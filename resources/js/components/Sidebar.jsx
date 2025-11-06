@@ -9,7 +9,7 @@ export default function Sidebar({ status, setStatus }) {
 
     return (
         <div
-            className={`min-w-[280px] bg-white h-screen z-20 shadow-md lg:shadow-0 print:hidden fixed lg:static ${
+            className={`min-w-[280px] bg-white h-screen z-20 shadow-md lg:shadow-0 print:hidden fixed lg:static overflow-scroll ${
                 status ? "left-0" : "-left-full"
             } duration-300 top-0`}
         >

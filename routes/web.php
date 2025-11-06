@@ -1,18 +1,21 @@
 <?php
 
-use App\Http\Controllers\AuthController;
-use App\Http\Controllers\BarcodePrintController;
-use App\Http\Controllers\CustomerController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\ExchangeController;
-use App\Http\Controllers\ExpenseController;
-use App\Http\Controllers\ExtraCashController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\SalesController;
-use App\Http\Controllers\SalesListController;
-use App\Http\Controllers\SectorController;
-use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\SalesController;
+use App\Http\Controllers\SectorController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ExchangeController;
+use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExtraCashController;
+use App\Http\Controllers\SalesListController;
+use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\BarcodePrintController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -48,6 +51,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/category/edit/{id}', 'category_edit')->name('category.edit');
         Route::get('/category/del/{id}', 'category_del')->name('category.del');
     });
+
+    // supplier
+    Route::get('/supplier', [SupplierController::class, 'index'])->name('supplier.view');
+    Route::post('/supplier', [SupplierController::class, 'store'])->name('supplier.store');
+    Route::put('/supplier/update/{id}', [SupplierController::class, 'update'])->name('supplier.update');
+    Route::get('/supplier/edit/{id}', [SupplierController::class, 'edit'])->name('supplier.edit');
+    Route::delete('/supplier/del/{id}', [SupplierController::class, 'destroy'])->name('supplier.del'); // Changed to DELETE
 
     // products
     Route::controller(ProductController::class)->prefix('/product')->group(function () {
@@ -105,4 +115,22 @@ Route::middleware('auth')->group(function () {
     Route::controller(BarcodePrintController::class)->group(function () {
         Route::get('/print-barcode', 'index')->name('barcode.print');
     });
+
+
+
+    // Warehouse Routes
+    Route::get('/warehouses', [WarehouseController::class, 'index'])->name('warehouse.list');
+    Route::get('/warehouses/create', [WarehouseController::class, 'create'])->name('warehouse.create');
+    Route::post('/warehouses', [WarehouseController::class, 'store'])->name('warehouse.store');
+    Route::get('/warehouses/{warehouse}', [WarehouseController::class, 'show'])->name('warehouse.show');
+    Route::get('/warehouses/{warehouse}/edit', [WarehouseController::class, 'edit'])->name('warehouse.edit');
+    Route::put('/warehouses/{warehouse}', [WarehouseController::class, 'update'])->name('warehouse.update');
+    Route::delete('/warehouses/{warehouse}', [WarehouseController::class, 'destroy'])->name('warehouse.destroy');
+
+    // Purchase Routes
+    Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchase.list');
+    Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchase.create');
+    Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchase.store');
+    Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchase.show');
+    Route::delete('/purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchase.destroy');
 });
