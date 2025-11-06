@@ -88,6 +88,8 @@ class SalesController extends Controller
     // get product varaint
     public function productVaraint(Request $request)
     {
+
+
         try {
             $product = Product::latest()
                 ->with(['category', 'sizes.colors'])

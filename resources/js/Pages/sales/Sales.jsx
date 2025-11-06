@@ -59,7 +59,6 @@ export default function Sales({
         }, 0);
     };
 
-    // invoice
     useEffect(() => {
         if (salesdata) {
             setInvoiceModel(true);
@@ -105,20 +104,19 @@ export default function Sales({
     const handleAddSystem = () => {
         if (!selectedSystem) return;
 
-        // আগেই যোগ করা আছে কিনা check
         const alreadyAdded = SalesForm.data.payments?.some(
             (p) => p.system === selectedSystem
         );
 
         if (alreadyAdded) return alert("This payment system is already added!");
-
         SalesForm.setData("payments", [
             ...(SalesForm.data.payments || []),
             { system: selectedSystem, amount: "" },
         ]);
 
-        setSelectedSystem(""); // reset dropdown
+        setSelectedSystem(""); 
     };
+
     const handleChangeAmount = (index, value) => {
         const updated = [...SalesForm.data.payments];
         updated[index].amount = value;
@@ -141,6 +139,7 @@ export default function Sales({
     const searchForm = useForm({
         category_id: filter.category_id || "",
     });
+    
     useEffect(() => {
         const queryString = {
             ...(searchForm.data.category_id && {
@@ -264,7 +263,6 @@ export default function Sales({
         const handleKeydown = (e) => {
             const now = Date.now();
 
-            // যদি 100ms এর বেশি gap হয় তাহলে নতুন barcode ধরা শুরু করবো
             if (now - lastScanTime > 100) {
                 setBarcode(e.key);
             } else {
@@ -273,7 +271,6 @@ export default function Sales({
 
             setLastScanTime(now);
 
-            // Barcode শেষ হবে Enter দিলে
             if (e.key === "Enter") {
                 const finalCode = barcode.trim();
                 if (finalCode.length > 0) {

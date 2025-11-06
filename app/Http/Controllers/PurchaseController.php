@@ -55,85 +55,91 @@ class PurchaseController extends Controller
         ]);
     }
 
-   public function store(Request $request)
-{
-    $request->validate([
-        'supplier_id' => 'required|exists:suppliers,id',
-        'warehouse_id' => 'required|exists:warehouses,id',
-        'purchase_date' => 'required|date',
-        'notes' => 'nullable|string',
-        'items' => 'required|array|min:1',
-        'items.*.product_id' => 'required|exists:products,id',
-        'items.*.variant_id' => 'required|exists:variants,id',
-        'items.*.quantity' => 'required|integer|min:1',
-        'items.*.unit_price' => 'required|numeric|min:0'
-    ]);
-
-    DB::beginTransaction();
-    try {
-        // Generate purchase number
-        $purchaseCount = Purchase::whereDate('created_at', today())->count();
-        $purchaseNo = 'PUR-' . date('Ymd') . '-' . str_pad($purchaseCount + 1, 4, '0', STR_PAD_LEFT);
-
-        // Calculate total amount
-        $totalAmount = collect($request->items)->sum(function ($item) {
-            return $item['quantity'] * $item['unit_price'];
-        });
-
-        // Create purchase
-        $purchase = Purchase::create([
-            'purchase_no' => $purchaseNo,
-            'supplier_id' => $request->supplier_id,
-            'warehouse_id' => $request->warehouse_id,
-            'purchase_date' => $request->purchase_date,
-            'total_amount' => $totalAmount,
-            'notes' => $request->notes,
-            'status' => 'completed'
+    public function store(Request $request)
+    {
+        $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'purchase_date' => 'required|date',
+            'notes' => 'nullable|string',
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.variant_id' => 'required|exists:variants,id',
+            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.unit_price' => 'required|numeric|min:0',
+            // Add these to allow the additional fields from frontend
+            'items.*.product_name' => 'sometimes|string',
+            'items.*.variant_name' => 'sometimes|string',
+            'items.*.total_price' => 'sometimes|numeric'
         ]);
 
-        // Create purchase items and update stock
-        foreach ($request->items as $item) {
-            $totalPrice = $item['quantity'] * $item['unit_price'];
+        DB::beginTransaction();
+        try {
+            // Generate purchase number
+            $purchaseCount = Purchase::whereDate('created_at', today())->count();
+            $purchaseNo = 'PUR-' . date('Ymd') . '-' . str_pad($purchaseCount + 1, 4, '0', STR_PAD_LEFT);
 
-            // Create purchase item
-            $purchase->items()->create([
-                'product_id' => $item['product_id'],
-                'variant_id' => $item['variant_id'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['unit_price'],
-                'total_price' => $totalPrice
+            // Calculate total amount (always calculate fresh, don't trust frontend)
+            $totalAmount = collect($request->items)->sum(function ($item) {
+                return $item['quantity'] * $item['unit_price'];
+            });
+
+            // Create purchase
+            $purchase = Purchase::create([
+                'purchase_no' => $purchaseNo,
+                'supplier_id' => $request->supplier_id,
+                'warehouse_id' => $request->warehouse_id,
+                'purchase_date' => $request->purchase_date,
+                'total_amount' => $totalAmount,
+                'notes' => $request->notes,
+                'status' => 'completed'
             ]);
 
-            // Update or create stock
-            $stock = Stock::where('warehouse_id', $request->warehouse_id)
-                ->where('product_id', $item['product_id'])
-                ->where('variant_id', $item['variant_id'])
-                ->first();
+            // Create purchase items and update stock
+            foreach ($request->items as $item) {
+                // Calculate total price fresh
+                $totalPrice = $item['quantity'] * $item['unit_price'];
 
-            if ($stock) {
-                $stock->increment('quantity', $item['quantity']);
-                // Update purchase price to the latest price
-                $stock->purchase_price = $item['unit_price'];
-                $stock->save();
-            } else {
-                Stock::create([
-                    'warehouse_id' => $request->warehouse_id,
+                // Create purchase item - only use the fields you need
+                $purchase->items()->create([
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
                     'quantity' => $item['quantity'],
-                    'purchase_price' => $item['unit_price']
+                    'unit_price' => $item['unit_price'],
+                    'total_price' => $totalPrice
+                    // Don't include product_name, variant_name as they're likely for display only
                 ]);
+
+                // Update or create stock
+                $stock = Stock::where('warehouse_id', $request->warehouse_id)
+                    ->where('product_id', $item['product_id'])
+                    ->where('variant_id', $item['variant_id'])
+                    ->first();
+
+                if ($stock) {
+                    $stock->increment('quantity', $item['quantity']);
+                    // Update purchase price to the latest price
+                    $stock->purchase_price = $item['unit_price'];
+                    $stock->save();
+                } else {
+                    Stock::create([
+                        'warehouse_id' => $request->warehouse_id,
+                        'product_id' => $item['product_id'],
+                        'variant_id' => $item['variant_id'],
+                        'quantity' => $item['quantity'],
+                        'purchase_price' => $item['unit_price']
+                    ]);
+                }
             }
+
+            DB::commit();
+
+            return redirect()->route('purchase.list')->with('success', 'Purchase created successfully');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Error creating purchase: ' . $e->getMessage());
         }
-
-        DB::commit();
-
-        return redirect()->route('purchase.list')->with('success', 'Purchase created successfully');
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return redirect()->back()->with('error', 'Error creating purchase: ' . $e->getMessage());
     }
-}
 
     public function show($id)
     {
