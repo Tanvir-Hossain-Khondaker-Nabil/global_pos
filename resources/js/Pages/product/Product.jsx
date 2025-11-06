@@ -24,6 +24,15 @@ export default function Product({ product, filters }) {
         });
     };
 
+
+    // Format variant display
+    const formatVariantDisplay = (variant) => {
+        const parts = [];
+        if (variant.size) parts.push(`Size: ${variant.size}`);
+        if (variant.color) parts.push(`Color: ${variant.color}`);
+        return parts.join(', ');
+    };
+
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
@@ -56,61 +65,67 @@ export default function Product({ product, filters }) {
                             <tr>
                                 <th></th>
                                 <th>Product Code</th>
-                                <th>Product</th>
-                                <th>Gross Price</th>
-                                <th>Discount</th>
-                                <th>Stock</th>
+                                <th>Product Name</th>
+                                <th>Category</th>
+                                <th>Variants</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {product.data.map((user, index) => (
-                                <tr key={index}>
+                            {product.data.map((productItem, index) => (
+                                <tr key={productItem.id}>
                                     <th>{index + 1}</th>
-                                    <td>{user.product_no}</td>
-                                    <td>{user.name}</td>
-                                    <td>{user.gross_price} Tk</td>
-                                    <td>{user.discount || 0} %</td>
-                                    <td className="flex flex-items gap-1 flex-wrap max-w-[300px]">
-                                        {user?.sizes.map((val, i) => (
-                                            <div
-                                                key={i}
-                                                className="border border-dashed border-box p-1 border-neutral flex items-center gap-1 flex-wrap"
-                                            >
-                                                <p className="text-neutral uppercase font-semibold">
-                                                    {val.name}
-                                                    {":"}
-                                                </p>
-                                                <div className="flex flex-wrap text-neutral items-center gap-1">
-                                                    {val?.colors.map(
-                                                        (val, i) => (
-                                                            <div
-                                                                key={i}
-                                                                className="text-xs border-r border-gray-400 pr-1.5 mr-0.5 last:border-r-0"
-                                                            >
-                                                                <span className="uppercase">
-                                                                    {val?.name}
-                                                                    {"("}
-                                                                    {val?.stock}
-                                                                    {")"}
-                                                                </span>
-                                                            </div>
-                                                        )
-                                                    )}
+                                    <td className="font-mono">{productItem.product_no}</td>
+                                    <td>
+                                        <div>
+                                            <div className="font-medium">{productItem.name}</div>
+                                            {productItem.description && (
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {productItem.description.length > 50 
+                                                        ? `${productItem.description.substring(0, 50)}...`
+                                                        : productItem.description
+                                                    }
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {productItem.category?.name || 'N/A'}
+                                    </td>
+                                    <td className="max-w-[300px]">
+                                        <div className="flex flex-col gap-2">
+                                            {productItem.variants?.map((variant, i) => (
+                                                <div
+                                                    key={variant.id}
+                                                    className="border border-dashed border-neutral p-2 rounded text-xs"
+                                                >
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex-1">
+                                                            <div className="font-medium">
+                                                                {formatVariantDisplay(variant) || 'Default Variant'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </td>
                                     <td>
                                         <div className="flex items-center gap-2">
+                                            {/* <Link
+                                                href={route('product.view', { id: productItem.id })}
+                                                className="btn btn-xs btn-info"
+                                            >
+                                                <Eye size={10} /> View
+                                            </Link> */}
                                             {auth.role === "admin" && (
                                                 <>
                                                     <Link
                                                         href={route(
                                                             "product.add",
-                                                            { id: user.id }
+                                                            { id: productItem.id }
                                                         )}
-                                                        className="btn btn-xs btn-info"
+                                                        className="btn btn-xs btn-warning"
                                                     >
                                                         <Pen size={10} /> Edit
                                                     </Link>
@@ -118,7 +133,7 @@ export default function Product({ product, filters }) {
                                                         href={route(
                                                             "product.del",
                                                             {
-                                                                id: user.id,
+                                                                id: productItem.id,
                                                             }
                                                         )}
                                                         onClick={(e) => {
@@ -147,13 +162,13 @@ export default function Product({ product, filters }) {
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={20} className="text-gray-500" />
                         <h1 className="text-gray-500 text-sm">
-                            Data not found!
+                            No products found!
                         </h1>
                         <button
                             onClick={() => router.visit(route("product.add"))}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new
+                            <Plus size={15} /> Add new product
                         </button>
                     </div>
                 )}

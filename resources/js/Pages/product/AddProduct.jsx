@@ -1,361 +1,330 @@
 import React, { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { useForm } from "@inertiajs/react";
-import { Trash, X } from "lucide-react";
+import { Trash, X, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 
 export default function AddProduct({ category, update }) {
-    const [sizes, setSizes] = useState([]);
-    const [sizeInput, setSizeInput] = useState("");
+    const [variants, setVariants] = useState([]);
     const [errors, setErrors] = useState({});
 
-    // Add Size
-    const handleSizeAdd = (e) => {
-        if (e.key === "Enter" && sizeInput.trim() !== "") {
-            e.preventDefault();
-            setSizes([
-                ...sizes,
-                { size: sizeInput.trim(), colors: [], colorInput: "" },
-            ]);
-            setSizeInput("");
-        }
-    };
-
-    // Delete Size
-    const handleSizeDelete = (index) => {
-        const updated = [...sizes];
-        updated.splice(index, 1);
-        setSizes(updated);
-    };
-
-    // Add Color
-    const handleColorAdd = (e, index) => {
-        if (e.key === "Enter" && sizes[index].colorInput.trim() !== "") {
-            e.preventDefault();
-            const updated = [...sizes];
-            updated[index].colors.push({
-                name: updated[index].colorInput.trim(),
-                stock: 1,
-            });
-            updated[index].colorInput = "";
-            setSizes(updated);
-        }
-    };
-
-    // Delete Color
-    const handleColorDelete = (sizeIndex, colorIndex) => {
-        const updated = [...sizes];
-        updated[sizeIndex].colors.splice(colorIndex, 1);
-        setSizes(updated);
-    };
-
-    // Update Stock
-    const handleStockChange = (sizeIndex, colorIndex, value) => {
-        const updated = [...sizes];
-        updated[sizeIndex].colors[colorIndex].stock = parseInt(value) || 0;
-        setSizes(updated);
-    };
-
+    // Initialize form
     const productForm = useForm({
-        id: update ? update[0]?.id : "",
-        product_name: update ? update[0]?.name : "",
-        category: update ? update[0]?.category_id : "",
-        product_code: update ? update[0]?.product_no : "",
-        gross_price: update ? update[0]?.gross_price : "",
-        discount: update ? update[0]?.discount : "",
-        sizes: [],
+        id: update ? update.id : "",
+        product_name: update ? update.name : "",
+        category: update ? update.category_id : "",
+        product_code: update ? update.product_no : "",
+        description: update ? update.description : "",
+        variants: [],
     });
 
-    const formSubmit = (e) => {
-        e.preventDefault();
+    // Add new variant
+    const handleAddVariant = () => {
+        setVariants([
+            ...variants,
+            {
+                id: null,
+                size: "",
+                color: "",
+            },
+        ]);
+    };
 
+    // Delete variant
+    const handleDeleteVariant = (index) => {
+        const updated = [...variants];
+        updated.splice(index, 1);
+        setVariants(updated);
+    };
+
+    // Update variant field
+    const handleVariantChange = (index, field, value) => {
+        const updated = [...variants];
+        updated[index][field] = value;
+        setVariants(updated);
+    };
+
+    // Form validation
+    const validateForm = () => {
         let hasError = false;
         let newErrors = {};
 
-        sizes.forEach((s, sizeIndex) => {
-            if (!s.size || s.size.trim() === "") {
-                hasError = true;
-                newErrors[`size-${sizeIndex}`] = "Size is required";
-            }
+        // Validate main product fields
+        if (!productForm.data.product_name?.trim()) {
+            hasError = true;
+            newErrors.product_name = "Product name is required";
+        }
 
-            if (!s.colors || s.colors.length === 0) {
+        if (!productForm.data.category) {
+            hasError = true;
+            newErrors.category = "Category is required";
+        }
+
+        if (!productForm.data.product_code?.trim()) {
+            hasError = true;
+            newErrors.product_code = "Product code is required";
+        }
+
+        // Validate variants
+        variants.forEach((variant, index) => {
+            // At least one of size or color must be provided
+            if (!variant.size?.trim() && !variant.color?.trim()) {
                 hasError = true;
-                newErrors[`colors-${sizeIndex}`] =
-                    "At least one color is required";
+                newErrors[`variant-${index}`] = "Either size or color is required";
             }
         });
 
-        if (hasError) {
-            setErrors(newErrors);
+        // Check if at least one variant exists
+        if (variants.length === 0) {
+            hasError = true;
+            newErrors.variants = "At least one variant is required";
+        }
+
+        setErrors(newErrors);
+        return hasError;
+    };
+
+    // Form submission
+    const formSubmit = (e) => {
+        e.preventDefault();
+
+        if (validateForm()) {
+            toast.error("Please fix the validation errors");
             return;
         }
 
-        setErrors({});
+        // Prepare the data for submission
+        const submitData = {
+            ...productForm.data,
+            variants: variants.map(variant => ({
+                ...variant,
+            }))
+        };
 
-        productForm.post(route("product.add.post"), {
+        productForm.data = submitData;
+
+        const url = update ? route("product.update.post") : route("product.add.post");
+        
+        productForm.post(url, {
             preserveScroll: true,
-            preserveState: true,
-            onSuccess: (res) => {
-                console.log(res);
+            onSuccess: () => {
+                toast.success(`Product ${update ? 'updated' : 'added'} successfully!`);
+                if (!update) {
+                    // Reset form for new products
+                    productForm.reset();
+                    setVariants([{
+                        id: null,
+                        size: "",
+                        color: "",
+                    }]);
+                }
             },
-            onError: (error) => {
-                console.log(error);
-
-                toast.error("Somthing else try again!");
+            onError: (errors) => {
+                toast.error("Something went wrong. Please try again!");
+                console.error(errors);
             },
         });
     };
 
+    // Sync variants with form data
     useEffect(() => {
-        productForm.setData("sizes", sizes);
-    }, [sizes]);
+        productForm.setData("variants", variants);
+    }, [variants]);
 
-    // Load existing data as default state
+    // Load existing data for editing
     useEffect(() => {
-        if (update && update[0]?.sizes?.length > 0) {
-            const mapped = update[0]?.sizes?.map((size) => ({
-                id: size.id,
-                size: size.name,
-                colorInput: "",
-                colors: size.colors.map((c) => ({
-                    id: c.id,
-                    name: c.name,
-                    stock: c.stock,
-                })),
+        if (update && update.variants?.length > 0) {
+            const mappedVariants = update.variants.map(variant => ({
+                id: variant.id,
+                size: variant.size || "",
+                color: variant.color || "",
             }));
-            setSizes(mapped);
+            setVariants(mappedVariants);
+        } else if (!update) {
+            // Add one empty variant for new products
+            handleAddVariant();
         }
     }, [update]);
+
+    // Debug: Check if category data is received
+    useEffect(() => {
+        console.log('Category data:', category);
+        console.log('Update data:', update);
+    }, [category, update]);
+
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title="Add new product"
-                subtitle="Add or update product."
+                title={update ? "Update Product" : "Add New Product"}
+                subtitle="Add or update product with variants"
             />
 
             <form onSubmit={formSubmit}>
-                {/* product */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* Product Basic Information */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                     <fieldset className="fieldset col-span-2">
-                        <legend className="fieldset-legend">
-                            Product name*
-                        </legend>
+                        <legend className="fieldset-legend">Product Name*</legend>
                         <input
                             type="text"
                             className="input"
                             value={productForm.data.product_name}
                             onChange={(e) =>
-                                productForm.setData(
-                                    "product_name",
-                                    e.target.value
-                                )
+                                productForm.setData("product_name", e.target.value)
                             }
+                            placeholder="Enter product name"
                         />
-                        {productForm.errors.product_name && (
+                        {errors.product_name && (
                             <p className="text-sm text-error">
-                                {productForm.errors.product_name}
+                                {errors.product_name}
                             </p>
                         )}
                     </fieldset>
+
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">Category*</legend>
                         <select
-                            defaultValue={productForm.data.category}
+                            value={productForm.data.category}
                             className="select"
                             onChange={(e) =>
                                 productForm.setData("category", e.target.value)
                             }
                         >
-                            <option value='' selected>--Pick a category--</option>
-                            {Object.entries(category).map(([key, value]) => (
-                                <option key={value} value={value}>
-                                    {key}
+                            <option value="">--Pick a category--</option>
+                            {category && Object.entries(category).map(([id, name]) => (
+                                <option key={id} value={id}>
+                                    {name}
                                 </option>
                             ))}
                         </select>
-                        {productForm.errors.category && (
+                        {errors.category && (
                             <p className="text-sm text-error">
-                                {productForm.errors.category}
+                                {errors.category}
                             </p>
                         )}
                     </fieldset>
+
                     <fieldset className="fieldset">
-                        <legend className="fieldset-legend">
-                            Product code*
-                        </legend>
+                        <legend className="fieldset-legend">Product Code*</legend>
                         <input
                             type="text"
                             className="input"
                             value={productForm.data.product_code}
                             onChange={(e) =>
-                                productForm.setData(
-                                    "product_code",
-                                    e.target.value
-                                )
+                                productForm.setData("product_code", e.target.value)
                             }
+                            placeholder="Enter product code"
                         />
-                        {productForm.errors.product_code && (
+                        {errors.product_code && (
                             <p className="text-sm text-error">
-                                {productForm.errors.product_code}
-                            </p>
-                        )}
-                    </fieldset>
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">
-                            Gross price*
-                        </legend>
-                        <input
-                            type="number"
-                            className="input"
-                            value={productForm.data.gross_price}
-                            onChange={(e) =>
-                                productForm.setData(
-                                    "gross_price",
-                                    e.target.value
-                                )
-                            }
-                        />
-                        {productForm.errors.gross_price && (
-                            <p className="text-sm text-error">
-                                {productForm.errors.gross_price}
-                            </p>
-                        )}
-                    </fieldset>
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Discount(%)</legend>
-                        <input
-                            min={0}
-                            max={100}
-                            type="number"
-                            className="input"
-                            value={productForm.data.discount}
-                            onChange={(e) =>
-                                productForm.setData("discount", e.target.value)
-                            }
-                        />
-                        {productForm.errors.discount && (
-                            <p className="text-sm text-error">
-                                {productForm.errors.discount}
+                                {errors.product_code}
                             </p>
                         )}
                     </fieldset>
 
-                    {/* Size input */}
                     <fieldset className="fieldset col-span-2">
-                        <legend className="fieldset-legend">Size*</legend>
-                        <input
-                            type="text"
-                            className="input"
-                            value={sizeInput}
-                            onChange={(e) => setSizeInput(e.target.value)}
-                            onKeyDown={handleSizeAdd}
-                            placeholder="Enter size & press Enter"
+                        <legend className="fieldset-legend">Description</legend>
+                        <textarea
+                            className="textarea"
+                            rows="3"
+                            value={productForm.data.description}
+                            onChange={(e) =>
+                                productForm.setData("description", e.target.value)
+                            }
+                            placeholder="Enter product description"
                         />
                     </fieldset>
                 </div>
 
-                {/* Render Sizes */}
-                {sizes.length > 0 && (
-                    <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-3">
-                        {sizes.map((s, sizeIndex) => (
+                {/* Variants Section */}
+                <div className="border-t pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Product Variants</h3>
+                        <button
+                            type="button"
+                            className="btn btn-primary btn-sm"
+                            onClick={handleAddVariant}
+                        >
+                            <Plus size={16} className="mr-1" />
+                            Add Variant
+                        </button>
+                    </div>
+
+                    {errors.variants && (
+                        <p className="text-red-500 text-sm mb-4">{errors.variants}</p>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4">
+                        {variants.map((variant, index) => (
                             <div
-                                key={sizeIndex}
-                                className="border border-gray-300 p-3 rounded-box"
+                                key={index}
+                                className="border border-gray-300 p-4 rounded-box bg-gray-50"
                             >
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="font-medium text-gray-500">
-                                        Size: {s.size}
+                                <div className="flex justify-between items-center mb-3">
+                                    <h4 className="font-medium text-gray-700">
+                                        Variant #{index + 1}
                                     </h4>
                                     <button
                                         type="button"
                                         className="btn btn-xs btn-circle btn-error"
-                                        onClick={() =>
-                                            handleSizeDelete(sizeIndex)
-                                        }
+                                        onClick={() => handleDeleteVariant(index)}
+                                        disabled={variants.length === 1}
                                     >
-                                        <Trash size={10} />
+                                        <Trash size={12} />
                                     </button>
                                 </div>
 
-                                {/* Show Size Error */}
-                                {errors[`size-${sizeIndex}`] && (
-                                    <p className="text-red-500 text-sm mb-1">
-                                        {errors[`size-${sizeIndex}`]}
-                                    </p>
-                                )}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {/* Size Input */}
+                                    <div>
+                                        <label className="label">
+                                            <span className="label-text">Size</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="input input-bordered"
+                                            value={variant.size}
+                                            onChange={(e) =>
+                                                handleVariantChange(index, "size", e.target.value)
+                                            }
+                                            placeholder="e.g., M, L, XL"
+                                        />
+                                    </div>
 
-                                {/* Color Input */}
-                                <input
-                                    type="text"
-                                    className="input input-sm mb-2"
-                                    value={s.colorInput}
-                                    onChange={(e) => {
-                                        const updated = [...sizes];
-                                        updated[sizeIndex].colorInput =
-                                            e.target.value;
-                                        setSizes(updated);
-                                    }}
-                                    onKeyDown={(e) =>
-                                        handleColorAdd(e, sizeIndex)
-                                    }
-                                    placeholder="Enter color & press Enter"
-                                />
+                                    {/* Color Input */}
+                                    <div>
+                                        <label className="label">
+                                            <span className="label-text">Color</span>
+                                        </label>
+                                        <input
+                                            type="text"
+                                            className="input input-bordered"
+                                            value={variant.color}
+                                            onChange={(e) =>
+                                                handleVariantChange(index, "color", e.target.value)
+                                            }
+                                            placeholder="e.g., Red, Blue"
+                                        />
+                                    </div>
 
-                                {/* Show Colors Error */}
-                                {errors[`colors-${sizeIndex}`] && (
-                                    <p className="text-red-500 text-sm mb-1">
-                                        {errors[`colors-${sizeIndex}`]}
-                                    </p>
-                                )}
-
-                                {/* Colors with Stock */}
-                                <div className="flex items-center flex-wrap gap-2">
-                                    {s.colors.map((c, colorIndex) => (
-                                        <div
-                                            key={colorIndex}
-                                            className="flex items-center gap-2 badge badge-soft badge-primary p-2"
-                                        >
-                                            <span>{c.name}</span>
-
-                                            {/* Stock Input */}
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                className="input input-xs w-20"
-                                                value={c.stock}
-                                                onChange={(e) =>
-                                                    handleStockChange(
-                                                        sizeIndex,
-                                                        colorIndex,
-                                                        e.target.value
-                                                    )
-                                                }
-                                                placeholder="Stock"
-                                            />
-
-                                            {/* Delete Color */}
-                                            <button
-                                                type="button"
-                                                className="ml-2 text-red-600"
-                                                onClick={() =>
-                                                    handleColorDelete(
-                                                        sizeIndex,
-                                                        colorIndex
-                                                    )
-                                                }
-                                            >
-                                                <X size={13} />
-                                            </button>
-                                        </div>
-                                    ))}
                                 </div>
+
+                                {/* Variant Error */}
+                                {errors[`variant-${index}`] && (
+                                    <p className="text-red-500 text-sm mt-2">
+                                        {errors[`variant-${index}`]}
+                                    </p>
+                                )}
                             </div>
                         ))}
                     </div>
-                )}
+                </div>
 
-                <button className="btn btn-primary mt-5" type="submit">
-                    Save product
+                <button 
+                    className="btn btn-primary mt-6" 
+                    type="submit"
+                    disabled={productForm.processing}
+                >
+                    {productForm.processing ? "Saving..." : (update ? "Update Product" : "Save Product")}
                 </button>
             </form>
         </div>

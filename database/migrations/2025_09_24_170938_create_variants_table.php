@@ -13,13 +13,11 @@ return new class extends Migration {
         Schema::create('variants', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('product_id');
-            $table->string('name');
-            $table->integer('stock')->default(0);
-            $table->unsignedBigInteger('parent_id')->nullable();
+            $table->string('size')->nullable();
+            $table->string('color')->nullable();
             $table->timestamps();
-            // auto delete
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
-            $table->foreign('parent_id')->references('id')->on('variants')->onDelete('cascade');
+            $table->unique(['product_id', 'size', 'color'], 'unique_variant');
         });
     }
 
