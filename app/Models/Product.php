@@ -36,11 +36,12 @@ class Product extends Model
     public function getPriceRangeAttribute()
     {
         $prices = $this->variants->pluck('price')->filter();
-        if ($prices->isEmpty()) return null;
-        
+        if ($prices->isEmpty())
+            return null;
+
         $min = $prices->min();
         $max = $prices->max();
-        
+
         return $min === $max ? "₹{$min}" : "₹{$min} - ₹{$max}";
     }
 
@@ -49,17 +50,22 @@ class Product extends Model
     {
         $query->when($filters['search'] ?? null, function ($query, $search) {
             $query->where(function ($query) use ($search) {
-                $query->where('name', 'like', '%'.$search.'%')
-                      ->orWhere('product_no', 'like', '%'.$search.'%')
-                      ->orWhere('description', 'like', '%'.$search.'%')
-                      ->orWhereHas('category', function ($query) use ($search) {
-                          $query->where('name', 'like', '%'.$search.'%');
-                      })
-                      ->orWhereHas('variants', function ($query) use ($search) {
-                          $query->where('size', 'like', '%'.$search.'%')
-                                ->orWhere('color', 'like', '%'.$search.'%');
-                      });
+                $query->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('product_no', 'like', '%' . $search . '%')
+                    ->orWhere('description', 'like', '%' . $search . '%')
+                    ->orWhereHas('category', function ($query) use ($search) {
+                        $query->where('name', 'like', '%' . $search . '%');
+                    })
+                    ->orWhereHas('variants', function ($query) use ($search) {
+                        $query->where('size', 'like', '%' . $search . '%')
+                            ->orWhere('color', 'like', '%' . $search . '%');
+                    });
             });
         });
+    }
+
+    public function stocks()
+    {
+        return $this->hasMany(Stock::class);
     }
 }

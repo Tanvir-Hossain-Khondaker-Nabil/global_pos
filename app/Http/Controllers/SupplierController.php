@@ -12,18 +12,18 @@ class SupplierController extends Controller
     public function index(Request $request)
     {
         $filters = $request->only('search');
-        
+
         $suppliers = Supplier::when($filters['search'] ?? null, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('contact_person', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('company', 'like', "%{$search}%");
+                    ->orWhere('contact_person', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('company', 'like', "%{$search}%");
             });
         })
-        ->latest()
-        ->paginate(10)
-        ->withQueryString();
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Supplier/Index', [
             'suppliers' => $suppliers,
@@ -63,6 +63,7 @@ class SupplierController extends Controller
     // Update supplier
     public function update(Request $request, $id)
     {
+        // Remove the dd() - it's stopping execution
         $supplier = Supplier::findOrFail($id);
 
         $validated = $request->validate([

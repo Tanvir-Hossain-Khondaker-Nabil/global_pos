@@ -11,6 +11,8 @@ import {
     User,
     UserPlus,
     WalletMinimal,
+    Warehouse,
+    Receipt,
 } from "lucide-react";
 
 // Common menu
@@ -34,6 +36,36 @@ const baseMenu = [
         icon: <BadgeCent size={16} />,
         route: route("sales.list.all"),
         active: "sales.list.all",
+        role: "all",
+    },
+    // New Purchase Menu Items
+    {
+        title: "Purchase",
+        icon: <Receipt size={16} />,
+        route: route("purchase.list"),
+        active: "purchase.list",
+        role: "all",
+    },
+    {
+        title: "Add Purchase",
+        icon: <ArrowRightLeft size={16} />,
+        route: route("purchase.create"),
+        active: "purchase.create",
+        role: "admin",
+    },
+    // New Warehouse Menu Item
+    {
+        title: "Warehouse",
+        icon: <Warehouse size={16} />,
+        route: route("warehouse.list"),
+        active: "warehouse.list",
+        role: "all",
+    },
+    {
+        title: "Supplier",
+        icon: <ShoppingBasket size={16} />,
+        route: route("supplier.view"),
+        active: "supplier.view",
         role: "all",
     },
     {

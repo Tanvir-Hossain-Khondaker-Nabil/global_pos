@@ -27,13 +27,20 @@ class Variant extends Model
         return $this->belongsTo(Product::class);
     }
 
-    // Get variant name for display
+    // Add this accessor
     public function getVariantNameAttribute()
     {
         $parts = [];
-        if ($this->size) $parts[] = "Size: {$this->size}";
-        if ($this->color) $parts[] = "Color: {$this->color}";
-        
+        if ($this->size)
+            $parts[] = "Size: {$this->size}";
+        if ($this->color)
+            $parts[] = "Color: {$this->color}";
+
         return implode(', ', $parts) ?: 'Default Variant';
+    }
+
+    public function stocks()
+    {
+        return $this->hasMany(Stock::class);
     }
 }
