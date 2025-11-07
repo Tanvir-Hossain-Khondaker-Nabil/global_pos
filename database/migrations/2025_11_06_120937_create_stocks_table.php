@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('variant_id');
             $table->integer('quantity')->default(0);
             $table->decimal('purchase_price', 10, 2)->default(0);
+            $table->decimal('sale_price', 10, 2)->default(0);
             $table->timestamps();
 
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('cascade');

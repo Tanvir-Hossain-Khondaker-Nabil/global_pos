@@ -3,20 +3,22 @@ import { useForm, router } from "@inertiajs/react";
 import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
 import { useState, useEffect } from "react";
 
-export default function AddPurchase({ suppliers, warehouses, products }) {
+
+export default function AddSale({ customers, productstocks }) {
     const [selectedItems, setSelectedItems] = useState([]);
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
 
+    console.log("Customers:", customers);
+    console.log("Product Stocks:", productstocks);
+
     const form = useForm({
-        supplier_id: "",
-        warehouse_id: "",
-        purchase_date: new Date().toISOString().split('T')[0],
+        customer_id: "",
+        sale_date: new Date().toISOString().split('T')[0],
         notes: "",
         items: [],
     });
 
-    // Helper function to get variant display name
     const getVariantDisplayName = (variant) => {
         const parts = [];
         if (variant.size) parts.push(`Size: ${variant.size}`);
@@ -27,38 +29,43 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
     // Filter products based on search
     useEffect(() => {
         if (productSearch) {
-            const filtered = products.filter(product =>
-                product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                product.product_no.toLowerCase().includes(productSearch.toLowerCase())
+            const filtered = productstocks.filter(productstock =>
+                productstock.product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                productstock.product.product_no?.toLowerCase().includes(productSearch.toLowerCase())
             );
             setFilteredProducts(filtered);
         } else {
-            setFilteredProducts(products.slice(0, 10));
+            setFilteredProducts(productstocks.slice(0, 10));
         }
-    }, [productSearch, products]);
+    }, [productSearch, productstocks]);
 
-    const addItem = (product, variant) => {
+    const addItem = (productstock, variant) => {
+        const variantId = variant?.id || 0;
+
         const existingItem = selectedItems.find(
-            item => item.product_id === product.id && item.variant_id === variant.id
+            item => item.product_id === productstock.product.id && item.variant_id === variantId
         );
 
         if (existingItem) {
             setSelectedItems(selectedItems.map(item =>
-                item.product_id === product.id && item.variant_id === variant.id
-                    ? { ...item, quantity: item.quantity + 1 }
+                item.product_id === productstock.product.id && item.variant_id === variantId
+                    ? { ...item, quantity: item.quantity }
                     : item
             ));
         } else {
             setSelectedItems([
                 ...selectedItems,
                 {
-                    product_id: product.id,
-                    variant_id: variant.id,
-                    product_name: product.name,
-                    variant_name: getVariantDisplayName(variant), // Use helper function
-                    quantity: 1,
+                    product_id: productstock.product.id,
+                    variant_id: variantId,
+                    product_name: productstock.product.name,
+                    product_code : productstock.product.product_no || '',
+                    variant_name:  variant ? getVariantDisplayName(variant) : 'Default Variant',
+                    quantity: productstock.quantity,
+                    stockQuantity : productstock.quantity || 0,
                     unit_price: 0,
-                    total_price: 0
+                    sell_price: productstock.sale_price || 0,
+                    total_price: 0,
                 }
             ]);
         }
@@ -75,45 +82,49 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
     const updateItem = (index, field, value) => {
         const updated = [...selectedItems];
         updated[index][field] = value;
-        
+
         if (field === 'quantity' || field === 'unit_price') {
             const quantity = field === 'quantity' ? value : updated[index].quantity;
             const unitPrice = field === 'unit_price' ? value : updated[index].unit_price;
             updated[index].total_price = quantity * unitPrice;
         }
-        
+
         setSelectedItems(updated);
     };
 
+
+    console.log("Selected Items:", selectedItems);
     const calculateTotal = () => {
         return selectedItems.reduce((total, item) => total + (item.total_price || 0), 0);
     };
 
     const submit = (e) => {
         e.preventDefault();
-        
         if (selectedItems.length === 0) {
-            alert("Please add at least one item to the purchase");
+            alert("Please add at least one product to the sale");
             return;
         }
 
         form.setData('items', selectedItems);
-        
-        form.post(route("purchase.store"), {
-            onSuccess: () => {
-                router.visit(route("purchase.list"));
-            },
+
+        form.post(route("sales.store"), {
+            onSuccess: () => router.visit(route("sales.index")),
+            onError: (errors) => {
+                console.error("Error occurred:", errors);
+                alert( errors.error || "Failed to create sale. Please check the console for details.");
+            }
         });
     };
+
 
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title="Create New Purchase"
-                subtitle="Add products to purchase order"
+                title="Create New (Sale/Order)"
+                subtitle="Add products to sale"
             >
                 <button
-                    onClick={() => router.visit(route("purchase.list"))}
+                    onClick={() => router.visit(route("sales.index"))}
                     className="btn btn-sm btn-ghost"
                 >
                     <ArrowLeft size={15} /> Back to List
@@ -125,57 +136,33 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                     <div className="lg:col-span-1 space-y-4">
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Supplier *</span>
+                                <span className="label-text">Customer *</span>
                             </label>
                             <select
                                 className="select select-bordered"
-                                value={form.data.supplier_id}
-                                onChange={(e) => form.setData("supplier_id", e.target.value)}
+                                value={form.data.customer_id}
+                                onChange={(e) => form.setData("customer_id", e.target.value)}
                                 required
                             >
-                                <option value="">Select Supplier</option>
-                                {suppliers.map(supplier => (
-                                    <option key={supplier.id} value={supplier.id}>
-                                        {supplier.name} - {supplier.company}
-                                    </option>
+                                <option value="">Select Customer</option>
+                                {customers.map(c => (
+                                    <option key={c.id} value={c.id}>{c.customer_name}</option>
                                 ))}
                             </select>
-                            {form.errors.supplier_id && (
-                                <div className="text-error text-sm mt-1">{form.errors.supplier_id}</div>
+                            {form.errors.customer_id && (
+                                <div className="text-error text-sm mt-1">{form.errors.customer_id}</div>
                             )}
                         </div>
 
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Warehouse *</span>
-                            </label>
-                            <select
-                                className="select select-bordered"
-                                value={form.data.warehouse_id}
-                                onChange={(e) => form.setData("warehouse_id", e.target.value)}
-                                required
-                            >
-                                <option value="">Select Warehouse</option>
-                                {warehouses.map(warehouse => (
-                                    <option key={warehouse.id} value={warehouse.id}>
-                                        {warehouse.name} ({warehouse.code})
-                                    </option>
-                                ))}
-                            </select>
-                            {form.errors.warehouse_id && (
-                                <div className="text-error text-sm mt-1">{form.errors.warehouse_id}</div>
-                            )}
-                        </div>
-
-                        <div className="form-control">
-                            <label className="label">
-                                <span className="label-text">Purchase Date *</span>
+                                <span className="label-text">Sale Date *</span>
                             </label>
                             <input
                                 type="date"
                                 className="input input-bordered"
-                                value={form.data.purchase_date}
-                                onChange={(e) => form.setData("purchase_date", e.target.value)}
+                                value={form.data.sale_date}
+                                onChange={(e) => form.setData("sale_date", e.target.value)}
                                 required
                             />
                         </div>
@@ -196,60 +183,50 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
 
                     {/* Product Selection */}
                     <div className="lg:col-span-2">
-                        <div className="form-control mb-4">
+                        <div className="form-control mb-4 relative">
                             <label className="label">
                                 <span className="label-text">Add Products</span>
                             </label>
-                            <div className="relative">
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full pr-10"
-                                    value={productSearch}
-                                    onChange={(e) => setProductSearch(e.target.value)}
-                                    placeholder="Search products by name or code..."
-                                />
-                                <Search size={16} className="absolute right-3 top-3 text-gray-400" />
-                            </div>
+                            <input
+                                type="text"
+                                className="input input-bordered w-full pr-10"
+                                value={productSearch}
+                                onChange={(e) => setProductSearch(e.target.value)}
+                                placeholder="Search products by name or SKU..."
+                            />
 
                             {/* Product Search Results */}
                             {productSearch && filteredProducts.length > 0 && (
                                 <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
-                                    {filteredProducts.map(product => (
-                                        <div key={product.id} className="border-b last:border-b-0">
-                                            <div className="p-3 font-medium bg-gray-50">
-                                                {product.name} ({product.product_no})
+                                    {filteredProducts.map(filteredProduct => (
+                                        <div
+                                            key={filteredProduct.product.id}
+                                            className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                            onClick={() => addItem(filteredProduct, filteredProduct.variant)}
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <span>{filteredProduct.product.name} ({filteredProduct.variant.size} size + {filteredProduct.variant.color} color)</span>
+                                                <Plus size={14} className="text-primary" />
                                             </div>
-                                            {product.variants && product.variants.map(variant => (
-                                                <div
-                                                    key={variant.id}
-                                                    className="p-3 hover:bg-gray-100 cursor-pointer border-t"
-                                                    onClick={() => addItem(product, variant)}
-                                                >
-                                                    <div className="flex justify-between items-center">
-                                                        <span className="text-sm">
-                                                            {getVariantDisplayName(variant)}
-                                                        </span>
-                                                        <Plus size={14} className="text-primary" />
-                                                    </div>
-                                                </div>
-                                            ))}
                                         </div>
                                     ))}
                                 </div>
                             )}
                         </div>
 
-                        {/* Selected Items */}
                         {selectedItems.length > 0 ? (
+
                             <div className="space-y-3">
                                 <h3 className="font-semibold">Selected Items ({selectedItems.length})</h3>
                                 {selectedItems.map((item, index) => (
                                     <div key={index} className="border border-gray-300 rounded-box p-4">
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1">
-                                                <h4 className="font-medium">{item.product_name}</h4>
-                                                <p className="text-sm text-gray-600">{item.variant_name}</p>
+                                                <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
+                                                <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
+                                                <p className="text-sm text-gray-600"> <strong>Total Quantity:</strong> {item.stockQuantity} ||  <strong>Unit Price:</strong> {item.sell_price}</p>
                                             </div>
+                                            <input type="hidden" name="warehouse_id" value={item.warehouse_id} />
                                             <button
                                                 type="button"
                                                 onClick={() => removeItem(index)}
@@ -260,9 +237,7 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                                         </div>
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Quantity</span>
-                                                </label>
+                                                <label className="label"><span className="label-text">Quantity</span></label>
                                                 <input
                                                     type="number"
                                                     min="1"
@@ -272,9 +247,7 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                                                 />
                                             </div>
                                             <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Unit Price (₹)</span>
-                                                </label>
+                                                <label className="label"><span className="label-text">Unit Price (₹)</span></label>
                                                 <input
                                                     type="number"
                                                     min="0"
@@ -285,9 +258,7 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                                                 />
                                             </div>
                                             <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Total Price (₹)</span>
-                                                </label>
+                                                <label className="label"><span className="label-text">Total Price (₹)</span></label>
                                                 <input
                                                     type="number"
                                                     className="input input-bordered input-sm bg-gray-100"
@@ -322,11 +293,11 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                         className="btn btn-primary"
                         disabled={form.processing || selectedItems.length === 0}
                     >
-                        {form.processing ? "Creating Purchase..." : "Create Purchase"}
+                        {form.processing ? "Creating Sale..." : "Create Sale"}
                     </button>
                     <button
                         type="button"
-                        onClick={() => router.visit(route("purchase.list"))}
+                        onClick={() => router.visit(route("sales.index"))}
                         className="btn btn-ghost"
                     >
                         Cancel

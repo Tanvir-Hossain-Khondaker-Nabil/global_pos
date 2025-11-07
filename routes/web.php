@@ -136,7 +136,10 @@ Route::middleware('auth')->group(function () {
 
     // sales
     Route::controller(SalesController::class)->group(function () {
-        Route::get('/sales/create', 'addView')->name('sales.add');
+
+        Route::get('/sales/add', 'addView')->name('sales.add');
+        Route::post('/sales/store', 'store')->name('sales.store');
+        Route::get('/sales/create', 'create')->name('sales.create');
         Route::post('/add/product/varaint', 'productVaraint')->name('sales.add.varaint');
         Route::post('/add/product-cart', 'productAddCart')->name('sales.add.cart');
         Route::post('/add/product-cart-scanner', 'productAddCartByscanner')->name('sales.add.cart.scanner');

@@ -67,7 +67,6 @@ class PurchaseController extends Controller
             'items.*.variant_id' => 'required|exists:variants,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|numeric|min:0',
-            // Add these to allow the additional fields from frontend
             'items.*.product_name' => 'sometimes|string',
             'items.*.variant_name' => 'sometimes|string',
             'items.*.total_price' => 'sometimes|numeric'

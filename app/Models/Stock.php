@@ -14,11 +14,13 @@ class Stock extends Model
         'product_id',
         'variant_id',
         'quantity',
-        'purchase_price'
+        'purchase_price',
+        'sale_price',
     ];
 
     protected $casts = [
-        'purchase_price' => 'decimal:2'
+        'purchase_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
     ];
 
     public function warehouse()

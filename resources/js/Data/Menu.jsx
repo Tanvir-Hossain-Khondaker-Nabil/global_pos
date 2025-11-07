@@ -27,7 +27,7 @@ const baseMenu = [
     {
         title: "Add Sales",
         icon: <BaggageClaim size={16} />,
-        route: route("sales.add"),
+        route: route("sales.create"),
         active: "sales.add",
         role: "all",
     },
