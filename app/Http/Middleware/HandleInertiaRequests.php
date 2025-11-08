@@ -42,7 +42,14 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn() => $request->session()->get('error'),
                 'success' => fn() => $request->session()->get('success'),
             ],
-            'auth' => Auth::user(),
+            'auth' => $request->user() ? [
+                'id' => $request->user()->id,
+                'name' => $request->user()->name,
+                'email' => $request->user()->email,
+                'type' => $request->user()->type,
+                'role' => $request->user()->role,
+                'profile' => $request->user()->profile,
+            ] : null,
             'currentRoute' => Route::currentRouteName(),
             'appName' => config('app.name'),
         ]);

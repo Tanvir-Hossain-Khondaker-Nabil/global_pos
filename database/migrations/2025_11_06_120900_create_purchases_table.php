@@ -18,6 +18,8 @@ return new class extends Migration
             $table->unsignedBigInteger('warehouse_id');
             $table->date('purchase_date');
             $table->decimal('total_amount', 12, 2);
+            $table->decimal('shadow_total_amount', 12, 2);
+            $table->decimal('shadow_paid_amount', 12, 2)->default(0);
             $table->decimal('paid_amount', 12, 2)->default(0);
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');

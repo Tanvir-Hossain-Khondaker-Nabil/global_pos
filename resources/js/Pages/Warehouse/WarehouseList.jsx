@@ -1,9 +1,9 @@
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Edit, Plus, Trash2, Frown, Warehouse as WarehouseIcon, Eye } from "lucide-react";
+import { Edit, Plus, Trash2, Frown, Warehouse as WarehouseIcon, Eye, Shield } from "lucide-react";
 
-export default function WarehouseList({ warehouses, filters }) {
+export default function WarehouseList({ warehouses, filters, isShadowUser }) {
     const { auth } = usePage().props;
 
     const searchForm = useForm({
@@ -28,37 +28,48 @@ export default function WarehouseList({ warehouses, filters }) {
         }
     };
 
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'BDT'
+        }).format(amount || 0);
+    };
+
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title="Warehouse Management"
-                subtitle="Manage your warehouses and inventory"
+                title={isShadowUser ? "Warehouse Management" : "Warehouse Management"}
+                subtitle={isShadowUser ? "Manage shadow warehouses and inventory" : "Manage your warehouses and inventory"}
             >
-                <div className="flex items-center gap-3">
-                    <input
-                        type="search"
-                        onChange={handleSearch}
-                        value={searchForm.data.search}
-                        placeholder="Search warehouses..."
-                        className="input input-sm"
-                    />
-                    {auth.role === "admin" && (
-                        <Link
-                            href={route("warehouse.create")}
-                            className="btn btn-primary btn-sm"
-                        >
-                            <Plus size={15} /> Add Warehouse
-                        </Link>
-                    )}
+                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                    <div className="flex gap-2">
+                        <input
+                            type="search"
+                            onChange={handleSearch}
+                            value={searchForm.data.search}
+                            placeholder="Search warehouses..."
+                            className="input input-sm input-bordered"
+                        />
+                        {auth.role === "admin" && (
+                            <Link
+                                href={route("warehouse.create")}
+                                className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
+                            >
+                                <Plus size={15} /> 
+                                {isShadowUser ? 'Add Warehouse' : 'Add Warehouse'}
+                            </Link>
+                        )}
+                    </div>
                 </div>
             </PageHeader>
+
 
             <div className="overflow-x-auto">
                 {warehouses.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                             <tr>
-                                <th>#</th>
+                                <th className="bg-opacity-20">#</th>
                                 <th>Name</th>
                                 <th>Code</th>
                                 <th>Contact</th>
@@ -71,12 +82,14 @@ export default function WarehouseList({ warehouses, filters }) {
                         </thead>
                         <tbody>
                             {warehouses.data.map((warehouse, index) => (
-                                <tr key={warehouse.id}>
-                                    <th>{index + 1}</th>
+                                <tr key={warehouse.id} className="hover:bg-base-100">
+                                    <th className="bg-base-200">{index + 1}</th>
                                     <td>
                                         <div className="flex items-center gap-2">
-                                            <WarehouseIcon size={16} className="text-primary" />
-                                            {warehouse.name}
+                                            <WarehouseIcon size={16} className={isShadowUser ? "text-warning" : "text-primary"} />
+                                            <div>
+                                                <div className="font-medium">{warehouse.name}</div>
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="font-mono">{warehouse.code}</td>
@@ -93,25 +106,29 @@ export default function WarehouseList({ warehouses, filters }) {
                                         </span>
                                     </td>
                                     <td>{warehouse.total_products}</td>
-                                    <td className="font-medium">₹{warehouse.total_stock_value?.toFixed(2) || '0.00'}</td>
+                                    <td className="font-medium">
+                                        <div className="flex items-center gap-1">
+                                            {formatCurrency(warehouse.total_stock_value)}
+                                        </div>
+                                    </td>
                                     <td>
                                         <div className="flex items-center gap-2">
                                             <Link
                                                 href={route("warehouse.edit", warehouse.id)}
-                                                className="btn btn-xs btn-warning"
+                                                className="btn btn-xs btn-warning btn-outline"
                                             >
                                                 <Edit size={12} /> Edit
                                             </Link>
                                             <Link
                                                 href={route("warehouse.show", warehouse.id)}
-                                                className="btn btn-xs btn-warning"
+                                                className="btn btn-xs btn-info btn-outline"
                                             >
-                                                <Eye size={12} /> Show
+                                                <Eye size={12} /> Stock
                                             </Link>
                                             {auth.role === "admin" && (
                                                 <button
                                                     onClick={() => handleDelete(warehouse.id)}
-                                                    className="btn btn-xs btn-error"
+                                                    className="btn btn-xs btn-error btn-outline"
                                                 >
                                                     <Trash2 size={12} /> Delete
                                                 </button>
@@ -123,15 +140,23 @@ export default function WarehouseList({ warehouses, filters }) {
                         </tbody>
                     </table>
                 ) : (
-                    <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
-                        <Frown size={20} className="text-gray-500" />
-                        <h1 className="text-gray-500 text-sm">No warehouses found!</h1>
-                        <Link
-                            href={route("warehouse.create")}
-                            className="btn btn-primary btn-sm"
-                        >
-                            <Plus size={15} /> Add Warehouse
-                        </Link>
+                    <div className="border border-gray-200 rounded-box px-5 py-16 flex flex-col justify-center items-center gap-3">
+                        <Frown size={40} className="text-gray-400" />
+                        <h1 className="text-gray-500 text-lg font-medium">
+                            {isShadowUser ? "No shadow warehouses found!" : "No warehouses found!"}
+                        </h1>
+                        <p className="text-gray-400 text-sm">
+                            {isShadowUser ? "Get started by creating your first shadow warehouse" : "Get started by creating your first warehouse"}
+                        </p>
+                        {auth.role === "admin" && (
+                            <Link
+                                href={route("warehouse.create")}
+                                className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'} mt-2`}
+                            >
+                                <Plus size={15} /> 
+                                {isShadowUser ? 'Add Warehouse' : 'Add Warehouse'}
+                            </Link>
+                        )}
                     </div>
                 )}
             </div>

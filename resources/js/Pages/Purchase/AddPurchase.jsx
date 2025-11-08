@@ -1,9 +1,9 @@
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
-import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Search, Shield } from "lucide-react";
 import { useState, useEffect } from "react";
 
-export default function AddPurchase({ suppliers, warehouses, products }) {
+export default function AddPurchase({ suppliers, warehouses, products, isShadowUser }) {
     const [selectedItems, setSelectedItems] = useState([]);
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
@@ -15,6 +15,11 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
         notes: "",
         items: [],
     });
+
+    // Sync selectedItems with form data
+    useEffect(() => {
+        form.setData('items', selectedItems);
+    }, [selectedItems]);
 
     // Helper function to get variant display name
     const getVariantDisplayName = (variant) => {
@@ -45,7 +50,11 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
         if (existingItem) {
             setSelectedItems(selectedItems.map(item =>
                 item.product_id === product.id && item.variant_id === variant.id
-                    ? { ...item, quantity: item.quantity + 1 }
+                    ? { 
+                        ...item, 
+                        quantity: item.quantity + 1,
+                        shadow_total_price: (item.quantity + 1) * item.shadow_unit_price
+                    }
                     : item
             ));
         } else {
@@ -55,10 +64,13 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                     product_id: product.id,
                     variant_id: variant.id,
                     product_name: product.name,
-                    variant_name: getVariantDisplayName(variant), // Use helper function
+                    variant_name: getVariantDisplayName(variant),
                     quantity: 1,
-                    unit_price: 0,
-                    total_price: 0
+                    unit_price: 0, // Always 0 for shadow users
+                    sale_price: 0, // Always 0 for shadow users
+                    shadow_unit_price: 0, // Required for shadow users
+                    total_price: 0, // Always 0 for shadow users
+                    shadow_total_price: 0
                 }
             ]);
         }
@@ -75,30 +87,39 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
     const updateItem = (index, field, value) => {
         const updated = [...selectedItems];
         updated[index][field] = value;
-        
-        if (field === 'quantity' || field === 'unit_price') {
-            const quantity = field === 'quantity' ? value : updated[index].quantity;
-            const unitPrice = field === 'unit_price' ? value : updated[index].unit_price;
-            updated[index].total_price = quantity * unitPrice;
+
+        // Recalculate shadow total when quantity or shadow unit price changes
+        if (field === 'quantity' || field === 'shadow_unit_price') {
+            const quantity = updated[index].quantity;
+            const shadowUnitPrice = updated[index].shadow_unit_price;
+            
+            updated[index].shadow_total_price = quantity * shadowUnitPrice;
         }
-        
+
         setSelectedItems(updated);
     };
 
-    const calculateTotal = () => {
-        return selectedItems.reduce((total, item) => total + (item.total_price || 0), 0);
+    const calculateShadowTotal = () => {
+        return selectedItems.reduce((total, item) => total + (item.shadow_total_price || 0), 0);
     };
 
     const submit = (e) => {
         e.preventDefault();
-        
+
         if (selectedItems.length === 0) {
             alert("Please add at least one item to the purchase");
             return;
         }
 
-        form.setData('items', selectedItems);
-        
+        // Validate that all required shadow prices are filled
+        for (let item of selectedItems) {
+            if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
+                alert(`Please enter shadow unit price for ${item.product_name}`);
+                return;
+            }
+        }
+
+        // Items are already synced via useEffect, so just submit
         form.post(route("purchase.store"), {
             onSuccess: () => {
                 router.visit(route("purchase.list"));
@@ -109,15 +130,17 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title="Create New Purchase"
-                subtitle="Add products to purchase order"
+                title={isShadowUser ? "Create Purchase" : "Create New Purchase"}
+                subtitle={isShadowUser ? "Add products to shadow purchase order" : "Add products to purchase order"}
             >
-                <button
-                    onClick={() => router.visit(route("purchase.list"))}
-                    className="btn btn-sm btn-ghost"
-                >
-                    <ArrowLeft size={15} /> Back to List
-                </button>
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => router.visit(route("purchase.list"))}
+                        className="btn btn-sm btn-ghost"
+                    >
+                        <ArrowLeft size={15} /> Back to List
+                    </button>
+                </div>
             </PageHeader>
 
             <form onSubmit={submit}>
@@ -242,7 +265,9 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                         {/* Selected Items */}
                         {selectedItems.length > 0 ? (
                             <div className="space-y-3">
-                                <h3 className="font-semibold">Selected Items ({selectedItems.length})</h3>
+                                <h3 className="font-semibold flex items-center gap-2">
+                                    Selected Items ({selectedItems.length})
+                                </h3>
                                 {selectedItems.map((item, index) => (
                                     <div key={index} className="border border-gray-300 rounded-box p-4">
                                         <div className="flex justify-between items-start mb-3">
@@ -258,59 +283,196 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                                                 <Trash2 size={12} />
                                             </button>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-3">
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Quantity</span>
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    className="input input-bordered input-sm"
-                                                    value={item.quantity}
-                                                    onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                                                />
+                                        
+                                        {/* For Shadow Users: Only show Quantity, Shadow Unit Price, and Shadow Total Price */}
+                                        {isShadowUser ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                {/* Quantity */}
+                                                <div className="form-control">
+                                                    <label className="label">
+                                                        <span className="label-text">Quantity</span>
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min="1"
+                                                        className="input input-bordered input-sm"
+                                                        value={item.quantity}
+                                                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                                                    />
+                                                </div>
+
+                                                {/* Shadow Unit Price */}
+                                                <div className="form-control">
+                                                    <label className="label">
+                                                        <span className="label-text flex items-center gap-1">
+                                                            Unit Price (৳) *
+                                                        </span>
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        min="0"
+                                                        step="0.01"
+                                                        className="input input-bordered input-sm border-warning focus:border-warning"
+                                                        value={item.shadow_unit_price}
+                                                        onChange={(e) => updateItem(index, 'shadow_unit_price', parseFloat(e.target.value) || 0)}
+                                                        required
+                                                    />
+                                                    <div className="text-xs text-warning mt-1">
+                                                        Required for shadow purchase
+                                                    </div>
+                                                </div>
+
+                                                {/* Shadow Total Price */}
+                                                <div className="form-control">
+                                                    <label className="label">
+                                                        <span className="label-text flex items-center gap-1">
+                                                            Total Price (৳)
+                                                        </span>
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        className="input input-bordered input-sm bg-warning/10 border-warning"
+                                                        value={item.shadow_total_price || 0}
+                                                        readOnly
+                                                    />
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        Auto-calculated
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Unit Price (₹)</span>
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    className="input input-bordered input-sm"
-                                                    value={item.unit_price}
-                                                    onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
-                                                />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label">
-                                                    <span className="label-text">Total Price (₹)</span>
-                                                </label>
-                                                <input
-                                                    type="number"
-                                                    className="input input-bordered input-sm bg-gray-100"
-                                                    value={item.total_price || 0}
-                                                    readOnly
-                                                />
-                                            </div>
-                                        </div>
+                                        ) : (
+                                            /* For General Users: Show all fields */
+                                            <>
+                                                {/* First Row: Quantity and Prices */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+                                                    {/* Quantity */}
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Quantity</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            className="input input-bordered input-sm"
+                                                            value={item.quantity}
+                                                            onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                                                        />
+                                                    </div>
+
+                                                    {/* Real Unit Price */}
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Unit Price (৳) *</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            className="input input-bordered input-sm"
+                                                            value={item.unit_price}
+                                                            onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    {/* Sale Unit Price */}
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Sale Unit Price (৳) *</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            className="input input-bordered input-sm"
+                                                            value={item.sale_price}
+                                                            onChange={(e) => updateItem(index, 'sale_price', parseFloat(e.target.value) || 0)}
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    {/* Shadow Unit Price */}
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Unit Price (৳)</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            step="0.01"
+                                                            className="input input-bordered input-sm"
+                                                            value={item.shadow_unit_price}
+                                                            onChange={(e) => updateItem(index, 'shadow_unit_price', parseFloat(e.target.value) || 0)}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Second Row: Total Prices */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {/* Real Total Price */}
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Total Price (৳)</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            className="input input-bordered input-sm bg-gray-100"
+                                                            value={item.total_price || 0}
+                                                            readOnly
+                                                        />
+                                                    </div>
+
+                                                    {/* Shadow Total Price */}
+                                                    <div className="form-control">
+                                                        <label className="label">
+                                                            <span className="label-text">Total Price (৳)</span>
+                                                        </label>
+                                                        <input
+                                                            type="number"
+                                                            className="input input-bordered input-sm bg-gray-100"
+                                                            value={item.shadow_total_price || 0}
+                                                            readOnly
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 ))}
 
-                                {/* Total Amount */}
-                                <div className="border-t pt-4 mt-4">
-                                    <div className="flex justify-between items-center text-lg font-bold">
-                                        <span>Total Amount:</span>
-                                        <span>₹{calculateTotal().toFixed(2)}</span>
-                                    </div>
+                                {/* Total Amounts */}
+                                <div className="border-t pt-4 mt-4 space-y-2">
+                                    {isShadowUser ? (
+                                        <div className="flex justify-between items-center text-lg font-bold text-warning">
+                                            <span className="flex items-center gap-2">
+                                                Total Amount:
+                                                <span className="badge badge-warning badge-sm">Active</span>
+                                            </span>
+                                            <span>৳{calculateShadowTotal().toFixed(2)}</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex justify-between items-center text-lg font-bold">
+                                                <span>Total Amount:</span>
+                                                <span>৳{selectedItems.reduce((total, item) => total + (item.total_price || 0), 0).toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-lg font-bold text-blue-600">
+                                                <span>Total Amount:</span>
+                                                <span>৳{calculateShadowTotal().toFixed(2)}</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         ) : (
                             <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-box">
                                 <p className="text-gray-500">No items added yet</p>
                                 <p className="text-sm text-gray-400 mt-1">Search and add products above</p>
+                                {isShadowUser && (
+                                    <p className="text-sm text-warning mt-2">
+                                        Remember to enter shadow unit prices for all items
+                                    </p>
+                                )}
                             </div>
                         )}
                     </div>
@@ -319,10 +481,16 @@ export default function AddPurchase({ suppliers, warehouses, products }) {
                 <div className="flex gap-3 mt-6">
                     <button
                         type="submit"
-                        className="btn btn-primary"
+                        className={`btn ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
                         disabled={form.processing || selectedItems.length === 0}
                     >
-                        {form.processing ? "Creating Purchase..." : "Create Purchase"}
+                        {form.processing ? (
+                            "Creating Purchase..."
+                        ) : isShadowUser ? (
+                            "Create Purchase"
+                        ) : (
+                            "Create Purchase"
+                        )}
                     </button>
                     <button
                         type="button"

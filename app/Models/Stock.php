@@ -16,11 +16,15 @@ class Stock extends Model
         'quantity',
         'purchase_price',
         'sale_price',
+        'shadow_purchase_price', // Add this
+        'shadow_sale_price',     // Add this
     ];
 
     protected $casts = [
         'purchase_price' => 'decimal:2',
         'sale_price' => 'decimal:2',
+        'shadow_purchase_price' => 'decimal:2', // Add this
+        'shadow_sale_price' => 'decimal:2',     // Add this
     ];
 
     public function warehouse()
@@ -42,6 +46,4 @@ class Stock extends Model
     {
         return $this->quantity * $this->purchase_price;
     }
-
-
 }

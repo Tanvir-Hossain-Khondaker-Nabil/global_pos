@@ -3,10 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Inertia\Inertia;
 
 class UserController extends Controller
 {
@@ -124,6 +125,63 @@ class UserController extends Controller
             return redirect()->back()->with('success', 'One user deleted success');
         } catch (\Exception $th) {
             return redirect()->back()->with('error', "somthing was wrong try again!");
+        }
+    }
+
+    public function toggleUserType(Request $request)
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return redirect()->back()->with('error', 'User not authenticated');
+        }
+
+        \Log::info('Toggle user type - Before update', [
+            'user_id' => $user->id,
+            'current_type' => $user->type,
+            'user_email' => $user->email
+        ]);
+
+        // Toggle between shadow and ganaral
+        $newType = $user->type === 'shadow' ? 'ganaral' : 'shadow';
+
+        \Log::info('Attempting to update', [
+            'user_id' => $user->id,
+            'new_type' => $newType
+        ]);
+
+        try {
+            // Method 1: Direct update
+            $user->type = $newType;
+            $saved = $user->save();
+
+            \Log::info('Save result', [
+                'success' => $saved,
+                'saved_type' => $user->type
+            ]);
+
+            if ($saved) {
+                // Refresh the user in the session
+                Auth::setUser($user->fresh());
+
+                \Log::info('User type updated successfully', [
+                    'user_id' => $user->id,
+                    'final_type' => $user->fresh()->type
+                ]);
+
+                return redirect()->back()->with('success', "Switched to {$newType} mode");
+            } else {
+                \Log::error('Failed to save user type');
+                return redirect()->back()->with('error', 'Failed to save user type');
+            }
+
+        } catch (\Exception $e) {
+            \Log::error("Error updating user type: " . $e->getMessage(), [
+                'user_id' => $user->id,
+                'new_type' => $newType
+            ]);
+
+            return redirect()->back()->with('error', 'Failed to switch mode: ' . $e->getMessage());
         }
     }
 }

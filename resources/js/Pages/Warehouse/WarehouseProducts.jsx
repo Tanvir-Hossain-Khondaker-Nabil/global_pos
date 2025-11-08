@@ -1,10 +1,9 @@
-// resources/js/Pages/Warehouse/WarehouseProducts.jsx
 import PageHeader from "../../components/PageHeader";
 import { Link, router, usePage } from "@inertiajs/react";
-import { ArrowLeft, Warehouse, Package, Search, Filter } from "lucide-react";
+import { ArrowLeft, Warehouse, Package, Search, Filter, Shield } from "lucide-react";
 import { useState } from "react";
 
-export default function WarehouseProducts({ warehouse, products }) {
+export default function WarehouseProducts({ warehouse, products, isShadowUser }) {
     const [searchTerm, setSearchTerm] = useState("");
     const [filterOutOfStock, setFilterOutOfStock] = useState(false);
 
@@ -17,6 +16,14 @@ export default function WarehouseProducts({ warehouse, products }) {
     // Helper function to safely get number value
     const getNumber = (value) => {
         return Number(value) || 0;
+    };
+
+    // Format currency
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'BDT'
+        }).format(amount || 0);
     };
 
     // Filter products based on search and stock filter
@@ -41,10 +48,13 @@ export default function WarehouseProducts({ warehouse, products }) {
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title={`Warehouse: ${warehouse.name}`}
-                subtitle={`Stock overview for ${warehouse.name} (${warehouse.code})`}
+                title={isShadowUser ? `Warehouse: ${warehouse.name}` : `Warehouse: ${warehouse.name}`}
+                subtitle={isShadowUser ? 
+                    `stock overview for ${warehouse.name} (${warehouse.code})` : 
+                    `Stock overview for ${warehouse.name} (${warehouse.code})`
+                }
             >
-                <div className="flex items-center gap-3">
+                <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                     <button
                         onClick={() => router.visit(route("warehouse.list"))}
                         className="btn btn-sm btn-ghost"
@@ -54,9 +64,10 @@ export default function WarehouseProducts({ warehouse, products }) {
                 </div>
             </PageHeader>
 
+
             {/* Warehouse Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="stat bg-base-200 rounded-box">
+                <div className={`stat rounded-box ${isShadowUser ? 'bg-warning/10' : 'bg-base-200'}`}>
                     <div className="stat-figure text-primary">
                         <Package size={24} />
                     </div>
@@ -65,7 +76,7 @@ export default function WarehouseProducts({ warehouse, products }) {
                     <div className="stat-desc">Different products</div>
                 </div>
 
-                <div className="stat bg-base-200 rounded-box">
+                <div className={`stat rounded-box ${isShadowUser ? 'bg-warning/10' : 'bg-base-200'}`}>
                     <div className="stat-figure text-secondary">
                         <Warehouse size={24} />
                     </div>
@@ -74,13 +85,19 @@ export default function WarehouseProducts({ warehouse, products }) {
                     <div className="stat-desc">Units in stock</div>
                 </div>
 
-                <div className="stat bg-base-200 rounded-box">
+                <div className={`stat rounded-box ${isShadowUser ? 'bg-warning/10' : 'bg-base-200'}`}>
                     <div className="stat-figure text-accent">
-                        <span className="text-2xl">₹</span>
+                        <span className="text-2xl">৳</span>
                     </div>
-                    <div className="stat-title">Total Value</div>
-                    <div className="stat-value text-accent">₹{formatNumber(totalValue)}</div>
-                    <div className="stat-desc">Current stock value</div>
+                    <div className="stat-title">
+                        {isShadowUser ? 'Stock Value' : 'Total Stock Value'}
+                    </div>
+                    <div className="stat-value text-accent">
+                        {formatCurrency(totalValue)}
+                    </div>
+                    <div className="stat-desc">
+                        {isShadowUser ? 'value' : 'Current stock value'}
+                    </div>
                 </div>
             </div>
 
@@ -139,7 +156,9 @@ export default function WarehouseProducts({ warehouse, products }) {
                                                 )}
                                             </div>
                                             <div className="text-right">
-                                                <div className="badge badge-primary">Product</div>
+                                                <div className={`badge ${isShadowUser ? 'badge-warning' : 'badge-primary'}`}>
+                                                    {isShadowUser ? 'Product' : 'Product'}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -147,13 +166,17 @@ export default function WarehouseProducts({ warehouse, products }) {
                                     {/* Variants Table */}
                                     <div className="p-4">
                                         <table className="table table-auto w-full">
-                                            <thead>
-                                                <tr className="bg-base-200">
-                                                    <th>Variant</th>
-                                                    <th>Stock</th>
-                                                    <th>Purchase Price</th>
-                                                    <th>Stock Value</th>
-                                                    <th>Status</th>
+                                            <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
+                                                <tr>
+                                                    <th className="bg-opacity-20">Variant</th>
+                                                    <th className="bg-opacity-20">Stock</th>
+                                                    <th className="bg-opacity-20">
+                                                        {isShadowUser ? 'Price' : 'Purchase Price'}
+                                                    </th>
+                                                    <th className="bg-opacity-20">
+                                                        {isShadowUser ? 'Value' : 'Stock Value'}
+                                                    </th>
+                                                    <th className="bg-opacity-20">Status</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -175,10 +198,10 @@ export default function WarehouseProducts({ warehouse, products }) {
                                                                 </span>
                                                             </td>
                                                             <td className="font-mono">
-                                                                ₹{formatNumber(purchasePrice)}
+                                                                {formatCurrency(purchasePrice)}
                                                             </td>
                                                             <td className="font-mono font-semibold">
-                                                                ₹{formatNumber(stockValue)}
+                                                                {formatCurrency(stockValue)}
                                                             </td>
                                                             <td>
                                                                 <span className={`badge badge-${stockQuantity === 0 ? 'error' : stockQuantity < 10 ? 'warning' : 'success'}`}>
@@ -200,7 +223,8 @@ export default function WarehouseProducts({ warehouse, products }) {
                                                     <span>Total Variants: {product.variants.length}</span>
                                                     <span>Total Stock: {productTotalStock}</span>
                                                     <span className="font-semibold">
-                                                        Total Value: ₹{formatNumber(productTotalValue)}
+                                                        {isShadowUser ? 'Value: ' : 'Total Value: '}
+                                                        {formatCurrency(productTotalValue)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -213,11 +237,13 @@ export default function WarehouseProducts({ warehouse, products }) {
                 ) : (
                     <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-box">
                         <Package size={48} className="mx-auto text-gray-400 mb-4" />
-                        <h3 className="text-lg font-semibold text-gray-500">No products found</h3>
+                        <h3 className="text-lg font-semibold text-gray-500">
+                            {isShadowUser ? "No shadow products found" : "No products found"}
+                        </h3>
                         <p className="text-gray-400 mt-2">
                             {searchTerm || filterOutOfStock 
                                 ? "Try adjusting your search or filter criteria" 
-                                : "No products available in this warehouse"}
+                                : isShadowUser ? "No shadow products available in this warehouse" : "No products available in this warehouse"}
                         </p>
                     </div>
                 )}

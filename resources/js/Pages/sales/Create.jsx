@@ -247,7 +247,7 @@ export default function AddSale({ customers, productstocks }) {
                                                 />
                                             </div>
                                             <div className="form-control">
-                                                <label className="label"><span className="label-text">Unit Price (₹)</span></label>
+                                                <label className="label"><span className="label-text">Unit Price (৳)</span></label>
                                                 <input
                                                     type="number"
                                                     min="0"
@@ -258,7 +258,7 @@ export default function AddSale({ customers, productstocks }) {
                                                 />
                                             </div>
                                             <div className="form-control">
-                                                <label className="label"><span className="label-text">Total Price (₹)</span></label>
+                                                <label className="label"><span className="label-text">Total Price (৳)</span></label>
                                                 <input
                                                     type="number"
                                                     className="input input-bordered input-sm bg-gray-100"
@@ -274,7 +274,7 @@ export default function AddSale({ customers, productstocks }) {
                                 <div className="border-t pt-4 mt-4">
                                     <div className="flex justify-between items-center text-lg font-bold">
                                         <span>Total Amount:</span>
-                                        <span>₹{calculateTotal().toFixed(2)}</span>
+                                        <span>৳{calculateTotal().toFixed(2)}</span>
                                     </div>
                                 </div>
                             </div>

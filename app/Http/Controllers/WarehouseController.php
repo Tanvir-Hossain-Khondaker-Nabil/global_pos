@@ -4,44 +4,70 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use App\Models\Warehouse;
-use App\Models\Product; // Add this import
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class WarehouseController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $warehousesQuery = Warehouse::latest()
+            ->withCount([
+                'stocks as total_products' => function ($query) {
+                    $query->select(DB::raw('count(distinct product_id)'));
+                }
+            ]);
+
+        // Calculate stock value based on user type
+        if ($isShadowUser) {
+            $warehousesQuery->withSum('stocks as total_stock_value', DB::raw('quantity * shadow_purchase_price'));
+        } else {
+            $warehousesQuery->withSum('stocks as total_stock_value', DB::raw('quantity * purchase_price'));
+        }
+
+        $warehouses = $warehousesQuery->filter($request->only('search'))
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('Warehouse/WarehouseList', [
             'filters' => $request->only('search'),
-            'warehouses' => Warehouse::latest()
-                ->withCount([
-                    'stocks as total_products' => function ($query) {
-                        $query->select(DB::raw('count(distinct product_id)'));
-                    }
-                ])
-                ->withSum('stocks as total_stock_value', DB::raw('quantity * purchase_price'))
-                ->filter($request->only('search'))
-                ->paginate(10)
-                ->withQueryString()
+            'warehouses' => $warehouses,
+            'isShadowUser' => $isShadowUser
         ]);
     }
 
     public function create()
     {
-        return Inertia::render('Warehouse/AddWarehouse');
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        return Inertia::render('Warehouse/AddWarehouse', [
+            'isShadowUser' => $isShadowUser
+        ]);
     }
 
     public function edit($id)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $warehouse = Warehouse::findOrFail($id);
         return Inertia::render('Warehouse/AddWarehouse', [
-            'warehouse' => $warehouse
+            'warehouse' => $warehouse,
+            'isShadowUser' => $isShadowUser
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50|unique:warehouses',
@@ -52,8 +78,15 @@ class WarehouseController extends Controller
         ]);
 
         try {
-            Warehouse::create($request->all());
-            return redirect()->route('warehouse.list')->with('success', 'Warehouse created successfully');
+            $warehouseData = $request->all();
+            $warehouseData['created_by'] = $user->id;
+            $warehouseData['user_type'] = $user->type;
+            
+            Warehouse::create($warehouseData);
+            
+            return redirect()->route('warehouse.list')->with('success', 
+                $isShadowUser ? 'Shadow warehouse created successfully' : 'Warehouse created successfully'
+            );
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error creating warehouse: ' . $e->getMessage());
         }
@@ -61,17 +94,20 @@ class WarehouseController extends Controller
 
     public function show($id)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $warehouse = Warehouse::with(['stocks.product', 'stocks.variant'])->findOrFail($id);
 
         // Get all products with their stock in this warehouse
         $products = Product::with([
-            'variants.stocks',  // ✅ Load stocks for each variant
+            'variants.stocks',
             'category',
             'stocks' => function ($query) use ($id) {
                 $query->where('warehouse_id', $id);
             }
         ])->get()
-            ->map(function ($product) use ($id) {
+            ->map(function ($product) use ($id, $isShadowUser) {
                 $totalStock = $product->stocks->sum('quantity');
 
                 return [
@@ -81,9 +117,15 @@ class WarehouseController extends Controller
                     'description' => $product->description,
                     'category' => $product->category,
                     'total_stock' => $totalStock,
-                    'variants' => $product->variants->map(function ($variant) use ($id) {
-                        // ✅ Now $variant->stocks is a collection
+                    'variants' => $product->variants->map(function ($variant) use ($id, $isShadowUser) {
                         $stock = $variant->stocks->where('warehouse_id', $id)->first();
+
+                        // Use shadow prices for shadow users
+                        $purchasePrice = $isShadowUser ? 
+                            ($stock ? $stock->shadow_purchase_price : 0) : 
+                            ($stock ? $stock->purchase_price : 0);
+                        
+                        $stockValue = $stock ? $stock->quantity * $purchasePrice : 0;
 
                         return [
                             'id' => $variant->id,
@@ -91,22 +133,25 @@ class WarehouseController extends Controller
                             'color' => $variant->color,
                             'variant_name' => $variant->variant_name,
                             'stock_quantity' => $stock ? $stock->quantity : 0,
-                            'purchase_price' => $stock ? $stock->purchase_price : 0,
-                            'stock_value' => $stock ? $stock->quantity * $stock->purchase_price : 0,
+                            'purchase_price' => $purchasePrice,
+                            'stock_value' => $stockValue,
                         ];
                     })
                 ];
             });
 
-
         return Inertia::render('Warehouse/WarehouseProducts', [
             'warehouse' => $warehouse,
-            'products' => $products
+            'products' => $products,
+            'isShadowUser' => $isShadowUser
         ]);
     }
 
     public function update(Request $request, $id)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'required|string|max:50|unique:warehouses,code,' . $id,
@@ -119,7 +164,10 @@ class WarehouseController extends Controller
         try {
             $warehouse = Warehouse::findOrFail($id);
             $warehouse->update($request->all());
-            return redirect()->route('warehouse.list')->with('success', 'Warehouse updated successfully');
+            
+            return redirect()->route('warehouse.list')->with('success', 
+                $isShadowUser ? 'Shadow warehouse updated successfully' : 'Warehouse updated successfully'
+            );
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error updating warehouse: ' . $e->getMessage());
         }
@@ -127,6 +175,9 @@ class WarehouseController extends Controller
 
     public function destroy($id)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         try {
             $warehouse = Warehouse::findOrFail($id);
 
@@ -136,7 +187,10 @@ class WarehouseController extends Controller
             }
 
             $warehouse->delete();
-            return redirect()->route('warehouse.list')->with('success', 'Warehouse deleted successfully');
+            
+            return redirect()->route('warehouse.list')->with('success', 
+                $isShadowUser ? 'Shadow warehouse deleted successfully' : 'Warehouse deleted successfully'
+            );
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Error deleting warehouse: ' . $e->getMessage());
         }

@@ -11,11 +11,15 @@ use App\Models\Variant;
 use App\Models\Stock;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseController extends Controller
 {
     public function index(Request $request)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $query = Purchase::latest()
             ->with(['supplier', 'warehouse', 'items.product', 'items.variant']);
 
@@ -40,23 +44,40 @@ class PurchaseController extends Controller
             $query->whereDate('purchase_date', $request->date);
         }
 
+        $purchases = $query->paginate(10)->withQueryString();
+
+        // Transform data for shadow users
+        if ($isShadowUser) {
+            $purchases->getCollection()->transform(function ($purchase) {
+                return $this->transformToShadowData($purchase);
+            });
+        }
+
         return Inertia::render('Purchase/PurchaseList', [
             'filters' => $request->only(['search', 'status', 'date']),
-            'purchases' => $query->paginate(10)->withQueryString()
+            'purchases' => $purchases,
+            'isShadowUser' => $isShadowUser
         ]);
     }
 
     public function create()
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         return Inertia::render('Purchase/AddPurchase', [
             'suppliers' => Supplier::all(),
             'warehouses' => Warehouse::where('is_active', true)->get(),
-            'products' => Product::with('variants')->get()
+            'products' => Product::with('variants')->get(),
+            'isShadowUser' => $isShadowUser
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'warehouse_id' => 'required|exists:warehouses,id',
@@ -66,10 +87,15 @@ class PurchaseController extends Controller
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.variant_id' => 'required|exists:variants,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
+            'items.*.shadow_unit_price' => 'required|numeric|min:0',
+            // For shadow users, real prices are optional
+            'items.*.unit_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            'items.*.sale_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
+            // Additional fields
             'items.*.product_name' => 'sometimes|string',
             'items.*.variant_name' => 'sometimes|string',
-            'items.*.total_price' => 'sometimes|numeric'
+            'items.*.total_price' => 'sometimes|numeric',
+            'items.*.shadow_total_price' => 'sometimes|numeric'
         ]);
 
         DB::beginTransaction();
@@ -78,10 +104,22 @@ class PurchaseController extends Controller
             $purchaseCount = Purchase::whereDate('created_at', today())->count();
             $purchaseNo = 'PUR-' . date('Ymd') . '-' . str_pad($purchaseCount + 1, 4, '0', STR_PAD_LEFT);
 
-            // Calculate total amount (always calculate fresh, don't trust frontend)
-            $totalAmount = collect($request->items)->sum(function ($item) {
-                return $item['quantity'] * $item['unit_price'];
-            });
+            // Calculate total amounts based on user type
+            if ($isShadowUser) {
+                // For shadow users, use shadow prices for total amount
+                $totalAmount = collect($request->items)->sum(function ($item) {
+                    return $item['quantity'] * $item['shadow_unit_price'];
+                });
+                $shadowTotalAmount = $totalAmount;
+            } else {
+                // For general users, use real prices for total amount
+                $totalAmount = collect($request->items)->sum(function ($item) {
+                    return $item['quantity'] * $item['unit_price'];
+                });
+                $shadowTotalAmount = collect($request->items)->sum(function ($item) {
+                    return $item['quantity'] * $item['shadow_unit_price'];
+                });
+            }
 
             // Create purchase
             $purchase = Purchase::create([
@@ -90,23 +128,35 @@ class PurchaseController extends Controller
                 'warehouse_id' => $request->warehouse_id,
                 'purchase_date' => $request->purchase_date,
                 'total_amount' => $totalAmount,
+                'shadow_total_amount' => $shadowTotalAmount,
                 'notes' => $request->notes,
-                'status' => 'completed'
+                'status' => 'completed',
+                'created_by' => $user->id,
+                'user_type' => $user->type
             ]);
 
             // Create purchase items and update stock
             foreach ($request->items as $item) {
-                // Calculate total price fresh
-                $totalPrice = $item['quantity'] * $item['unit_price'];
+                // Calculate total prices
+                $totalPrice = $item['quantity'] * ($item['unit_price'] ?? 0);
+                $shadowTotalPrice = $item['quantity'] * $item['shadow_unit_price'];
 
-                // Create purchase item - only use the fields you need
+                // For shadow users, set real prices to 0 if not provided
+                $unitPrice = $isShadowUser ? 0 : ($item['unit_price'] ?? 0);
+                $salePrice = $isShadowUser ? 0 : ($item['sale_price'] ?? 0);
+
+                // Create purchase item
                 $purchase->items()->create([
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'total_price' => $totalPrice
-                    // Don't include product_name, variant_name as they're likely for display only
+                    'unit_price' => $unitPrice,
+                    'sale_price' => $salePrice,
+                    'shadow_unit_price' => $item['shadow_unit_price'],
+                    'shadow_sale_price' => $salePrice, // You can add separate shadow_sale_price if needed
+                    'total_price' => $totalPrice,
+                    'shadow_total_price' => $shadowTotalPrice,
+                    'user_type' => $user->type
                 ]);
 
                 // Update or create stock
@@ -117,8 +167,18 @@ class PurchaseController extends Controller
 
                 if ($stock) {
                     $stock->increment('quantity', $item['quantity']);
-                    // Update purchase price to the latest price
-                    $stock->purchase_price = $item['unit_price'];
+                    // Update prices based on user type
+                    if ($isShadowUser) {
+                        // For shadow users, only update shadow prices
+                        $stock->shadow_purchase_price = $item['shadow_unit_price'];
+                        $stock->shadow_sale_price = $salePrice;
+                    } else {
+                        // For general users, update both real and shadow prices
+                        $stock->purchase_price = $unitPrice;
+                        $stock->sale_price = $salePrice;
+                        $stock->shadow_purchase_price = $item['shadow_unit_price'];
+                        $stock->shadow_sale_price = $salePrice;
+                    }
                     $stock->save();
                 } else {
                     Stock::create([
@@ -126,32 +186,53 @@ class PurchaseController extends Controller
                         'product_id' => $item['product_id'],
                         'variant_id' => $item['variant_id'],
                         'quantity' => $item['quantity'],
-                        'purchase_price' => $item['unit_price']
+                        'purchase_price' => $isShadowUser ? 0 : $unitPrice,
+                        'sale_price' => $isShadowUser ? 0 : $salePrice,
+                        'shadow_purchase_price' => $item['shadow_unit_price'],
+                        'shadow_sale_price' => $salePrice,
+                        'user_type' => $user->type
                     ]);
                 }
             }
 
             DB::commit();
 
-            return redirect()->route('purchase.list')->with('success', 'Purchase created successfully');
+            return redirect()->route('purchase.list')->with(
+                'success',
+                $isShadowUser ? 'Shadow purchase created successfully' : 'Purchase created successfully'
+            );
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Error creating purchase: ' . $e->getMessage());
         }
     }
-
     public function show($id)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $purchase = Purchase::with(['supplier', 'warehouse', 'items.product', 'items.variant'])
             ->findOrFail($id);
 
-        return Inertia::render('Purchase/ViewPurchase', [
-            'purchase' => $purchase
+        // Transform data for shadow users
+        if ($isShadowUser) {
+            $purchase = $this->transformToShadowData($purchase);
+        }
+
+        return Inertia::render('Purchase/PurchaseShow', [
+            'purchase' => $purchase,
+            'isShadowUser' => $isShadowUser
         ]);
     }
 
     public function destroy($id)
     {
+        $user = Auth::user();
+
+        if ($user->role !== 'admin') {
+            return redirect()->back()->with('error', 'You are not authorized to delete purchases.');
+        }
+
         DB::beginTransaction();
         try {
             $purchase = Purchase::with('items')->findOrFail($id);
@@ -179,5 +260,27 @@ class PurchaseController extends Controller
             DB::rollBack();
             return redirect()->back()->with('error', 'Error deleting purchase: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Transform purchase data for shadow users
+     */
+    private function transformToShadowData($purchase)
+    {
+        // Replace real amounts with shadow amounts
+        $purchase->total_amount = $purchase->shadow_total_amount;
+        $purchase->paid_amount = $purchase->shadow_paid_amount;
+
+        // Transform items
+        if ($purchase->items) {
+            $purchase->items->transform(function ($item) {
+                $item->unit_price = $item->shadow_unit_price;
+                $item->total_price = $item->shadow_total_price;
+                $item->sale_price = $item->shadow_sale_price;
+                return $item;
+            });
+        }
+
+        return $purchase;
     }
 }
