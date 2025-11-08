@@ -16,6 +16,51 @@ use Inertia\Inertia;
 class SalesController extends Controller
 {
     /**
+     * Display a listing of all sales
+     */
+    public function index(Request $request)
+    {
+        // Get search and filter parameters
+        $search = $request->input('search');
+        $status = $request->input('status');
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+        
+        // Build query with relationships
+        $sales = Sale::with(['customer', 'items.product', 'items.variant'])
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('invoice_no', 'like', "%{$search}%")
+                      ->orWhereHas('customer', function ($q) use ($search) {
+                          $q->where('name', 'like', "%{$search}%");
+                      });
+                });
+            })
+            ->when($status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->when($dateFrom, function ($query, $dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($query, $dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('sales/Index', [
+            'sales' => $sales,
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
+            ]
+        ]);
+    }
+
+    /**
      * Show form
      */
     public function create()
@@ -108,13 +153,74 @@ class SalesController extends Controller
 
             DB::commit();
 
-            return to_route('sales.create')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
+            return to_route('sales.index')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
 
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
         }
     }
+
+
+
+    /**
+     * Display the specified sale
+     */
+    public function show(Sale $sale)
+    {
+            $sale->load(['customer', 'items.product', 'items.variant', 'items.warehouse']);
+
+
+            return Inertia::render('sales/Show', [
+                'sale' => $sale,
+            ]);
+    }
+
+
+
+    /**
+     * Remove the specified sale
+     */
+    public function destroy(Sale $sale)
+    {
+        DB::beginTransaction();
+        
+        try {
+            // Restore stock for each item
+            foreach ($sale->items as $item) {
+                // Add stock back using FIFO logic
+                Stock::create([
+                    'product_id' => $item->product_id,
+                    'variant_id' => $item->variant_id,
+                    'warehouse_id' => $item->warehouse_id,
+                    'quantity' => $item->quantity,
+                ]);
+                
+                // Log stock movement
+                StockMovement::create([
+                    'warehouse_id' => $item->warehouse_id,
+                    'product_id' => $item->product_id,
+                    'variant_id' => $item->variant_id,
+                    'type' => 'in',
+                    'qty' => $item->quantity,
+                    'reference_type' => Sale::class,
+                    'reference_id' => $sale->id,
+                    'notes' => 'Stock restored from deleted sale',
+                ]);
+            }
+            
+            $sale->delete();
+            
+            DB::commit();
+            
+            return redirect()->route('sales.index')->with('success', 'Sale deleted successfully!');
+            
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors($e->getMessage());
+        }
+}
+
 
     /**
      * FIFO stock deduction

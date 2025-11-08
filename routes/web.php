@@ -140,14 +140,22 @@ Route::middleware('auth')->group(function () {
         Route::get('/sales/add', 'addView')->name('sales.add');
         Route::post('/sales/store', 'store')->name('sales.store');
         Route::get('/sales/create', 'create')->name('sales.create');
-        Route::post('/add/product/varaint', 'productVaraint')->name('sales.add.varaint');
-        Route::post('/add/product-cart', 'productAddCart')->name('sales.add.cart');
-        Route::post('/add/product-cart-scanner', 'productAddCartByscanner')->name('sales.add.cart.scanner');
-        Route::get('/add/cart-de;/{id}', 'destroy')->name('sales.dele');
-        Route::get('/add/clear', 'clearCat')->name('sales.cart.clear');
-        Route::post('/add/cart/update', 'updatecat')->name('sales.cart.update');
-        Route::post('/add/done', 'salesDone')->name('sales.done');
-        Route::post('/add/customer/add', 'customer_store')->name('sales.cart.customer.add');
+        Route::get('/sales', 'index')->name('sales.index');
+        Route::get('/sales/{sale}',  'show')->name('sales.show');
+        Route::delete('/sales/{sale}', 'destroy')->name('sales.destroy');
+        Route::get('/sales/{sale}/edit', 'edit')->name('sales.edit');
+        Route::put('/sales/{sale}', 'update')->name('sales.update');
+
+
+
+        // Route::post('/add/product/varaint', 'productVaraint')->name('sales.add.varaint');
+        // Route::post('/add/product-cart', 'productAddCart')->name('sales.add.cart');
+        // Route::post('/add/product-cart-scanner', 'productAddCartByscanner')->name('sales.add.cart.scanner');
+        // Route::get('/add/cart-de;/{id}', 'destroy')->name('sales.dele');
+        // Route::get('/add/clear', 'clearCat')->name('sales.cart.clear');
+        // Route::post('/add/cart/update', 'updatecat')->name('sales.cart.update');
+        // Route::post('/add/done', 'salesDone')->name('sales.done');
+        // Route::post('/add/customer/add', 'customer_store')->name('sales.cart.customer.add');
     });
 
     // sales list

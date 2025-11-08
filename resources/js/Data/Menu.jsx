@@ -34,8 +34,8 @@ const baseMenu = [
     {
         title: "All Sales",
         icon: <BadgeCent size={16} />,
-        route: route("sales.list.all"),
-        active: "sales.list.all",
+        route: route("sales.index"),
+        active: "sales.index",
         role: "all",
     },
     // New Purchase Menu Items
