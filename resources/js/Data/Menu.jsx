@@ -25,14 +25,14 @@ const baseMenu = [
         role: "all",
     },
     {
-        title: "Add Sales",
+        title: "Add Sale (Inventory)",
         icon: <BaggageClaim size={16} />,
         route: route("sales.create"),
         active: "sales.add",
         role: "all",
     },
     {
-        title: "All Sales",
+        title: "All Sales (Inventory)",
         icon: <BadgeCent size={16} />,
         route: route("sales.index"),
         active: "sales.index",
