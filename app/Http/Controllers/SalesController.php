@@ -32,7 +32,7 @@ class SalesController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('invoice_no', 'like', "%{$search}%")
                       ->orWhereHas('customer', function ($q) use ($search) {
-                          $q->where('name', 'like', "%{$search}%");
+                          $q->where('customer_name', 'like', "%{$search}%");
                       });
                 });
             })

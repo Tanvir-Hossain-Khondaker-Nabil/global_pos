@@ -129,7 +129,7 @@ export default function SalesIndex({ sales, filters }) {
                                         <td>
                                             <div>
                                                 <p className="font-medium">
-                                                    {sale.customer?.name || "Walk-in Customer"}
+                                                    {sale.customer?.customer_name || "Walk-in Customer"}
                                                 </p>
                                                 {sale.customer?.phone && (
                                                     <p className="text-sm text-gray-500">
