@@ -1,13 +1,51 @@
-import { Link, usePage } from "@inertiajs/react";
-import React from "react";
+import { Link, usePage, router } from "@inertiajs/react";
+import React, { useState, useEffect } from "react";
 import Image from "../components/Image";
-import { Lock, LogOut, Menu, Plus, User } from "lucide-react";
+import { Lock, LogOut, Menu, Plus, User, Shield } from "lucide-react";
 
 export default function Header({ sidebarOpen, setSidebarOpen }) {
     const { auth } = usePage().props;
+    const [isShadowUser, setIsShadowUser] = useState(false);
+
+    // Initialize state after component mounts
+    useEffect(() => {
+        if (auth && auth.type) {
+            setIsShadowUser(auth.type === 'shadow');
+        }
+    }, [auth]);
+
+    const handleToggleUserType = () => {
+        router.post(route('user.toggle.type'), {}, {
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                // Update local state after successful toggle
+                setIsShadowUser(!isShadowUser);
+            }
+        });
+    };
+
+    // Show loading state if auth is not available yet
+    if (!auth) {
+        return (
+            <div className="h-[80px] flex items-center justify-between gap-4 px-6 print:hidden">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        className="btn btn-sm btn-square btn-primary lg:hidden"
+                    >
+                        <Menu size={14} />
+                    </button>
+                    <div className="skeleton h-8 w-32"></div>
+                </div>
+                <div className="skeleton h-10 w-10 rounded-full"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="h-[80px] flex items-center justify-between gap-4 px-6 print:hidden">
-            {/* search */}
+            {/* Left side - Menu and Toggle */}
             <div className="flex items-center gap-3">
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -15,16 +53,17 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                 >
                     <Menu size={14} />
                 </button>
-                <Link href={route("sales.add")}>
-                    <div className="tooltip tooltip-right" data-tip="Add new sales">
-                        <button className="btn btn-sm btn-square btn-primary">
-                            <Plus size={13} />
-                        </button>
-                    </div>
-                </Link>
+                <button
+                    onClick={handleToggleUserType}
+                    className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'} gap-2`}
+                    title={`Switch to ${isShadowUser ? 'General' : 'Shadow'} mode`}
+                >
+                    <Shield size={16} />
+                    {isShadowUser ? 'Shadow Mode' : 'General Mode'}
+                </button>
             </div>
 
-            {/* profile */}
+            {/* Right side - Profile */}
             <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-900">
                     Hello, <strong>{auth.name}</strong>
@@ -38,7 +77,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
 
                     <ul
                         tabIndex={0}
-                        className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 mt-4"
+                        className="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 mt-4 shadow-lg"
                     >
                         <li className="pointer-events-none border-b border-gray-100 mb-2 py-3">
                             <div className="space-x-3">
@@ -54,6 +93,9 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                     <span className="text-xs font-normal text-gray-500 capitalize">
                                         {auth.role}
                                     </span>
+                                    <div className={`badge badge-xs mt-1 ${isShadowUser ? 'badge-warning' : 'badge-primary'}`}>
+                                        {isShadowUser ? 'Shadow User' : 'General User'}
+                                    </div>
                                 </div>
                             </div>
                         </li>

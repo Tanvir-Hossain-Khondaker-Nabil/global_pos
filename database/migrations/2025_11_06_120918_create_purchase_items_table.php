@@ -18,7 +18,9 @@ return new class extends Migration
             $table->unsignedBigInteger('variant_id');
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);
+            $table->decimal('shadow_unit_price', 10, 2);
             $table->decimal('total_price', 10, 2);
+            $table->decimal('shadow_total_price', 10, 2);
             $table->timestamps();
             $table->foreign('purchase_id')->references('id')->on('purchases')->onDelete('cascade');
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');

@@ -25,23 +25,23 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 });
 
 
-    Route::get('/clear', function() {
-        Artisan::call('cache:clear');
-        Artisan::call('config:clear');
-        Artisan::call('config:cache');
-        Artisan::call('view:clear');
-        return "Cache is cleared";
-    });
+Route::get('/clear', function () {
+    Artisan::call('cache:clear');
+    Artisan::call('config:clear');
+    Artisan::call('config:cache');
+    Artisan::call('view:clear');
+    return "Cache is cleared";
+});
 
 
-    Route::get('/migrate', function() {
-        Artisan::call('migrate:fresh --seed');
-        return "Database migrated fresh with seeders";
-    });
+Route::get('/migrate', function () {
+    Artisan::call('migrate:fresh --seed');
+    return "Database migrated fresh with seeders";
+});
 
 
-    Route::get('/module', function() {
-        $modules = collect(Route::getRoutes())
+Route::get('/module', function () {
+    $modules = collect(Route::getRoutes())
         ->map(fn($route) => $route->getName())
         ->filter()
         ->map(fn($name) => explode('.', $name)[0])
@@ -49,51 +49,52 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
         ->values()
         ->toArray();
 
-        return $modules;
-    });
+    return $modules;
+});
 
 
-    Route::get('/actions', function() {
+Route::get('/actions', function () {
 
-            $actionMap = [
-                'index'   => 'view',
-                'show'    => 'view',
-                'create'  => 'create',
-                'store'   => 'create',
-                'edit'    => 'edit',
-                'update'  => 'edit',
-                'destroy' => 'delete',
-                'delete'  => 'delete'
-            ];
-
-
-            $allActions = collect(Route::getRoutes())
-            ->map(fn($route) => $route->getName())
-            ->filter()
-            ->map(function ($name) use ($actionMap) {
-
-                $parts = explode('.', $name);
-
-                if(count($parts) < 2) return null;
-
-                $method = end($parts);
-
-                return $actionMap[$method] ?? null;
-            })
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
-
-            return $allActions;
+    $actionMap = [
+        'index' => 'view',
+        'show' => 'view',
+        'create' => 'create',
+        'store' => 'create',
+        'edit' => 'edit',
+        'update' => 'edit',
+        'destroy' => 'delete',
+        'delete' => 'delete'
+    ];
 
 
-    });
+    $allActions = collect(Route::getRoutes())
+        ->map(fn($route) => $route->getName())
+        ->filter()
+        ->map(function ($name) use ($actionMap) {
+
+            $parts = explode('.', $name);
+
+            if (count($parts) < 2)
+                return null;
+
+            $method = end($parts);
+
+            return $actionMap[$method] ?? null;
+        })
+        ->filter()
+        ->unique()
+        ->values()
+        ->toArray();
+
+    return $allActions;
+
+
+});
 
 
 // auth routes
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('home');
+    Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->name('home');
 
     // users managment
     Route::controller(UserController::class)->prefix('users')->group(function () {
@@ -141,7 +142,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/sales/store', 'store')->name('sales.store');
         Route::get('/sales/create', 'create')->name('sales.create');
         Route::get('/sales', 'index')->name('sales.index');
-        Route::get('/sales/{sale}',  'show')->name('sales.show');
+        Route::get('/sales/{sale}', 'show')->name('sales.show');
         Route::delete('/sales/{sale}', 'destroy')->name('sales.destroy');
         Route::get('/sales/{sale}/edit', 'edit')->name('sales.edit');
         Route::put('/sales/{sale}', 'update')->name('sales.update');
@@ -211,4 +212,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchase.store');
     Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchase.show');
     Route::delete('/purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchase.destroy');
+
+    Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 });
+
+

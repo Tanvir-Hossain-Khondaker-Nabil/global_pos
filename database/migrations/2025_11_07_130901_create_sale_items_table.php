@@ -20,6 +20,9 @@ return new class extends Migration
             $table->integer('quantity')->default(1);
             $table->decimal('unit_price', 10,2)->default(0);
             $table->decimal('total_price', 10,2)->default(0);
+
+            $table->decimal('shadow_unit_price', 10,2)->default(0);
+            $table->decimal('shadow_total_price', 10,2)->default(0);
             $table->softDeletes();
             $table->timestamps();
         });

@@ -15,12 +15,16 @@ class PurchaseItem extends Model
         'variant_id',
         'quantity',
         'unit_price',
-        'total_price'
+        'shadow_unit_price', // Add this
+        'total_price',
+        'shadow_total_price' // Add this
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
-        'total_price' => 'decimal:2'
+        'shadow_unit_price' => 'decimal:2', // Add this
+        'total_price' => 'decimal:2',
+        'shadow_total_price' => 'decimal:2' // Add this
     ];
 
     public function purchase()

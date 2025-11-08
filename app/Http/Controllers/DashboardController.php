@@ -10,8 +10,14 @@ use Inertia\Inertia;
 class DashboardController extends Controller
 {
     // index
-    public function index()
+    public function index($s = null)
     {
+
+        if ($s) {
+            return "Dashboard for: " . $s;
+        } else {
+
+
         $mobileBankSystems = ['bkash', 'nagod', 'upay', 'rocket'];
         $bankSystems = ['city_bank', 'ucb', 'DBBL'];
         $cashSystems = ['cash'];
@@ -49,5 +55,6 @@ class DashboardController extends Controller
             'totalSalespyament' => $grandTotal,
             'totalexpense' => Expense::sum('amount')
         ]);
+        }
     }
 }

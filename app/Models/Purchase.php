@@ -15,6 +15,8 @@ class Purchase extends Model
         'warehouse_id',
         'purchase_date',
         'total_amount',
+        'shadow_total_amount', // Add this
+        'shadow_paid_amount',  // Add this
         'paid_amount',
         'notes',
         'status'
@@ -23,6 +25,8 @@ class Purchase extends Model
     protected $casts = [
         'purchase_date' => 'date',
         'total_amount' => 'decimal:2',
+        'shadow_total_amount' => 'decimal:2', // Add this
+        'shadow_paid_amount' => 'decimal:2',  // Add this
         'paid_amount' => 'decimal:2'
     ];
 
@@ -55,6 +59,4 @@ class Purchase extends Model
             default => 'neutral'
         };
     }
-
-    
 }
