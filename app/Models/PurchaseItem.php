@@ -15,9 +15,11 @@ class PurchaseItem extends Model
         'variant_id',
         'quantity',
         'unit_price',
-        'shadow_unit_price', // Add this
+        'shadow_unit_price',
         'total_price',
-        'shadow_total_price' // Add this
+        'shadow_total_price',
+        'sale_price',
+        'shadow_sale_price'
     ];
 
     protected $casts = [

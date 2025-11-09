@@ -43,4 +43,28 @@ class Variant extends Model
     {
         return $this->hasMany(Stock::class);
     }
+
+    // Stock relationship যোগ করুন
+    public function stock()
+    {
+        return $this->hasOne(Stock::class, 'variant_id');
+    }
+
+    // Helper method to get stock quantity
+    public function getStockQuantityAttribute()
+    {
+        return $this->stock ? $this->stock->quantity : 0;
+    }
+
+    // Helper method to get purchase price
+    public function getPurchasePriceAttribute()
+    {
+        return $this->stock ? $this->stock->purchase_price : 0;
+    }
+
+    // Helper method to get sale price
+    public function getSalePriceAttribute()
+    {
+        return $this->stock ? $this->stock->sale_price : 0;
+    }
 }

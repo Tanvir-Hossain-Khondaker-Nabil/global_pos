@@ -214,6 +214,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchase.destroy');
 
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
+
+    Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
+    Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
 });
 
 

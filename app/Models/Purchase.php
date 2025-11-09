@@ -40,10 +40,6 @@ class Purchase extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
-    public function items()
-    {
-        return $this->hasMany(PurchaseItem::class);
-    }
 
     public function getDueAmountAttribute()
     {
@@ -52,11 +48,26 @@ class Purchase extends Model
 
     public function getStatusColorAttribute()
     {
-        return match($this->status) {
+        return match ($this->status) {
             'completed' => 'success',
             'pending' => 'warning',
             'cancelled' => 'error',
             default => 'neutral'
         };
+    }
+
+    // Purchase model
+    public function items()
+    {
+        return $this->hasMany(PurchaseItem::class);
+    }
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function variant()
+    {
+        return $this->belongsTo(Variant::class);
     }
 }

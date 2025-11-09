@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Pen, Plus, Trash2, X } from "lucide-react";
+import { Frown, Pen, Plus, Trash2, X, Package, BarChart3 } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 
@@ -29,7 +29,7 @@ export default function Category({ category, filters }) {
         router.get(route("category.view"), queryString, {
             preserveScroll: true,
             preserveState: true,
-            replace: true, // prevents pushing new history entry on every keystroke
+            replace: true,
         });
     };
 
@@ -93,7 +93,7 @@ export default function Category({ category, filters }) {
                             <tr>
                                 <th></th>
                                 <th>Name</th>
-                                <th>Total Products</th>
+                                <th>Products</th>
                                 <th>Join at</th>
                                 <th>Actions</th>
                             </tr>
@@ -102,8 +102,18 @@ export default function Category({ category, filters }) {
                             {category.data.map((user, index) => (
                                 <tr key={index}>
                                     <th>{index + 1}</th>
-                                    <td>{user.name}</td>
-                                    <td>{user?.total_stock || 0} Pc</td>
+                                    <td>
+                                        <div className="font-medium">{user.name}</div>
+                                    </td>
+                                    <td>
+                                        <div className="flex items-center gap-2">
+                                            <Package size={16} className="text-blue-600" />
+                                            <div>
+                                                <div className="font-bold text-lg">{user.products_count || 0}</div>
+                                                <div className="text-xs text-gray-500">products</div>
+                                            </div>
+                                        </div>
+                                    </td>
                                     <td>{user.join_at}</td>
                                     <td>
                                         {auth.role === "admin" ? (
@@ -172,7 +182,7 @@ export default function Category({ category, filters }) {
                 <div className="modal-box">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
                         <h1 className="text-base font-medium text-gray-900">
-                            Add new category
+                            {userForm.data.id ? "Update Category" : "Add new category"}
                         </h1>
                         <button
                             onClick={modelClose}
@@ -205,7 +215,7 @@ export default function Category({ category, filters }) {
                             className="btn btn-primary"
                             type="submit"
                         >
-                            Add now
+                            {userForm.data.id ? "Update Category" : "Add now"}
                         </button>
                     </form>
                 </div>

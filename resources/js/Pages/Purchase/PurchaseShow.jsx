@@ -24,6 +24,46 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
         return purchase.items.reduce((sum, item) => sum + item.quantity, 0);
     };
 
+    // Get the correct price based on user type
+    const getPrice = (item, field) => {
+        if (isShadowUser) {
+            // Use shadow prices for shadow users
+            switch (field) {
+                case 'unit_price': return item.shadow_unit_price || item.unit_price;
+                case 'total_price': return item.shadow_total_price || item.total_price;
+                case 'sale_price': return item.shadow_sale_price || item.sale_price;
+                default: return item[field];
+            }
+        }
+        // Use regular prices for general users
+        return item[field];
+    };
+
+    // Get purchase amounts based on user type
+    const getPurchaseAmount = (field) => {
+        if (isShadowUser) {
+            switch (field) {
+                case 'total_amount': return purchase.shadow_total_amount || purchase.total_amount;
+                case 'paid_amount': return purchase.shadow_paid_amount || purchase.paid_amount;
+                case 'due_amount': return purchase.shadow_due_amount || purchase.due_amount;
+                default: return purchase[field];
+            }
+        }
+        return purchase[field];
+    };
+
+    // Helper function to get variant display name
+    const getVariantDisplayName = (variant) => {
+        if (!variant) return 'Default Variant';
+        
+        const parts = [];
+        if (variant.size) parts.push(`Size: ${variant.size}`);
+        if (variant.color) parts.push(`Color: ${variant.color}`);
+        if (variant.material) parts.push(`Material: ${variant.material}`);
+        
+        return parts.length > 0 ? parts.join(', ') : 'Default Variant';
+    };
+
     const handlePrint = () => {
         window.print();
     };
@@ -203,21 +243,21 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                 <div className="flex justify-between items-center">
                                     <span>Total Amount:</span>
                                     <span className={`font-bold text-lg ${isShadowUser ? 'text-warning' : ''}`}>
-                                        {formatCurrency(purchase.total_amount)}
+                                        {formatCurrency(getPurchaseAmount('total_amount'))}
                                     </span>
                                 </div>
                                 
                                 <div className="flex justify-between items-center text-green-600">
                                     <span>Paid Amount:</span>
                                     <span className="font-bold">
-                                        {formatCurrency(purchase.paid_amount)}
+                                        {formatCurrency(getPurchaseAmount('paid_amount'))}
                                     </span>
                                 </div>
                                 
                                 <div className="flex justify-between items-center text-orange-600">
                                     <span>Due Amount:</span>
                                     <span className="font-bold">
-                                        {formatCurrency(purchase.due_amount)}
+                                        {formatCurrency(getPurchaseAmount('due_amount'))}
                                     </span>
                                 </div>
                             </div>
@@ -264,7 +304,9 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                         <th className="bg-base-200">{index + 1}</th>
                                         <td>
                                             <div>
-                                                <div className="font-medium">{item.product?.name || 'N/A'}</div>
+                                                <div className="font-medium">
+                                                    {item.product?.name || 'N/A'}
+                                                </div>
                                                 <div className="text-xs text-gray-500">
                                                     #{item.product_id}
                                                 </div>
@@ -272,21 +314,23 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                         </td>
                                         <td>
                                             <div className="text-sm">
-                                                {item.variant?.name || 'Default Variant'}
+                                                {getVariantDisplayName(item.variant)}
                                             </div>
+                                            {item.variant && (
+                                                <div className="text-xs text-gray-500">
+                                                    #{item.variant_id}
+                                                </div>
+                                            )}
                                         </td>
                                         <td className="text-right font-mono">{item.quantity}</td>
                                         <td className="text-right font-mono">
-                                            {formatCurrency(item.unit_price)}
-
+                                            {formatCurrency(getPrice(item, 'unit_price'))}
                                         </td>
                                         <td className="text-right font-mono">
-                                            {formatCurrency(item.sale_price || 0)}
-
+                                            {formatCurrency(getPrice(item, 'sale_price'))}
                                         </td>
                                         <td className={`text-right font-mono font-bold ${isShadowUser ? 'text-warning' : ''}`}>
-                                            {formatCurrency(item.total_price)}
-
+                                            {formatCurrency(getPrice(item, 'total_price'))}
                                         </td>
                                     </tr>
                                 ))}
@@ -298,8 +342,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     <th className="text-right bg-opacity-20"></th>
                                     <th className="text-right bg-opacity-20"></th>
                                     <th className="text-right bg-opacity-20 font-bold">
-                                        {formatCurrency(purchase.total_amount)}
-
+                                        {formatCurrency(getPurchaseAmount('total_amount'))}
                                     </th>
                                 </tr>
                             </tfoot>

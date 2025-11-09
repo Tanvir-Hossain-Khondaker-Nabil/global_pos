@@ -93,60 +93,86 @@ class WarehouseController extends Controller
     }
 
     public function show($id)
-    {
-        $user = Auth::user();
-        $isShadowUser = $user->type === 'shadow';
+{
+    $user = Auth::user();
+    $isShadowUser = $user->type === 'shadow';
 
-        $warehouse = Warehouse::with(['stocks.product', 'stocks.variant'])->findOrFail($id);
+    $warehouse = Warehouse::with(['stocks.product', 'stocks.variant'])->findOrFail($id);
 
-        // Get all products with their stock in this warehouse
-        $products = Product::with([
-            'variants.stocks',
-            'category',
-            'stocks' => function ($query) use ($id) {
-                $query->where('warehouse_id', $id);
-            }
-        ])->get()
-            ->map(function ($product) use ($id, $isShadowUser) {
-                $totalStock = $product->stocks->sum('quantity');
+    // Get only products that have stock in this warehouse
+    $products = Product::with([
+        'variants.stocks' => function ($query) use ($id) {
+            $query->where('warehouse_id', $id);
+        },
+        'category',
+        'stocks' => function ($query) use ($id) {
+            $query->where('warehouse_id', $id);
+        }
+    ])
+    ->whereHas('stocks', function ($query) use ($id) {
+        $query->where('warehouse_id', $id)
+              ->where('quantity', '>', 0);
+    })
+    ->orWhereHas('variants.stocks', function ($query) use ($id) {
+        $query->where('warehouse_id', $id)
+              ->where('quantity', '>', 0);
+    })
+    ->get()
+    ->map(function ($product) use ($id, $isShadowUser) {
+        // Calculate total stock for this product in this warehouse
+        $totalStock = $product->stocks->sum('quantity');
+        
+        // Also include variant stocks
+        $variantStocks = $product->variants->flatMap(function ($variant) use ($id) {
+            return $variant->stocks->where('warehouse_id', $id);
+        });
+        
+        $totalStock += $variantStocks->sum('quantity');
+
+        return [
+            'id' => $product->id,
+            'name' => $product->name,
+            'product_no' => $product->product_no,
+            'description' => $product->description,
+            'category' => $product->category,
+            'total_stock' => $totalStock,
+            'variants' => $product->variants->map(function ($variant) use ($id, $isShadowUser) {
+                $stock = $variant->stocks->where('warehouse_id', $id)->first();
+
+                // Use shadow prices for shadow users
+                $purchasePrice = $isShadowUser ? 
+                    ($stock ? $stock->shadow_purchase_price : 0) : 
+                    ($stock ? $stock->purchase_price : 0);
+                
+                $stockQuantity = $stock ? $stock->quantity : 0;
+                $stockValue = $stockQuantity * $purchasePrice;
 
                 return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'product_no' => $product->product_no,
-                    'description' => $product->description,
-                    'category' => $product->category,
-                    'total_stock' => $totalStock,
-                    'variants' => $product->variants->map(function ($variant) use ($id, $isShadowUser) {
-                        $stock = $variant->stocks->where('warehouse_id', $id)->first();
-
-                        // Use shadow prices for shadow users
-                        $purchasePrice = $isShadowUser ? 
-                            ($stock ? $stock->shadow_purchase_price : 0) : 
-                            ($stock ? $stock->purchase_price : 0);
-                        
-                        $stockValue = $stock ? $stock->quantity * $purchasePrice : 0;
-
-                        return [
-                            'id' => $variant->id,
-                            'size' => $variant->size,
-                            'color' => $variant->color,
-                            'variant_name' => $variant->variant_name,
-                            'stock_quantity' => $stock ? $stock->quantity : 0,
-                            'purchase_price' => $purchasePrice,
-                            'stock_value' => $stockValue,
-                        ];
-                    })
+                    'id' => $variant->id,
+                    'size' => $variant->size,
+                    'color' => $variant->color,
+                    'variant_name' => $variant->variant_name,
+                    'stock_quantity' => $stockQuantity,
+                    'purchase_price' => $purchasePrice,
+                    'stock_value' => $stockValue,
                 ];
-            });
+            })->filter(function ($variant) {
+                // Only show variants that have stock or relevant data
+                return $variant['stock_quantity'] > 0 || $variant['purchase_price'] > 0;
+            })
+        ];
+    })
+    ->filter(function ($product) {
+        // Only show products that have stock or variants with stock
+        return $product['total_stock'] > 0 || count($product['variants']) > 0;
+    });
 
-        return Inertia::render('Warehouse/WarehouseProducts', [
-            'warehouse' => $warehouse,
-            'products' => $products,
-            'isShadowUser' => $isShadowUser
-        ]);
-    }
-
+    return Inertia::render('Warehouse/WarehouseProducts', [
+        'warehouse' => $warehouse,
+        'products' => $products,
+        'isShadowUser' => $isShadowUser
+    ]);
+}
     public function update(Request $request, $id)
     {
         $user = Auth::user();
