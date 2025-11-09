@@ -46,7 +46,7 @@ class SalesController extends Controller
                 $query->whereDate('created_at', '<=', $dateTo);
             })
             ->orderBy('created_at', 'desc')
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString();
 
         return Inertia::render('sales/Index', [
@@ -234,7 +234,128 @@ class SalesController extends Controller
             DB::rollBack();
             return back()->withErrors($e->getMessage());
         }
-}
+    }
+
+
+    /**
+     * Display all sales items
+     */
+
+    public function allSalesItems()
+    {
+        $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'warehouse'])
+            ->orderBy('created_at', 'desc')
+            ->when(request('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('product', function ($q1) use ($search) {
+                        $q1->where('name', 'like', "%{$search}%")
+                        ->orWhere('product_no', 'like', "%{$search}%");
+                    })->orWhereHas('sale', function ($q1) use ($search) {
+                        $q1->where('invoice_no', 'like', "%{$search}%")
+                        ->orWhereHas('customer', function ($q2) use ($search) {
+                            $q2->where('customer_name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        });
+                    })->orWhereHas('variant', function ($q1) use ($search) {
+                        $q1->where('size', 'like', "%{$search}%")
+                        ->orWhere('color', 'like', "%{$search}%");
+                    })->orWhereHas('warehouse', function ($q1) use ($search) {
+                        $q1->where('name', 'like', "%{$search}%");
+                    });
+                });
+            })
+            ->when(request('customer_id'), function ($query, $customerId) {
+                $query->whereHas('sale.customer', function ($q) use ($customerId) {
+                    $q->where('customer_name', 'like', "%{$customerId}%")
+                    ->orWhere('phone', 'like', "%{$customerId}%");
+                });
+            })
+            ->when(request('product_id'), function ($query, $productId) {
+                $query->whereHas('product', function ($q) use ($productId) {
+                    $q->where('name', 'like', "%{$productId}%")
+                    ->orWhere('product_no', 'like', "%{$productId}%");
+                });
+            })
+            ->when(request('warehouse_id'), function ($query, $warehouseId) {
+                $query->whereHas('warehouse', function ($q) use ($warehouseId) {
+                    $q->where('name', 'like', "%{$warehouseId}%");
+                });
+            })
+            ->when(request('date_from'), function ($query, $dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when(request('date_to'), function ($query, $dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            })
+            ->paginate(15);
+        
+        return Inertia::render('sales/SalesItem', [
+            'salesItems' => $salesItems,
+        ]);
+    }
+
+
+     public function showItem($id)
+    {
+        $saleItem = SaleItem::with([
+            'sale.customer',
+            'product',
+            'variant', 
+            'warehouse',
+        ])->findOrFail($id);
+
+
+        return Inertia::render('sales/ShowItem', [
+            'saleItem' => $saleItem,
+        ]);
+    }
+
+ 
+
+    /**
+     * Recalculate sale totals after item deletion
+     */
+    private function recalculateSaleTotals(Sale $sale)
+    {
+        $subtotal = $sale->saleItems->sum(function ($item) {
+            return ($item->unit_price * $item->quantity) * (1 - $item->discount / 100);
+        });
+        
+        $totalQuantity = $sale->saleItems->sum('quantity');
+        
+        $sale->update([
+            'subtotal' => $subtotal,
+            'grandtotal' => $subtotal,
+            'total_quantity' => $totalQuantity,
+        ]);
+    }
+
+    /**
+     * Get sales items statistics
+     */
+    public function getStatistics(Request $request)
+    {
+        $query = SaleItem::with('sale', 'product');
+        
+        // Apply date filters if provided
+        if ($request->has('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->has('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        $stats = [
+            'total_items' => $query->count(),
+            'total_quantity' => $query->sum('quantity'),
+            'total_revenue' => $query->get()->sum(function ($item) {
+                return ($item->unit_price * $item->quantity) * (1 - $item->discount / 100);
+            }),
+            'avg_item_value' => $query->avg('unit_price'),
+        ];
+        
+        return response()->json($stats);
+    }
 
 
     /**

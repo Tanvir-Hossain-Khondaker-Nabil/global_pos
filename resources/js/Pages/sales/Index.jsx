@@ -187,13 +187,6 @@ export default function SalesIndex({ sales, filters }) {
                                                     <Eye size={13} />
                                                     View
                                                 </Link>
-                                                <button
-                                                    onClick={() => window.print()}
-                                                    className="btn btn-xs btn-primary"
-                                                >
-                                                    <Printer size={13} />
-                                                    Print
-                                                </button>
                                                 {auth.role === "admin" && (
                                                     <Link
                                                         href={route("sales.destroy", { sale: sale.id })}

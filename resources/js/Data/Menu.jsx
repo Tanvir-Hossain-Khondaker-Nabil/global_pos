@@ -32,10 +32,18 @@ const baseMenu = [
         role: "all",
     },
     {
-        title: "All Sales (Inventory)",
+        title: "All Orders (Inventory)",
         icon: <BadgeCent size={16} />,
         route: route("sales.index"),
         active: "sales.index",
+        role: "all",
+    },
+
+    {
+        title: "All Sales Items",
+        icon: <BadgeCent size={16} />,
+        route: route("salesItems.list"),
+        active: "salesItems.list",
         role: "all",
     },
     // New Purchase Menu Items
