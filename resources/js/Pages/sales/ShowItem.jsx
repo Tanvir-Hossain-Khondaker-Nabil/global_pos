@@ -148,12 +148,7 @@ export default function SaleItemShow({ saleItem }) {
                                         {saleItem.sale.discount}%
                                     </p>
                                 </div>
-                                <div>
-                                    <label className="label font-semibold">Vat</label>
-                                    <p className="text-xl font-bold text-warning">
-                                        {saleItem.sale.vat_tax}%
-                                    </p>
-                                </div>
+                    
                                 <div>
                                     <label className="label font-semibold">Total Amount</label>
                                     <p className="text-2xl font-bold text-primary">

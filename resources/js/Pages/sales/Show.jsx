@@ -89,14 +89,8 @@ export default function SaleShow({ sale }) {
                         </button>
                         {auth.role === 'admin' && (
                             <>
-                                <Link
-                                    href={route('sales.edit', { sale: sale.id })}
-                                    className="btn btn-warning btn-sm"
-                                >
-                                    <Edit size={16} />
-                                    Edit
-                                </Link>
-                                <Link
+                          
+                                {/* <Link
                                     href={route('sales.destroy', { sale: sale.id })}
                                     method="delete"
                                     as="button"
@@ -109,7 +103,7 @@ export default function SaleShow({ sale }) {
                                 >
                                     <Trash2 size={16} />
                                     Delete
-                                </Link>
+                                </Link> */}
                             </>
                         )}
                     </div>

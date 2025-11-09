@@ -14,6 +14,7 @@ export default function AddSale({ customers, productstocks }) {
     console.log("Customers:", customers);
     console.log("Product Stocks:", productstocks);
 
+    // Calculate all amounts using useCallback to prevent unnecessary recalculations
     const calculateSubTotal = useCallback(() => {
         if (!selectedItems || selectedItems.length === 0) return 0;
         return selectedItems.reduce((total, item) => {
@@ -41,7 +42,7 @@ export default function AddSale({ customers, productstocks }) {
 
     const calculateDueAmount = useCallback(() => {
         const grandTotal = calculateGrandTotal();
-        const paid = Number(paidAmount) || 0;
+        const paid = grandTotal || 0;
         return Math.max(0, grandTotal - paid);
     }, [calculateGrandTotal, paidAmount]);
 
@@ -56,7 +57,7 @@ export default function AddSale({ customers, productstocks }) {
         grand_amount: 0,
         due_amount: 0,
         sub_amount: 0,
-        type: 'inventory',
+        type: 'pos',
     });
 
     // Update form data when any of the dependencies change
@@ -70,11 +71,11 @@ export default function AddSale({ customers, productstocks }) {
             items: selectedItems,
             vat_rate: Number(vatRate) || 0,
             discount_rate: Number(discountRate) || 0,
-            paid_amount: Number(paidAmount) || 0,
+            paid_amount: grandTotal || 0,
             grand_amount: grandTotal,
-            due_amount: dueAmount,
             sub_amount: subTotal,
-            type: 'inventory',
+            due_amount: dueAmount,
+            type: 'pos',
         });
     }, [selectedItems, vatRate, discountRate, paidAmount, calculateSubTotal, calculateGrandTotal, calculateDueAmount]);
 
@@ -217,7 +218,7 @@ export default function AddSale({ customers, productstocks }) {
         <div className="bg-white rounded-box p-5">
             <PageHeader
                 title="Create New (Sale/Order)"
-                subtitle="Add products to sale (Inventory System)"
+                subtitle="Add products to sale (POS System)"
             >
                 <button
                     onClick={() => router.visit(route("sales.index"))}
@@ -418,55 +419,12 @@ export default function AddSale({ customers, productstocks }) {
                                         <span>৳{formatCurrency(calculateVatAmount())}</span>
                                     </div>
 
-                                    {/* Discount Field */}
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span>Discount:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                step="0.01"
-                                                className="input input-bordered input-sm w-20"
-                                                value={discountRate}
-                                                onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
-                                                placeholder="Rate %"
-                                            />
-                                            <span>%</span>
-                                        </div>
-                                        <span>৳{formatCurrency(calculateDiscountAmount())}</span>
-                                    </div>
-
                                     {/* Grand Total */}
                                     <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
                                         <span>Grand Total:</span>
                                         <span>৳{formatCurrency(calculateGrandTotal())}</span>
                                     </div>
 
-                                    {/* Paid Amount */}
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span>Paid Amount:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                max={calculateGrandTotal()}
-                                                className="input input-bordered input-sm w-32"
-                                                value={paidAmount}
-                                                onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                        <span>৳{formatCurrency(paidAmount)}</span>
-                                    </div>
-
-                                    {/* Due Amount */}
-                                    <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
-                                        <span>Due Amount:</span>
-                                        <span className={calculateDueAmount() > 0 ? "text-error" : "text-success"}>
-                                            ৳{formatCurrency(calculateDueAmount())}
-                                        </span>
-                                    </div>
                                 </div>
                             </div>
                         ) : (

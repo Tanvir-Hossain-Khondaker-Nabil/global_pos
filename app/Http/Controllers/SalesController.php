@@ -19,7 +19,7 @@ class SalesController extends Controller
     /**
      * Display a listing of all sales
      */
-    public function index(Request $request)
+    public function index(Request $request, $pos = null)
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
@@ -29,8 +29,10 @@ class SalesController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
-        
-        $sales = Sale::with(['customer', 'items.product', 'items.variant'])
+        $pos === 'pos' ? $type = 'pos' : $type = 'inventory';
+
+
+        $sales = Sale::with(['customer', 'items.product', 'items.variant'])->where('type', $type)
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_no', 'like', "%{$search}%")
@@ -60,8 +62,14 @@ class SalesController extends Controller
         }
 
 
+        if($type == 'pos'){
+            $render = 'sales/IndexPos';
+        } else {
+            $render = 'sales/Index';
+        }
 
-        return Inertia::render('sales/Index', [
+
+        return Inertia::render($render, [
             'sales' => $sales,
             'isShadowUser' => $isShadowUser,
             'filters' => [
@@ -89,12 +97,26 @@ class SalesController extends Controller
         //
     }
 
+
+    public function createPos()
+    {
+        $customers = Customer::all();
+        $stock = Stock::with(['warehouse','product','variant'])->get();
+
+        return  Inertia::render('sales/CreatePos', [
+            'customers' => $customers,
+            'productstocks'  => $stock,
+        ]);
+        //
+    }
+
     /**
      * Store sale
      */
     public function store(Request $request)
     {
 
+        $type = $request->input('type', 'pos');
 
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
@@ -103,11 +125,10 @@ class SalesController extends Controller
             'items.*.quantity'   => 'required|integer|min:1',
         ]);
 
-        // dd($request->all());
-
         DB::beginTransaction();
+        $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
 
-
+    
         try {
             // 1. Create Sale
             $sale = Sale::create([
@@ -117,23 +138,22 @@ class SalesController extends Controller
                 'discount'    => $request->discount_rate ?? 0,
                 'vat_tax'     => $request->vat_rate ?? 0,
                 'grand_total' => $request->grand_amount ?? 0,
-                'paid_amount' => $request->paid_amount ?? 0,
+                'paid_amount' =>  $paidAmount ?? 0,
                 'due_amount'  => $request->due_amount ?? 0,
                 'shadow_vat_tax' => $request->vat_rate ?? 0,
                 'shadow_discount' => $request->discount_rate ?? 0,
                 'shadow_sub_total' =>  0,
                 'shadow_grand_total' => 0,
-                'shadow_paid_amount' => $request->paid_amount ?? 0,
+                'shadow_paid_amount' =>  $paidAmount ?? 0,
                 'shadow_due_amount'  => 0,
                 'payment_type'=> 'cash',
                 'status'      => 'pending',
-                'type'        => $request->type ?? 'pos',
+                'type'        => $type ?? 'pos',
             ]);
 
 
             $shadowSubTotal = 0;
 
-            // 2. Loop items
             foreach($request->items as $item)
             {
                 $product = Product::findOrFail($item['product_id']);
@@ -144,9 +164,9 @@ class SalesController extends Controller
                 $shadowtotalPrice = $quantity * $shadowUnitPrice;
                 $totalPrice = $quantity * $unitPrice;
 
-
-                // 3. Deduct FIFO stock
-                self::fifoOut($product->id, $variant->id, $quantity, $sale->id);
+                // if ($type === 'inventory') {
+                    self::fifoOut($product->id, $variant->id, $quantity, $sale->id);
+                // }
 
                 $warehouse_id = Stock::where('product_id', $product->id)
                     ->where('variant_id', $variant->id)
@@ -172,19 +192,30 @@ class SalesController extends Controller
 
             $shadowGrandTotal =  $shadowSubTotal;
             $shadowGrandTotal += $shadowSubTotal * $request->vat_rate / 100; 
-            $shadowGrandTotal -= $shadowSubTotal * $request->discount_rate / 100; 
-            $shadowDueAmount = $shadowGrandTotal - $request->paid_amount;
+            $shadowGrandTotal -= $shadowSubTotal * $request->discount_rate / 100;
 
+            if ($paidAmount >= $shadowGrandTotal) {
+                $shadowDueAmount = 0;
+                $shadowPaidAmount = $shadowGrandTotal ?? 0;
+            } else {
+                $shadowDueAmount = $shadowGrandTotal - $paidAmount;
+                $shadowPaidAmount = $paidAmount ?? 0;
+            } 
 
             $sale->update([
                 'shadow_sub_total'   => $shadowSubTotal,
                 'shadow_grand_total' => $shadowGrandTotal,
-                'shadow_due_amount'  => $shadowDueAmount,
+                'shadow_due_amount'  => $shadowDueAmount ?? 0,
+                'shadow_paid_amount' => $shadowPaidAmount ?? 0,
             ]);
 
             DB::commit();
 
-            return to_route('sales.index')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
+            if ($type === 'inventory') {
+                return to_route('sales.index')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
+            } else {
+                return to_route('salesPos.index',$type)->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
+            }
 
         } catch (\Exception $e) {
             DB::rollBack();
@@ -197,8 +228,8 @@ class SalesController extends Controller
     /**
      * Display the specified sale
      */
-    public function show(Sale $sale)
-    {
+    public function show(Sale $sale, $print = null)
+    { 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
@@ -208,9 +239,31 @@ class SalesController extends Controller
             $sale = $this->transformToShadowData($sale);
         }
 
-        return Inertia::render('sales/Show', [
+        $render = $print ? 'sales/ShowPos' : 'sales/Show';
+
+        return Inertia::render($render, [
             'sale' => $sale,
         ]);
+    }
+
+
+    public function print(Sale $sale)
+    {
+        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse'])
+            ->findOrFail($sale->id);
+
+        return Inertia::render('Sales/Print', [
+            'sale' => $sale,
+        ]);
+    }
+
+
+    public function downloadPdf(Sale $sale)
+    {
+        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse'])
+            ->findOrFail($sale->id);
+
+        return response()->json(['message' => 'PDF download would be implemented here']);
     }
 
 

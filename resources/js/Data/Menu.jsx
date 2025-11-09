@@ -28,6 +28,13 @@ const baseMenu = [
         title: "Add Sale (Inventory)",
         icon: <BaggageClaim size={16} />,
         route: route("sales.create"),
+        active: "sales.create",
+        role: "all",
+    },
+    {
+        title: "Add Sale (POS)",
+        icon: <BaggageClaim size={16} />,
+        route: route("sales.add"),
         active: "sales.add",
         role: "all",
     },
@@ -36,6 +43,14 @@ const baseMenu = [
         icon: <BadgeCent size={16} />,
         route: route("sales.index"),
         active: "sales.index",
+        role: "all",
+    },
+
+    {
+        title: "All Orders (POS)",
+        icon: <BadgeCent size={16} />,
+        route: route("salesPos.index", 'pos'),
+        active: "salesPos.index",
         role: "all",
     },
 

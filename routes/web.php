@@ -138,11 +138,17 @@ Route::middleware('auth')->group(function () {
     // sales
     Route::controller(SalesController::class)->group(function () {
 
-        Route::get('/sales/add', 'addView')->name('sales.add');
+        Route::get('/sales/add', 'createPos')->name('sales.add');
         Route::post('/sales/store', 'store')->name('sales.store');
         Route::get('/sales/create', 'create')->name('sales.create');
         Route::get('/sales', 'index')->name('sales.index');
+        Route::get('/sales/list/{pos}', 'index')->name('salesPos.index');
+
+
         Route::get('/sales/{sale}', 'show')->name('sales.show');
+        Route::get('/sales/{sale}/{print}', 'show')->name('salesPrint.show');
+        Route::get('/sales/{sale}/print',  'print')->name('sales.print');
+        Route::get('/sales/{sale}/download-pdf', 'downloadPdf')->name('sales.download.pdf');
         Route::delete('/sales/{sale}', 'destroy')->name('sales.destroy');
         Route::get('/sales/{sale}/edit', 'edit')->name('sales.edit');
         Route::put('/sales/{sale}', 'update')->name('sales.update');

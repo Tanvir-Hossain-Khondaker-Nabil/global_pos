@@ -165,7 +165,6 @@ export default function AllSalesItems({ salesItems }) {
                                 <th>Price</th>
                                 <th>Qty</th>
                                 <th>Discount</th>
-                                <th>VAT</th>
                                 <th>Type</th>
                                 <th>Total</th>
                                 <th>Warehouse</th>
@@ -228,11 +227,7 @@ export default function AllSalesItems({ salesItems }) {
                                                 {item.sale.discount}%
                                             </div>
                                         </td>
-                                        <td>
-                                            <div className="text-sm">
-                                                {item.sale.vat_tax}%
-                                            </div>
-                                        </td>
+                                
                                         <td>
                                             <div className="badge badge-info badge-sm">
                                                <strong>{item.sale.type}</strong>
