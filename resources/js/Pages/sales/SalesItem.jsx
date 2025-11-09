@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import Select from "react-select";
 
 export default function AllSalesItems({ salesItems }) {
-    const { flash } = usePage().props;
+    const { flash, isShadowUser } = usePage().props;
     const [expandedRow, setExpandedRow] = useState(null);
     const [filters, setFilters] = useState({
         search: "",
@@ -157,7 +157,7 @@ export default function AllSalesItems({ salesItems }) {
             <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
                 {salesItems.data.length > 0 ? (
                     <table className="table">
-                        <thead className="bg-primary text-white">
+                        <thead className={`${isShadowUser ? 'bg-warning' : 'bg-primary'} text-white`}>
                             <tr>
                                 <th className="w-8"></th>
                                 <th>Product</th>

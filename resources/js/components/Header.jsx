@@ -59,14 +59,14 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                     title={`Switch to ${isShadowUser ? 'Shadow' : 'General'} mode`}
                 >
                     <Shield size={16} />
-                    {isShadowUser ? 'General Mode' : 'Shadow Mode'}
+                    {isShadowUser ? 'সাধারণ মোড' : 'শ্যাডো মোড'}
                 </button>
             </div>
 
             {/* Right side - Profile */}
             <div className="flex items-center gap-4">
                 <span className="text-sm text-gray-900">
-                    Hello, <strong>{auth.name}</strong>
+                    হ্যালো, <strong>{auth.name}</strong>
                 </span>
                 <div className="dropdown dropdown-end">
                     <div tabIndex={0} role="button" className="avatar">
@@ -99,13 +99,13 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                         <li>
                             <Link href={route("profile.view")}>
                                 <User size={14} />
-                                <span>Profile</span>
+                                <span>প্রোফাইল</span>
                             </Link>
                         </li>
                         <li>
                             <Link href={route("security.view")}>
                                 <Lock size={14} />
-                                <span>Security</span>
+                                <span>সিকিউরিটি</span>
                             </Link>
                         </li>
                         <li>
@@ -114,7 +114,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                 onClick={(e) => {
                                     if (
                                         !confirm(
-                                            "Are you sure you want to logout?"
+                                            "আপনি কি লগআউট করতে চান?"
                                         )
                                     ) {
                                         e.preventDefault();
@@ -122,7 +122,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                 }}
                             >
                                 <LogOut size={14} />
-                                <span>Logout</span>
+                                <span>লগআউট</span>
                             </Link>
                         </li>
                     </ul>

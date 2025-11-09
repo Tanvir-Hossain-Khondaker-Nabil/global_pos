@@ -15,7 +15,8 @@ export default function Sidebar({ status, setStatus }) {
         >
             {/* logo */}
             <div className="h-[80px] flex items-center justify-between lg:justify-start px-8">
-                <Image path="logo.png" className="h-[30px] w-auto" />
+                {/* <Image path="https://nexoryn.com/wp-content/uploads/2025/02/NEXORYN.png" className="h-[30px] w-auto" /> */}
+                <img src="https://nexoryn.com/wp-content/uploads/2025/02/NEXORYN.png" className="h-[30px] w-auto" alt="" />
                 <button
                     className="btn btn-error btn-xs btn-circle lg:hidden"
                     onClick={() => setStatus(!status)}
