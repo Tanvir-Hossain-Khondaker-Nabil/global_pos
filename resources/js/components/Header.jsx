@@ -55,11 +55,11 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                 </button>
                 <button
                     onClick={handleToggleUserType}
-                    className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'} gap-2`}
-                    title={`Switch to ${isShadowUser ? 'General' : 'Shadow'} mode`}
+                    className={`btn btn-sm ${isShadowUser ? 'btn-primary' : 'btn-warning'} gap-2`}
+                    title={`Switch to ${isShadowUser ? 'Shadow' : 'General'} mode`}
                 >
                     <Shield size={16} />
-                    {isShadowUser ? 'Shadow Mode' : 'General Mode'}
+                    {isShadowUser ? 'General Mode' : 'Shadow Mode'}
                 </button>
             </div>
 
@@ -93,9 +93,6 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                     <span className="text-xs font-normal text-gray-500 capitalize">
                                         {auth.role}
                                     </span>
-                                    <div className={`badge badge-xs mt-1 ${isShadowUser ? 'badge-warning' : 'badge-primary'}`}>
-                                        {isShadowUser ? 'Shadow User' : 'General User'}
-                                    </div>
                                 </div>
                             </div>
                         </li>

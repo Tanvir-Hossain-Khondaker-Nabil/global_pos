@@ -28,10 +28,12 @@ class PurchaseController extends Controller
             $query->where(function ($q) use ($request) {
                 $q->where('purchase_no', 'like', '%' . $request->search . '%')
                     ->orWhereHas('supplier', function ($q) use ($request) {
-                        $q->where('name', 'like', '%' . $request->search . '%');
+                        $q->where('name', 'like', '%' . $request->search . '%')
+                            ->orWhere('company', 'like', '%' . $request->search . '%');
                     })
                     ->orWhereHas('warehouse', function ($q) use ($request) {
-                        $q->where('name', 'like', '%' . $request->search . '%');
+                        $q->where('name', 'like', '%' . $request->search . '%')
+                            ->orWhere('code', 'like', '%' . $request->search . '%');
                     });
             });
         }
@@ -83,11 +85,14 @@ class PurchaseController extends Controller
             'warehouse_id' => 'required|exists:warehouses,id',
             'purchase_date' => 'required|date',
             'notes' => 'nullable|string',
+            'paid_amount' => 'required|numeric|min:0',
+            'payment_status' => 'required|in:unpaid,partial,paid',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.variant_id' => 'required|exists:variants,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.shadow_unit_price' => 'required|numeric|min:0',
+            'items.*.shadow_sale_price' => 'required|numeric|min:0',
             // For shadow users, real prices are optional
             'items.*.unit_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
             'items.*.sale_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
@@ -121,6 +126,11 @@ class PurchaseController extends Controller
                 });
             }
 
+            // Calculate due amount
+            $paidAmount = $request->paid_amount;
+            $dueAmount = $totalAmount - $paidAmount;
+            $shadowDueAmount = $shadowTotalAmount - $paidAmount;
+
             // Create purchase
             $purchase = Purchase::create([
                 'purchase_no' => $purchaseNo,
@@ -129,6 +139,11 @@ class PurchaseController extends Controller
                 'purchase_date' => $request->purchase_date,
                 'total_amount' => $totalAmount,
                 'shadow_total_amount' => $shadowTotalAmount,
+                'paid_amount' => $paidAmount,
+                'shadow_paid_amount' => $paidAmount,
+                'due_amount' => $dueAmount,
+                'shadow_due_amount' => $shadowDueAmount,
+                'payment_status' => $request->payment_status,
                 'notes' => $request->notes,
                 'status' => 'completed',
                 'created_by' => $user->id,
@@ -144,6 +159,7 @@ class PurchaseController extends Controller
                 // For shadow users, set real prices to 0 if not provided
                 $unitPrice = $isShadowUser ? 0 : ($item['unit_price'] ?? 0);
                 $salePrice = $isShadowUser ? 0 : ($item['sale_price'] ?? 0);
+                $shadowSalePrice = $item['shadow_sale_price'];
 
                 // Create purchase item
                 $purchase->items()->create([
@@ -153,7 +169,7 @@ class PurchaseController extends Controller
                     'unit_price' => $unitPrice,
                     'sale_price' => $salePrice,
                     'shadow_unit_price' => $item['shadow_unit_price'],
-                    'shadow_sale_price' => $salePrice, // You can add separate shadow_sale_price if needed
+                    'shadow_sale_price' => $shadowSalePrice,
                     'total_price' => $totalPrice,
                     'shadow_total_price' => $shadowTotalPrice,
                     'user_type' => $user->type
@@ -171,13 +187,13 @@ class PurchaseController extends Controller
                     if ($isShadowUser) {
                         // For shadow users, only update shadow prices
                         $stock->shadow_purchase_price = $item['shadow_unit_price'];
-                        $stock->shadow_sale_price = $salePrice;
+                        $stock->shadow_sale_price = $shadowSalePrice;
                     } else {
                         // For general users, update both real and shadow prices
                         $stock->purchase_price = $unitPrice;
                         $stock->sale_price = $salePrice;
                         $stock->shadow_purchase_price = $item['shadow_unit_price'];
-                        $stock->shadow_sale_price = $salePrice;
+                        $stock->shadow_sale_price = $shadowSalePrice;
                     }
                     $stock->save();
                 } else {
@@ -189,7 +205,7 @@ class PurchaseController extends Controller
                         'purchase_price' => $isShadowUser ? 0 : $unitPrice,
                         'sale_price' => $isShadowUser ? 0 : $salePrice,
                         'shadow_purchase_price' => $item['shadow_unit_price'],
-                        'shadow_sale_price' => $salePrice,
+                        'shadow_sale_price' => $shadowSalePrice,
                         'user_type' => $user->type
                     ]);
                 }
@@ -223,6 +239,26 @@ class PurchaseController extends Controller
             'purchase' => $purchase,
             'isShadowUser' => $isShadowUser
         ]);
+    }
+
+    private function transformToShadowData($purchase)
+    {
+        // Replace real amounts with shadow amounts for main purchase
+        $purchase->total_amount = $purchase->shadow_total_amount;
+        $purchase->paid_amount = $purchase->shadow_paid_amount;
+        $purchase->due_amount = $purchase->shadow_due_amount;
+
+        // Transform items
+        if ($purchase->items) {
+            $purchase->items->transform(function ($item) {
+                $item->unit_price = $item->shadow_unit_price;
+                $item->sale_price = $item->shadow_sale_price;
+                $item->total_price = $item->shadow_total_price;
+                return $item;
+            });
+        }
+
+        return $purchase;
     }
 
     public function destroy($id)
@@ -262,25 +298,4 @@ class PurchaseController extends Controller
         }
     }
 
-    /**
-     * Transform purchase data for shadow users
-     */
-    private function transformToShadowData($purchase)
-    {
-        // Replace real amounts with shadow amounts
-        $purchase->total_amount = $purchase->shadow_total_amount;
-        $purchase->paid_amount = $purchase->shadow_paid_amount;
-
-        // Transform items
-        if ($purchase->items) {
-            $purchase->items->transform(function ($item) {
-                $item->unit_price = $item->shadow_unit_price;
-                $item->total_price = $item->shadow_total_price;
-                $item->sale_price = $item->shadow_sale_price;
-                return $item;
-            });
-        }
-
-        return $purchase;
-    }
 }
