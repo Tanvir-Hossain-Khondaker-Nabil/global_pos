@@ -28,6 +28,15 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
         window.print();
     };
 
+    const getPaymentStatusColor = (status) => {
+        switch (status) {
+            case 'paid': return 'success';
+            case 'partial': return 'warning';
+            case 'unpaid': return 'error';
+            default: return 'neutral';
+        }
+    };
+
     return (
         <div className="bg-white rounded-box p-5 print:p-0">
             {/* Header */}
@@ -166,6 +175,12 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                             <div className="divider my-3"></div>
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
+                                    <span>Payment Status:</span>
+                                    <span className={`badge badge-${getPaymentStatusColor(purchase.payment_status)}`}>
+                                        {purchase.payment_status}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between">
                                     <span>Created:</span>
                                     <span>{formatDate(purchase.created_at)}</span>
                                 </div>
@@ -189,36 +204,22 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     <span>Total Amount:</span>
                                     <span className={`font-bold text-lg ${isShadowUser ? 'text-warning' : ''}`}>
                                         {formatCurrency(purchase.total_amount)}
-                                        {isShadowUser && (
-                                            <span className="badge badge-warning badge-xs ml-1">S</span>
-                                        )}
                                     </span>
                                 </div>
                                 
-                                {purchase.paid_amount > 0 && (
-                                    <>
-                                        <div className="flex justify-between items-center text-green-600">
-                                            <span>Paid Amount:</span>
-                                            <span className="font-bold">
-                                                {formatCurrency(purchase.paid_amount)}
-                                                {isShadowUser && (
-                                                    <span className="badge badge-warning badge-xs ml-1">S</span>
-                                                )}
-                                            </span>
-                                        </div>
-                                        {purchase.due_amount > 0 && (
-                                            <div className="flex justify-between items-center text-orange-600">
-                                                <span>Due Amount:</span>
-                                                <span className="font-bold">
-                                                    {formatCurrency(purchase.due_amount)}
-                                                    {isShadowUser && (
-                                                        <span className="badge badge-warning badge-xs ml-1">S</span>
-                                                    )}
-                                                </span>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
+                                <div className="flex justify-between items-center text-green-600">
+                                    <span>Paid Amount:</span>
+                                    <span className="font-bold">
+                                        {formatCurrency(purchase.paid_amount)}
+                                    </span>
+                                </div>
+                                
+                                <div className="flex justify-between items-center text-orange-600">
+                                    <span>Due Amount:</span>
+                                    <span className="font-bold">
+                                        {formatCurrency(purchase.due_amount)}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -253,7 +254,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                         {isShadowUser ? 'Sale Price' : 'Sale Price'}
                                     </th>
                                     <th className="text-right">
-                                        {isShadowUser ? 'Total Price' : 'Total'}
+                                        {isShadowUser ? 'Total Price' : 'Total Price'}
                                     </th>
                                 </tr>
                             </thead>
@@ -276,29 +277,16 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                         </td>
                                         <td className="text-right font-mono">{item.quantity}</td>
                                         <td className="text-right font-mono">
-                                            {isShadowUser ? (
-                                                <span className="text-warning font-bold">
-                                                    {formatCurrency(item.unit_price)}
-                                                </span>
-                                            ) : (
-                                                formatCurrency(item.unit_price)
-                                            )}
+                                            {formatCurrency(item.unit_price)}
+
                                         </td>
                                         <td className="text-right font-mono">
-                                            {isShadowUser ? (
-                                                <span className="text-warning">
-                                                    {formatCurrency(item.sale_price || 0)}
-                                                </span>
-                                            ) : (
-                                                formatCurrency(item.sale_price || 0)
-                                            )}
+                                            {formatCurrency(item.sale_price || 0)}
+
                                         </td>
-                                        <td className={`text-right font-mono font-bold ${isShadowUser ? 'text-warning' : 'text-blue-600'}`}>
-                                            {isShadowUser ? (
-                                                formatCurrency(item.total_price)
-                                            ) : (
-                                                formatCurrency(item.shadow_total_price || 0)
-                                            )}
+                                        <td className={`text-right font-mono font-bold ${isShadowUser ? 'text-warning' : ''}`}>
+                                            {formatCurrency(item.total_price)}
+
                                         </td>
                                     </tr>
                                 ))}
@@ -306,17 +294,12 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                             <tfoot className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                                 <tr>
                                     <th colSpan="3" className="text-right bg-opacity-20">Totals:</th>
-                                    <th className="text-right bg-opacity-20">{calculateTotalQuantity()}</th>
+                                    <th className="text-right bg-opacity-20 font-bold">{calculateTotalQuantity()}</th>
                                     <th className="text-right bg-opacity-20"></th>
                                     <th className="text-right bg-opacity-20"></th>
                                     <th className="text-right bg-opacity-20 font-bold">
-                                        {isShadowUser ? (
-                                            <span className="text-warning-content">
-                                                {formatCurrency(purchase.total_amount)}
-                                            </span>
-                                        ) : (
-                                            formatCurrency(purchase.shadow_total_amount)
-                                        )}
+                                        {formatCurrency(purchase.total_amount)}
+
                                     </th>
                                 </tr>
                             </tfoot>
