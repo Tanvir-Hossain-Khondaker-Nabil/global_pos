@@ -17,6 +17,12 @@ class Sale extends Model
         'due_amount',
         'payment_type',
         'status',
+        'shadow_sub_total',
+        'shadow_discount',
+        'shadow_vat_tax',
+        'shadow_grand_total',
+        'shadow_paid_amount',
+        'shadow_due_amount',
     ];
 
 

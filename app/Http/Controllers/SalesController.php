@@ -32,7 +32,7 @@ class SalesController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('invoice_no', 'like', "%{$search}%")
                       ->orWhereHas('customer', function ($q) use ($search) {
-                          $q->where('name', 'like', "%{$search}%");
+                          $q->where('customer_name', 'like', "%{$search}%");
                       });
                 });
             })
@@ -81,13 +81,14 @@ class SalesController extends Controller
     public function store(Request $request)
     {
 
-
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'items'       => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity'   => 'required|integer|min:1',
         ]);
+
+        // dd($request->all());
 
         DB::beginTransaction();
 
@@ -97,18 +98,24 @@ class SalesController extends Controller
             $sale = Sale::create([
                 'customer_id' => $request->customer_id,
                 'invoice_no'  => $this->generateInvoiceNo(),
-                'sub_total'   => 0,
-                'discount'    => 0,
-                'vat_tax'     => 0,
-                'grand_total' => 0,
-                'paid_amount' => 0,
-                'due_amount'  => 0,
+                'sub_total'   => $request->sub_amount ?? 0,
+                'discount'    => $request->discount_rate,
+                'vat_tax'     => $request->vat_rate,
+                'grand_total' => $request->grand_amount,
+                'paid_amount' => $request->paid_amount,
+                'due_amount'  => $request->due_amount,
+                'shadow_vat_tax' => $request->vat_rate,
+                'shadow_discount' => $request->discount_rate,
+                'shadow_sub_total' =>  0,
+                'shadow_grand_total' => 0,
+                'shadow_paid_amount' => $request->paid_amount,
+                'shadow_due_amount'  => 0,
                 'payment_type'=> 'cash',
                 'status'      => 'pending',
             ]);
 
 
-            $subTotal = 0;
+            $shadowSubTotal = 0;
 
             // 2. Loop items
             foreach($request->items as $item)
@@ -117,6 +124,8 @@ class SalesController extends Controller
                 $variant = Variant::findOrFail($item['variant_id']);
                 $quantity = $item['quantity'];
                 $unitPrice = $item['unit_price'];
+                $shadowUnitPrice = $item['shadow_sell_price'];
+                $shadowtotalPrice = $quantity * $shadowUnitPrice;
                 $totalPrice = $quantity * $unitPrice;
 
 
@@ -138,17 +147,23 @@ class SalesController extends Controller
                     'quantity'   => $quantity,
                     'unit_price' => $unitPrice,
                     'total_price'=> $totalPrice,
+                    'shadow_unit_price' => $shadowUnitPrice,
+                    'shadow_total_price'=> $shadowtotalPrice,
                 ]);
 
-                $subTotal += $totalPrice;
+                $shadowSubTotal += $shadowtotalPrice;
             }
 
-            // 5. Update totals
-            $grandTotal = $subTotal; // add discount or tax if needed
+            $shadowGrandTotal =  $shadowSubTotal;
+            $shadowGrandTotal += $shadowSubTotal * $request->vat_rate / 100; 
+            $shadowGrandTotal -= $shadowSubTotal * $request->discount_rate / 100; 
+            $shadowDueAmount = $shadowGrandTotal - $request->paid_amount;
+
+
             $sale->update([
-                'sub_total'   => $subTotal,
-                'grand_total' => $grandTotal,
-                'due_amount'  => $grandTotal,
+                'shadow_sub_total'   => $shadowSubTotal,
+                'shadow_grand_total' => $shadowGrandTotal,
+                'shadow_due_amount'  => $shadowDueAmount,
             ]);
 
             DB::commit();

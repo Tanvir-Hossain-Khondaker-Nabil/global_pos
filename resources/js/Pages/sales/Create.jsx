@@ -1,23 +1,81 @@
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
 import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
-import { useState, useEffect } from "react";
-
+import { useState, useEffect, useCallback } from "react";
 
 export default function AddSale({ customers, productstocks }) {
     const [selectedItems, setSelectedItems] = useState([]);
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
+    const [vatRate, setVatRate] = useState(0);
+    const [discountRate, setDiscountRate] = useState(0);
+    const [paidAmount, setPaidAmount] = useState(0);
 
     console.log("Customers:", customers);
     console.log("Product Stocks:", productstocks);
+
+    // Calculate all amounts using useCallback to prevent unnecessary recalculations
+    const calculateSubTotal = useCallback(() => {
+        if (!selectedItems || selectedItems.length === 0) return 0;
+        return selectedItems.reduce((total, item) => {
+            const itemTotal = Number(item.total_price) || 0;
+            return total + itemTotal;
+        }, 0);
+    }, [selectedItems]);
+
+    const calculateVatAmount = useCallback(() => {
+        const subtotal = calculateSubTotal();
+        return (subtotal * (Number(vatRate) || 0)) / 100;
+    }, [calculateSubTotal, vatRate]);
+
+    const calculateDiscountAmount = useCallback(() => {
+        const subtotal = calculateSubTotal();
+        return (subtotal * (Number(discountRate) || 0)) / 100;
+    }, [calculateSubTotal, discountRate]);
+
+    const calculateGrandTotal = useCallback(() => {
+        const subtotal = calculateSubTotal();
+        const vatAmount = calculateVatAmount();
+        const discountAmount = calculateDiscountAmount();
+        return subtotal + vatAmount - discountAmount;
+    }, [calculateSubTotal, calculateVatAmount, calculateDiscountAmount]);
+
+    const calculateDueAmount = useCallback(() => {
+        const grandTotal = calculateGrandTotal();
+        const paid = Number(paidAmount) || 0;
+        return Math.max(0, grandTotal - paid);
+    }, [calculateGrandTotal, paidAmount]);
 
     const form = useForm({
         customer_id: "",
         sale_date: new Date().toISOString().split('T')[0],
         notes: "",
         items: [],
+        vat_rate: 0,
+        discount_rate: 0,
+        paid_amount: 0,
+        grand_amount: 0,
+        due_amount: 0,
+        sub_amount: 0,
     });
+
+    // Update form data when any of the dependencies change
+    useEffect(() => {
+        const subTotal = calculateSubTotal();
+        const grandTotal = calculateGrandTotal();
+        const dueAmount = calculateDueAmount();
+
+        form.setData({
+            ...form.data,
+            items: selectedItems,
+            vat_rate: Number(vatRate) || 0,
+            discount_rate: Number(discountRate) || 0,
+            paid_amount: Number(paidAmount) || 0,
+            grand_amount: grandTotal,
+            due_amount: dueAmount,
+            sub_amount: subTotal,
+        });
+    }, [selectedItems, vatRate, discountRate, paidAmount, calculateSubTotal, calculateGrandTotal, calculateDueAmount]);
 
     const getVariantDisplayName = (variant) => {
         const parts = [];
@@ -53,19 +111,23 @@ export default function AddSale({ customers, productstocks }) {
                     : item
             ));
         } else {
+            const salePrice = Number(productstock.sale_price) || 0;
+            const shadowSalePrice = Number(productstock.shadow_sale_price) || 0;
+
             setSelectedItems([
                 ...selectedItems,
                 {
                     product_id: productstock.product.id,
                     variant_id: variantId,
                     product_name: productstock.product.name,
-                    product_code : productstock.product.product_no || '',
-                    variant_name:  variant ? getVariantDisplayName(variant) : 'Default Variant',
-                    quantity: productstock.quantity,
-                    stockQuantity : productstock.quantity || 0,
-                    unit_price: 0,
-                    sell_price: productstock.sale_price || 0,
-                    total_price: 0,
+                    product_code: productstock.product.product_no || '',
+                    variant_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
+                    quantity: 1,
+                    stockQuantity: Number(productstock.quantity) || 0,
+                    unit_price: salePrice,
+                    sell_price: salePrice,
+                    total_price: salePrice,
+                    shadow_sell_price: shadowSalePrice,
                 }
             ]);
         }
@@ -81,41 +143,74 @@ export default function AddSale({ customers, productstocks }) {
 
     const updateItem = (index, field, value) => {
         const updated = [...selectedItems];
-        updated[index][field] = value;
+        const numValue = field === 'quantity' ? parseInt(value) || 0 : parseFloat(value) || 0;
+        
+        updated[index][field] = numValue;
 
         if (field === 'quantity' || field === 'unit_price') {
-            const quantity = field === 'quantity' ? value : updated[index].quantity;
-            const unitPrice = field === 'unit_price' ? value : updated[index].unit_price;
+            const quantity = field === 'quantity' ? numValue : updated[index].quantity;
+            const unitPrice = field === 'unit_price' ? numValue : updated[index].unit_price;
             updated[index].total_price = quantity * unitPrice;
         }
 
         setSelectedItems(updated);
     };
 
-
     console.log("Selected Items:", selectedItems);
-    const calculateTotal = () => {
-        return selectedItems.reduce((total, item) => total + (item.total_price || 0), 0);
+    console.log("Form Data:", form.data);
+
+    // Safe number formatting function
+    const formatCurrency = (value) => {
+        const numValue = Number(value) || 0;
+        return numValue.toFixed(2);
     };
 
     const submit = (e) => {
         e.preventDefault();
+        
         if (selectedItems.length === 0) {
             alert("Please add at least one product to the sale");
             return;
         }
 
-        form.setData('items', selectedItems);
+        // Validate that all items have quantity and unit price
+        const invalidItems = selectedItems.filter(item => 
+            !item.quantity || item.quantity <= 0 || !item.unit_price || item.unit_price <= 0
+        );
+
+        if (invalidItems.length > 0) {
+            alert("Please ensure all items have valid quantity and unit price");
+            return;
+        }
+
+        // Check for stock availability
+        const outOfStockItems = selectedItems.filter(item => 
+            item.quantity > item.stockQuantity
+        );
+
+        if (outOfStockItems.length > 0) {
+            alert("Some items exceed available stock. Please adjust quantities.");
+            return;
+        }
+
+        console.log("Submitting form data:", form.data);
 
         form.post(route("sales.store"), {
-            onSuccess: () => router.visit(route("sales.index")),
+            onSuccess: () => {
+                console.log("Sale created successfully");
+                router.visit(route("sales.index"));
+            },
             onError: (errors) => {
                 console.error("Error occurred:", errors);
-                alert( errors.error || "Failed to create sale. Please check the console for details.");
+                if (errors.items) {
+                    alert("Please check the product items: " + errors.items);
+                } else {
+                    console.error("Error occurred:", errors);
+                    alert(errors.error || "Failed to create sale. Please check the form data.");
+                }
             }
         });
     };
-
 
     return (
         <div className="bg-white rounded-box p-5">
@@ -224,9 +319,8 @@ export default function AddSale({ customers, productstocks }) {
                                             <div className="flex-1">
                                                 <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
                                                 <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
-                                                <p className="text-sm text-gray-600"> <strong>Total Quantity:</strong> {item.stockQuantity} ||  <strong>Unit Price:</strong> {item.sell_price}</p>
+                                                <p className="text-sm text-gray-600"> <strong>Available Stock:</strong> {item.stockQuantity} | <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
                                             </div>
-                                            <input type="hidden" name="warehouse_id" value={item.warehouse_id} />
                                             <button
                                                 type="button"
                                                 onClick={() => removeItem(index)}
@@ -237,24 +331,42 @@ export default function AddSale({ customers, productstocks }) {
                                         </div>
                                         <div className="grid grid-cols-3 gap-3">
                                             <div className="form-control">
-                                                <label className="label"><span className="label-text">Quantity</span></label>
+                                                <label className="label"><span className="label-text">Quantity *</span></label>
                                                 <input
                                                     type="number"
                                                     min="1"
+                                                    max={item.stockQuantity}
                                                     className="input input-bordered input-sm"
                                                     value={item.quantity}
-                                                    onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                                                    onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                                    required
                                                 />
+                                                {item.quantity > item.stockQuantity && (
+                                                    <div className="text-error text-xs mt-1">Exceeds available stock!</div>
+                                                )}
                                             </div>
                                             <div className="form-control">
-                                                <label className="label"><span className="label-text">Unit Price (৳)</span></label>
+                                                <label className="label"><span className="label-text">Unit Price (৳) *</span></label>
                                                 <input
                                                     type="number"
                                                     min="0"
                                                     step="0.01"
                                                     className="input input-bordered input-sm"
-                                                    value={item.unit_price}
-                                                    onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
+                                                    value={item.sell_price}
+                                                    onChange={(e) => updateItem(index, 'sell_price', e.target.value)}
+                                                    required
+                                                />
+                                            </div>
+                                            <div className="form-control">
+                                                <label className="label"><span className="label-text">Sh Unit Price (৳) *</span></label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    className="input input-bordered input-sm"
+                                                    value={item.shadow_sell_price}
+                                                    onChange={(e) => updateItem(index, 'shadow_sell_price', e.target.value)}
+                                                    required
                                                 />
                                             </div>
                                             <div className="form-control">
@@ -262,7 +374,16 @@ export default function AddSale({ customers, productstocks }) {
                                                 <input
                                                     type="number"
                                                     className="input input-bordered input-sm bg-gray-100"
-                                                    value={item.total_price || 0}
+                                                    value={formatCurrency(item.total_price)}
+                                                    readOnly
+                                                />
+                                            </div>
+                                            <div className="form-control">
+                                                <label className="label"><span className="label-text">Sh Total Price (৳)</span></label>
+                                                <input
+                                                    type="number"
+                                                    className="input input-bordered input-sm bg-gray-100"
+                                                    value={formatCurrency(item.shadow_sell_price * item.quantity)}
                                                     readOnly
                                                 />
                                             </div>
@@ -270,11 +391,80 @@ export default function AddSale({ customers, productstocks }) {
                                     </div>
                                 ))}
 
-                                {/* Total Amount */}
-                                <div className="border-t pt-4 mt-4">
-                                    <div className="flex justify-between items-center text-lg font-bold">
-                                        <span>Total Amount:</span>
-                                        <span>৳{calculateTotal().toFixed(2)}</span>
+                                {/* Calculation Summary */}
+                                <div className="border-t pt-4 mt-4 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <span>Sub Total:</span>
+                                        <span>৳{formatCurrency(calculateSubTotal())}</span>
+                                    </div>
+                                    
+                                    {/* VAT Field */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span>Vat / Tax:</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                step="0.01"
+                                                className="input input-bordered input-sm w-20"
+                                                value={vatRate}
+                                                onChange={(e) => setVatRate(parseFloat(e.target.value) || 0)}
+                                                placeholder="Rate %"
+                                            />
+                                            <span>%</span>
+                                        </div>
+                                        <span>৳{formatCurrency(calculateVatAmount())}</span>
+                                    </div>
+
+                                    {/* Discount Field */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span>Discount:</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                max="100"
+                                                step="0.01"
+                                                className="input input-bordered input-sm w-20"
+                                                value={discountRate}
+                                                onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
+                                                placeholder="Rate %"
+                                            />
+                                            <span>%</span>
+                                        </div>
+                                        <span>৳{formatCurrency(calculateDiscountAmount())}</span>
+                                    </div>
+
+                                    {/* Grand Total */}
+                                    <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
+                                        <span>Grand Total:</span>
+                                        <span>৳{formatCurrency(calculateGrandTotal())}</span>
+                                    </div>
+
+                                    {/* Paid Amount */}
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <span>Paid Amount:</span>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                step="0.01"
+                                                max={calculateGrandTotal()}
+                                                className="input input-bordered input-sm w-32"
+                                                value={paidAmount}
+                                                onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                                            />
+                                        </div>
+                                        <span>৳{formatCurrency(paidAmount)}</span>
+                                    </div>
+
+                                    {/* Due Amount */}
+                                    <div className="flex justify-between items-center text-lg font-bold border-t pt-2">
+                                        <span>Due Amount:</span>
+                                        <span className={calculateDueAmount() > 0 ? "text-error" : "text-success"}>
+                                            ৳{formatCurrency(calculateDueAmount())}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

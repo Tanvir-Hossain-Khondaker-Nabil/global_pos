@@ -268,14 +268,14 @@ export default function SaleShow({ sale }) {
                             {sale.discount > 0 && (
                                 <div className="flex justify-between text-lg">
                                     <span className="text-gray-600">Discount:</span>
-                                    <span className="font-semibold text-error">-{formatCurrency(sale.discount)} Tk</span>
+                                    <span className="font-semibold text-error">{formatCurrency(sale.discount)} %</span>
                                 </div>
                             )}
                             
                             {sale.vat_tax > 0 && (
                                 <div className="flex justify-between text-lg">
-                                    <span className="text-gray-600">VAT/Tax:</span>
-                                    <span className="font-semibold text-warning">+{formatCurrency(sale.vat_tax)} Tk</span>
+                                    <span className="text-gray-600">Vat/Tax:</span>
+                                    <span className="font-semibold text-warning">{formatCurrency(sale.vat_tax)} %</span>
                                 </div>
                             )}
                             
