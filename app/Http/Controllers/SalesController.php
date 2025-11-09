@@ -10,6 +10,7 @@ use App\Models\StockMovement;
 use App\Models\Customer;
 use App\Models\Stock;
 use App\Models\Variant;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -20,37 +21,49 @@ class SalesController extends Controller
      */
     public function index(Request $request)
     {
-        // Get search and filter parameters
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $search = $request->input('search');
         $status = $request->input('status');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
+
         
-        // Build query with relationships
         $sales = Sale::with(['customer', 'items.product', 'items.variant'])
-            ->when($search, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('invoice_no', 'like', "%{$search}%")
-                      ->orWhereHas('customer', function ($q) use ($search) {
-                          $q->where('customer_name', 'like', "%{$search}%");
-                      });
-                });
-            })
-            ->when($status, function ($query, $status) {
-                $query->where('status', $status);
-            })
-            ->when($dateFrom, function ($query, $dateFrom) {
-                $query->whereDate('created_at', '>=', $dateFrom);
-            })
-            ->when($dateTo, function ($query, $dateTo) {
-                $query->whereDate('created_at', '<=', $dateTo);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->withQueryString();
+        ->when($search, function ($query, $search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('invoice_no', 'like', "%{$search}%")
+                    ->orWhereHas('customer', function ($q) use ($search) {
+                        $q->where('customer_name', 'like', "%{$search}%");
+                    });
+            });
+        })
+        ->when($status, function ($query, $status) {
+            $query->where('status', $status);
+        })
+        ->when($dateFrom, function ($query, $dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        })
+        ->when($dateTo, function ($query, $dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(15)
+        ->withQueryString();
+
+        
+        if ($isShadowUser) {
+            $sales->getCollection()->transform(function ($sale) {
+                return $this->transformToShadowData($sale);
+            });
+        }
+
+
 
         return Inertia::render('sales/Index', [
             'sales' => $sales,
+            'isShadowUser' => $isShadowUser,
             'filters' => [
                 'search' => $search,
                 'status' => $status,
@@ -59,6 +72,7 @@ class SalesController extends Controller
             ]
         ]);
     }
+
 
     /**
      * Show form
@@ -81,6 +95,7 @@ class SalesController extends Controller
     public function store(Request $request)
     {
 
+
         $request->validate([
             'customer_id' => 'required|exists:customers,id',
             'items'       => 'required|array|min:1',
@@ -99,19 +114,20 @@ class SalesController extends Controller
                 'customer_id' => $request->customer_id,
                 'invoice_no'  => $this->generateInvoiceNo(),
                 'sub_total'   => $request->sub_amount ?? 0,
-                'discount'    => $request->discount_rate,
-                'vat_tax'     => $request->vat_rate,
-                'grand_total' => $request->grand_amount,
-                'paid_amount' => $request->paid_amount,
-                'due_amount'  => $request->due_amount,
-                'shadow_vat_tax' => $request->vat_rate,
-                'shadow_discount' => $request->discount_rate,
+                'discount'    => $request->discount_rate ?? 0,
+                'vat_tax'     => $request->vat_rate ?? 0,
+                'grand_total' => $request->grand_amount ?? 0,
+                'paid_amount' => $request->paid_amount ?? 0,
+                'due_amount'  => $request->due_amount ?? 0,
+                'shadow_vat_tax' => $request->vat_rate ?? 0,
+                'shadow_discount' => $request->discount_rate ?? 0,
                 'shadow_sub_total' =>  0,
                 'shadow_grand_total' => 0,
-                'shadow_paid_amount' => $request->paid_amount,
+                'shadow_paid_amount' => $request->paid_amount ?? 0,
                 'shadow_due_amount'  => 0,
                 'payment_type'=> 'cash',
                 'status'      => 'pending',
+                'type'        => $request->type ?? 'pos',
             ]);
 
 
@@ -183,14 +199,19 @@ class SalesController extends Controller
      */
     public function show(Sale $sale)
     {
-            $sale->load(['customer', 'items.product', 'items.variant', 'items.warehouse']);
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
 
+        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse'])->findOrFail($sale->id);
 
-            return Inertia::render('sales/Show', [
-                'sale' => $sale,
-            ]);
+        if ($isShadowUser) {
+            $sale = $this->transformToShadowData($sale);
+        }
+
+        return Inertia::render('sales/Show', [
+            'sale' => $sale,
+        ]);
     }
-
 
 
     /**
@@ -234,7 +255,143 @@ class SalesController extends Controller
             DB::rollBack();
             return back()->withErrors($e->getMessage());
         }
-}
+    }
+
+
+    /**
+     * Display all sales items
+     */
+
+    public function allSalesItems()
+    {
+
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'warehouse'])
+            ->orderBy('created_at', 'desc')
+            ->when(request('search'), function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->whereHas('product', function ($q1) use ($search) {
+                        $q1->where('name', 'like', "%{$search}%")
+                        ->orWhere('product_no', 'like', "%{$search}%");
+                    })->orWhereHas('sale', function ($q1) use ($search) {
+                        $q1->where('invoice_no', 'like', "%{$search}%")
+                        ->orWhereHas('customer', function ($q2) use ($search) {
+                            $q2->where('customer_name', 'like', "%{$search}%")
+                                ->orWhere('phone', 'like', "%{$search}%");
+                        });
+                    })->orWhereHas('variant', function ($q1) use ($search) {
+                        $q1->where('size', 'like', "%{$search}%")
+                        ->orWhere('color', 'like', "%{$search}%");
+                    })->orWhereHas('warehouse', function ($q1) use ($search) {
+                        $q1->where('name', 'like', "%{$search}%");
+                    });
+                });
+            })
+            ->when(request('customer_id'), function ($query, $customerId) {
+                $query->whereHas('sale.customer', function ($q) use ($customerId) {
+                    $q->where('customer_name', 'like', "%{$customerId}%")
+                    ->orWhere('phone', 'like', "%{$customerId}%");
+                });
+            })
+            ->when(request('product_id'), function ($query, $productId) {
+                $query->whereHas('product', function ($q) use ($productId) {
+                    $q->where('name', 'like', "%{$productId}%")
+                    ->orWhere('product_no', 'like', "%{$productId}%");
+                });
+            })
+            ->when(request('warehouse_id'), function ($query, $warehouseId) {
+                $query->whereHas('warehouse', function ($q) use ($warehouseId) {
+                    $q->where('name', 'like', "%{$warehouseId}%");
+                });
+            })
+            ->when(request('date_from'), function ($query, $dateFrom) {
+                $query->whereDate('created_at', '>=', $dateFrom);
+            })
+            ->when(request('date_to'), function ($query, $dateTo) {
+                $query->whereDate('created_at', '<=', $dateTo);
+            })
+            ->paginate(15);
+
+
+        if ($isShadowUser) {
+            $salesItems->getCollection()->transform(function ($item) {
+                return self::transformToShadowItemData($item);
+            });
+        }
+
+        
+        return Inertia::render('sales/SalesItem', [
+            'salesItems' => $salesItems,
+        ]);
+    }
+
+
+
+    public function showItem($id)
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+
+        $saleItem = SaleItem::with(['sale.customer','product','variant', 'warehouse',])->findOrFail($id);
+
+         if ($isShadowUser) {
+             $saleItem = self::transformToShadowItemData($saleItem);
+        }
+
+
+        return Inertia::render('sales/ShowItem', [
+            'saleItem' => $saleItem,
+        ]);
+    }
+
+ 
+    /**
+     * Recalculate sale totals after item deletion
+     */
+    private function recalculateSaleTotals(Sale $sale)
+    {
+        $subtotal = $sale->saleItems->sum(function ($item) {
+            return ($item->unit_price * $item->quantity) * (1 - $item->discount / 100);
+        });
+        
+        $totalQuantity = $sale->saleItems->sum('quantity');
+        
+        $sale->update([
+            'subtotal' => $subtotal,
+            'grandtotal' => $subtotal,
+            'total_quantity' => $totalQuantity,
+        ]);
+    }
+
+    /**
+     * Get sales items statistics
+     */
+    public function getStatistics(Request $request)
+    {
+        $query = SaleItem::with('sale', 'product');
+        
+        // Apply date filters if provided
+        if ($request->has('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+        if ($request->has('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+        
+        $stats = [
+            'total_items' => $query->count(),
+            'total_quantity' => $query->sum('quantity'),
+            'total_revenue' => $query->get()->sum(function ($item) {
+                return ($item->unit_price * $item->quantity) * (1 - $item->discount / 100);
+            }),
+            'avg_item_value' => $query->avg('unit_price'),
+        ];
+        
+        return response()->json($stats);
+    }
 
 
     /**
@@ -285,5 +442,47 @@ class SalesController extends Controller
         $last = Sale::latest()->first();
         $num = $last ? intval(substr($last->invoice_no, -4)) + 1 : 1;
         return 'INV-'.date('Y-m').'-'.str_pad($num, 4, '0', STR_PAD_LEFT);
+    }
+
+
+    /**
+     * Transform sale data to shadow data
+     */
+
+    private function transformToShadowData($sale)
+    {
+        $sale->sub_total = $sale->shadow_sub_total;
+        $sale->discount = $sale->shadow_discount;
+        $sale->vat_tax = $sale->shadow_vat_tax;
+        $sale->grand_total = $sale->shadow_grand_total;
+        $sale->paid_amount = $sale->shadow_paid_amount;
+        $sale->due_amount = $sale->shadow_due_amount;
+
+        if ($sale->items) {
+            $sale->items->transform(function ($item) {
+                $item->unit_price = $item->shadow_unit_price;
+                $item->sale_price = $item->shadow_sale_price;
+                $item->total_price = $item->shadow_total_price;
+                return $item;
+            });
+        }
+
+        return $sale;
+    }
+
+
+    /**
+     * Update the specified sale item
+     */
+
+    private static function transformToShadowItemData($salesItems)
+    {
+
+
+        $salesItems->unit_price = $salesItems->shadow_unit_price;
+        $salesItems->total_price = $salesItems->shadow_total_price;
+ 
+
+        return $salesItems;
     }
 }

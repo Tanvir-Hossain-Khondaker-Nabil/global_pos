@@ -1,10 +1,10 @@
 import React, { useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Plus, Printer, Trash2, Eye } from "lucide-react";
+import { Frown, Plus, Printer, Trash2, Eye, Search } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 
-export default function SalesIndex({ sales, filters }) {
+export default function SalesIndex({ sales, filters, isShadowUser }) {
     const { auth } = usePage().props;
 
     // Handle search and filters
@@ -15,9 +15,7 @@ export default function SalesIndex({ sales, filters }) {
         date_to: filters.date_to || "",
     });
 
-    const handleFilter = (field, value) => {
-        filterForm.setData(field, value);
-        
+    const handleFilter = () => {
         const queryString = {};
         if (filterForm.data.search) queryString.search = filterForm.data.search;
         if (filterForm.data.status) queryString.status = filterForm.data.status;
@@ -32,6 +30,12 @@ export default function SalesIndex({ sales, filters }) {
     };
 
     const clearFilters = () => {
+        filterForm.setData({
+            search: "",
+            status: "",
+            date_from: "",
+            date_to: "",
+        });
         router.get(route("sales.index"));
     };
 
@@ -48,23 +52,51 @@ export default function SalesIndex({ sales, filters }) {
         }).format(amount);
     };
 
+    // Calculate totals from all sales data (not just current page)
+    const calculateTotals = () => {
+        // Use sales.data for current page or all data if available
+        const salesData = sales.data || [];
+        
+        const totalRevenue = salesData.reduce((sum, sale) => sum + parseFloat(sale.grand_total || 0), 0);
+        const totalPaid = salesData.reduce((sum, sale) => sum + parseFloat(sale.paid_amount || 0), 0);
+        const totalDue = salesData.reduce((sum, sale) => sum + parseFloat(sale.due_amount || 0), 0);
+
+        return {
+            totalRevenue,
+            totalPaid,
+            totalDue,
+            totalSales: salesData.length
+        };
+    };
+
+    const totals = calculateTotals();
+
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title="Sales History"
-                subtitle="Manage and view all your sales records"
+                title={isShadowUser ?  "Sales History (Inventory)" : "Sales History (Inventory)"}
+                subtitle={isShadowUser ? "View sales data" : "Manage your product sales"}
             >
                 <div className="flex items-center gap-3 flex-wrap">
-                    <input
-                        type="search"
-                        onChange={(e) => handleFilter("search", e.target.value)}
-                        value={filterForm.data.search}
-                        placeholder="Search invoice or customer..."
-                        className="input input-sm input-bordered"
-                    />
+                    <div className="join">
+                        <input
+                            type="search"
+                            value={filterForm.data.search}
+                            onChange={(e) => filterForm.setData("search", e.target.value)}
+                            onKeyPress={(e) => {
+                                if (e.key === 'Enter') {
+                                    handleFilter();
+                                }
+                            }}
+                            placeholder="Search invoice or customer..."
+                            className="input input-sm input-bordered join-item"
+                        />
+                    
+                    </div>
+                    
                     <select
                         value={filterForm.data.status}
-                        onChange={(e) => handleFilter("status", e.target.value)}
+                        onChange={(e) => filterForm.setData("status", e.target.value)}
                         className="select select-sm select-bordered"
                     >
                         <option value="">All Status</option>
@@ -72,18 +104,21 @@ export default function SalesIndex({ sales, filters }) {
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
+                    
                     <input
                         type="date"
                         value={filterForm.data.date_from}
-                        onChange={(e) => handleFilter("date_from", e.target.value)}
+                        onChange={(e) => filterForm.setData("date_from", e.target.value)}
                         className="input input-sm input-bordered"
                     />
+                    
                     <input
                         type="date"
                         value={filterForm.data.date_to}
-                        onChange={(e) => handleFilter("date_to", e.target.value)}
+                        onChange={(e) => filterForm.setData("date_to", e.target.value)}
                         className="input input-sm input-bordered"
                     />
+                    
                     {(filterForm.data.search || filterForm.data.status || filterForm.data.date_from || filterForm.data.date_to) && (
                         <button
                             onClick={clearFilters}
@@ -92,12 +127,21 @@ export default function SalesIndex({ sales, filters }) {
                             Clear
                         </button>
                     )}
+                    
                     <Link
                         className="btn btn-primary btn-sm"
                         href={route("sales.create")}
                     >
                         <Plus size={16} />
                         New Sale
+                    </Link>
+
+                    <Link
+                        onClick={handleFilter}
+                        className="btn btn-sm btn-primary join-item"
+                    >
+                        <Search size={16} />
+                        Filter
                     </Link>
                 </div>
             </PageHeader>
@@ -187,13 +231,6 @@ export default function SalesIndex({ sales, filters }) {
                                                     <Eye size={13} />
                                                     View
                                                 </Link>
-                                                <button
-                                                    onClick={() => window.print()}
-                                                    className="btn btn-xs btn-primary"
-                                                >
-                                                    <Printer size={13} />
-                                                    Print
-                                                </button>
                                                 {auth.role === "admin" && (
                                                     <Link
                                                         href={route("sales.destroy", { sale: sale.id })}
@@ -247,31 +284,30 @@ export default function SalesIndex({ sales, filters }) {
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Total Sales</p>
                             <p className="text-xl font-bold text-primary">
-                                {sales.data.length}
+                                {totals.totalSales}
                             </p>
                         </div>
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Total Revenue</p>
                             <p className="text-xl font-bold text-success">
-                                {formatCurrency(sales.data.reduce((sum, sale) => sum + sale.grand_total, 0))} Tk
+                                {formatCurrency(totals.totalRevenue)} Tk
                             </p>
                         </div>
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Total Paid</p>
                             <p className="text-xl font-bold text-info">
-                                {formatCurrency(sales.data.reduce((sum, sale) => sum + sale.paid_amount, 0))} Tk
+                                {formatCurrency(totals.totalPaid)} Tk
                             </p>
                         </div>
                         <div className="text-center">
                             <p className="text-sm text-gray-600">Total Due</p>
                             <p className="text-xl font-bold text-error">
-                                {formatCurrency(sales.data.reduce((sum, sale) => sum + sale.due_amount, 0))} Tk
+                                {formatCurrency(totals.totalDue)} Tk
                             </p>
                         </div>
                     </div>
                 )}
 
-                {/* Pagination */}
                 {sales.data.length > 0 && <Pagination data={sales} />}
             </div>
         </div>

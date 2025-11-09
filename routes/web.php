@@ -149,6 +149,13 @@ Route::middleware('auth')->group(function () {
 
 
 
+
+        Route::get('sales/items/list', 'allSalesItems')->name('salesItems.list');
+        Route::get('/sales-items/{id}', 'showItem')->name('sales.items.show');
+        Route::delete('/sales-items/{id}', 'destroy')->name('sales.items.destroy');
+
+
+
         // Route::post('/add/product/varaint', 'productVaraint')->name('sales.add.varaint');
         // Route::post('/add/product-cart', 'productAddCart')->name('sales.add.cart');
         // Route::post('/add/product-cart-scanner', 'productAddCartByscanner')->name('sales.add.cart.scanner');
@@ -158,6 +165,7 @@ Route::middleware('auth')->group(function () {
         // Route::post('/add/done', 'salesDone')->name('sales.done');
         // Route::post('/add/customer/add', 'customer_store')->name('sales.cart.customer.add');
     });
+
 
     // sales list
     Route::controller(SalesListController::class)->group(function () {

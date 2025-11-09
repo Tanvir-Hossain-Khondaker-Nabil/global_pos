@@ -57,7 +57,7 @@ export default function SaleShow({ sale }) {
                                 <ArrowLeft size={16} />
                             </Link>
                             <h1 className="text-2xl font-bold text-gray-900">
-                                Sale Invoice
+                                Sale Invoice ({sale.type === 'inventory' ? 'Inventory' : 'POS'})
                             </h1>
                         </div>
                         <p className="text-gray-600">
