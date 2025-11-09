@@ -57,6 +57,7 @@ export default function AddSale({ customers, productstocks }) {
         grand_amount: 0,
         due_amount: 0,
         sub_amount: 0,
+        type: 'inventory',
     });
 
     // Update form data when any of the dependencies change
@@ -74,6 +75,7 @@ export default function AddSale({ customers, productstocks }) {
             grand_amount: grandTotal,
             due_amount: dueAmount,
             sub_amount: subTotal,
+            type: 'inventory',
         });
     }, [selectedItems, vatRate, discountRate, paidAmount, calculateSubTotal, calculateGrandTotal, calculateDueAmount]);
 
