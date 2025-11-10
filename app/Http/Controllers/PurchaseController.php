@@ -152,23 +152,41 @@ class PurchaseController extends Controller
 
             // Create purchase items and update stock
             foreach ($request->items as $item) {
+                // Debug: Check what values are coming from frontend
+                \Log::info('Item data:', [
+                    'product_id' => $item['product_id'],
+                    'unit_price' => $item['unit_price'] ?? 'null',
+                    'sale_price' => $item['sale_price'] ?? 'null',
+                    'shadow_unit_price' => $item['shadow_unit_price'],
+                    'shadow_sale_price' => $item['shadow_sale_price'],
+                ]);
+
                 // Calculate total prices
                 $totalPrice = $item['quantity'] * ($item['unit_price'] ?? 0);
                 $shadowTotalPrice = $item['quantity'] * $item['shadow_unit_price'];
 
-                // For shadow users, set real prices to 0 if not provided
-                $unitPrice = $isShadowUser ? 0 : ($item['unit_price'] ?? 0);
-                $salePrice = $isShadowUser ? 0 : ($item['sale_price'] ?? 0);
-                $shadowSalePrice = $item['shadow_sale_price'];
+                // FIX: Ensure sale prices are properly set and not null
+                $unitPrice = $isShadowUser ? 0 : (float) ($item['unit_price'] ?? 0);
+                $salePrice = $isShadowUser ? 0 : (float) ($item['sale_price'] ?? 0);
+                $shadowUnitPrice = (float) $item['shadow_unit_price'];
+                $shadowSalePrice = (float) $item['shadow_sale_price'];
+
+                // Validate that sale prices are not zero
+                if (!$isShadowUser && $salePrice <= 0) {
+                    throw new \Exception("Sale price must be greater than 0 for product ID: {$item['product_id']}");
+                }
+                if ($shadowSalePrice <= 0) {
+                    throw new \Exception("Shadow sale price must be greater than 0 for product ID: {$item['product_id']}");
+                }
 
                 // Create purchase item
-                $purchase->items()->create([
+                $purchaseItem = $purchase->items()->create([
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
                     'sale_price' => $salePrice,
-                    'shadow_unit_price' => $item['shadow_unit_price'],
+                    'shadow_unit_price' => $shadowUnitPrice,
                     'shadow_sale_price' => $shadowSalePrice,
                     'total_price' => $totalPrice,
                     'shadow_total_price' => $shadowTotalPrice,
@@ -186,13 +204,13 @@ class PurchaseController extends Controller
                     // Update prices based on user type
                     if ($isShadowUser) {
                         // For shadow users, only update shadow prices
-                        $stock->shadow_purchase_price = $item['shadow_unit_price'];
+                        $stock->shadow_purchase_price = $shadowUnitPrice;
                         $stock->shadow_sale_price = $shadowSalePrice;
                     } else {
                         // For general users, update both real and shadow prices
                         $stock->purchase_price = $unitPrice;
                         $stock->sale_price = $salePrice;
-                        $stock->shadow_purchase_price = $item['shadow_unit_price'];
+                        $stock->shadow_purchase_price = $shadowUnitPrice;
                         $stock->shadow_sale_price = $shadowSalePrice;
                     }
                     $stock->save();
@@ -204,11 +222,18 @@ class PurchaseController extends Controller
                         'quantity' => $item['quantity'],
                         'purchase_price' => $isShadowUser ? 0 : $unitPrice,
                         'sale_price' => $isShadowUser ? 0 : $salePrice,
-                        'shadow_purchase_price' => $item['shadow_unit_price'],
+                        'shadow_purchase_price' => $shadowUnitPrice,
                         'shadow_sale_price' => $shadowSalePrice,
                         'user_type' => $user->type
                     ]);
                 }
+
+                // Log the created purchase item for debugging
+                \Log::info('Created purchase item:', [
+                    'purchase_item_id' => $purchaseItem->id,
+                    'sale_price' => $purchaseItem->sale_price,
+                    'shadow_sale_price' => $purchaseItem->shadow_sale_price,
+                ]);
             }
 
             DB::commit();
@@ -219,9 +244,12 @@ class PurchaseController extends Controller
             );
         } catch (\Exception $e) {
             DB::rollBack();
+            \Log::error('Purchase creation error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Error creating purchase: ' . $e->getMessage());
         }
     }
+
+    
     public function show($id)
     {
         $user = Auth::user();
@@ -295,6 +323,97 @@ class PurchaseController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Error deleting purchase: ' . $e->getMessage());
+        }
+    }
+
+public function updatePayment(Request $request, $id)
+    {
+        $purchase = Purchase::findOrFail($id);
+        
+        $request->validate([
+            'paid_amount' => 'required|numeric|min:0',
+            'payment_status' => 'required|in:unpaid,partial,paid'
+        ]);
+
+        $totalAmount = $purchase->total_amount;
+        $paidAmount = $request->paid_amount;
+        $dueAmount = $totalAmount - $paidAmount;
+
+        // Update purchase
+        $purchase->update([
+            'paid_amount' => $paidAmount,
+            'due_amount' => max(0, $dueAmount),
+            'payment_status' => $request->payment_status
+        ]);
+
+        return redirect()->back()->with('success', 'Payment status updated successfully');
+    }
+
+    public function approve(Request $request, $id)
+    {
+        $purchase = Purchase::with('items')->findOrFail($id);
+        
+        $request->validate([
+            'items' => 'required|array',
+            'items.*.id' => 'required|exists:purchase_items,id',
+            'items.*.purchase_price' => 'required|numeric|min:0.01',
+            'items.*.sale_price' => 'required|numeric|min:0.01',
+            'notes' => 'nullable|string'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $totalRealAmount = 0;
+
+            // Update purchase items with real prices
+            foreach ($request->items as $approveItem) {
+                $item = PurchaseItem::find($approveItem['id']);
+                
+                if ($item) {
+                    $realTotalPrice = $approveItem['purchase_price'] * $item->quantity;
+                    $totalRealAmount += $realTotalPrice;
+
+                    // Update purchase item with real prices
+                    $item->update([
+                        'unit_price' => $approveItem['purchase_price'],
+                        'sale_price' => $approveItem['sale_price'],
+                        'total_price' => $realTotalPrice
+                        // shadow prices remain unchanged
+                    ]);
+
+                    // Update stock with real prices
+                    $stock = Stock::where('warehouse_id', $purchase->warehouse_id)
+                        ->where('product_id', $item->product_id)
+                        ->where('variant_id', $item->variant_id)
+                        ->first();
+
+                    if ($stock) {
+                        $stock->update([
+                            'purchase_price' => $approveItem['purchase_price'],
+                            'sale_price' => $approveItem['sale_price']
+                            // shadow prices remain unchanged
+                        ]);
+                    }
+                }
+            }
+
+            // Update purchase with real amounts
+            $purchase->update([
+                'total_amount' => $totalRealAmount,
+                'due_amount' => max(0, $totalRealAmount - $purchase->paid_amount),
+                'status' => 'completed',
+                'notes' => $purchase->notes . "\n\nApproved by: " . Auth::user()->name . 
+                          "\nApproval Date: " . now()->format('Y-m-d H:i:s') .
+                          ($request->notes ? "\nApproval Notes: " . $request->notes : "")
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Shadow purchase approved successfully');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Purchase approval error: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error approving purchase: ' . $e->getMessage());
         }
     }
 

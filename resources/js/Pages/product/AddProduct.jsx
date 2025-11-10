@@ -1,22 +1,49 @@
 import React, { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
-import { useForm } from "@inertiajs/react";
+import { useForm, router } from "@inertiajs/react";
 import { Trash, X, Plus } from "lucide-react";
 import { toast } from "react-toastify";
 
 export default function AddProduct({ category, update }) {
     const [variants, setVariants] = useState([]);
     const [errors, setErrors] = useState({});
+    const [categories, setCategories] = useState([]);
 
     // Initialize form
     const productForm = useForm({
         id: update ? update.id : "",
         product_name: update ? update.name : "",
-        category: update ? update.category_id : "",
-        product_code: update ? update.product_no : "",
+        category_id: update ? update.category_id : "",
+        product_no: update ? update.product_no : "",
         description: update ? update.description : "",
         variants: [],
     });
+
+    // Process categories data - FIXED: Handle different data formats
+    useEffect(() => {
+        console.log('Raw category data:', category);
+        
+        if (Array.isArray(category)) {
+            // If category is already an array
+            setCategories(category);
+        } else if (category && typeof category === 'object') {
+            // If category is an object, convert to array
+            if (category.data && Array.isArray(category.data)) {
+                // If it's a paginated response
+                setCategories(category.data);
+            } else {
+                // If it's a plain object, convert to array of objects
+                const categoriesArray = Object.entries(category).map(([id, name]) => ({
+                    id: id,
+                    name: name
+                }));
+                setCategories(categoriesArray);
+            }
+        } else {
+            // Fallback to empty array
+            setCategories([]);
+        }
+    }, [category]);
 
     // Add new variant
     const handleAddVariant = () => {
@@ -55,14 +82,14 @@ export default function AddProduct({ category, update }) {
             newErrors.product_name = "Product name is required";
         }
 
-        if (!productForm.data.category) {
+        if (!productForm.data.category_id) {
             hasError = true;
-            newErrors.category = "Category is required";
+            newErrors.category_id = "Category is required";
         }
 
-        if (!productForm.data.product_code?.trim()) {
+        if (!productForm.data.product_no?.trim()) {
             hasError = true;
-            newErrors.product_code = "Product code is required";
+            newErrors.product_no = "Product code is required";
         }
 
         // Validate variants
@@ -93,19 +120,26 @@ export default function AddProduct({ category, update }) {
             return;
         }
 
-        // Prepare the data for submission
+        // Prepare the data for submission with correct field names
         const submitData = {
-            ...productForm.data,
+            id: productForm.data.id,
+            product_name: productForm.data.product_name,
+            category_id: productForm.data.category_id,
+            product_no: productForm.data.product_no,
+            description: productForm.data.description,
             variants: variants.map(variant => ({
-                ...variant,
+                id: variant.id,
+                size: variant.size || null,
+                color: variant.color || null,
             }))
         };
 
-        productForm.data = submitData;
+        console.log('Submitting data:', submitData);
 
-        const url = update ? route("product.update.post") : route("product.add.post");
+        const url = update ? route("product.add.post") : route("product.add.post");
         
         productForm.post(url, {
+            data: submitData,
             preserveScroll: true,
             onSuccess: () => {
                 toast.success(`Product ${update ? 'updated' : 'added'} successfully!`);
@@ -121,7 +155,7 @@ export default function AddProduct({ category, update }) {
             },
             onError: (errors) => {
                 toast.error("Something went wrong. Please try again!");
-                console.error(errors);
+                console.error('Form errors:', errors);
             },
         });
     };
@@ -133,24 +167,49 @@ export default function AddProduct({ category, update }) {
 
     // Load existing data for editing
     useEffect(() => {
-        if (update && update.variants?.length > 0) {
-            const mappedVariants = update.variants.map(variant => ({
-                id: variant.id,
-                size: variant.size || "",
-                color: variant.color || "",
-            }));
-            setVariants(mappedVariants);
-        } else if (!update) {
+        if (update) {
+            console.log('Update data received:', update);
+            
+            // Set form data with correct field names
+            productForm.setData({
+                id: update.id || "",
+                product_name: update.name || "",
+                category_id: update.category_id || "",
+                product_no: update.product_no || "",
+                description: update.description || "",
+            });
+
+            // Load variants
+            if (update.variants && update.variants.length > 0) {
+                const mappedVariants = update.variants.map(variant => ({
+                    id: variant.id || null,
+                    size: variant.size || "",
+                    color: variant.color || "",
+                }));
+                console.log('Mapped variants:', mappedVariants);
+                setVariants(mappedVariants);
+            } else {
+                // Add one empty variant if no variants exist
+                setVariants([{
+                    id: null,
+                    size: "",
+                    color: "",
+                }]);
+            }
+        } else {
             // Add one empty variant for new products
-            handleAddVariant();
+            setVariants([{
+                id: null,
+                size: "",
+                color: "",
+            }]);
         }
     }, [update]);
 
-    // Debug: Check if category data is received
+    // Debug: Check processed categories
     useEffect(() => {
-        console.log('Category data:', category);
-        console.log('Update data:', update);
-    }, [category, update]);
+        console.log('Processed categories:', categories);
+    }, [categories]);
 
     return (
         <div className="bg-white rounded-box p-5">
@@ -183,22 +242,27 @@ export default function AddProduct({ category, update }) {
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">Category*</legend>
                         <select
-                            value={productForm.data.category}
+                            value={productForm.data.category_id}
                             className="select"
                             onChange={(e) =>
-                                productForm.setData("category", e.target.value)
+                                productForm.setData("category_id", e.target.value)
                             }
                         >
                             <option value="">--Pick a category--</option>
-                            {category && Object.entries(category).map(([id, name]) => (
-                                <option key={id} value={id}>
-                                    {name}
+                            {categories.map((cat) => (
+                                <option key={cat.id} value={cat.id}>
+                                    {cat.name}
                                 </option>
                             ))}
                         </select>
-                        {errors.category && (
+                        {errors.category_id && (
                             <p className="text-sm text-error">
-                                {errors.category}
+                                {errors.category_id}
+                            </p>
+                        )}
+                        {categories.length === 0 && (
+                            <p className="text-sm text-warning mt-1">
+                                No categories available. Please add categories first.
                             </p>
                         )}
                     </fieldset>
@@ -208,15 +272,15 @@ export default function AddProduct({ category, update }) {
                         <input
                             type="text"
                             className="input"
-                            value={productForm.data.product_code}
+                            value={productForm.data.product_no}
                             onChange={(e) =>
-                                productForm.setData("product_code", e.target.value)
+                                productForm.setData("product_no", e.target.value)
                             }
                             placeholder="Enter product code"
                         />
-                        {errors.product_code && (
+                        {errors.product_no && (
                             <p className="text-sm text-error">
-                                {errors.product_code}
+                                {errors.product_no}
                             </p>
                         )}
                     </fieldset>
@@ -262,6 +326,7 @@ export default function AddProduct({ category, update }) {
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="font-medium text-gray-700">
                                         Variant #{index + 1}
+                                        {variant.id && <span className="text-xs text-gray-500 ml-2">(ID: {variant.id})</span>}
                                     </h4>
                                     <button
                                         type="button"
@@ -305,7 +370,6 @@ export default function AddProduct({ category, update }) {
                                             placeholder="e.g., Red, Blue"
                                         />
                                     </div>
-
                                 </div>
 
                                 {/* Variant Error */}

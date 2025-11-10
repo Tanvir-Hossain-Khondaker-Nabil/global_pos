@@ -39,6 +39,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
         const parts = [];
         if (variant.size) parts.push(`Size: ${variant.size}`);
         if (variant.color) parts.push(`Color: ${variant.color}`);
+        if (variant.material) parts.push(`Material: ${variant.material}`);
         return parts.join(', ') || 'Default Variant';
     };
 
@@ -56,43 +57,48 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     }, [productSearch, products]);
 
     const addItem = (product, variant) => {
-        const existingItem = selectedItems.find(
-            item => item.product_id === product.id && item.variant_id === variant.id
-        );
+    const existingItem = selectedItems.find(
+        item => item.product_id === product.id && item.variant_id === variant.id
+    );
 
-        if (existingItem) {
-            setSelectedItems(selectedItems.map(item =>
-                item.product_id === product.id && item.variant_id === variant.id
-                    ? {
-                        ...item,
-                        quantity: item.quantity + 1,
-                        total_price: (item.quantity + 1) * item.unit_price,
-                        shadow_total_price: (item.quantity + 1) * item.shadow_unit_price
-                    }
-                    : item
-            ));
-        } else {
-            // Set default prices to 1 instead of 0 to avoid validation issues
-            setSelectedItems([
-                ...selectedItems,
-                {
-                    product_id: product.id,
-                    variant_id: variant.id,
-                    product_name: product.name,
-                    variant_name: getVariantDisplayName(variant),
-                    quantity: 1,
-                    unit_price: 1, // Changed from 0 to 1
-                    sale_price: 1, // Changed from 0 to 1
-                    shadow_unit_price: 1, // Changed from 0 to 1
-                    shadow_sale_price: 1, // Changed from 0 to 1
-                    total_price: 1, // 1 * 1 = 1
-                    shadow_total_price: 1 // 1 * 1 = 1
+    if (existingItem) {
+        setSelectedItems(selectedItems.map(item =>
+            item.product_id === product.id && item.variant_id === variant.id
+                ? {
+                    ...item,
+                    quantity: item.quantity + 1,
+                    total_price: (item.quantity + 1) * item.unit_price,
+                    shadow_total_price: (item.quantity + 1) * item.shadow_unit_price
                 }
-            ]);
-        }
-        setProductSearch("");
-        setFilteredProducts([]);
-    };
+                : item
+        ));
+    } else {
+        // FIX: Set proper default sale prices
+        const defaultUnitPrice = 1;
+        const defaultSalePrice = 1; // Make sure sale price is also 1, not 0
+        const defaultShadowUnitPrice = 1;
+        const defaultShadowSalePrice = 1;
+
+        setSelectedItems([
+            ...selectedItems,
+            {
+                product_id: product.id,
+                variant_id: variant.id,
+                product_name: product.name,
+                variant_name: getVariantDisplayName(variant),
+                quantity: 1,
+                unit_price: defaultUnitPrice,
+                sale_price: defaultSalePrice, // This was probably missing or 0
+                shadow_unit_price: defaultShadowUnitPrice,
+                shadow_sale_price: defaultShadowSalePrice, // This was probably missing or 0
+                total_price: defaultUnitPrice * 1,
+                shadow_total_price: defaultShadowUnitPrice * 1
+            }
+        ]);
+    }
+    setProductSearch("");
+    setFilteredProducts([]);
+};
 
     const removeItem = (index) => {
         const updated = [...selectedItems];
@@ -101,21 +107,29 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     };
 
     const updateItem = (index, field, value) => {
-        const updated = [...selectedItems];
-        updated[index][field] = value;
+    const updated = [...selectedItems];
+    const numericValue = parseFloat(value) || 0;
+    
+    updated[index][field] = numericValue;
 
-        // Recalculate totals when relevant fields change
-        if (field === 'quantity' || field === 'unit_price' || field === 'shadow_unit_price' || field === 'sale_price' || field === 'shadow_sale_price') {
-            const quantity = updated[index].quantity;
-            const unitPrice = updated[index].unit_price;
-            const shadowUnitPrice = updated[index].shadow_unit_price;
+    // Recalculate totals when relevant fields change
+    if (field === 'quantity' || field === 'unit_price' || field === 'shadow_unit_price') {
+        const quantity = updated[index].quantity;
+        const unitPrice = updated[index].unit_price;
+        const shadowUnitPrice = updated[index].shadow_unit_price;
 
-            updated[index].total_price = quantity * unitPrice;
-            updated[index].shadow_total_price = quantity * shadowUnitPrice;
-        }
+        updated[index].total_price = quantity * unitPrice;
+        updated[index].shadow_total_price = quantity * shadowUnitPrice;
+    }
 
-        setSelectedItems(updated);
-    };
+    // Also update sale prices immediately when changed
+    if (field === 'sale_price' || field === 'shadow_sale_price') {
+        // Ensure sale prices are properly set
+        updated[index][field] = numericValue;
+    }
+
+    setSelectedItems(updated);
+};
 
     const calculateTotal = () => {
         return selectedItems.reduce((total, item) => total + (item.total_price || 0), 0);
@@ -151,8 +165,51 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
     const getDueAmount = () => {
         const totalAmount = isShadowUser ? calculateShadowTotal() : calculateTotal();
-        return totalAmount - paidAmount;
+        return Math.max(0, totalAmount - paidAmount);
     };
+
+    const validateItems = () => {
+    for (let item of selectedItems) {
+        // Validate quantity
+        if (!item.quantity || item.quantity <= 0) {
+            alert(`Please enter valid quantity for ${item.product_name}`);
+            return false;
+        }
+
+        if (isShadowUser) {
+            // Validate shadow prices for shadow users
+            if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
+                alert(`Please enter unit price for ${item.product_name}`);
+                return false;
+            }
+            if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
+                alert(`Please enter sale price for ${item.product_name}`);
+                return false;
+            }
+        } else {
+            // Validate real prices for general users
+            if (!item.unit_price || item.unit_price <= 0) {
+                alert(`Please enter unit price for ${item.product_name}`);
+                return false;
+            }
+            if (!item.sale_price || item.sale_price <= 0) {
+                alert(`Please enter sale price for ${item.product_name}`);
+                return false;
+            }
+            
+            // Also validate shadow prices for general users
+            if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
+                alert(`Please enter unit price for ${item.product_name}`);
+                return false;
+            }
+            if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
+                alert(`Please enter sale price for ${item.product_name}`);
+                return false;
+            }
+        }
+    }
+    return true;
+};
 
     const submit = (e) => {
         e.preventDefault();
@@ -162,27 +219,19 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
             return;
         }
 
-        // Validate required prices based on user type
-        for (let item of selectedItems) {
-            if (isShadowUser) {
-                if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
-                    alert(`Please enter unit price for ${item.product_name}`);
-                    return;
-                }
-                if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
-                    alert(`Please enter sale price for ${item.product_name}`);
-                    return;
-                }
-            } else {
-                if (!item.unit_price || item.unit_price <= 0) {
-                    alert(`Please enter unit price for ${item.product_name}`);
-                    return;
-                }
-                if (!item.sale_price || item.sale_price <= 0) {
-                    alert(`Please enter sale price for ${item.product_name}`);
-                    return;
-                }
-            }
+        if (!form.data.supplier_id) {
+            alert("Please select a supplier");
+            return;
+        }
+
+        if (!form.data.warehouse_id) {
+            alert("Please select a warehouse");
+            return;
+        }
+
+        // Validate all items
+        if (!validateItems()) {
+            return;
         }
 
         // Items are already synced via useEffect, so just submit
@@ -190,17 +239,22 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
             onSuccess: () => {
                 router.visit(route("purchase.list"));
             },
+            onError: (errors) => {
+                console.error('Form errors:', errors);
+                alert("There was an error creating the purchase. Please check all fields and try again.");
+            }
         });
     };
 
     const totalAmount = isShadowUser ? calculateShadowTotal() : calculateTotal();
+    const shadowTotalAmount = calculateShadowTotal();
     const dueAmount = getDueAmount();
 
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
                 title={isShadowUser ? "Create Purchase" : "Create New Purchase"}
-                subtitle={isShadowUser ? "Add products to purchase order" : "Add products to purchase order"}
+                subtitle={isShadowUser ? "Add products to purchase order with pricing" : "Add products to purchase order"}
             >
                 <div className="flex items-center gap-3">
                     <button
@@ -295,7 +349,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">Paid Amount (৳)</span>
+                                    <span className="label-text">Paid Amount</span>
                                 </label>
                                 <input
                                     type="number"
@@ -390,7 +444,6 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                             <div className="space-y-3">
                                 <h3 className="font-semibold flex items-center gap-2">
                                     Selected Items ({selectedItems.length})
-                                    {isShadowUser && <span className="badge badge-warning badge-sm">Shadow</span>}
                                 </h3>
                                 {selectedItems.map((item, index) => (
                                     <div key={index} className="border border-gray-300 rounded-box p-4">
@@ -408,14 +461,14 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                             </button>
                                         </div>
 
-                                        {/* Item Input Fields - Improved Responsive Grid */}
+                                        {/* Item Input Fields */}
                                         <div className="space-y-3">
-                                            {/* First Row: Basic Info */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            {/* First Row: Quantity and Unit Prices */}
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                                 {/* Quantity */}
                                                 <div className="form-control">
                                                     <label className="label">
-                                                        <span className="label-text">Quantity</span>
+                                                        <span className="label-text">Quantity *</span>
                                                     </label>
                                                     <input
                                                         type="number"
@@ -423,6 +476,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                         className="input input-bordered input-sm"
                                                         value={item.quantity}
                                                         onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                                                        required
                                                     />
                                                 </div>
 
@@ -430,7 +484,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 {!isShadowUser && (
                                                     <div className="form-control">
                                                         <label className="label">
-                                                            <span className="label-text">Unit Price (৳) *</span>
+                                                            <span className="label-text">Unit Price *</span>
                                                         </label>
                                                         <input
                                                             type="number"
@@ -438,7 +492,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                             step="0.01"
                                                             className="input input-bordered input-sm"
                                                             value={item.unit_price}
-                                                            onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 1)}
+                                                            onChange={(e) => updateItem(index, 'unit_price', parseFloat(e.target.value) || 0)}
                                                             required
                                                         />
                                                     </div>
@@ -448,8 +502,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text flex items-center gap-1">
-                                                            {isShadowUser ? 'Unit Price (৳) *' : 'Shadow Unit Price (৳)'}
-                                                            {isShadowUser && <span className="badge badge-warning badge-xs">Required</span>}
+                                                            {isShadowUser ? 'Unit Price *' : 'Shadow Unit Price *'}
                                                         </span>
                                                     </label>
                                                     <input
@@ -458,19 +511,34 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                         step="0.01"
                                                         className={`input input-bordered input-sm ${isShadowUser ? 'border-warning' : ''}`}
                                                         value={item.shadow_unit_price}
-                                                        onChange={(e) => updateItem(index, 'shadow_unit_price', parseFloat(e.target.value) || 1)}
-                                                        required={isShadowUser}
+                                                        onChange={(e) => updateItem(index, 'shadow_unit_price', parseFloat(e.target.value) || 0)}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                {/* Total Price Display */}
+                                                <div className="form-control">
+                                                    <label className="label">
+                                                        <span className="label-text">
+                                                            {isShadowUser ? 'Total Price' : 'Real Total'}
+                                                        </span>
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        className={`input input-bordered input-sm bg-gray-100 ${isShadowUser ? 'bg-warning/10' : ''}`}
+                                                        value={isShadowUser ? item.shadow_total_price : item.total_price}
+                                                        readOnly
                                                     />
                                                 </div>
                                             </div>
 
                                             {/* Second Row: Sale Prices */}
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                 {/* Real Sale Price - Hidden for shadow users */}
                                                 {!isShadowUser && (
                                                     <div className="form-control">
                                                         <label className="label">
-                                                            <span className="label-text">Sale Price (৳) *</span>
+                                                            <span className="label-text">Sale Price *</span>
                                                         </label>
                                                         <input
                                                             type="number"
@@ -478,7 +546,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                             step="0.01"
                                                             className="input input-bordered input-sm"
                                                             value={item.sale_price}
-                                                            onChange={(e) => updateItem(index, 'sale_price', parseFloat(e.target.value) || 1)}
+                                                            onChange={(e) => updateItem(index, 'sale_price', parseFloat(e.target.value) || 0)}
                                                             required
                                                         />
                                                     </div>
@@ -488,8 +556,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text flex items-center gap-1">
-                                                            {isShadowUser ? 'Sale Price (৳) *' : 'Shadow Sale Price (৳)'}
-                                                            {isShadowUser && <span className="badge badge-warning badge-xs">Required</span>}
+                                                            {isShadowUser ? 'Sale Price *' : 'Shadow Sale Price *'}
                                                         </span>
                                                     </label>
                                                     <input
@@ -498,23 +565,8 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                         step="0.01"
                                                         className={`input input-bordered input-sm ${isShadowUser ? 'border-warning' : ''}`}
                                                         value={item.shadow_sale_price}
-                                                        onChange={(e) => updateItem(index, 'shadow_sale_price', parseFloat(e.target.value) || 1)}
-                                                        required={isShadowUser}
-                                                    />
-                                                </div>
-
-                                                {/* Total Price */}
-                                                <div className="form-control">
-                                                    <label className="label">
-                                                        <span className="label-text">
-                                                            {isShadowUser ? 'Total Price (৳)' : 'Real Total (৳)'}
-                                                        </span>
-                                                    </label>
-                                                    <input
-                                                        type="number"
-                                                        className={`input input-bordered input-sm bg-gray-100 ${isShadowUser ? 'bg-warning/10' : ''}`}
-                                                        value={isShadowUser ? item.shadow_total_price : item.total_price}
-                                                        readOnly
+                                                        onChange={(e) => updateItem(index, 'shadow_sale_price', parseFloat(e.target.value) || 0)}
+                                                        required
                                                     />
                                                 </div>
                                             </div>
@@ -527,12 +579,20 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                             <span>Real Total:</span>
                                                             <span className="font-medium">৳{item.total_price?.toFixed(2) || '0.00'}</span>
                                                         </div>
+                                                        <div className="flex justify-between">
+                                                            <span>Real Sale Price:</span>
+                                                            <span className="font-medium">৳{item.sale_price?.toFixed(2) || '0.00'}</span>
+                                                        </div>
                                                     </div>
                                                 )}
                                                 <div className={`text-xs ${isShadowUser ? 'text-warning' : 'text-blue-600'}`}>
                                                     <div className="flex justify-between">
                                                         <span>{isShadowUser ? 'Active Total' : 'Shadow Total'}:</span>
                                                         <span className="font-medium">৳{item.shadow_total_price?.toFixed(2) || '0.00'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>{isShadowUser ? 'Active Sale Price' : 'Shadow Sale Price'}:</span>
+                                                        <span className="font-medium">৳{item.shadow_sale_price?.toFixed(2) || '0.00'}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -545,14 +605,14 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className={`p-4 rounded-box ${isShadowUser ? 'bg-warning/10 border border-warning' : 'bg-base-200'}`}>
                                             <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                                {isShadowUser ? 'Amounts' : 'Real Amounts'}
+                                                {isShadowUser ? 'Active Amounts' : 'Real Amounts'}
                                                 {isShadowUser && <span className="badge badge-warning badge-sm">Active</span>}
                                             </h4>
                                             <div className="space-y-1 text-sm">
                                                 <div className="flex justify-between">
                                                     <span>Total Amount:</span>
                                                     <span className="font-semibold">
-                                                        ৳{isShadowUser ? calculateShadowTotal().toFixed(2) : calculateTotal().toFixed(2)}
+                                                        ৳{isShadowUser ? shadowTotalAmount.toFixed(2) : totalAmount.toFixed(2)}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between">
@@ -575,7 +635,17 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                     <div className="flex justify-between">
                                                         <span>Shadow Total:</span>
                                                         <span className="font-semibold text-blue-700">
-                                                            ৳{calculateShadowTotal().toFixed(2)}
+                                                            ৳{shadowTotalAmount.toFixed(2)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Paid Amount:</span>
+                                                        <span className="text-green-600">৳{paidAmount.toFixed(2)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Due Amount:</span>
+                                                        <span className={`font-semibold ${dueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                                            ৳{dueAmount.toFixed(2)}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -607,7 +677,10 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                         {form.processing ? (
                             "Creating Purchase..."
                         ) : isShadowUser ? (
-                            "Create Purchase"
+                            <>
+                                <Shield size={16} />
+                                Create Purchase
+                            </>
                         ) : (
                             "Create Purchase"
                         )}

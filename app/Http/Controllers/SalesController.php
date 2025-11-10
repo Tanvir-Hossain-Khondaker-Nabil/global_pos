@@ -377,6 +377,7 @@ class SalesController extends Controller
         
         return Inertia::render('sales/SalesItem', [
             'salesItems' => $salesItems,
+            'isShadowUser' => $isShadowUser,
         ]);
     }
 

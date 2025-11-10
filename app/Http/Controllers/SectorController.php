@@ -13,20 +13,30 @@ class SectorController extends Controller
     {
         return Inertia::render("product/Category", [
             'filters' => $request->only('search'),
-            'category' => Category::latest()
-                ->with('products.sizes.colors')
+            'category' => Category::withCount('products')
+                ->with(['products.variants.stock'])
+                ->latest()
                 ->filter($request->only('search'))
                 ->paginate(10)
                 ->withQueryString()
-                ->through(fn($user) => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'total_stock' => $user->products
-                        ->flatMap(fn($product) => $product->sizes)
-                        ->flatMap(fn($size) => $size->colors)
-                        ->sum('stock'),
-                    'join_at' => $user->created_at->format('D M, Y'),
-                ]),
+                ->through(function ($category) {
+                    $totalStock = 0;
+
+                    // Calculate total stock from all products in this category
+                    foreach ($category->products as $product) {
+                        foreach ($product->variants as $variant) {
+                            $totalStock += $variant->stock ? $variant->stock->quantity : 0;
+                        }
+                    }
+
+                    return [
+                        'id' => $category->id,
+                        'name' => $category->name,
+                        'products_count' => $category->products_count,
+                        'total_stock' => $totalStock,
+                        'join_at' => $category->created_at->format('D M, Y'),
+                    ];
+                }),
         ]);
     }
 

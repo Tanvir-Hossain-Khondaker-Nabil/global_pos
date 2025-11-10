@@ -150,7 +150,8 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                 <div className="overflow-x-auto">
                     {sales.data.length > 0 ? (
                         <table className="table table-auto w-full">
-                            <thead className="bg-primary text-white">
+                            <thead className={`${isShadowUser ? 'bg-warning' : 'bg-primary'} text-white`}>
+
                                 <tr>
                                     <th>Invoice No</th>
                                     <th>Customer</th>
