@@ -37,7 +37,7 @@ class Sale extends Model
     // relation to sale items
     public function items()
     {
-        return $this->hasMany(SaleItem::class, 'sale_id');
+        return $this->hasMany(SaleItem::class, 'sale_id')->with('product', 'variant');
     }
 
     

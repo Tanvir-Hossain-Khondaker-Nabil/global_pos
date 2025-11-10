@@ -8,11 +8,15 @@ use App\Models\SaleItem;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\Stock;
 use App\Models\Variant;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
+
 
 class SalesController extends Controller
 {
@@ -209,6 +213,20 @@ class SalesController extends Controller
                 'shadow_paid_amount' => $shadowPaidAmount ?? 0,
             ]);
 
+            // create payment record if paid_amount > 0
+            if ($paidAmount > 0) {
+                $payment = new Payment();
+                $payment->sale_id = $sale->id;
+                $payment->amount = $paidAmount;
+                $payment->shadow_amount = $shadowPaidAmount;
+                $payment->payment_method = $request->payment_method ?? 'cash';
+                $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
+                $payment->note = $request->notes ?? null;
+                $payment->customer_id = $request->customer_id ?? null;
+                $payment->paid_at = Carbon::now();
+                $payment->save();
+            }
+
             DB::commit();
 
             if ($type === 'inventory') {
@@ -317,6 +335,7 @@ class SalesController extends Controller
 
     public function allSalesItems()
     {
+
 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';

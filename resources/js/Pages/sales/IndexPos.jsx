@@ -16,17 +16,25 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
     });
 
     const handleFilter = () => {
-        const queryString = {};
-        if (filterForm.data.search) queryString.search = filterForm.data.search;
-        if (filterForm.data.status) queryString.status = filterForm.data.status;
-        if (filterForm.data.date_from) queryString.date_from = filterForm.data.date_from;
-        if (filterForm.data.date_to) queryString.date_to = filterForm.data.date_to;
+        const queryParams = {};
+        
+        // Only add non-empty values to query params
+        if (filterForm.data.search.trim()) queryParams.search = filterForm.data.search.trim();
+        if (filterForm.data.status) queryParams.status = filterForm.data.status;
+        if (filterForm.data.date_from) queryParams.date_from = filterForm.data.date_from;
+        if (filterForm.data.date_to) queryParams.date_to = filterForm.data.date_to;
 
-        router.get(route("sales.index"), queryString, {
+        router.get(route("sales.index"), queryParams, {
             preserveScroll: true,
             preserveState: true,
             replace: true,
         });
+    };
+
+    const handleKeyPress = (e) => {
+        if (e.key === 'Enter') {
+            handleFilter();
+        }
     };
 
     const clearFilters = () => {
@@ -36,7 +44,12 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
             date_from: "",
             date_to: "",
         });
-        router.get(route("sales.index"));
+        setTimeout(() => {
+            router.get(route("sales.index"), {}, {
+                preserveScroll: true,
+                preserveState: true,
+            });
+        }, 0);
     };
 
     // Calculate item counts for each sale
@@ -52,9 +65,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
         }).format(amount);
     };
 
-    // Calculate totals from all sales data (not just current page)
     const calculateTotals = () => {
-        // Use sales.data for current page or all data if available
         const salesData = sales.data || [];
         
         const totalRevenue = salesData.reduce((sum, sale) => sum + parseFloat(sale.grand_total || 0), 0);
@@ -71,10 +82,12 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
 
     const totals = calculateTotals();
 
+    const hasActiveFilters = filterForm.data.search || filterForm.data.status || filterForm.data.date_from || filterForm.data.date_to;
+
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title={isShadowUser ?  "Sales History (POS)" : "Sales History (POS)"}
+                title={isShadowUser ? "Sales History (POS)" : "Sales History (POS)"}
                 subtitle={isShadowUser ? "View sales data" : "Manage your product sales"}
             >
                 <div className="flex items-center gap-3 flex-wrap">
@@ -83,20 +96,17 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                             type="search"
                             value={filterForm.data.search}
                             onChange={(e) => filterForm.setData("search", e.target.value)}
-                            onKeyPress={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleFilter();
-                                }
-                            }}
+                            onKeyPress={handleKeyPress}
                             placeholder="Search invoice or customer..."
                             className="input input-sm input-bordered join-item"
                         />
-                    
+                      
                     </div>
                     
                     <select
                         value={filterForm.data.status}
                         onChange={(e) => filterForm.setData("status", e.target.value)}
+                        onKeyPress={handleKeyPress}
                         className="select select-sm select-bordered"
                     >
                         <option value="">All Status</option>
@@ -109,6 +119,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                         type="date"
                         value={filterForm.data.date_from}
                         onChange={(e) => filterForm.setData("date_from", e.target.value)}
+                        onKeyPress={handleKeyPress}
                         className="input input-sm input-bordered"
                     />
                     
@@ -116,17 +127,26 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                         type="date"
                         value={filterForm.data.date_to}
                         onChange={(e) => filterForm.setData("date_to", e.target.value)}
+                        onKeyPress={handleKeyPress}
                         className="input input-sm input-bordered"
                     />
                     
-                    {(filterForm.data.search || filterForm.data.status || filterForm.data.date_from || filterForm.data.date_to) && (
+                    {hasActiveFilters && (
                         <button
                             onClick={clearFilters}
                             className="btn btn-sm btn-ghost"
                         >
-                            Clear
+                            Clear Filters
                         </button>
                     )}
+
+                    <button
+                        onClick={handleFilter}
+                        className="btn btn-sm btn-primary join-item"
+                    >
+                        <Search size={16} />
+                        Search
+                    </button>
                     
                     <Link
                         className="btn btn-primary btn-sm"
@@ -135,14 +155,6 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                         <Plus size={16} />
                         New Sale
                     </Link>
-
-                    <Link
-                        onClick={handleFilter}
-                        className="btn btn-sm btn-primary join-item"
-                    >
-                        <Search size={16} />
-                        Filter
-                    </Link>
                 </div>
             </PageHeader>
 
@@ -150,7 +162,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                 <div className="overflow-x-auto">
                     {sales.data.length > 0 ? (
                         <table className="table table-auto w-full">
-                            <thead className="bg-primary text-white">
+                            <thead className={`${isShadowUser ? 'bg-warning' : 'bg-primary'} text-white`}>
                                 <tr>
                                     <th>Invoice No</th>
                                     <th>Customer</th>
@@ -225,12 +237,13 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                         <td>
                                             <div className="flex items-center gap-1 flex-wrap">
                                                 <Link
-                                                    href={route("sales.show", { sale: sale.id })}
+                                                    href={route("salesPrint.show", { sale: sale.id, print: 'print' })}
                                                     className="btn btn-xs btn-info"
                                                 >
                                                     <Eye size={13} />
                                                     View
                                                 </Link>
+
                                                 {auth.role === "admin" && (
                                                     <Link
                                                         href={route("sales.destroy", { sale: sale.id })}
@@ -260,12 +273,12 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                 No sales found!
                             </h1>
                             <p className="text-gray-400 text-sm text-center max-w-md">
-                                {filterForm.data.search || filterForm.data.status 
+                                {hasActiveFilters
                                     ? "Try adjusting your search filters to find what you're looking for."
                                     : "Get started by creating your first sale record."
                                 }
                             </p>
-                            {!filterForm.data.search && !filterForm.data.status && (
+                            {!hasActiveFilters && (
                                 <Link
                                     className="btn btn-primary btn-sm mt-2"
                                     href={route("sales.create")}
