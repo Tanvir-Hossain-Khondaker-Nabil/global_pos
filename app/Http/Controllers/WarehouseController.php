@@ -81,10 +81,11 @@ class WarehouseController extends Controller
             $warehouseData = $request->all();
             $warehouseData['created_by'] = $user->id;
             $warehouseData['user_type'] = $user->type;
-            
+
             Warehouse::create($warehouseData);
-            
-            return redirect()->route('warehouse.list')->with('success', 
+
+            return redirect()->route('warehouse.list')->with(
+                'success',
                 $isShadowUser ? 'Shadow warehouse created successfully' : 'Warehouse created successfully'
             );
         } catch (\Exception $e) {
@@ -93,86 +94,81 @@ class WarehouseController extends Controller
     }
 
     public function show($id)
-{
-    $user = Auth::user();
-    $isShadowUser = $user->type === 'shadow';
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
 
-    $warehouse = Warehouse::with(['stocks.product', 'stocks.variant'])->findOrFail($id);
+        $warehouse = Warehouse::with(['stocks.product', 'stocks.variant'])->findOrFail($id);
 
-    // Get only products that have stock in this warehouse
-    $products = Product::with([
-        'variants.stocks' => function ($query) use ($id) {
-            $query->where('warehouse_id', $id);
-        },
-        'category',
-        'stocks' => function ($query) use ($id) {
-            $query->where('warehouse_id', $id);
-        }
-    ])
-    ->whereHas('stocks', function ($query) use ($id) {
-        $query->where('warehouse_id', $id)
-              ->where('quantity', '>', 0);
-    })
-    ->orWhereHas('variants.stocks', function ($query) use ($id) {
-        $query->where('warehouse_id', $id)
-              ->where('quantity', '>', 0);
-    })
-    ->get()
-    ->map(function ($product) use ($id, $isShadowUser) {
-        // Calculate total stock for this product in this warehouse
-        $totalStock = $product->stocks->sum('quantity');
-        
-        // Also include variant stocks
-        $variantStocks = $product->variants->flatMap(function ($variant) use ($id) {
-            return $variant->stocks->where('warehouse_id', $id);
-        });
-        
-        $totalStock += $variantStocks->sum('quantity');
-
-        return [
-            'id' => $product->id,
-            'name' => $product->name,
-            'product_no' => $product->product_no,
-            'description' => $product->description,
-            'category' => $product->category,
-            'total_stock' => $totalStock,
-            'variants' => $product->variants->map(function ($variant) use ($id, $isShadowUser) {
-                $stock = $variant->stocks->where('warehouse_id', $id)->first();
-
-                // Use shadow prices for shadow users
-                $purchasePrice = $isShadowUser ? 
-                    ($stock ? $stock->shadow_purchase_price : 0) : 
-                    ($stock ? $stock->purchase_price : 0);
-                
-                $stockQuantity = $stock ? $stock->quantity : 0;
-                $stockValue = $stockQuantity * $purchasePrice;
+        // Get products with their variants and stocks for this warehouse
+        $products = Product::with([
+            'category',
+            'variants.stock' => function ($query) use ($id) {
+                $query->where('warehouse_id', $id);
+            }
+        ])
+            ->whereHas('variants.stock', function ($query) use ($id) {
+                $query->where('warehouse_id', $id)
+                    ->where('quantity', '>', 0);
+            })
+            ->get()
+            ->map(function ($product) use ($id, $isShadowUser) {
+                // Calculate total stock for this product in this warehouse
+                $totalStock = $product->variants->sum(function ($variant) use ($id) {
+                    return $variant->stock ? $variant->stock->quantity : 0;
+                });
 
                 return [
-                    'id' => $variant->id,
-                    'size' => $variant->size,
-                    'color' => $variant->color,
-                    'variant_name' => $variant->variant_name,
-                    'stock_quantity' => $stockQuantity,
-                    'purchase_price' => $purchasePrice,
-                    'stock_value' => $stockValue,
-                ];
-            })->filter(function ($variant) {
-                // Only show variants that have stock or relevant data
-                return $variant['stock_quantity'] > 0 || $variant['purchase_price'] > 0;
-            })
-        ];
-    })
-    ->filter(function ($product) {
-        // Only show products that have stock or variants with stock
-        return $product['total_stock'] > 0 || count($product['variants']) > 0;
-    });
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'product_no' => $product->product_no,
+                    'description' => $product->description,
+                    'category' => $product->category,
+                    'total_stock' => $totalStock,
+                    'variants' => $product->variants->map(function ($variant) use ($id, $isShadowUser) {
+                        $stock = $variant->stock;
 
-    return Inertia::render('Warehouse/WarehouseProducts', [
-        'warehouse' => $warehouse,
-        'products' => $products,
-        'isShadowUser' => $isShadowUser
-    ]);
-}
+                        // Use shadow prices for shadow users
+                        $purchasePrice = $isShadowUser ?
+                            ($stock ? $stock->shadow_purchase_price : 0) :
+                            ($stock ? $stock->purchase_price : 0);
+
+                        $salePrice = $isShadowUser ?
+                            ($stock ? $stock->shadow_sale_price : 0) :
+                            ($stock ? $stock->sale_price : 0);
+
+                        $stockQuantity = $stock ? $stock->quantity : 0;
+                        $stockValue = $stockQuantity * $purchasePrice;
+
+                        return [
+                            'id' => $variant->id,
+                            'attribute_values' => $variant->attribute_values,
+                            'sku' => $variant->sku,
+                            'variant_name' => $variant->variant_name,
+                            'stock_quantity' => $stockQuantity,
+                            'purchase_price' => $purchasePrice,
+                            'sale_price' => $salePrice,
+                            'stock_value' => $stockValue,
+                        ];
+                    })->filter(function ($variant) {
+                        // Only show variants that have stock
+                        return $variant['stock_quantity'] > 0;
+                    })
+                ];
+            })
+            ->filter(function ($product) {
+                // Only show products that have stock
+                return $product['total_stock'] > 0;
+            });
+
+        return Inertia::render('Warehouse/WarehouseProducts', [
+            'warehouse' => $warehouse,
+            'products' => $products,
+            'isShadowUser' => $isShadowUser
+        ]);
+    }
+
+    
     public function update(Request $request, $id)
     {
         $user = Auth::user();
@@ -190,8 +186,9 @@ class WarehouseController extends Controller
         try {
             $warehouse = Warehouse::findOrFail($id);
             $warehouse->update($request->all());
-            
-            return redirect()->route('warehouse.list')->with('success', 
+
+            return redirect()->route('warehouse.list')->with(
+                'success',
                 $isShadowUser ? 'Shadow warehouse updated successfully' : 'Warehouse updated successfully'
             );
         } catch (\Exception $e) {
@@ -213,8 +210,9 @@ class WarehouseController extends Controller
             }
 
             $warehouse->delete();
-            
-            return redirect()->route('warehouse.list')->with('success', 
+
+            return redirect()->route('warehouse.list')->with(
+                'success',
                 $isShadowUser ? 'Shadow warehouse deleted successfully' : 'Warehouse deleted successfully'
             );
         } catch (\Exception $e) {

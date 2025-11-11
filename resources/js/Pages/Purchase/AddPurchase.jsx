@@ -35,7 +35,18 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     }, [paidAmount, paymentStatus]);
 
     // Helper function to get variant display name
+    // Helper function to get variant display name
     const getVariantDisplayName = (variant) => {
+        // Check if variant has attribute_values (new format)
+        if (variant.attribute_values && Object.keys(variant.attribute_values).length > 0) {
+            const parts = [];
+            for (const [attribute, value] of Object.entries(variant.attribute_values)) {
+                parts.push(`${attribute}: ${value}`);
+            }
+            return parts.join(', ');
+        }
+
+        // Fallback to old format for backward compatibility
         const parts = [];
         if (variant.size) parts.push(`Size: ${variant.size}`);
         if (variant.color) parts.push(`Color: ${variant.color}`);
@@ -57,48 +68,48 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     }, [productSearch, products]);
 
     const addItem = (product, variant) => {
-    const existingItem = selectedItems.find(
-        item => item.product_id === product.id && item.variant_id === variant.id
-    );
+        const existingItem = selectedItems.find(
+            item => item.product_id === product.id && item.variant_id === variant.id
+        );
 
-    if (existingItem) {
-        setSelectedItems(selectedItems.map(item =>
-            item.product_id === product.id && item.variant_id === variant.id
-                ? {
-                    ...item,
-                    quantity: item.quantity + 1,
-                    total_price: (item.quantity + 1) * item.unit_price,
-                    shadow_total_price: (item.quantity + 1) * item.shadow_unit_price
+        if (existingItem) {
+            setSelectedItems(selectedItems.map(item =>
+                item.product_id === product.id && item.variant_id === variant.id
+                    ? {
+                        ...item,
+                        quantity: item.quantity + 1,
+                        total_price: (item.quantity + 1) * item.unit_price,
+                        shadow_total_price: (item.quantity + 1) * item.shadow_unit_price
+                    }
+                    : item
+            ));
+        } else {
+            // FIX: Set proper default sale prices
+            const defaultUnitPrice = 1;
+            const defaultSalePrice = 1; // Make sure sale price is also 1, not 0
+            const defaultShadowUnitPrice = 1;
+            const defaultShadowSalePrice = 1;
+
+            setSelectedItems([
+                ...selectedItems,
+                {
+                    product_id: product.id,
+                    variant_id: variant.id,
+                    product_name: product.name,
+                    variant_name: getVariantDisplayName(variant),
+                    quantity: 1,
+                    unit_price: defaultUnitPrice,
+                    sale_price: defaultSalePrice, // This was probably missing or 0
+                    shadow_unit_price: defaultShadowUnitPrice,
+                    shadow_sale_price: defaultShadowSalePrice, // This was probably missing or 0
+                    total_price: defaultUnitPrice * 1,
+                    shadow_total_price: defaultShadowUnitPrice * 1
                 }
-                : item
-        ));
-    } else {
-        // FIX: Set proper default sale prices
-        const defaultUnitPrice = 1;
-        const defaultSalePrice = 1; // Make sure sale price is also 1, not 0
-        const defaultShadowUnitPrice = 1;
-        const defaultShadowSalePrice = 1;
-
-        setSelectedItems([
-            ...selectedItems,
-            {
-                product_id: product.id,
-                variant_id: variant.id,
-                product_name: product.name,
-                variant_name: getVariantDisplayName(variant),
-                quantity: 1,
-                unit_price: defaultUnitPrice,
-                sale_price: defaultSalePrice, // This was probably missing or 0
-                shadow_unit_price: defaultShadowUnitPrice,
-                shadow_sale_price: defaultShadowSalePrice, // This was probably missing or 0
-                total_price: defaultUnitPrice * 1,
-                shadow_total_price: defaultShadowUnitPrice * 1
-            }
-        ]);
-    }
-    setProductSearch("");
-    setFilteredProducts([]);
-};
+            ]);
+        }
+        setProductSearch("");
+        setFilteredProducts([]);
+    };
 
     const removeItem = (index) => {
         const updated = [...selectedItems];
@@ -107,29 +118,29 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     };
 
     const updateItem = (index, field, value) => {
-    const updated = [...selectedItems];
-    const numericValue = parseFloat(value) || 0;
-    
-    updated[index][field] = numericValue;
+        const updated = [...selectedItems];
+        const numericValue = parseFloat(value) || 0;
 
-    // Recalculate totals when relevant fields change
-    if (field === 'quantity' || field === 'unit_price' || field === 'shadow_unit_price') {
-        const quantity = updated[index].quantity;
-        const unitPrice = updated[index].unit_price;
-        const shadowUnitPrice = updated[index].shadow_unit_price;
-
-        updated[index].total_price = quantity * unitPrice;
-        updated[index].shadow_total_price = quantity * shadowUnitPrice;
-    }
-
-    // Also update sale prices immediately when changed
-    if (field === 'sale_price' || field === 'shadow_sale_price') {
-        // Ensure sale prices are properly set
         updated[index][field] = numericValue;
-    }
 
-    setSelectedItems(updated);
-};
+        // Recalculate totals when relevant fields change
+        if (field === 'quantity' || field === 'unit_price' || field === 'shadow_unit_price') {
+            const quantity = updated[index].quantity;
+            const unitPrice = updated[index].unit_price;
+            const shadowUnitPrice = updated[index].shadow_unit_price;
+
+            updated[index].total_price = quantity * unitPrice;
+            updated[index].shadow_total_price = quantity * shadowUnitPrice;
+        }
+
+        // Also update sale prices immediately when changed
+        if (field === 'sale_price' || field === 'shadow_sale_price') {
+            // Ensure sale prices are properly set
+            updated[index][field] = numericValue;
+        }
+
+        setSelectedItems(updated);
+    };
 
     const calculateTotal = () => {
         return selectedItems.reduce((total, item) => total + (item.total_price || 0), 0);
@@ -169,47 +180,47 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     };
 
     const validateItems = () => {
-    for (let item of selectedItems) {
-        // Validate quantity
-        if (!item.quantity || item.quantity <= 0) {
-            alert(`Please enter valid quantity for ${item.product_name}`);
-            return false;
-        }
+        for (let item of selectedItems) {
+            // Validate quantity
+            if (!item.quantity || item.quantity <= 0) {
+                alert(`Please enter valid quantity for ${item.product_name}`);
+                return false;
+            }
 
-        if (isShadowUser) {
-            // Validate shadow prices for shadow users
-            if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
-                alert(`Please enter unit price for ${item.product_name}`);
-                return false;
-            }
-            if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
-                alert(`Please enter sale price for ${item.product_name}`);
-                return false;
-            }
-        } else {
-            // Validate real prices for general users
-            if (!item.unit_price || item.unit_price <= 0) {
-                alert(`Please enter unit price for ${item.product_name}`);
-                return false;
-            }
-            if (!item.sale_price || item.sale_price <= 0) {
-                alert(`Please enter sale price for ${item.product_name}`);
-                return false;
-            }
-            
-            // Also validate shadow prices for general users
-            if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
-                alert(`Please enter unit price for ${item.product_name}`);
-                return false;
-            }
-            if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
-                alert(`Please enter sale price for ${item.product_name}`);
-                return false;
+            if (isShadowUser) {
+                // Validate shadow prices for shadow users
+                if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
+                    alert(`Please enter unit price for ${item.product_name}`);
+                    return false;
+                }
+                if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
+                    alert(`Please enter sale price for ${item.product_name}`);
+                    return false;
+                }
+            } else {
+                // Validate real prices for general users
+                if (!item.unit_price || item.unit_price <= 0) {
+                    alert(`Please enter unit price for ${item.product_name}`);
+                    return false;
+                }
+                if (!item.sale_price || item.sale_price <= 0) {
+                    alert(`Please enter sale price for ${item.product_name}`);
+                    return false;
+                }
+
+                // Also validate shadow prices for general users
+                if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
+                    alert(`Please enter unit price for ${item.product_name}`);
+                    return false;
+                }
+                if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
+                    alert(`Please enter sale price for ${item.product_name}`);
+                    return false;
+                }
             }
         }
-    }
-    return true;
-};
+        return true;
+    };
 
     const submit = (e) => {
         e.preventDefault();
@@ -426,9 +437,14 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                     onClick={() => addItem(product, variant)}
                                                 >
                                                     <div className="flex justify-between items-center">
-                                                        <span className="text-sm">
-                                                            {getVariantDisplayName(variant)}
-                                                        </span>
+                                                        <div className="text-sm">
+                                                            <div>{getVariantDisplayName(variant)}</div>
+                                                            {variant.sku && (
+                                                                <div className="text-xs text-gray-500 font-mono mt-1">
+                                                                    SKU: {variant.sku}
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                         <Plus size={14} className="text-primary" />
                                                     </div>
                                                 </div>

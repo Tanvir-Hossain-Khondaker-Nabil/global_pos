@@ -29,7 +29,9 @@ class Product extends Model
     // Calculate total stock
     public function getTotalStockAttribute()
     {
-        return $this->variants->sum('stock');
+        return $this->variants->sum(function($variant) {
+            return $variant->stock ? $variant->stock->quantity : 0;
+        });
     }
 
     // Get price range
@@ -57,8 +59,8 @@ class Product extends Model
                         $query->where('name', 'like', '%' . $search . '%');
                     })
                     ->orWhereHas('variants', function ($query) use ($search) {
-                        $query->where('size', 'like', '%' . $search . '%')
-                            ->orWhere('color', 'like', '%' . $search . '%');
+                        $query->where('sku', 'like', '%' . $search . '%')
+                            ->orWhereJsonContains('attribute_values', $search);
                     });
             });
         });
@@ -66,12 +68,31 @@ class Product extends Model
 
     public function stocks()
     {
-        return $this->hasMany(Stock::class);
+        return $this->hasManyThrough(Stock::class, Variant::class);
     }
 
-    public function stock()
-    {
-        return $this->hasOne(Stock::class, 'variant_id');
-    }
+    // Remove these relationships as they might cause conflicts
+    // public function attributeValue()
+    // {
+    //     return $this->hasMany(AttributeValue::class);
+    // }
+    
+    // public function stock()
+    // {
+    //     return $this->hasOne(Stock::class, 'variant_id');
+    // }
 
+    // Remove getProductAttributes as it's not needed with current structure
+    // public function getProductAttributes()
+    // {
+    //     return Attribute::whereIn('id', function($query) {
+    //         $query->select('attribute_id')
+    //               ->from('product_variant_attributes')
+    //               ->whereIn('product_variant_id', function($q) {
+    //                   $q->select('id')
+    //                     ->from('product_variants')
+    //                     ->where('product_id', $this->id);
+    //               });
+    //     })->get();
+    // }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SalesController;
@@ -11,12 +12,12 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\AttributeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
-use Illuminate\Support\Facades\Artisan;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -147,7 +148,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/sales/{sale}', 'show')->name('sales.show');
         Route::get('/sales/{sale}/{print}', 'show')->name('salesPrint.show');
-        Route::get('/sales/{sale}/print',  'print')->name('sales.print');
+        Route::get('/sales/{sale}/print', 'print')->name('sales.print');
         Route::get('/sales/{sale}/download-pdf', 'downloadPdf')->name('sales.download.pdf');
         Route::delete('/sales/{sale}', 'destroy')->name('sales.destroy');
         Route::get('/sales/{sale}/edit', 'edit')->name('sales.edit');
@@ -209,6 +210,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/print-barcode', 'index')->name('barcode.print');
     });
 
+Route::get('/attributes', [AttributeController::class, 'index'])->name('attributes.index');
+Route::post('/attributes', [AttributeController::class, 'store'])->name('attributes.store');
+Route::put('/attributes/{attribute}', [AttributeController::class, 'update'])->name('attributes.update');
+Route::delete('/attributes/{attribute}', [AttributeController::class, 'destroy'])->name('attributes.destroy');
+
+// Attribute values routes
+Route::post('/attributes/{attribute}/values', [AttributeController::class, 'storeValue'])->name('attributes.values.store');
+Route::delete('/attributes/{attribute}/values/{value}', [AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
 
 
     // Warehouse Routes

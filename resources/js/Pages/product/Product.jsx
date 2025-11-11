@@ -1,7 +1,8 @@
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Eye, Frown, Pen, Plus, Trash2, Package, DollarSign, BarChart3 } from "lucide-react";
+import { Eye, Frown, Pen, Plus, Trash2, Package, DollarSign, BarChart3, Tag } from "lucide-react";
+import { useEffect } from "react";
 
 export default function Product({ product, filters }) {
     const { auth } = usePage().props;
@@ -12,11 +13,9 @@ export default function Product({ product, filters }) {
     });
     const handleSearch = (e) => {
         const value = e.target.value;
-
         searchForm.setData("search", value);
 
         const queryString = value ? { search: value } : {};
-
         router.get(route("product.list"), queryString, {
             preserveScroll: true,
             preserveState: true,
@@ -24,12 +23,18 @@ export default function Product({ product, filters }) {
         });
     };
 
-    // Format variant display
+    // Format variant display for attribute-based variants
     const formatVariantDisplay = (variant) => {
+        if (!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) {
+            return 'Default Variant';
+        }
+
         const parts = [];
-        if (variant.size) parts.push(`Size: ${variant.size}`);
-        if (variant.color) parts.push(`Color: ${variant.color}`);
-        return parts.join(', ');
+        for (const [attributeCode, value] of Object.entries(variant.attribute_values)) {
+            parts.push(`${attributeCode}: ${value}`);
+        }
+
+        return parts.join(' | ');
     };
 
     // Format currency
@@ -37,29 +42,56 @@ export default function Product({ product, filters }) {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'BDT'
-        }).format(amount);
+        }).format(amount || 0);
     };
 
     // Calculate total stock for a product
     const calculateTotalStock = (productItem) => {
-        return productItem.variants?.reduce((total, variant) => {
+        if (!productItem.variants || productItem.variants.length === 0) {
+            return 0;
+        }
+
+        return productItem.variants.reduce((total, variant) => {
             return total + (variant.stock?.quantity || 0);
-        }, 0) || 0;
+        }, 0);
     };
 
-    // Get average purchase price
-    const getAveragePurchasePrice = (productItem) => {
-        const variantsWithPrice = productItem.variants?.filter(variant => 
-            variant.stock?.purchase_price && variant.stock.purchase_price > 0
-        );
+    // Get average price
+    const getAveragePrice = (productItem) => {
+        if (!productItem.variants || productItem.variants.length === 0) {
+            return 0;
+        }
+
+        const variantsWithPrice = productItem.variants.filter(variant => {
+            return (variant.stock?.sale_price || 0) > 0;
+        });
         
-        if (!variantsWithPrice || variantsWithPrice.length === 0) return 0;
+        if (variantsWithPrice.length === 0) return 0;
         
         const totalPrice = variantsWithPrice.reduce((sum, variant) => {
-            return sum + (variant.stock.purchase_price || 0);
+            return sum + (variant.stock?.sale_price || 0);
         }, 0);
         
         return totalPrice / variantsWithPrice.length;
+    };
+
+    // Get unique attributes count for a product
+    const getUniqueAttributesCount = (productItem) => {
+        if (!productItem.variants || productItem.variants.length === 0) {
+            return 0;
+        }
+        
+        const allAttributes = new Set();
+        
+        productItem.variants.forEach((variant) => {
+            if (variant.attribute_values && Object.keys(variant.attribute_values).length > 0) {
+                Object.keys(variant.attribute_values).forEach((attributeCode) => {
+                    allAttributes.add(attributeCode);
+                });
+            }
+        });
+        
+        return allAttributes.size;
     };
 
     return (
@@ -96,8 +128,8 @@ export default function Product({ product, filters }) {
                                 <th>Product Code</th>
                                 <th>Product Name</th>
                                 <th>Category</th>
-                                <th>Stock</th>
-                                <th>Avg. Price</th>
+                                <th>Attributes</th>
+                                <th>Total Stock</th>
                                 <th>Variants</th>
                                 <th>Actions</th>
                             </tr>
@@ -105,7 +137,8 @@ export default function Product({ product, filters }) {
                         <tbody>
                             {product.data.map((productItem, index) => {
                                 const totalStock = calculateTotalStock(productItem);
-                                const avgPrice = getAveragePurchasePrice(productItem);
+                                const avgPrice = getAveragePrice(productItem);
+                                const attributesCount = getUniqueAttributesCount(productItem);
                                 
                                 return (
                                     <tr key={productItem.id}>
@@ -125,50 +158,59 @@ export default function Product({ product, filters }) {
                                             </div>
                                         </td>
                                         <td>
-                                            {productItem.category?.name || 'N/A'}
+                                            <span className="badge badge-outline">
+                                                {productItem.category?.name || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div className="flex items-center gap-2">
+                                                <Tag size={14} className="text-purple-600" />
+                                                <span className="text-sm">
+                                                    {attributesCount} {attributesCount === 1 ? 'attribute' : 'attributes'}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-2">
                                                 <Package size={16} className="text-blue-600" />
                                                 <div>
-                                                    <div className="font-bold text-lg">{totalStock}</div>
-                                                    <div className="text-xs text-gray-500">units</div>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="flex items-center gap-2">
-                                                <DollarSign size={16} className="text-green-600" />
-                                                <div>
-                                                    <div className="font-semibold">
-                                                        {avgPrice > 0 ? formatCurrency(avgPrice) : 'N/A'}
+                                                    <div className={`font-bold text-lg ${totalStock === 0 ? 'text-error' : totalStock < 10 ? 'text-warning' : 'text-success'}`}>
+                                                        {totalStock}
                                                     </div>
-                                                    <div className="text-xs text-gray-500">avg. price</div>
+                                                    <div className="text-xs text-gray-500">units</div>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="max-w-[300px]">
                                             <div className="flex flex-col gap-2">
-                                                {productItem.variants?.map((variant, i) => (
-                                                    <div
-                                                        key={variant.id}
-                                                        className="border border-dashed border-neutral p-2 rounded text-xs"
-                                                    >
-                                                        <div className="flex justify-between items-start">
-                                                            <div className="flex-1">
-                                                                <div className="font-medium">
-                                                                    {formatVariantDisplay(variant) || 'Default Variant'}
-                                                                </div>
-                                                                <div className="flex gap-4 mt-1 text-xs text-gray-600">
-                                                                    <span>Stock: {variant.stock?.quantity || 0}</span>
-                                                                    {variant.stock?.purchase_price > 0 && (
-                                                                        <span>Price: {formatCurrency(variant.stock.purchase_price)}</span>
-                                                                    )}
+                                                {productItem.variants?.map((variant, i) => {
+                                                    const hasAttributes = variant.attribute_values && Object.keys(variant.attribute_values).length > 0;
+                                                    const variantStock = variant.stock?.quantity || 0;
+                                                    const variantPrice = variant.stock?.sale_price || 0;
+                                                    
+                                                    return (
+                                                        <div
+                                                            key={variant.id}
+                                                            className={`border p-2 rounded text-xs ${
+                                                                hasAttributes 
+                                                                    ? 'border-primary bg-primary/5' 
+                                                                    : 'border-dashed border-neutral'
+                                                            }`}
+                                                        >
+                                                            <div className="flex justify-between items-start">
+                                                                <div className="flex-1">
+                                                                    <div className="font-medium">
+                                                                        {formatVariantDisplay(variant)}
+                                                                    </div>
+                                                                    
+                                                                    <div className="flex gap-4 mt-1 text-xs text-gray-600">
+                                                                        <span>Stock: {variantStock}</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </td>
                                         <td>
@@ -181,6 +223,7 @@ export default function Product({ product, filters }) {
                                                                 { id: productItem.id }
                                                             )}
                                                             className="btn btn-xs btn-warning"
+                                                            title="Edit Product"
                                                         >
                                                             <Pen size={10} /> Edit
                                                         </Link>
@@ -194,16 +237,16 @@ export default function Product({ product, filters }) {
                                                             onClick={(e) => {
                                                                 if (
                                                                     !confirm(
-                                                                        "Are you sure you want to delete this product?"
+                                                                        "Are you sure you want to delete this product? This action cannot be undone."
                                                                     )
                                                                 ) {
                                                                     e.preventDefault();
                                                                 }
                                                             }}
                                                             className="btn btn-xs btn-error"
+                                                            title="Delete Product"
                                                         >
-                                                            <Trash2 size={10} />{" "}
-                                                            Delete
+                                                            <Trash2 size={10} /> Delete
                                                         </Link>
                                                     </>
                                                 )}

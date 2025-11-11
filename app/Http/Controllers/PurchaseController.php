@@ -66,6 +66,7 @@ class PurchaseController extends Controller
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
+        
 
         return Inertia::render('Purchase/AddPurchase', [
             'suppliers' => Supplier::all(),

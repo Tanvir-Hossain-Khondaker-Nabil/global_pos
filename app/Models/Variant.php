@@ -2,52 +2,55 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Variant extends Model
 {
-    use HasFactory;
-
-    protected $fillable = [
-        'product_id',
-        'size',
-        'color',
-        'price',
-        'stock'
-    ];
+    protected $fillable = ['product_id', 'attribute_values', 'sku'];
 
     protected $casts = [
-        'price' => 'decimal:2',
-        'stock' => 'integer'
+        'attribute_values' => 'array',
     ];
 
-    public function product()
+    // Always load stock relationship
+    protected $with = ['stock'];
+
+    // Append computed attributes to JSON
+    protected $appends = ['stock_quantity', 'stock_sale_price', 'variant_name'];
+
+    public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
     }
 
-    // Add this accessor
-    public function getVariantNameAttribute()
+    public function stock(): HasOne
     {
-        $parts = [];
-        if ($this->size)
-            $parts[] = "Size: {$this->size}";
-        if ($this->color)
-            $parts[] = "Color: {$this->color}";
-
-        return implode(', ', $parts) ?: 'Default Variant';
+        return $this->hasOne(Stock::class, 'variant_id', 'id');
     }
 
-    public function stocks()
+    public function stocks(): HasOne
     {
-        return $this->hasMany(Stock::class);
+        return $this->hasOne(Stock::class, 'variant_id', 'id');
     }
 
-    // Stock relationship যোগ করুন
-    public function stock()
+    // Remove duplicate stocks() method if it's the same as stock()
+    // public function stocks(): HasOne
+    // {
+    //     return $this->hasOne(Stock::class, 'variant_id', 'id');
+    // }
+
+    // Helper method to get attribute values as string
+    public function getVariantNameAttribute(): string
     {
-        return $this->hasOne(Stock::class, 'variant_id');
+        if (empty($this->attribute_values)) {
+            return 'Default Variant';
+        }
+
+        return collect($this->attribute_values)
+            ->map(fn($value, $attribute) => "{$attribute}: {$value}")
+            ->join(', ');
     }
 
     // Helper method to get stock quantity
@@ -56,15 +59,28 @@ class Variant extends Model
         return $this->stock ? $this->stock->quantity : 0;
     }
 
-    // Helper method to get purchase price
-    public function getPurchasePriceAttribute()
-    {
-        return $this->stock ? $this->stock->purchase_price : 0;
-    }
-
     // Helper method to get sale price
-    public function getSalePriceAttribute()
+    public function getStockSalePriceAttribute()
     {
         return $this->stock ? $this->stock->sale_price : 0;
+    }
+
+    // Remove duplicate getSalePriceAttribute() since we have getStockSalePriceAttribute()
+    // public function getSalePriceAttribute()
+    // {
+    //     return $this->stock ? $this->stock->sale_price : 0;
+    // }
+
+    // Custom toArray method if needed (optional)
+    public function toArray()
+    {
+        $array = parent::toArray();
+        
+        // You can customize what gets returned here if needed
+        return array_merge($array, [
+            'variant_name' => $this->variant_name,
+            'stock_quantity' => $this->stock_quantity,
+            'stock_sale_price' => $this->stock_sale_price,
+        ]);
     }
 }

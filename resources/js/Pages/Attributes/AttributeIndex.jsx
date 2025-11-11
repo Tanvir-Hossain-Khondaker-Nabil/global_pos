@@ -1,0 +1,380 @@
+// resources/js/Pages/attributes/AttributeIndex.jsx
+import React, { useState } from 'react';
+import { useForm, router } from '@inertiajs/react';
+import { Plus, Trash, Edit, X, Save } from 'lucide-react';
+
+export default function AttributeIndex({ attributes }) {
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [editingAttribute, setEditingAttribute] = useState(null);
+    const [addingValues, setAddingValues] = useState({});
+
+    const attributeForm = useForm({
+        id: '',
+        name: '',
+        code: '',
+        values: [{ value: '', code: '' }]
+    });
+
+    const valueForms = {};
+
+    // Handle attribute form
+    const handleAddValueField = () => {
+        attributeForm.setData('values', [...attributeForm.data.values, { value: '', code: '' }]);
+    };
+
+    const handleValueChange = (index, field, newValue) => {
+        const newValues = [...attributeForm.data.values];
+        newValues[index][field] = newValue;
+        attributeForm.setData('values', newValues);
+    };
+
+    const handleRemoveValueField = (index) => {
+        const newValues = attributeForm.data.values.filter((_, i) => i !== index);
+        attributeForm.setData('values', newValues);
+    };
+
+    const submitAttribute = (e) => {
+        e.preventDefault();
+        
+        const url = editingAttribute 
+            ? route('attributes.update', { attribute: editingAttribute.id })
+            : route('attributes.store');
+            
+        const method = editingAttribute ? 'put' : 'post';
+
+        router[method](url, attributeForm.data, {
+            onSuccess: () => {
+                attributeForm.reset();
+                setShowCreateForm(false);
+                setEditingAttribute(null);
+            }
+        });
+    };
+
+    const handleCreate = () => {
+        attributeForm.reset();
+        attributeForm.setData('values', [{ value: '', code: '' }]);
+        setShowCreateForm(true);
+        setEditingAttribute(null);
+    };
+
+    const handleEdit = (attribute) => {
+        attributeForm.setData({
+            id: attribute.id,
+            name: attribute.name,
+            code: attribute.code,
+            values: attribute.values.map(val => ({
+                id: val.id,
+                value: val.value,
+                code: val.code
+            }))
+        });
+        setEditingAttribute(attribute);
+        setShowCreateForm(true);
+    };
+
+    const handleCancel = () => {
+        attributeForm.reset();
+        setShowCreateForm(false);
+        setEditingAttribute(null);
+    };
+
+    const handleDeleteAttribute = (attribute) => {
+        if (confirm(`Are you sure you want to delete "${attribute.name}"?`)) {
+            router.delete(route('attributes.destroy', { attribute: attribute.id }));
+        }
+    };
+
+    // Handle adding values to existing attribute
+    const handleAddValueToAttribute = (attributeId) => {
+        setAddingValues(prev => ({
+            ...prev,
+            [attributeId]: { value: '', code: '' }
+        }));
+    };
+
+    const handleNewValueChange = (attributeId, field, value) => {
+        setAddingValues(prev => ({
+            ...prev,
+            [attributeId]: {
+                ...prev[attributeId],
+                [field]: value
+            }
+        }));
+    };
+
+    const submitNewValue = (attributeId, e) => {
+        e.preventDefault();
+        const valueData = addingValues[attributeId];
+        
+        router.post(route('attributes.values.store', { attribute: attributeId }), valueData, {
+            onSuccess: () => {
+                setAddingValues(prev => {
+                    const newState = { ...prev };
+                    delete newState[attributeId];
+                    return newState;
+                });
+            }
+        });
+    };
+
+    const handleDeleteValue = (attributeId, valueId) => {
+        if (confirm('Are you sure you want to delete this value?')) {
+            router.delete(route('attributes.values.destroy', { 
+                attribute: attributeId, 
+                value: valueId 
+            }));
+        }
+    };
+
+    return (
+        <div className="p-6">
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold">Attributes Management</h1>
+                    <p className="text-gray-600">Manage product attributes and their values</p>
+                </div>
+                <button
+                    onClick={handleCreate}
+                    className="btn btn-primary"
+                >
+                    <Plus size={16} className="mr-2" />
+                    Create Attribute
+                </button>
+            </div>
+
+            {/* Create/Edit Attribute Form */}
+            {showCreateForm && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-semibold">
+                            {editingAttribute ? 'Edit Attribute' : 'Create New Attribute'}
+                        </h2>
+                        <button
+                            onClick={handleCancel}
+                            className="btn btn-ghost btn-sm"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                    
+                    <form onSubmit={submitAttribute}>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                            <div>
+                                <label className="label">Attribute Name *</label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    value={attributeForm.data.name}
+                                    onChange={(e) => attributeForm.setData('name', e.target.value)}
+                                    placeholder="e.g., Color, Size, Model"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="label">Attribute Code *</label>
+                                <input
+                                    type="text"
+                                    className="input input-bordered w-full"
+                                    value={attributeForm.data.code}
+                                    onChange={(e) => attributeForm.setData('code', e.target.value)}
+                                    placeholder="e.g., color, size, model"
+                                    required
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mb-6">
+                            <div className="flex justify-between items-center mb-3">
+                                <label className="label">Attribute Values *</label>
+                                <button
+                                    type="button"
+                                    onClick={handleAddValueField}
+                                    className="btn btn-sm btn-outline"
+                                >
+                                    <Plus size={14} className="mr-1" />
+                                    Add Value
+                                </button>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                {attributeForm.data.values.map((value, index) => (
+                                    <div key={index} className="flex gap-3 items-start">
+                                        <div className="flex-1">
+                                            <input
+                                                type="text"
+                                                className="input input-bordered w-full"
+                                                value={value.value}
+                                                onChange={(e) => handleValueChange(index, 'value', e.target.value)}
+                                                placeholder="Value (e.g., Small, Red)"
+                                                required
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <input
+                                                type="text"
+                                                className="input input-bordered w-full"
+                                                value={value.code}
+                                                onChange={(e) => handleValueChange(index, 'code', e.target.value)}
+                                                placeholder="Code (e.g., sm, red)"
+                                                required
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveValueField(index)}
+                                            disabled={attributeForm.data.values.length === 1}
+                                            className="btn btn-sm btn-error mt-1"
+                                        >
+                                            <Trash size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button
+                                type="submit"
+                                className="btn btn-primary"
+                                disabled={attributeForm.processing}
+                            >
+                                <Save size={16} className="mr-2" />
+                                {attributeForm.processing 
+                                    ? 'Saving...' 
+                                    : (editingAttribute ? 'Update Attribute' : 'Create Attribute')
+                                }
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCancel}
+                                className="btn btn-ghost"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+
+            {/* Attributes List */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {attributes.map((attribute) => (
+                    <div key={attribute.id} className="border border-gray-200 rounded-lg p-4 bg-white shadow-sm">
+                        <div className="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 className="font-semibold text-lg text-gray-900">{attribute.name}</h3>
+                                <code className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                    {attribute.code}
+                                </code>
+                            </div>
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={() => handleEdit(attribute)}
+                                    className="btn btn-sm btn-outline btn-primary"
+                                >
+                                    <Edit size={14} />
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteAttribute(attribute)}
+                                    className="btn btn-sm btn-outline btn-error"
+                                >
+                                    <Trash size={14} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Values List */}
+                        <div className="space-y-2 mb-4">
+                            {attribute.values.map((value) => (
+                                <div key={value.id} className="flex justify-between items-center bg-gray-50 px-3 py-2 rounded">
+                                    <div>
+                                        <span className="font-medium">{value.value}</span>
+                                        <code className="text-xs text-gray-500 ml-2 bg-gray-200 px-1 rounded">
+                                            {value.code}
+                                        </code>
+                                    </div>
+                                    <button
+                                        onClick={() => handleDeleteValue(attribute.id, value.id)}
+                                        className="btn btn-xs btn-error"
+                                    >
+                                        <Trash size={12} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Add Value Form */}
+                        <div className="border-t pt-3">
+                            {addingValues[attribute.id] ? (
+                                <form onSubmit={(e) => submitNewValue(attribute.id, e)} className="space-y-2">
+                                    <div className="flex gap-2">
+                                        <input
+                                            type="text"
+                                            className="input input-sm input-bordered flex-1"
+                                            value={addingValues[attribute.id].value}
+                                            onChange={(e) => handleNewValueChange(attribute.id, 'value', e.target.value)}
+                                            placeholder="Value"
+                                            required
+                                        />
+                                        <input
+                                            type="text"
+                                            className="input input-sm input-bordered flex-1"
+                                            value={addingValues[attribute.id].code}
+                                            onChange={(e) => handleNewValueChange(attribute.id, 'code', e.target.value)}
+                                            placeholder="Code"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button type="submit" className="btn btn-sm btn-primary flex-1">
+                                            <Plus size={12} className="mr-1" />
+                                            Add
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setAddingValues(prev => {
+                                                const newState = { ...prev };
+                                                delete newState[attribute.id];
+                                                return newState;
+                                            })}
+                                            className="btn btn-sm btn-ghost"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </form>
+                            ) : (
+                                <button
+                                    onClick={() => handleAddValueToAttribute(attribute.id)}
+                                    className="btn btn-sm btn-outline w-full"
+                                >
+                                    <Plus size={14} className="mr-1" />
+                                    Add Value
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {attributes.length === 0 && (
+                <div className="text-center py-12">
+                    <div className="text-gray-400 mb-4">
+                        <Plus size={48} className="mx-auto" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No attributes found</h3>
+                    <p className="text-gray-500 mb-4">Get started by creating your first attribute</p>
+                    <button
+                        onClick={handleCreate}
+                        className="btn btn-primary"
+                    >
+                        <Plus size={16} className="mr-2" />
+                        Create Attribute
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+}
