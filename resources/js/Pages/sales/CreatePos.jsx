@@ -231,7 +231,7 @@ export default function AddSale({ customers, productstocks }) {
             <form onSubmit={submit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div className="lg:col-span-1 space-y-4">
-                        <div className="form-control">
+                        {/* <div className="form-control">
                             <label className="label">
                                 <span className="label-text">Customer *</span>
                             </label>
@@ -248,6 +248,38 @@ export default function AddSale({ customers, productstocks }) {
                             </select>
                             {form.errors.customer_id && (
                                 <div className="text-error text-sm mt-1">{form.errors.customer_id}</div>
+                            )}
+                        </div> */}
+
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Customer Name *</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="input input-bordered"
+                                value={form.data.customer_name}
+                                onChange={(e) => form.setData("customer_name", e.target.value)}
+                                required
+                            />
+                            {form.errors.customer_name && (
+                                <div className="text-error text-sm mt-1">{form.errors.customer_name}</div>
+                            )}
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Customer Phone *</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="input input-bordered"
+                                value={form.data.customer_phone}
+                                onChange={(e) => form.setData("customer_phone", e.target.value)}
+                                required
+                            />
+                            {form.errors.customer_phone && (
+                                <div className="text-error text-sm mt-1">{form.errors.customer_phone}</div>
                             )}
                         </div>
 

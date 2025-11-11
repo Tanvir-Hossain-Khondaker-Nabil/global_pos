@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Plus, Printer, Trash2, Eye, Search } from "lucide-react";
+import { Frown, Plus, Printer, Trash2, Eye, Search, Check, X } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 
 export default function SalesIndex({ sales, filters, isShadowUser }) {
@@ -244,7 +244,35 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                     View
                                                 </Link>
 
-                                                {auth.role === "admin" && (
+                                                {sale.shadow_type == 'shadow' && !isShadowUser && (
+                                                    <>
+                                                        <Link
+                                                            href={route("sales.edit", { sale: sale.id })}
+                                                            className="btn btn-xs btn-success flex items-center gap-1"
+                                                        >
+                                                            <Check size={13} /> Accepted
+                                                        </Link>
+
+                                                        <Link
+                                                            href={route("sales.rejected", { sale: sale.id })}
+                                                            method="delete"
+                                                            as="button"
+                                                            onClick={(e) => {
+                                                                if (!confirm("Are you sure you want to reject this order?")) {
+                                                                    e.preventDefault();
+                                                                }
+                                                            }}
+                                                            className="btn btn-xs btn-error"
+                                                        >
+                                                            <X size={13} />
+                                                            Rejected
+                                                        </Link>
+
+                                                    </>
+
+                                                )}
+
+                                                {sale.shadow_type == 'general' && (
                                                     <Link
                                                         href={route("sales.destroy", { sale: sale.id })}
                                                         method="delete"

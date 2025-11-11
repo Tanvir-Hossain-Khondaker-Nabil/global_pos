@@ -36,7 +36,8 @@ class SalesController extends Controller
         $pos === 'pos' ? $type = 'pos' : $type = 'inventory';
 
 
-        $sales = Sale::with(['customer', 'items.product', 'items.variant'])->where('type', $type)
+        $sales = Sale::with(['customer', 'items.product', 'items.variant','payments'])->where('type', $type)
+        ->where('status', '!=', 'cancelled')
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_no', 'like', "%{$search}%")
@@ -108,6 +109,8 @@ class SalesController extends Controller
     }
 
 
+
+    //createPos 
     public function createPos()
     {
         $user = Auth::user();
@@ -134,21 +137,53 @@ class SalesController extends Controller
 
         $type = $request->input('type', 'pos');
 
-        $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'items'       => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity'   => 'required|integer|min:1',
+        if ($type == 'inventory') {
+            $rules = [
+                'customer_id' => 'required|exists:customers,id',
+            ];
+        } else {
+            $rules = [
+                'customer_name'  => 'nullable|string|max:255',
+                'customer_phone' => 'nullable|string|max:20',
+            ];
+        }
+
+        $rules = array_merge($rules, [
+            'items'                 => 'required|array|min:1',
+            'items.*.product_id'    => 'required|exists:products,id',
+            'items.*.quantity'      => 'required|integer|min:1',
         ]);
+
+        $request->validate($rules);
+
 
         DB::beginTransaction();
         $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
 
-    
+
+        if($type == 'inventory') {
+            $customerId = $request->customer_id;
+            $status = 'pending' ;
+        } else {
+            $existingCustomer = Customer::where('phone', $request->customer_phone)
+                                        ->orWhere('customer_name', $request->customer_name)
+                                        ->first();
+            $status = 'paid' ;
+            
+            if ($existingCustomer) {
+                $customerId = $existingCustomer->id;
+            } else {
+            $customerId = Customer::CreateOrUpdate([
+                'customer_name' => $request->customer_name ?? 'Walk-in Customer',
+                'phone'         => $request->customer_phone ?? null,
+            ])->id;
+            }
+        }
+
+
         try {
-            // 1. Create Sale
             $sale = Sale::create([
-                'customer_id' => $request->customer_id,
+                'customer_id' => $customerId,
                 'invoice_no'  => $this->generateInvoiceNo(),
                 'sub_total'   => $request->sub_amount ?? 0,
                 'discount'    => $request->discount_rate ?? 0,
@@ -163,7 +198,7 @@ class SalesController extends Controller
                 'shadow_paid_amount' =>  0,
                 'shadow_due_amount'  => 0,
                 'payment_type'=> 'cash',
-                'status'      => 'pending',
+                'status'      => $status ?? 'pending',
                 'type'        => $type ?? 'pos',
             ]);
 
@@ -231,7 +266,7 @@ class SalesController extends Controller
                 $payment->payment_method = $request->payment_method ?? 'cash';
                 $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
                 $payment->note = $request->notes ?? null;
-                $payment->customer_id = $request->customer_id ?? null;
+                $payment->customer_id =  $customerId ?? null;
                 $payment->paid_at = Carbon::now();
                 $payment->save();
             }
@@ -251,28 +286,85 @@ class SalesController extends Controller
     }
 
 
+    // payment Clearance
+
+    public function storePayment(Request $request, Sale $sale)
+    {
+        $customerId = $sale->customer_id;
+
+        $sale->update([
+            'paid_amount' => $sale->paid_amount + $request->amount,
+            'shadow_paid_amount' => $sale->shadow_paid_amount + $request->shadow_paid_amount,
+            'due_amount' => 0,
+            'shadow_due_amount' => 0,
+            'status' => 'paid',
+        ]);
+
+        Payment::create([
+            'sale_id' => $sale->id,
+            'amount' => $request->amount,
+            'shadow_amount' => $request->shadow_paid_amount,
+            'payment_method' => $request->payment_method,
+            'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+            'note' => $request->note ?? null,
+            'customer_id' =>  $customerId ?? null,
+            'paid_at' => Carbon::now(),
+            'status' => 'completed',
+        ]);
+
+    }
+
 
     public function shadowStore(Request $request)
     {
 
         $type = $request->input('type', 'pos');
 
-        $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'items'       => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity'   => 'required|integer|min:1',
+        if ($type == 'inventory') {
+            $rules = [
+                'customer_id' => 'required|exists:customers,id',
+            ];
+        } else {
+            $rules = [
+                'customer_name'  => 'nullable|string|max:255',
+                'customer_phone' => 'nullable|string|max:20',
+            ];
+        }
+
+        $rules = array_merge($rules, [
+            'items'                 => 'required|array|min:1',
+            'items.*.product_id'    => 'required|exists:products,id',
+            'items.*.quantity'      => 'required|integer|min:1',
         ]);
 
-        DB::beginTransaction();
+        $request->validate($rules);
 
+
+        DB::beginTransaction();
         $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
+
+
+        if($type == 'inventory') {
+            $customerId = $request->customer_id;
+        } else {
+            $existingCustomer = Customer::where('phone', $request->customer_phone)
+                                        ->orWhere('customer_name', $request->customer_name)
+                                        ->first();
+            if ($existingCustomer) {
+                $customerId = $existingCustomer->id;
+            } else {
+            $customerId = Customer::CreateOrUpdate([
+                'customer_name' => $request->customer_name ?? 'Walk-in Customer',
+                'phone'         => $request->customer_phone ?? null,
+            ])->id;
+            }
+        }
 
     
         try {
             // 1. Create Sale
             $sale = Sale::create([
-                'customer_id' => $request->customer_id,
+                'customer_id' =>  $customerId,
                 'invoice_no'  => $this->generateInvoiceNo(),
                 'sub_total'   => 0,
                 'discount'    => $request->discount_rate ?? 0,
@@ -293,7 +385,7 @@ class SalesController extends Controller
             ]);
 
 
-            $shadowSubTotal = 0;
+            $subTotal = 0;
 
             foreach($request->items as $item)
             {
@@ -303,6 +395,7 @@ class SalesController extends Controller
                 $unitPrice = $item['unit_price'];
                 $shadowUnitPrice = $item['shadow_sell_price'];
                 $shadowtotalPrice = $quantity * $shadowUnitPrice;
+                $totalPrice = $quantity * $unitPrice;
 
                 $warehouse_id = Stock::where('product_id', $product->id)
                     ->where('variant_id', $variant->id)
@@ -319,13 +412,19 @@ class SalesController extends Controller
                     'quantity'   => $quantity,
                     'unit_price' => $unitPrice,
                     'status'     => 'pending',
-                    'total_price'=> 0,
+                    'total_price'=> $totalPrice,
                     'shadow_unit_price' => $shadowUnitPrice,
                     'shadow_total_price'=> $shadowtotalPrice,
                 ]);
 
-                $shadowSubTotal += $shadowtotalPrice;
+                $subTotal += $totalPrice;
             }
+
+            // 5. Update sale totals
+            $sale->update([
+                'sub_total'   => $subTotal,
+                'grand_total' => $subTotal + ($subTotal * $request->vat_rate / 100) - ($subTotal * $request->discount_rate / 100),
+            ]);
 
 
             // create payment record if paid_amount > 0
@@ -337,7 +436,7 @@ class SalesController extends Controller
                 $payment->payment_method = $request->payment_method ?? 'cash';
                 $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
                 $payment->note = $request->notes ?? null;
-                $payment->customer_id = $request->customer_id ?? null;
+                $payment->customer_id =  $customerId ?? null;
                 $payment->paid_at = Carbon::now();
                 $payment->status = 'pending';
                 $payment->save();
@@ -457,6 +556,7 @@ class SalesController extends Controller
         $isShadowUser = $user->type === 'shadow';
 
         $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'warehouse'])
+            ->where('status', '!=', 'cancelled')
             ->orderBy('created_at', 'desc')
             ->when(request('search'), function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -523,8 +623,8 @@ class SalesController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-
         $saleItem = SaleItem::with(['sale.customer','product','variant', 'warehouse',])->findOrFail($id);
+
 
          if ($isShadowUser) {
              $saleItem = self::transformToShadowItemData($saleItem);
@@ -534,6 +634,85 @@ class SalesController extends Controller
         return Inertia::render('sales/ShowItem', [
             'saleItem' => $saleItem,
         ]);
+    }
+
+
+    public function edit(Sale $sale)
+    {
+      
+        $sale->load(['customer', 'items.product', 'items.variant']);
+        
+        return inertia('sales/Edit', [
+            'sale' => $sale,
+        ]);
+    }
+
+
+    /**
+     * update the specified sale 
+     */ 
+
+    public function update(Sale $sale, Request $request)
+    {
+
+        $sale = Sale::with(['customer', 'items.product', 'items.variant'])->findOrFail($sale->id);
+
+        if($request->paid_amount > $sale->grand_total){
+            return back()->withErrors(['Paid amount cannot be greater than grand total.']);
+        }
+
+        if($request->due_amount < 0){
+            return back()->withErrors(['Due amount cannot be negative.']);
+        }
+
+        if($request->due_amount == 0 && $request->paid_amount == $sale->grand_total){
+            $status = 'paid';
+        } else {
+            $status = 'pending';
+        }
+
+
+        $sale->update([
+            'paid_amount' => $request->paid_amount,
+            'due_amount' => $request->due_amount,
+            'shadow_type' => 'general',
+            'status' => $status,
+        ]);
+
+        $sale->items()->update([
+            'status'     => 'completed',
+        ]);
+
+        Payment::where('sale_id', $sale->id)->update([
+            'status' => 'completed',
+            'amount' => $request->paid_amount,
+        ]);
+
+        return redirect()->route('sales.index')->with('success', 'Sale updated successfully.');
+    }
+
+
+    //rejected 
+
+    public function rejected(Sale $sale)
+    {
+        $sale = Sale::with(['customer', 'items.product', 'items.variant'])->findOrFail($sale->id);
+
+        $sale->update([
+            'shadow_type' => 'shadow',
+            'status' => 'cancelled',
+        ]);
+
+        $sale->items()->update([
+            'status'     => 'cancelled',
+        ]);
+
+        Payment::where('sale_id', $sale->id)->update([
+            'status' => 'cancelled',
+            'amount' => 0,
+        ]);
+
+        return back()->with('success', 'Sale cancelled successfully.');
     }
 
  

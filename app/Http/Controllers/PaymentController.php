@@ -21,6 +21,7 @@ class PaymentController extends Controller
         ];
 
         $payments = Payment::with(['sale', 'customer'])
+            ->where('status', '!=', 'cancelled')
             ->when($request->input('search'), function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('payment_method', 'like', "%{$search}%")

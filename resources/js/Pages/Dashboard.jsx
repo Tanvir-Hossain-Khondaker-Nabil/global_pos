@@ -6,6 +6,8 @@ export default function Dashboard({
     totalSalespyament,
     totalselas,
     totalexpense,
+    totalDue,
+    totalPaid
 }) {
     const { auth, appName } = usePage().props;
 
@@ -24,11 +26,11 @@ export default function Dashboard({
                 <div className="grid mt-5 grid-cols-1 md:grid-cols-5 gap-3">
                     <div className="bg-primary rounded-box p-7 flex items-center gap-3">
                         <div className="bg-white/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
-                            <DollarSign size={20} className="text-white" />
+                            <span className="text-white text-xl font-bold">৳</span>
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-white">
-                                {Number(totalSales)?.toFixed(2) ?? "0.00"} Tk
+                               ৳ {Number(totalSales)?.toFixed(2) ?? "0.00"}
                             </h1>
                             <small className="text-xs text-white">
                                 Total seles
@@ -37,13 +39,11 @@ export default function Dashboard({
                     </div>
                     <div className="bg-orange-300 rounded-box p-7 flex items-center gap-3">
                         <div className="bg-white/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
-                            <DollarSign size={20} className="text-gray-900" />
+                            <span className="text-white text-xl font-bold">৳</span>
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-gray-900">
-                                {Number(totalSalespyament)?.toFixed(2) ??
-                                    "0.00"}{" "}
-                                Tk
+                               ৳ {Number(totalPaid)?.toFixed(2) ?? "0.00"}
                             </h1>
                             <small className="text-xs text-gray-600">
                                 Total Payment
@@ -52,20 +52,16 @@ export default function Dashboard({
                     </div>
                     <div className="bg-red-400 rounded-box p-7 flex items-center gap-3">
                         <div className="bg-white/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
-                            <DollarSign size={20} className="text-white" />
+                            <span className="text-white text-xl font-bold">৳</span>
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-white">
-                                {Number(
-                                    totalSales - totalSalespyament
-                                )?.toFixed(2) ?? "0.00"}{" "}
-                                Tk
+                                ৳ {Number(totalDue)?.toFixed(2)}
                             </h1>
-                            <small className="text-xs text-white">
-                                Total Due
-                            </small>
+                            <small className="text-xs text-white">Total Due</small>
                         </div>
                     </div>
+
                     <div className="bg-white rounded-box p-7 flex items-center gap-3">
                         <div className="bg-primary/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
                             <ShoppingCart size={20} className="text-primary" />
@@ -75,7 +71,7 @@ export default function Dashboard({
                                 {totalselas}
                             </h1>
                             <small className="text-xs text-gray-600">
-                                Total Sales
+                                Total Orders
                             </small>
                         </div>
                     </div>

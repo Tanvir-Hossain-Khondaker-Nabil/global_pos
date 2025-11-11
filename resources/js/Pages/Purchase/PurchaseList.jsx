@@ -378,7 +378,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                 <Eye size={12} /> Details
                                             </Link>
 
-                                            {/* Payment Update Button */}
                                             {auth.role === "admin" && purchase.status !== 'cancelled' && (
                                                 <button
                                                     onClick={() => openPaymentModal(purchase)}
@@ -388,7 +387,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                 </button>
                                             )}
 
-                                            {/* Approve Button for Shadow Purchases */}
                                             {canApprovePurchases && isPendingApproval(purchase) && (
                                                 <button
                                                     onClick={() => openApproveModal(purchase)}

@@ -155,14 +155,20 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{sale}', 'destroy')->name('sales.destroy');
 
 
-        Route::get('/sales-items/{id}', 'showItem')->name('sales.items.show');
         Route::delete('/sales-items/{id}', 'destroy')->name('sales.items.destroy');
 
 
     });
 
 
+    Route::get('/items/{id}',[SalesController::class , 'showItem'])->name('sales.items.show');
     Route::get('/sales-items',[SalesController::class , 'allSalesItems'])->name('salesItems.list');
+    Route::get('/{sale}/edit', [SalesController::class , 'edit'])->name('sales.edit');
+    Route::patch('/{sale}/update', [SalesController::class , 'update'])->name('sales.update');
+    Route::delete('/{sale}/rejected', [SalesController::class , 'rejected'])->name('sales.rejected');
+    Route::post('/sales/{sale}/payments', [SalesController::class, 'storePayment'])->name('sales.payments.store');
+
+
 
 
     // sales list

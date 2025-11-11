@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Expense;
 use App\Models\Product;
+use App\Models\Sale;
 use App\Models\SalesList;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -13,9 +15,18 @@ class DashboardController extends Controller
     public function index($s = null)
     {
 
-        if ($s) {
-            return "Dashboard for: " . $s;
-        } else {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $totalDue = Sale::sum('due_amount');
+        $totalPaid = Sale::sum('paid_amount');
+        $totalsales = Sale::sum('grand_total');
+
+        if ($isShadowUser) {
+            $totalDue = Sale::sum('shadow_due_amount');
+            $totalPaid = Sale::sum('shadow_paid_amount');
+            $totalsales = Sale::sum('shadow_grand_total');
+        }
 
 
         $mobileBankSystems = ['bkash', 'nagod', 'upay', 'rocket'];
@@ -27,6 +38,9 @@ class DashboardController extends Controller
             ->flatten(1)
             ->groupBy('system')
             ->map(fn($group) => $group->sum(fn($item) => (float) $item['amount']));
+
+        
+       
 
         // ---- এখন তিনটা আলাদা গ্রুপ তৈরি করছি ----
         $mobilebanking = collect($mobileBankSystems)->mapWithKeys(function ($system) use ($paymentData) {
@@ -50,11 +64,16 @@ class DashboardController extends Controller
         $grandTotal = $totals->sum();
 
         return Inertia::render("Dashboard", [
-            'totalSales' => SalesList::sum('grandtotal'),
-            'totalselas' => SalesList::count(),
+            'totalSales' => $totalsales,
+            'totalDue' => $totalDue,
+            'totalPaid' => $totalPaid,
+            'totalselas' => Sale::count(),
             'totalSalespyament' => $grandTotal,
             'totalexpense' => Expense::sum('amount')
         ]);
-        }
     }
+
+
+
+
 }

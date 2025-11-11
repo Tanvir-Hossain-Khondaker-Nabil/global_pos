@@ -322,7 +322,8 @@ export default function AddSale({ customers, productstocks }) {
                                             <div className="flex-1">
                                                 <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
                                                 <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
-                                                <p className="text-sm text-gray-600"> <strong>Available Stock:</strong> {item.stockQuantity} | <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
+                                                <p className="text-sm text-gray-600"> <strong>Available Stock:</strong> {item.stockQuantity} | 
+                                                <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
                                             </div>
                                             <button
                                                 type="button"
@@ -354,10 +355,10 @@ export default function AddSale({ customers, productstocks }) {
                                                     type="number"
                                                     min="0"
                                                     step="0.01"
-                                                    className="input input-bordered input-sm"
+                                                    className="input input-bordered input-sm bg-gray-100"
                                                     value={item.sell_price}
                                                     onChange={(e) => updateItem(index, 'sell_price', e.target.value)}
-                                                    required
+                                                    readOnly
                                                 />
                                             </div>
                                             <div className="form-control">
@@ -366,10 +367,10 @@ export default function AddSale({ customers, productstocks }) {
                                                     type="number"
                                                     min="0"
                                                     step="0.01"
-                                                    className="input input-bordered input-sm"
+                                                    className="input input-bordered input-sm bg-gray-100"
                                                     value={item.shadow_sell_price}
                                                     onChange={(e) => updateItem(index, 'shadow_sell_price', e.target.value)}
-                                                    required
+                                                    readOnly
                                                 />
                                             </div>
                                             <div className="form-control">
