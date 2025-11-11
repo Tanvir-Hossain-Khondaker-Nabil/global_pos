@@ -24,6 +24,7 @@ class Sale extends Model
         'shadow_grand_total',
         'shadow_paid_amount',
         'shadow_due_amount',
+        'shadow_type',
     ];
 
 
@@ -37,7 +38,7 @@ class Sale extends Model
     // relation to sale items
     public function items()
     {
-        return $this->hasMany(SaleItem::class, 'sale_id');
+        return $this->hasMany(SaleItem::class, 'sale_id')->with('product', 'variant');
     }
 
     

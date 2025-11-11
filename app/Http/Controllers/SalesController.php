@@ -8,11 +8,15 @@ use App\Models\SaleItem;
 use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\Stock;
 use App\Models\Variant;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
+
 
 class SalesController extends Controller
 {
@@ -87,12 +91,18 @@ class SalesController extends Controller
      */
     public function create()
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $customers = Customer::all();
         $stock = Stock::with(['warehouse','product','variant'])->get();
 
-        return  Inertia::render('sales/Create', [
+        $isShadowUser? $render = 'sales/CreateShadow' : $render = 'sales/Create';
+
+        return  Inertia::render($render, [
             'customers' => $customers,
             'productstocks'  => $stock,
+            'isShadowUser' => $isShadowUser,
         ]);
         //
     }
@@ -100,10 +110,16 @@ class SalesController extends Controller
 
     public function createPos()
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $customers = Customer::all();
         $stock = Stock::with(['warehouse','product','variant'])->get();
 
-        return  Inertia::render('sales/CreatePos', [
+        $isShadowUser? $render = 'sales/CreateShadowPos' : $render = 'sales/CreatePos';
+
+
+        return  Inertia::render($render, [
             'customers' => $customers,
             'productstocks'  => $stock,
         ]);
@@ -144,7 +160,7 @@ class SalesController extends Controller
                 'shadow_discount' => $request->discount_rate ?? 0,
                 'shadow_sub_total' =>  0,
                 'shadow_grand_total' => 0,
-                'shadow_paid_amount' =>  $paidAmount ?? 0,
+                'shadow_paid_amount' =>  0,
                 'shadow_due_amount'  => 0,
                 'payment_type'=> 'cash',
                 'status'      => 'pending',
@@ -194,13 +210,10 @@ class SalesController extends Controller
             $shadowGrandTotal += $shadowSubTotal * $request->vat_rate / 100; 
             $shadowGrandTotal -= $shadowSubTotal * $request->discount_rate / 100;
 
-            if ($paidAmount >= $shadowGrandTotal) {
-                $shadowDueAmount = 0;
-                $shadowPaidAmount = $shadowGrandTotal ?? 0;
-            } else {
-                $shadowDueAmount = $shadowGrandTotal - $paidAmount;
-                $shadowPaidAmount = $paidAmount ?? 0;
-            } 
+            $type == 'inventory' ? $shadowPaidAmount = $request->shadow_paid_amount : $shadowPaidAmount = $shadowGrandTotal;
+            $shadowDueAmount = $shadowGrandTotal - $shadowPaidAmount;
+
+         
 
             $sale->update([
                 'shadow_sub_total'   => $shadowSubTotal,
@@ -208,6 +221,127 @@ class SalesController extends Controller
                 'shadow_due_amount'  => $shadowDueAmount ?? 0,
                 'shadow_paid_amount' => $shadowPaidAmount ?? 0,
             ]);
+
+            // create payment record if paid_amount > 0
+            if ($paidAmount > 0) {
+                $payment = new Payment();
+                $payment->sale_id = $sale->id;
+                $payment->amount = $paidAmount;
+                $payment->shadow_amount = $shadowPaidAmount;
+                $payment->payment_method = $request->payment_method ?? 'cash';
+                $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
+                $payment->note = $request->notes ?? null;
+                $payment->customer_id = $request->customer_id ?? null;
+                $payment->paid_at = Carbon::now();
+                $payment->save();
+            }
+
+            DB::commit();
+
+            if ($type === 'inventory') {
+                return to_route('sales.index')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
+            } else {
+                return to_route('salesPos.index',$type)->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
+            }
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors($e->getMessage());
+        }
+    }
+
+
+
+    public function shadowStore(Request $request)
+    {
+
+        $type = $request->input('type', 'pos');
+
+        $request->validate([
+            'customer_id' => 'required|exists:customers,id',
+            'items'       => 'required|array|min:1',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity'   => 'required|integer|min:1',
+        ]);
+
+        DB::beginTransaction();
+
+        $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
+
+    
+        try {
+            // 1. Create Sale
+            $sale = Sale::create([
+                'customer_id' => $request->customer_id,
+                'invoice_no'  => $this->generateInvoiceNo(),
+                'sub_total'   => 0,
+                'discount'    => $request->discount_rate ?? 0,
+                'vat_tax'     => $request->vat_rate ?? 0,
+                'grand_total' =>  0,
+                'paid_amount' =>  0,
+                'due_amount'  =>  0,
+                'shadow_vat_tax' => $request->vat_rate ?? 0,
+                'shadow_discount' => $request->discount_rate ?? 0,
+                'shadow_sub_total' =>  $request->sub_amount ?? 0,
+                'shadow_grand_total' => $request->grand_amount ?? 0,
+                'shadow_paid_amount' => $paidAmount ?? 0,
+                'shadow_due_amount'  => $request->due_amount ?? 0,
+                'payment_type'=> 'cash',
+                'status'      => 'pending',
+                'shadow_type' =>  $request->shadow_type ?? 'shadow',
+                'type'        => $type ?? 'pos',
+            ]);
+
+
+            $shadowSubTotal = 0;
+
+            foreach($request->items as $item)
+            {
+                $product = Product::findOrFail($item['product_id']);
+                $variant = Variant::findOrFail($item['variant_id']);
+                $quantity = $item['quantity'];
+                $unitPrice = $item['unit_price'];
+                $shadowUnitPrice = $item['shadow_sell_price'];
+                $shadowtotalPrice = $quantity * $shadowUnitPrice;
+
+                $warehouse_id = Stock::where('product_id', $product->id)
+                    ->where('variant_id', $variant->id)
+                    ->where('quantity', '>', 0)
+                    ->orderBy('created_at', 'asc')
+                    ->value('warehouse_id');
+
+                // 4. Create sale item
+                SaleItem::create([
+                    'sale_id'    => $sale->id,
+                    'product_id' => $product->id,
+                    'variant_id' => $variant->id,
+                    'warehouse_id' => $warehouse_id ?? null,
+                    'quantity'   => $quantity,
+                    'unit_price' => $unitPrice,
+                    'status'     => 'pending',
+                    'total_price'=> 0,
+                    'shadow_unit_price' => $shadowUnitPrice,
+                    'shadow_total_price'=> $shadowtotalPrice,
+                ]);
+
+                $shadowSubTotal += $shadowtotalPrice;
+            }
+
+
+            // create payment record if paid_amount > 0
+            if ($paidAmount > 0) {
+                $payment = new Payment();
+                $payment->sale_id = $sale->id;
+                $payment->amount = 0;
+                $payment->shadow_amount =  $paidAmount;
+                $payment->payment_method = $request->payment_method ?? 'cash';
+                $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
+                $payment->note = $request->notes ?? null;
+                $payment->customer_id = $request->customer_id ?? null;
+                $payment->paid_at = Carbon::now();
+                $payment->status = 'pending';
+                $payment->save();
+            }
 
             DB::commit();
 
@@ -317,6 +451,7 @@ class SalesController extends Controller
 
     public function allSalesItems()
     {
+
 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';

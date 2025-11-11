@@ -18,6 +18,7 @@ use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
+use App\Http\Controllers\PaymentController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -137,41 +138,32 @@ Route::middleware('auth')->group(function () {
     });
 
     // sales
-    Route::controller(SalesController::class)->group(function () {
+    Route::controller(SalesController::class)->prefix('/sales')->group(function () {
 
-        Route::get('/sales/add', 'createPos')->name('sales.add');
-        Route::post('/sales/store', 'store')->name('sales.store');
-        Route::get('/sales/create', 'create')->name('sales.create');
-        Route::get('/sales', 'index')->name('sales.index');
-        Route::get('/sales/list/{pos}', 'index')->name('salesPos.index');
+        Route::get('/add', 'createPos')->name('sales.add');
+        Route::post('/store', 'store')->name('sales.store');
+        Route::post('/store/shadow', 'shadowStore')->name('salesShadow.store');
 
-
-        Route::get('/sales/{sale}', 'show')->name('sales.show');
-        Route::get('/sales/{sale}/{print}', 'show')->name('salesPrint.show');
-        Route::get('/sales/{sale}/print', 'print')->name('sales.print');
-        Route::get('/sales/{sale}/download-pdf', 'downloadPdf')->name('sales.download.pdf');
-        Route::delete('/sales/{sale}', 'destroy')->name('sales.destroy');
-        Route::get('/sales/{sale}/edit', 'edit')->name('sales.edit');
-        Route::put('/sales/{sale}', 'update')->name('sales.update');
+        Route::get('/create', 'create')->name('sales.create');
+        Route::get('/', 'index')->name('sales.index');
+        Route::get('/list/{pos}', 'index')->name('salesPos.index');
 
 
+        Route::get('/{sale}', 'show')->name('sales.show');
+        Route::get('/{sale}/{print}', 'show')->name('salesPrint.show');
+        Route::get('/{sale}/print',  'print')->name('sales.print');
+        Route::get('/{sale}/download-pdf', 'downloadPdf')->name('sales.download.pdf');
+        Route::delete('/{sale}', 'destroy')->name('sales.destroy');
 
 
-        Route::get('sales/items/list', 'allSalesItems')->name('salesItems.list');
         Route::get('/sales-items/{id}', 'showItem')->name('sales.items.show');
         Route::delete('/sales-items/{id}', 'destroy')->name('sales.items.destroy');
 
 
-
-        // Route::post('/add/product/varaint', 'productVaraint')->name('sales.add.varaint');
-        // Route::post('/add/product-cart', 'productAddCart')->name('sales.add.cart');
-        // Route::post('/add/product-cart-scanner', 'productAddCartByscanner')->name('sales.add.cart.scanner');
-        // Route::get('/add/cart-de;/{id}', 'destroy')->name('sales.dele');
-        // Route::get('/add/clear', 'clearCat')->name('sales.cart.clear');
-        // Route::post('/add/cart/update', 'updatecat')->name('sales.cart.update');
-        // Route::post('/add/done', 'salesDone')->name('sales.done');
-        // Route::post('/add/customer/add', 'customer_store')->name('sales.cart.customer.add');
     });
+
+
+    Route::get('/sales-items',[SalesController::class , 'allSalesItems'])->name('salesItems.list');
 
 
     // sales list
@@ -218,6 +210,11 @@ Route::delete('/attributes/{attribute}', [AttributeController::class, 'destroy']
 // Attribute values routes
 Route::post('/attributes/{attribute}/values', [AttributeController::class, 'storeValue'])->name('attributes.values.store');
 Route::delete('/attributes/{attribute}/values/{value}', [AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
+
+    //payment routes
+     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+     Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
+
 
 
     // Warehouse Routes

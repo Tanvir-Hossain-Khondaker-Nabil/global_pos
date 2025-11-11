@@ -16,6 +16,7 @@ class SaleItem extends Model
         'total_price',
         'shadow_unit_price',
         'shadow_total_price',
+        'status',
     ];
 
 

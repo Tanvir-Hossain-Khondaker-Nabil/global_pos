@@ -13,6 +13,7 @@ import {
     WalletMinimal,
     Warehouse,
     Receipt,
+    DollarSign,
 } from "lucide-react";
 
 // Common menu
@@ -138,6 +139,13 @@ const baseMenu = [
         icon: <Barcode size={16} />,
         route: route("barcode.print"),
         active: "barcode.print",
+        role: "admin",
+    },
+    {
+        title: "Transactions",
+        icon: <DollarSign size={16} />,
+        route: route("payments.index"),
+        active: "payments.index",
         role: "admin",
     },
     {
