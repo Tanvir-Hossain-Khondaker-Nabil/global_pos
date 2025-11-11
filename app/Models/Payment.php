@@ -15,6 +15,7 @@ class Payment extends Model
         'customer_id',
         'paid_at',
         'shadow_amount',
+        'status',
     ];
 
     public function sale()

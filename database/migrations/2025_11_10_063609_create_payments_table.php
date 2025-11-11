@@ -21,6 +21,7 @@ return new class extends Migration
             $table->text('note')->nullable();
             $table->unsignedBigInteger('customer_id')->nullable();
             $table->timestamp('paid_at')->nullable();
+            $table->string('status')->default('completed'); // e.g., completed, pending, failed
             $table->timestamps();
         });
     }

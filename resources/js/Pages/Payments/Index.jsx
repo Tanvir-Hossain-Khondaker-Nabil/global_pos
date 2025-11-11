@@ -148,6 +148,7 @@ export default function PaymentIndex({ payments, filters,isShadowUser }) {
                                     <th>Invoice No</th>
                                     <th>Amount</th>
                                     <th>Payment Method</th>
+                                    <th>Status</th>
                                     <th>Note</th>
                                     <th>Date</th>
                                     <th>Actions</th>
@@ -191,6 +192,15 @@ export default function PaymentIndex({ payments, filters,isShadowUser }) {
                                             <span className={`badge capitalize ${getPaymentMethodBadge(payment.payment_method)}`}>
                                                 {payment.payment_method}
                                             </span>
+                                        </td>
+                                        <td>
+                                            {payment.status === 'completed' ? (
+                                                <span className="badge badge-success">Completed</span>
+                                            ) : payment.status === 'pending' ? (    
+                                                <span className="badge badge-warning">Pending</span>
+                                            ) : (
+                                                <span className="badge badge-secondary">Failed</span>
+                                            )}
                                         </td>
                                         <td className="max-w-xs">
                                             {payment.note ? (

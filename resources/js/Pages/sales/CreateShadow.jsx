@@ -77,6 +77,7 @@ export default function AddSale({ customers, productstocks }) {
             due_amount: dueAmount,
             sub_amount: subTotal,
             type: 'inventory',
+            shadow_type: 'shadow',
         });
     }, [selectedItems, vatRate, discountRate, paidAmount, shadowPaidAmount, calculateSubTotal, calculateGrandTotal, calculateDueAmount]);
 
@@ -152,7 +153,8 @@ export default function AddSale({ customers, productstocks }) {
 
         if (field === 'quantity' || field === 'unit_price') {
             const quantity = field === 'quantity' ? numValue : updated[index].quantity;
-            const unitPrice = field === 'unit_price' ? numValue : updated[index].unit_price;
+            const unitPrice = field === 'shadow_sell_price' ? numValue : updated[index].shadow_sell_price;
+
             updated[index].total_price = quantity * unitPrice;
         }
 
@@ -198,7 +200,7 @@ export default function AddSale({ customers, productstocks }) {
 
         console.log("Submitting form data:", form.data);
 
-        form.post(route("sales.store"), {
+        form.post(route("salesShadow.store"), {
             onSuccess: () => {
                 console.log("Sale created successfully");
                 router.visit(route("sales.index"));
@@ -218,7 +220,7 @@ export default function AddSale({ customers, productstocks }) {
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title="Create New (Sale/Order)"
+                title="Create New (Sale/Order)(shadow)"
                 subtitle="Add products to sale (Inventory System)"
             >
                 <button
@@ -348,20 +350,9 @@ export default function AddSale({ customers, productstocks }) {
                                                     <div className="text-error text-xs mt-1">Exceeds available stock!</div>
                                                 )}
                                             </div>
+                                      
                                             <div className="form-control">
-                                                <label className="label"><span className="label-text">Unit Price (৳) *</span></label>
-                                                <input
-                                                    type="number"
-                                                    min="0"
-                                                    step="0.01"
-                                                    className="input input-bordered input-sm"
-                                                    value={item.sell_price}
-                                                    onChange={(e) => updateItem(index, 'sell_price', e.target.value)}
-                                                    required
-                                                />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label"><span className="label-text">Sh Unit Price (৳) *</span></label>
+                                                <label className="label"><span className="label-text"> Unit Price (৳) *</span></label>
                                                 <input
                                                     type="number"
                                                     min="0"
@@ -372,21 +363,13 @@ export default function AddSale({ customers, productstocks }) {
                                                     required
                                                 />
                                             </div>
+
                                             <div className="form-control">
                                                 <label className="label"><span className="label-text">Total Price (৳)</span></label>
                                                 <input
                                                     type="number"
                                                     className="input input-bordered input-sm bg-gray-100"
                                                     value={formatCurrency(item.total_price)}
-                                                    readOnly
-                                                />
-                                            </div>
-                                            <div className="form-control">
-                                                <label className="label"><span className="label-text">Sh Total Price (৳)</span></label>
-                                                <input
-                                                    type="number"
-                                                    className="input input-bordered input-sm bg-gray-100"
-                                                    value={formatCurrency(item.shadow_sell_price * item.quantity)}
                                                     readOnly
                                                 />
                                             </div>
@@ -461,20 +444,6 @@ export default function AddSale({ customers, productstocks }) {
                                         <span>৳{formatCurrency(paidAmount)}</span>
                                     </div>
 
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span>Sh Paid Amount:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                className="input input-bordered input-sm w-32"
-                                                value={shadowPaidAmount}
-                                                onChange={(e) => setShadowPaidAmount(parseFloat(e.target.value) || 0)}
-                                            />
-                                        </div>
-                                        <span>৳{formatCurrency(shadowPaidAmount)}</span>
-                                    </div>
 
                                     {/* Due Amount */}
                                     <div className="flex justify-between items-center text-lg font-bold border-t pt-2">

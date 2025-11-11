@@ -141,6 +141,8 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/add', 'createPos')->name('sales.add');
         Route::post('/store', 'store')->name('sales.store');
+        Route::post('/store/shadow', 'shadowStore')->name('salesShadow.store');
+
         Route::get('/create', 'create')->name('sales.create');
         Route::get('/', 'index')->name('sales.index');
         Route::get('/list/{pos}', 'index')->name('salesPos.index');

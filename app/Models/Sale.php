@@ -24,6 +24,7 @@ class Sale extends Model
         'shadow_grand_total',
         'shadow_paid_amount',
         'shadow_due_amount',
+        'shadow_type',
     ];
 
 
