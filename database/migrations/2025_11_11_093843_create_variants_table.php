@@ -12,7 +12,7 @@ return new class extends Migration {
     {
         Schema::create('variants', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->unsignedBigInteger('product_id')->nullable();
             $table->json('attribute_values')->nullable();
             $table->string('sku')->unique()->nullable();
             $table->timestamps();
