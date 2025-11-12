@@ -228,9 +228,34 @@ export default function SaleShow({ sale }) {
                                                 <p className="text-sm text-gray-500">SKU: {item.product?.product_no || 'N/A'}</p>
                                             </div>
                                         </td>
+                                        
                                         <td className="text-center">
-                                            {item.variant?.size || 'Default'} ({item.variant?.color || ' '})
+                                            {item.variant && (
+                                                <>
+                                                {(() => {
+                                                    const variant = item.variant;
+                                                    let attrsText = '';
+
+                                                    if (variant.attribute_values) {
+                                                    if (typeof variant.attribute_values === 'object') {
+                                                        attrsText = Object.entries(variant.attribute_values)
+                                                        .map(([key, value]) => `${key}: ${value}`)
+                                                        .join(', ');
+                                                    } else {
+                                                        attrsText = variant.attribute_values;
+                                                    }
+                                                    }
+
+                                                    return <>{attrsText || 'N/A'}</>;
+                                                })()}
+                                                <br />
+                                                <span className="text-sm text-gray-500">
+                                                    {item.variant?.sku || 'No SKU'}
+                                                </span>
+                                                </>
+                                            )}
                                         </td>
+
                                         <td className="text-center">
                                             {item.warehouse?.name || 'N/A'}
                                         </td>

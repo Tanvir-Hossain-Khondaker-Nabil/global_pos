@@ -135,6 +135,7 @@ class SalesController extends Controller
     public function store(Request $request)
     {
 
+
         $type = $request->input('type', 'pos');
 
         if ($type == 'inventory') {
@@ -173,7 +174,7 @@ class SalesController extends Controller
             if ($existingCustomer) {
                 $customerId = $existingCustomer->id;
             } else {
-            $customerId = Customer::CreateOrUpdate([
+            $customerId = Customer::create([
                 'customer_name' => $request->customer_name ?? 'Walk-in Customer',
                 'phone'         => $request->customer_phone ?? null,
             ])->id;

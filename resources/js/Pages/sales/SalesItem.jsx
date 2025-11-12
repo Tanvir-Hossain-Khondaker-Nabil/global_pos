@@ -195,7 +195,7 @@ export default function AllSalesItems({ salesItems }) {
                                                 </div>
                                                 {item.variant && (
                                                     <div className="text-xs text-gray-500">
-                                                        Variant: {item.variant.size || ''} ({item.variant.color || ''})
+                                                        Variant: {item.variant.sku || ''}
                                                     </div>
                                                 )}
                                             </div>
@@ -271,8 +271,31 @@ export default function AllSalesItems({ salesItems }) {
                                                         <div><strong>Name:</strong> {item.product?.name}</div>
                                                         <div><strong>Code:</strong> {item.product?.product_no || 'N/A'}</div>
                                                         {item.variant && (
-                                                            <div><strong>Variant:</strong> {item.variant.size || 'N/A'} ({item.variant.color || ''})</div>
+                                                        <div>
+                                                            <strong>Variant:</strong>{' '}
+                                                            {(() => {
+                                                            const variant = item.variant;
+                                                            let attrsText = '';
+
+                                                            if (variant.attribute_values) {
+                                                                if (typeof variant.attribute_values === 'object') {
+                                                                attrsText = Object.entries(variant.attribute_values)
+                                                                    .map(([key, value]) => `${key}: ${value}`)
+                                                                    .join(', ');
+                                                                } else {
+                                                                attrsText = variant.attribute_values;
+                                                                }
+                                                            }
+
+                                                            return (
+                                                                <>
+                                                                {attrsText || 'N/A'} {variant.sku ? `(${variant.sku})` : ''}
+                                                                </>
+                                                            );
+                                                            })()}
+                                                        </div>
                                                         )}
+
                                                     </div>
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Sale Details:</strong>
