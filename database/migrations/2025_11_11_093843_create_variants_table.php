@@ -12,12 +12,10 @@ return new class extends Migration {
     {
         Schema::create('variants', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('product_id');
-            $table->string('size')->nullable();
-            $table->string('color')->nullable();
+            $table->foreignId('product_id')->constrained()->onDelete('cascade');
+            $table->json('attribute_values')->nullable();
+            $table->string('sku')->unique()->nullable();
             $table->timestamps();
-            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
-            $table->unique(['product_id', 'size', 'color'], 'unique_variant');
         });
     }
 
@@ -26,6 +24,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('variants');
+        Schema::dropIfExists('_variants');
     }
 };

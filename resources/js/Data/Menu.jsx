@@ -93,6 +93,13 @@ const baseMenu = [
         role: "all",
     },
     {
+        title: "Attribute",
+        icon: <ShoppingBasket size={16} />,
+        route: route("attributes.index"),
+        active: "attributes.index",
+        role: "all",
+    },
+    {
         title: "Products",
         icon: <ShoppingBasket size={16} />,
         route: route("product.list"),

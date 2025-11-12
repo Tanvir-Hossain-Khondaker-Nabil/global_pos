@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SalesController;
@@ -11,13 +12,13 @@ use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\AttributeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\PaymentController;
-use Illuminate\Support\Facades\Artisan;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -207,6 +208,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/print-barcode', 'index')->name('barcode.print');
     });
 
+Route::get('/attributes', [AttributeController::class, 'index'])->name('attributes.index');
+Route::post('/attributes', [AttributeController::class, 'store'])->name('attributes.store');
+Route::put('/attributes/{attribute}', [AttributeController::class, 'update'])->name('attributes.update');
+Route::delete('/attributes/{attribute}', [AttributeController::class, 'destroy'])->name('attributes.destroy');
+
+// Attribute values routes
+Route::post('/attributes/{attribute}/values', [AttributeController::class, 'storeValue'])->name('attributes.values.store');
+Route::delete('/attributes/{attribute}/values/{value}', [AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
 
     //payment routes
      Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');

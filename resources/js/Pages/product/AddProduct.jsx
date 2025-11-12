@@ -1,15 +1,17 @@
 import React, { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
-import { Trash, X, Plus } from "lucide-react";
+import { Trash, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "react-toastify";
 
-export default function AddProduct({ category, update }) {
+export default function AddProduct({ category, update, attributes }) {
     const [variants, setVariants] = useState([]);
     const [errors, setErrors] = useState({});
     const [categories, setCategories] = useState([]);
+    const [availableAttributes, setAvailableAttributes] = useState([]);
+    const [selectedAttributes, setSelectedAttributes] = useState({});
+    const [showAttributeSelector, setShowAttributeSelector] = useState(false);
 
-    // Initialize form
     const productForm = useForm({
         id: update ? update.id : "",
         product_name: update ? update.name : "",
@@ -19,20 +21,14 @@ export default function AddProduct({ category, update }) {
         variants: [],
     });
 
-    // Process categories data - FIXED: Handle different data formats
+    // Process categories and attributes data
     useEffect(() => {
-        console.log('Raw category data:', category);
-        
         if (Array.isArray(category)) {
-            // If category is already an array
             setCategories(category);
         } else if (category && typeof category === 'object') {
-            // If category is an object, convert to array
             if (category.data && Array.isArray(category.data)) {
-                // If it's a paginated response
                 setCategories(category.data);
             } else {
-                // If it's a plain object, convert to array of objects
                 const categoriesArray = Object.entries(category).map(([id, name]) => ({
                     id: id,
                     name: name
@@ -40,28 +36,79 @@ export default function AddProduct({ category, update }) {
                 setCategories(categoriesArray);
             }
         } else {
-            // Fallback to empty array
             setCategories([]);
         }
-    }, [category]);
 
-    // Add new variant
-    const handleAddVariant = () => {
-        setVariants([
-            ...variants,
-            {
+        // Process attributes
+        if (attributes && Array.isArray(attributes)) {
+            setAvailableAttributes(attributes);
+        }
+    }, [category, attributes]);
+
+    // Generate variants based on selected attribute combinations
+    const generateVariants = () => {
+        const selectedValues = Object.values(selectedAttributes).filter(arr => arr.length > 0);
+        
+        if (selectedValues.length === 0) {
+            // If no attributes selected, create one default variant
+            setVariants([{ 
+                id: null, 
+                attribute_values: {} 
+            }]);
+            return;
+        }
+
+        // Generate all combinations of selected attribute values
+        const combinations = selectedValues.reduce((acc, curr) => {
+            if (acc.length === 0) return curr.map(val => [val]);
+            return acc.flatMap(comb => 
+                curr.map(val => [...comb, val])
+            );
+        }, []);
+
+        const newVariants = combinations.map(combination => {
+            const attributeValues = {};
+            combination.forEach(item => {
+                attributeValues[item.attribute_code] = item.value;
+            });
+
+            return {
                 id: null,
-                size: "",
-                color: "",
-            },
-        ]);
+                attribute_values: attributeValues,
+            };
+        });
+
+        setVariants(newVariants);
     };
 
-    // Delete variant
-    const handleDeleteVariant = (index) => {
-        const updated = [...variants];
-        updated.splice(index, 1);
-        setVariants(updated);
+    // Handle attribute selection
+    const handleAttributeSelect = (attributeCode, value, checked) => {
+        setSelectedAttributes(prev => {
+            const newSelection = { ...prev };
+            
+            if (checked) {
+                if (!newSelection[attributeCode]) {
+                    newSelection[attributeCode] = [];
+                }
+                newSelection[attributeCode].push(value);
+            } else {
+                newSelection[attributeCode] = newSelection[attributeCode]?.filter(
+                    item => item.value !== value.value
+                ) || [];
+                
+                if (newSelection[attributeCode].length === 0) {
+                    delete newSelection[attributeCode];
+                }
+            }
+            
+            return newSelection;
+        });
+    };
+
+    // Apply selected attributes to generate variants
+    const applyAttributeSelection = () => {
+        generateVariants();
+        setShowAttributeSelector(false);
     };
 
     // Update variant field
@@ -71,12 +118,31 @@ export default function AddProduct({ category, update }) {
         setVariants(updated);
     };
 
+    // Add empty variant manually
+    const handleAddVariant = () => {
+        setVariants([
+            ...variants,
+            {
+                id: null,
+                attribute_values: {},
+            },
+        ]);
+    };
+
+    // Delete variant
+    const handleDeleteVariant = (index) => {
+        if (variants.length > 1) {
+            const updated = [...variants];
+            updated.splice(index, 1);
+            setVariants(updated);
+        }
+    };
+
     // Form validation
     const validateForm = () => {
         let hasError = false;
         let newErrors = {};
 
-        // Validate main product fields
         if (!productForm.data.product_name?.trim()) {
             hasError = true;
             newErrors.product_name = "Product name is required";
@@ -92,20 +158,23 @@ export default function AddProduct({ category, update }) {
             newErrors.product_no = "Product code is required";
         }
 
-        // Validate variants
+        // Validate variants - check if at least one variant has attributes
+        const hasValidVariants = variants.some(variant => 
+            variant.attribute_values && Object.keys(variant.attribute_values).length > 0
+        );
+
+        if (!hasValidVariants) {
+            hasError = true;
+            newErrors.variants = "At least one variant must have attributes selected";
+        }
+
+        // Check each variant
         variants.forEach((variant, index) => {
-            // At least one of size or color must be provided
-            if (!variant.size?.trim() && !variant.color?.trim()) {
+            if (!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) {
                 hasError = true;
-                newErrors[`variant-${index}`] = "Either size or color is required";
+                newErrors[`variant-${index}`] = "Please select attributes for this variant";
             }
         });
-
-        // Check if at least one variant exists
-        if (variants.length === 0) {
-            hasError = true;
-            newErrors.variants = "At least one variant is required";
-        }
 
         setErrors(newErrors);
         return hasError;
@@ -120,7 +189,6 @@ export default function AddProduct({ category, update }) {
             return;
         }
 
-        // Prepare the data for submission with correct field names
         const submitData = {
             id: productForm.data.id,
             product_name: productForm.data.product_name,
@@ -129,8 +197,7 @@ export default function AddProduct({ category, update }) {
             description: productForm.data.description,
             variants: variants.map(variant => ({
                 id: variant.id,
-                size: variant.size || null,
-                color: variant.color || null,
+                attribute_values: variant.attribute_values,
             }))
         };
 
@@ -144,13 +211,9 @@ export default function AddProduct({ category, update }) {
             onSuccess: () => {
                 toast.success(`Product ${update ? 'updated' : 'added'} successfully!`);
                 if (!update) {
-                    // Reset form for new products
                     productForm.reset();
-                    setVariants([{
-                        id: null,
-                        size: "",
-                        color: "",
-                    }]);
+                    setVariants([{ attribute_values: {}}]);
+                    setSelectedAttributes({});
                 }
             },
             onError: (errors) => {
@@ -170,7 +233,6 @@ export default function AddProduct({ category, update }) {
         if (update) {
             console.log('Update data received:', update);
             
-            // Set form data with correct field names
             productForm.setData({
                 id: update.id || "",
                 product_name: update.name || "",
@@ -179,37 +241,43 @@ export default function AddProduct({ category, update }) {
                 description: update.description || "",
             });
 
-            // Load variants
             if (update.variants && update.variants.length > 0) {
                 const mappedVariants = update.variants.map(variant => ({
                     id: variant.id || null,
-                    size: variant.size || "",
-                    color: variant.color || "",
+                    attribute_values: variant.attribute_values || {},
                 }));
-                console.log('Mapped variants:', mappedVariants);
                 setVariants(mappedVariants);
+                
+                // Pre-select attributes for editing
+                const selectedAttrs = {};
+                mappedVariants.forEach(variant => {
+                    Object.entries(variant.attribute_values || {}).forEach(([attrCode, value]) => {
+                        if (!selectedAttrs[attrCode]) {
+                            selectedAttrs[attrCode] = [];
+                        }
+                        if (!selectedAttrs[attrCode].some(item => item.value === value)) {
+                            selectedAttrs[attrCode].push({
+                                value: value,
+                                attribute_code: attrCode
+                            });
+                        }
+                    });
+                });
+                setSelectedAttributes(selectedAttrs);
             } else {
-                // Add one empty variant if no variants exist
-                setVariants([{
-                    id: null,
-                    size: "",
-                    color: "",
-                }]);
+                setVariants([{ attribute_values: {} }]);
             }
         } else {
-            // Add one empty variant for new products
-            setVariants([{
-                id: null,
-                size: "",
-                color: "",
-            }]);
+            setVariants([{ attribute_values: {} }]);
         }
     }, [update]);
 
-    // Debug: Check processed categories
+    // Auto-generate variants when selectedAttributes changes
     useEffect(() => {
-        console.log('Processed categories:', categories);
-    }, [categories]);
+        if (Object.keys(selectedAttributes).length > 0) {
+            generateVariants();
+        }
+    }, [selectedAttributes]);
 
     return (
         <div className="bg-white rounded-box p-5">
@@ -233,9 +301,7 @@ export default function AddProduct({ category, update }) {
                             placeholder="Enter product name"
                         />
                         {errors.product_name && (
-                            <p className="text-sm text-error">
-                                {errors.product_name}
-                            </p>
+                            <p className="text-sm text-error">{errors.product_name}</p>
                         )}
                     </fieldset>
 
@@ -256,14 +322,7 @@ export default function AddProduct({ category, update }) {
                             ))}
                         </select>
                         {errors.category_id && (
-                            <p className="text-sm text-error">
-                                {errors.category_id}
-                            </p>
-                        )}
-                        {categories.length === 0 && (
-                            <p className="text-sm text-warning mt-1">
-                                No categories available. Please add categories first.
-                            </p>
+                            <p className="text-sm text-error">{errors.category_id}</p>
                         )}
                     </fieldset>
 
@@ -279,9 +338,7 @@ export default function AddProduct({ category, update }) {
                             placeholder="Enter product code"
                         />
                         {errors.product_no && (
-                            <p className="text-sm text-error">
-                                {errors.product_no}
-                            </p>
+                            <p className="text-sm text-error">{errors.product_no}</p>
                         )}
                     </fieldset>
 
@@ -299,18 +356,84 @@ export default function AddProduct({ category, update }) {
                     </fieldset>
                 </div>
 
-                {/* Variants Section */}
-                <div className="border-t pt-6">
+                {/* Attribute Selection */}
+                <div className="border-t pt-6 mb-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Product Variants</h3>
+                        <h3 className="text-lg font-semibold">Product Attributes</h3>
                         <button
                             type="button"
                             className="btn btn-primary btn-sm"
-                            onClick={handleAddVariant}
+                            onClick={() => setShowAttributeSelector(!showAttributeSelector)}
                         >
-                            <Plus size={16} className="mr-1" />
-                            Add Variant
+                            {showAttributeSelector ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            {showAttributeSelector ? "Hide Attributes" : "Select Attributes"}
                         </button>
+                    </div>
+
+                    {showAttributeSelector && (
+                        <div className="border border-gray-300 p-4 rounded-box bg-gray-50 mb-4">
+                            <h4 className="font-semibold mb-3">Select Attribute Values</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {availableAttributes.map((attribute) => (
+                                    <div key={attribute.code} className="border rounded-box p-3">
+                                        <h5 className="font-medium mb-2">{attribute.name}</h5>
+                                        <div className="space-y-1 max-h-32 overflow-y-auto">
+                                            {attribute.active_values?.map((value) => (
+                                                <label key={value.id} className="flex items-center space-x-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedAttributes[attribute.code]?.some(
+                                                            item => item.value === value.value
+                                                        ) || false}
+                                                        onChange={(e) => 
+                                                            handleAttributeSelect(
+                                                                attribute.code, 
+                                                                { value: value.value, attribute_code: attribute.code },
+                                                                e.target.checked
+                                                            )
+                                                        }
+                                                        className="checkbox checkbox-sm"
+                                                    />
+                                                    <span className="text-sm">{value.value}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex justify-end mt-4">
+                                <button
+                                    type="button"
+                                    className="btn btn-primary btn-sm"
+                                    onClick={applyAttributeSelection}
+                                >
+                                    Apply Attributes
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Selected Attributes Summary */}
+                    {Object.keys(selectedAttributes).length > 0 && (
+                        <div className="mb-4">
+                            <h4 className="font-semibold mb-2">Selected Attributes:</h4>
+                            <div className="flex flex-wrap gap-2">
+                                {Object.entries(selectedAttributes).map(([attributeCode, values]) => (
+                                    <div key={attributeCode} className="badge badge-primary">
+                                        {attributeCode}: {values.map(v => v.value).join(', ')}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Variants Section */}
+                <div className="border-t pt-6">
+                    <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">
+                            Product Variants ({variants.length})
+                        </h3>
                     </div>
 
                     {errors.variants && (
@@ -326,53 +449,28 @@ export default function AddProduct({ category, update }) {
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="font-medium text-gray-700">
                                         Variant #{index + 1}
-                                        {variant.id && <span className="text-xs text-gray-500 ml-2">(ID: {variant.id})</span>}
+                                        {variant.id && (
+                                            <span className="text-xs text-gray-500 ml-2">
+                                                (ID: {variant.id})
+                                            </span>
+                                        )}
                                     </h4>
-                                    <button
-                                        type="button"
-                                        className="btn btn-xs btn-circle btn-error"
-                                        onClick={() => handleDeleteVariant(index)}
-                                        disabled={variants.length === 1}
-                                    >
-                                        <Trash size={12} />
-                                    </button>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                    {/* Size Input */}
-                                    <div>
-                                        <label className="label">
-                                            <span className="label-text">Size</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="input input-bordered"
-                                            value={variant.size}
-                                            onChange={(e) =>
-                                                handleVariantChange(index, "size", e.target.value)
-                                            }
-                                            placeholder="e.g., M, L, XL"
-                                        />
-                                    </div>
-
-                                    {/* Color Input */}
-                                    <div>
-                                        <label className="label">
-                                            <span className="label-text">Color</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            className="input input-bordered"
-                                            value={variant.color}
-                                            onChange={(e) =>
-                                                handleVariantChange(index, "color", e.target.value)
-                                            }
-                                            placeholder="e.g., Red, Blue"
-                                        />
+                                {/* Display selected attributes for this variant */}
+                                <div className="mb-3">
+                                    <div className="flex flex-wrap gap-2">
+                                        {variant.attribute_values && Object.entries(variant.attribute_values).map(([attribute, value]) => (
+                                            <span key={attribute} className="badge badge-outline">
+                                                {attribute}: {value}
+                                            </span>
+                                        ))}
+                                        {(!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) && (
+                                            <span className="text-sm text-gray-500">No attributes selected</span>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Variant Error */}
                                 {errors[`variant-${index}`] && (
                                     <p className="text-red-500 text-sm mt-2">
                                         {errors[`variant-${index}`]}

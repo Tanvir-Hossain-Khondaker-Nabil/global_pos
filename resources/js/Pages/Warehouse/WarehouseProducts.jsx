@@ -26,6 +26,20 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
         }).format(amount || 0);
     };
 
+    // Format variant display name from attribute_values
+    const formatVariantDisplay = (variant) => {
+        if (!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) {
+            return 'Default Variant';
+        }
+
+        const parts = [];
+        for (const [attributeCode, value] of Object.entries(variant.attribute_values)) {
+            parts.push(`${attributeCode}: ${value}`);
+        }
+
+        return parts.join(' | ');
+    };
+
     // Filter products based on search and stock filter
     const filteredProducts = products.filter(product => {
         const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -37,22 +51,23 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
     });
 
     // Calculate warehouse statistics
-    const totalProducts = products.length;
-    const totalItems = products.reduce((sum, product) => sum + getNumber(product.total_stock), 0);
-    const totalValue = products.reduce((sum, product) => {
+    const totalProducts = filteredProducts.length;
+    const totalItems = filteredProducts.reduce((sum, product) => sum + getNumber(product.total_stock), 0);
+    const totalValue = filteredProducts.reduce((sum, product) => {
         return sum + product.variants.reduce((variantSum, variant) => {
             return variantSum + getNumber(variant.stock_value);
         }, 0);
     }, 0);
 
+    // Debug: Check what data we're receiving
+    console.log('Warehouse products data:', products);
+    console.log('Filtered products:', filteredProducts);
+
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title={isShadowUser ? `Warehouse: ${warehouse.name}` : `Warehouse: ${warehouse.name}`}
-                subtitle={isShadowUser ? 
-                    `stock overview for ${warehouse.name} (${warehouse.code})` : 
-                    `Stock overview for ${warehouse.name} (${warehouse.code})`
-                }
+                title={`Warehouse: ${warehouse.name}`}
+                subtitle={`Stock overview for ${warehouse.name} (${warehouse.code})`}
             >
                 <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
                     <button
@@ -61,9 +76,14 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                     >
                         <ArrowLeft size={15} /> Back to Warehouses
                     </button>
+                    {isShadowUser && (
+                        <span className="badge badge-warning badge-lg">
+                            <Shield size={12} className="mr-1" />
+                            Shadow Warehouse
+                        </span>
+                    )}
                 </div>
             </PageHeader>
-
 
             {/* Warehouse Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -96,7 +116,7 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                         {formatCurrency(totalValue)}
                     </div>
                     <div className="stat-desc">
-                        {isShadowUser ? 'value' : 'Current stock value'}
+                        {isShadowUser ? 'Shadow value' : 'Current stock value'}
                     </div>
                 </div>
             </div>
@@ -109,7 +129,7 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                         <input
                             type="text"
                             className="grow"
-                            placeholder="Search products..."
+                            placeholder="Search products by name or code..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -157,7 +177,10 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                                             </div>
                                             <div className="text-right">
                                                 <div className={`badge ${isShadowUser ? 'badge-warning' : 'badge-primary'}`}>
-                                                    {isShadowUser ? 'Product' : 'Product'}
+                                                    Product
+                                                </div>
+                                                <div className="text-xs text-gray-500 mt-1">
+                                                    {product.variants.length} variant(s)
                                                 </div>
                                             </div>
                                         </div>
@@ -169,11 +192,15 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                                             <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                                                 <tr>
                                                     <th className="bg-opacity-20">Variant</th>
-                                                    <th className="bg-opacity-20">Stock</th>
-                                                    <th className="bg-opacity-20">
+                                                    <th className="bg-opacity-20">SKU</th>
+                                                    <th className="bg-opacity-20 text-right">Stock</th>
+                                                    <th className="bg-opacity-20 text-right">
                                                         {isShadowUser ? 'Price' : 'Purchase Price'}
                                                     </th>
-                                                    <th className="bg-opacity-20">
+                                                    <th className="bg-opacity-20 text-right">
+                                                        {isShadowUser ? 'Sale Price' : 'Sale Price'}
+                                                    </th>
+                                                    <th className="bg-opacity-20 text-right">
                                                         {isShadowUser ? 'Value' : 'Stock Value'}
                                                     </th>
                                                     <th className="bg-opacity-20">Status</th>
@@ -183,24 +210,33 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                                                 {product.variants.map((variant) => {
                                                     const stockQuantity = getNumber(variant.stock_quantity);
                                                     const purchasePrice = getNumber(variant.purchase_price);
+                                                    const salePrice = getNumber(variant.sale_price);
                                                     const stockValue = getNumber(variant.stock_value);
                                                     
                                                     return (
                                                         <tr key={variant.id} className="hover:bg-base-100">
                                                             <td>
                                                                 <div className="font-medium">
-                                                                    {variant.variant_name}
+                                                                    {formatVariantDisplay(variant)}
                                                                 </div>
                                                             </td>
                                                             <td>
+                                                                <code className="text-xs bg-base-200 px-1 rounded">
+                                                                    {variant.sku || 'N/A'}
+                                                                </code>
+                                                            </td>
+                                                            <td className="text-right">
                                                                 <span className={`font-bold ${stockQuantity === 0 ? 'text-error' : 'text-success'}`}>
                                                                     {stockQuantity}
                                                                 </span>
                                                             </td>
-                                                            <td className="font-mono">
+                                                            <td className="text-right font-mono">
                                                                 {formatCurrency(purchasePrice)}
                                                             </td>
-                                                            <td className="font-mono font-semibold">
+                                                            <td className="text-right font-mono">
+                                                                {formatCurrency(salePrice)}
+                                                            </td>
+                                                            <td className="text-right font-mono font-semibold">
                                                                 {formatCurrency(stockValue)}
                                                             </td>
                                                             <td>
@@ -220,11 +256,10 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="font-semibold">Product Summary:</span>
                                                 <div className="flex gap-4">
-                                                    <span>Total Variants: {product.variants.length}</span>
+                                                    <span>Variants: {product.variants.length}</span>
                                                     <span>Total Stock: {productTotalStock}</span>
                                                     <span className="font-semibold">
-                                                        {isShadowUser ? 'Value: ' : 'Total Value: '}
-                                                        {formatCurrency(productTotalValue)}
+                                                        Total Value: {formatCurrency(productTotalValue)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -238,12 +273,14 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                     <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-box">
                         <Package size={48} className="mx-auto text-gray-400 mb-4" />
                         <h3 className="text-lg font-semibold text-gray-500">
-                            {isShadowUser ? "No shadow products found" : "No products found"}
+                            {searchTerm || filterOutOfStock 
+                                ? "No products match your search criteria" 
+                                : "No products in stock"}
                         </h3>
                         <p className="text-gray-400 mt-2">
                             {searchTerm || filterOutOfStock 
                                 ? "Try adjusting your search or filter criteria" 
-                                : isShadowUser ? "No shadow products available in this warehouse" : "No products available in this warehouse"}
+                                : "This warehouse currently has no products in stock"}
                         </p>
                     </div>
                 )}

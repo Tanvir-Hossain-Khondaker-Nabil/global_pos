@@ -17,21 +17,21 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'BDT'
-        }).format(amount);
+        }).format(amount || 0);
     };
 
     const calculateTotalQuantity = () => {
         return purchase.items.reduce((sum, item) => sum + item.quantity, 0);
     };
 
-    // Get the correct price based on user type
+    // Get the correct price based on user type - FIXED
     const getPrice = (item, field) => {
         if (isShadowUser) {
             // Use shadow prices for shadow users
             switch (field) {
-                case 'unit_price': return item.shadow_unit_price || item.unit_price;
-                case 'total_price': return item.shadow_total_price || item.total_price;
-                case 'sale_price': return item.shadow_sale_price || item.sale_price;
+                case 'unit_price': return item.shadow_unit_price;
+                case 'total_price': return item.shadow_total_price;
+                case 'sale_price': return item.shadow_sale_price;
                 default: return item[field];
             }
         }
@@ -39,23 +39,33 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
         return item[field];
     };
 
-    // Get purchase amounts based on user type
+    // Get purchase amounts based on user type - FIXED
     const getPurchaseAmount = (field) => {
         if (isShadowUser) {
             switch (field) {
-                case 'total_amount': return purchase.shadow_total_amount || purchase.total_amount;
-                case 'paid_amount': return purchase.shadow_paid_amount || purchase.paid_amount;
-                case 'due_amount': return purchase.shadow_due_amount || purchase.due_amount;
+                case 'total_amount': return purchase.shadow_total_amount;
+                case 'paid_amount': return purchase.shadow_paid_amount;
+                case 'due_amount': return purchase.shadow_due_amount;
                 default: return purchase[field];
             }
         }
         return purchase[field];
     };
 
-    // Helper function to get variant display name
+    // Helper function to get variant display name - FIXED for new attribute_values format
     const getVariantDisplayName = (variant) => {
         if (!variant) return 'Default Variant';
         
+        // Check if variant has attribute_values (new format)
+        if (variant.attribute_values && Object.keys(variant.attribute_values).length > 0) {
+            const parts = [];
+            for (const [attributeCode, value] of Object.entries(variant.attribute_values)) {
+                parts.push(`${attributeCode}: ${value}`);
+            }
+            return parts.join(', ');
+        }
+        
+        // Fallback to old format
         const parts = [];
         if (variant.size) parts.push(`Size: ${variant.size}`);
         if (variant.color) parts.push(`Color: ${variant.color}`);
@@ -76,6 +86,11 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
             default: return 'neutral';
         }
     };
+
+    // Debug: Check what data we're receiving
+    console.log('Purchase data:', purchase);
+    console.log('Is shadow user:', isShadowUser);
+    console.log('Items data:', purchase.items);
 
     return (
         <div className="bg-white rounded-box p-5 print:p-0">
@@ -121,10 +136,18 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     <div>
                                         <h3 className="font-bold text-lg">{purchase.purchase_no}</h3>
                                         <p className="text-sm text-gray-600">
-                                            {isShadowUser ? 'Purchase Number' : 'Purchase Number'}
+                                            Purchase Number
                                         </p>
                                     </div>
                                 </div>
+                                {isShadowUser && (
+                                    <div className="mt-2">
+                                        <span className="badge badge-warning badge-sm">
+                                            <Shield size={12} className="mr-1" />
+                                            Shadow Purchase
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -153,19 +176,19 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                 <div className="space-y-2">
                                     <div>
                                         <label className="text-sm text-gray-600">Name</label>
-                                        <p className="font-medium">{purchase.supplier.name}</p>
+                                        <p className="font-medium">{purchase.supplier?.name || 'N/A'}</p>
                                     </div>
                                     <div>
                                         <label className="text-sm text-gray-600">Company</label>
-                                        <p className="font-medium">{purchase.supplier.company}</p>
+                                        <p className="font-medium">{purchase.supplier?.company || 'N/A'}</p>
                                     </div>
-                                    {purchase.supplier.phone && (
+                                    {purchase.supplier?.phone && (
                                         <div>
                                             <label className="text-sm text-gray-600">Phone</label>
                                             <p className="font-medium">{purchase.supplier.phone}</p>
                                         </div>
                                     )}
-                                    {purchase.supplier.email && (
+                                    {purchase.supplier?.email && (
                                         <div>
                                             <label className="text-sm text-gray-600">Email</label>
                                             <p className="font-medium">{purchase.supplier.email}</p>
@@ -183,13 +206,13 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                 <div className="space-y-2">
                                     <div>
                                         <label className="text-sm text-gray-600">Name</label>
-                                        <p className="font-medium">{purchase.warehouse.name}</p>
+                                        <p className="font-medium">{purchase.warehouse?.name || 'N/A'}</p>
                                     </div>
                                     <div>
                                         <label className="text-sm text-gray-600">Code</label>
-                                        <p className="font-medium">{purchase.warehouse.code}</p>
+                                        <p className="font-medium">{purchase.warehouse?.code || 'N/A'}</p>
                                     </div>
-                                    {purchase.warehouse.address && (
+                                    {purchase.warehouse?.address && (
                                         <div>
                                             <label className="text-sm text-gray-600">Address</label>
                                             <p className="font-medium text-sm">{purchase.warehouse.address}</p>
@@ -208,8 +231,8 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                         <div className="card-body p-4">
                             <h3 className="font-bold mb-3">Purchase Status</h3>
                             <div className="text-center">
-                                <span className={`badge badge-lg badge-${purchase.status_color}`}>
-                                    {purchase.status.toUpperCase()}
+                                <span className={`badge badge-lg badge-${purchase.status === 'completed' ? 'success' : 'warning'}`}>
+                                    {purchase.status?.toUpperCase() || 'PENDING'}
                                 </span>
                             </div>
                             <div className="divider my-3"></div>
@@ -237,12 +260,12 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                         <div className="card-body p-4">
                             <h3 className="font-bold mb-3 flex items-center gap-2">
                                 <DollarSign size={16} /> 
-                                {isShadowUser ? 'Amount Summary' : 'Amount Summary'}
+                                Amount Summary
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
                                     <span>Total Amount:</span>
-                                    <span className={`font-bold text-lg ${isShadowUser ? 'text-warning' : ''}`}>
+                                    <span className={`font-bold text-lg ${isShadowUser ? 'text-warning' : 'text-primary'}`}>
                                         {formatCurrency(getPurchaseAmount('total_amount'))}
                                     </span>
                                 </div>
@@ -254,7 +277,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     </span>
                                 </div>
                                 
-                                <div className="flex justify-between items-center text-orange-600">
+                                <div className={`flex justify-between items-center ${getPurchaseAmount('due_amount') > 0 ? 'text-orange-600' : 'text-green-600'}`}>
                                     <span>Due Amount:</span>
                                     <span className="font-bold">
                                         {formatCurrency(getPurchaseAmount('due_amount'))}
@@ -272,7 +295,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                     <div className="p-4 border-b">
                         <h3 className="font-bold flex items-center gap-2">
                             <Package size={16} /> 
-                            {isShadowUser ? 'Purchase Items' : 'Purchase Items'} ({purchase.items.length})
+                            Purchase Items ({purchase.items?.length || 0})
                         </h3>
                         <p className="text-sm text-gray-600">
                             Total {calculateTotalQuantity()} units purchased
@@ -288,18 +311,18 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     <th>Variant</th>
                                     <th className="text-right">Quantity</th>
                                     <th className="text-right">
-                                        {isShadowUser ? 'Unit Price' : 'Unit Price'}
+                                        Unit Price
                                     </th>
                                     <th className="text-right">
-                                        {isShadowUser ? 'Sale Price' : 'Sale Price'}
+                                        Sale Price
                                     </th>
                                     <th className="text-right">
-                                        {isShadowUser ? 'Total Price' : 'Total Price'}
+                                        Total Price
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {purchase.items.map((item, index) => (
+                                {purchase.items?.map((item, index) => (
                                     <tr key={item.id} className="hover:bg-base-100">
                                         <th className="bg-base-200">{index + 1}</th>
                                         <td>
@@ -329,11 +352,18 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                         <td className="text-right font-mono">
                                             {formatCurrency(getPrice(item, 'sale_price'))}
                                         </td>
-                                        <td className={`text-right font-mono font-bold ${isShadowUser ? 'text-warning' : ''}`}>
+                                        <td className={`text-right font-mono font-bold ${isShadowUser ? 'text-warning' : 'text-primary'}`}>
                                             {formatCurrency(getPrice(item, 'total_price'))}
                                         </td>
                                     </tr>
                                 ))}
+                                {(!purchase.items || purchase.items.length === 0) && (
+                                    <tr>
+                                        <td colSpan="7" className="text-center py-8 text-gray-500">
+                                            No items found in this purchase
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
                             <tfoot className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                                 <tr>
