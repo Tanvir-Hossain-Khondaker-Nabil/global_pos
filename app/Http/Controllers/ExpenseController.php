@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Exchange;
 use App\Models\Expense;
+use App\Models\ExpenseCategory;
 use App\Models\ExtraCas;
 use App\Models\SalesList;
 use Illuminate\Http\Request;
@@ -13,7 +14,11 @@ use Inertia\Inertia;
 
 class ExpenseController extends Controller
 {
-    // index
+
+    /**
+     * Display a listing of the resource.
+    */
+
     public function index(Request $request)
     {
         $startdate = $request->query('startdate') ?? null;
@@ -45,14 +50,12 @@ class ExpenseController extends Controller
                 $query->where('created_by', Auth::id());
             })
             ->pluck('pay')
-            // Decode JSON
             ->map(fn($json) => collect(json_decode($json, true)))
             ->flatten(1)
 
-            // 🔹 Step 2: তারিখ অনুযায়ী filter
             ->filter(function ($item) use ($startdate, $date) {
                 if (!isset($item['date'])) {
-                    return false; // যদি JSON-এ date না থাকে
+                    return false; 
                 }
 
                 $itemDate = Carbon::parse($item['date']);
@@ -64,15 +67,12 @@ class ExpenseController extends Controller
                     );
                 }
 
-                // শুধু $date থাকলে
                 return $itemDate->isSameDay(Carbon::parse($date));
             })
 
-            // 🔹 Step 3: system অনুযায়ী group করে amount sum করো
             ->groupBy('system')
             ->map(fn($group) => $group->sum(fn($item) => (float) $item['amount']));
 
-        // 🔹 Step 4: category অনুযায়ী আলাদা করো
         $mobilebanking = collect($mobileBankSystems)->mapWithKeys(
             fn($system) => [$system => $paymentData[$system] ?? 0]
         );
@@ -83,16 +83,13 @@ class ExpenseController extends Controller
             fn($system) => [$system => $paymentData[$system] ?? 0]
         );
 
-        // ---- সবগুলো একত্র করে final result ----
         $final = [
             'mobilebanking' => $mobilebanking,
             'bank' => $bank,
             'cash' => $cash,
         ];
 
-        // প্রতিটি category এর sum
         $totals = collect($final)->map(fn($group) => $group->sum());
-        // grand total
         $grandTotal = $totals->sum();
         $totalAmount = [
             'totals' => $totals,
@@ -150,6 +147,39 @@ class ExpenseController extends Controller
             'query' => $request->only('date', 'startdate')
         ]);
     }
+
+    /**
+     * Create a expense category
+     */
+    public function category(Request $request)
+    {
+        $query = $request->only(['startdate', 'date', 'search']);
+        
+        $today = now()->format('Y-m-d');
+
+        $categories = ExpenseCategory::with('expenses')
+            ->when($request->has('startdate') && $request->startdate, function ($query) use ($request) {
+                $query->whereDate('created_at', '>=', $request->startdate);
+            })
+            ->when($request->has('search') && $request->search, function ($query) use ($request) {
+                $query->where('name', 'like', '%' . $request->search . '%')
+                      ->orWhere('description', 'like', '%' . $request->search . '%');
+            })
+            ->withCount('expenses')
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+
+        $todaysCategoriesCount = ExpenseCategory::count();
+
+
+        return Inertia::render('expenses/category/index', [
+            'categories' => $categories,
+            'todaysCategoriesCount' => $todaysCategoriesCount,
+            'query' => $query,
+        ]);
+    }
+
 
     // store
     public function store(Request $request)

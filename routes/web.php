@@ -18,6 +18,8 @@ use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\PaymentController;
 
 // Guest routes
@@ -183,6 +185,9 @@ Route::middleware('auth')->group(function () {
     // Expense
     Route::controller(ExpenseController::class)->group(function () {
         Route::get('/expense', 'index')->name('expenses.list');
+        Route::get('/expense/category', 'category')->name('expenses.category');
+        Route::post('/expense/category', 'categoryStore')->name('expenses.category.store');
+
         Route::post('/expense', 'store')->name('expenses.post');
         Route::get('/expense/{id}', 'distroy')->name('expenses.del');
     });
@@ -208,14 +213,14 @@ Route::middleware('auth')->group(function () {
         Route::get('/print-barcode', 'index')->name('barcode.print');
     });
 
-Route::get('/attributes', [AttributeController::class, 'index'])->name('attributes.index');
-Route::post('/attributes', [AttributeController::class, 'store'])->name('attributes.store');
-Route::put('/attributes/{attribute}', [AttributeController::class, 'update'])->name('attributes.update');
-Route::delete('/attributes/{attribute}', [AttributeController::class, 'destroy'])->name('attributes.destroy');
+    Route::get('/attributes', [AttributeController::class, 'index'])->name('attributes.index');
+    Route::post('/attributes', [AttributeController::class, 'store'])->name('attributes.store');
+    Route::put('/attributes/{attribute}', [AttributeController::class, 'update'])->name('attributes.update');
+    Route::delete('/attributes/{attribute}', [AttributeController::class, 'destroy'])->name('attributes.destroy');
 
-// Attribute values routes
-Route::post('/attributes/{attribute}/values', [AttributeController::class, 'storeValue'])->name('attributes.values.store');
-Route::delete('/attributes/{attribute}/values/{value}', [AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
+    // Attribute values routes
+    Route::post('/attributes/{attribute}/values', [AttributeController::class, 'storeValue'])->name('attributes.values.store');
+    Route::delete('/attributes/{attribute}/values/{value}', [AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
 
     //payment routes
      Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
@@ -243,6 +248,31 @@ Route::delete('/attributes/{attribute}/values/{value}', [AttributeController::cl
 
     Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
     Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
+
+
+        Route::resource('companies', CompanyController::class)->names([
+            'index'   => 'companies.index',
+            'create'  => 'companies.create',
+            'store'   => 'companies.store',
+            'show'    => 'companies.show',
+            'edit'    => 'companies.edit',
+            'update'  => 'companies.update',
+            'destroy' => 'companies.destroy',
+        ]);
+
+        Route::resource('dealerships', DealershipController::class)->names([
+            'index'   => 'dealerships.index',
+            'create'  => 'dealerships.create',
+            'store'   => 'dealerships.store',
+            'show'    => 'dealerships.show',
+            'edit'    => 'dealerships.edit',
+            'update'  => 'dealerships.update',
+            'destroy' => 'dealerships.destroy',
+        ]);
+
+
+
+
 });
 
 
