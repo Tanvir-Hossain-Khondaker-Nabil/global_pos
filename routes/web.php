@@ -21,6 +21,8 @@ use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\SubscriptionController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -29,71 +31,7 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 });
 
 
-Route::get('/clear', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('config:cache');
-    Artisan::call('view:clear');
-    return "Cache is cleared";
-});
 
-
-Route::get('/migrate', function () {
-    Artisan::call('migrate:fresh --seed');
-    return "Database migrated fresh with seeders";
-});
-
-
-Route::get('/module', function () {
-    $modules = collect(Route::getRoutes())
-        ->map(fn($route) => $route->getName())
-        ->filter()
-        ->map(fn($name) => explode('.', $name)[0])
-        ->unique()
-        ->values()
-        ->toArray();
-
-    return $modules;
-});
-
-
-Route::get('/actions', function () {
-
-    $actionMap = [
-        'index' => 'view',
-        'show' => 'view',
-        'create' => 'create',
-        'store' => 'create',
-        'edit' => 'edit',
-        'update' => 'edit',
-        'destroy' => 'delete',
-        'delete' => 'delete'
-    ];
-
-
-    $allActions = collect(Route::getRoutes())
-        ->map(fn($route) => $route->getName())
-        ->filter()
-        ->map(function ($name) use ($actionMap) {
-
-            $parts = explode('.', $name);
-
-            if (count($parts) < 2)
-                return null;
-
-            $method = end($parts);
-
-            return $actionMap[$method] ?? null;
-        })
-        ->filter()
-        ->unique()
-        ->values()
-        ->toArray();
-
-    return $allActions;
-
-
-});
 
 
 // auth routes
@@ -271,8 +209,31 @@ Route::middleware('auth')->group(function () {
     ]);
 
 
+    Route::resource('plans', PlanController::class)->names([
+        'index'   => 'plans.index',
+        'create'  => 'plans.create',
+        'store'   => 'plans.store',
+        'show'    => 'plans.show',
+        'edit'    => 'plans.edit',
+        'update'  => 'plans.update',
+        'destroy' => 'plans.destroy',
+    ]);
+
+
+    Route::resource('subscriptions', SubscriptionController::class)->names([
+        'index'   => 'subscriptions.index',
+        'create'  => 'subscriptions.create',
+        'store'   => 'subscriptions.store',
+        'show'    => 'subscriptions.show',
+        'edit'    => 'subscriptions.edit',
+        'update'  => 'subscriptions.update',
+        'destroy' => 'subscriptions.destroy',
+    ]);
 
 
 });
+
+
+require __DIR__.'/command.php';
 
 

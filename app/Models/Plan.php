@@ -21,9 +21,38 @@ class Plan extends Model
         'features' => 'array', 
     ];
 
+    const STATUS_ACTIVE = 1;
+    const STATUS_INACTIVE = 2;
+
     // Relation with Subscriptions
     public function subscriptions()
     {
         return $this->hasMany(Subscription::class);
     }
+
+
+
+
+    // Scope for active plans
+    public function scopeActive($query)
+    {
+        return $query->where('status', self::STATUS_ACTIVE);
+    }
+
+
+    // Scope for plan type
+    public function scopeOfType($query, $type)
+    {
+        return $query->where('plan_type', $type);
+    }
+
+
+    // Scope for searching plans
+    public function scopeSearch($query, $term)
+    {
+        return $query->where('name', 'like', "%{$term}%")
+                     ->orWhere('description', 'like', "%{$term}%")
+                     ->orWhereJsonContains('features', $term);
+    }
+                     
 }
