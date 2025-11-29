@@ -250,25 +250,25 @@ Route::middleware('auth')->group(function () {
     Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
 
 
-        Route::resource('companies', CompanyController::class)->names([
-            'index'   => 'companies.index',
-            'create'  => 'companies.create',
-            'store'   => 'companies.store',
-            'show'    => 'companies.show',
-            'edit'    => 'companies.edit',
-            'update'  => 'companies.update',
-            'destroy' => 'companies.destroy',
-        ]);
+    Route::resource('companies', CompanyController::class)->names([
+        'index'   => 'companies.index',
+        'create'  => 'companies.create',
+        'store'   => 'companies.store',
+        'show'    => 'companies.show',
+        'edit'    => 'companies.edit',
+        'update'  => 'companies.update',
+        'destroy' => 'companies.destroy',
+    ]);
 
-        Route::resource('dealerships', DealershipController::class)->names([
-            'index'   => 'dealerships.index',
-            'create'  => 'dealerships.create',
-            'store'   => 'dealerships.store',
-            'show'    => 'dealerships.show',
-            'edit'    => 'dealerships.edit',
-            'update'  => 'dealerships.update',
-            'destroy' => 'dealerships.destroy',
-        ]);
+    Route::resource('dealerships', DealershipController::class)->names([
+        'index'   => 'dealerships.index',
+        'create'  => 'dealerships.create',
+        'store'   => 'dealerships.store',
+        'show'    => 'dealerships.show',
+        'edit'    => 'dealerships.edit',
+        'update'  => 'dealerships.update',
+        'destroy' => 'dealerships.destroy',
+    ]);
 
 
 
