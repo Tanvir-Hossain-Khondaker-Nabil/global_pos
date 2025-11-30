@@ -195,6 +195,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->name('purchase.exportPdf');
 
 
+
+    Route::post('/switch-locale', [Controller::class, 'switchLocale'])->name('locale.switch');
+
+    Route::get('/lang/{locale}', [Controller::class, 'setLang'])->name('lang.switch');
+
+    Route::get('/current-lang', [Controller::class, 'getLang'])->name('lang.current');
+
     Route::resource('companies', CompanyController::class)->names([
         'index' => 'companies.index',
         'create' => 'companies.create',
