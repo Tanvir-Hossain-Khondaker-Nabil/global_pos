@@ -8,9 +8,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     const { auth } = usePage().props;
 
     const [localFilters, setLocalFilters] = useState({
-        search: filters.search || "",
-        status: filters.status || "",
-        date: filters.date || "",
+        search: filters?.search || "",
+        status: filters?.status || "",
+        date: filters?.date || "",
     });
 
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -18,7 +18,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     const [selectedPurchase, setSelectedPurchase] = useState(null);
     const [paymentData, setPaymentData] = useState({
         paid_amount: 0,
-        payment_status: 'unpaid'
+        shadow_paid_amount: 0,
+        payment_status: 'unpaid',
+        shadow_payment_status: 'unpaid'
     });
     const [approveData, setApproveData] = useState({
         items: [],
@@ -28,9 +30,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     // Update local filters when props change
     useEffect(() => {
         setLocalFilters({
-            search: filters.search || "",
-            status: filters.status || "",
-            date: filters.date || "",
+            search: filters?.search || "",
+            status: filters?.status || "",
+            date: filters?.date || "",
         });
     }, [filters]);
 
@@ -77,8 +79,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     const openPaymentModal = (purchase) => {
         setSelectedPurchase(purchase);
         setPaymentData({
-            paid_amount: purchase.paid_amount,
-            payment_status: purchase.payment_status
+            paid_amount: parseFloat(purchase.paid_amount) || 0,
+            shadow_paid_amount: parseFloat(purchase.shadow_paid_amount) || 0,
+            payment_status: purchase.payment_status,
+            shadow_payment_status: purchase.shadow_payment_status
         });
         setShowPaymentModal(true);
     };
@@ -86,13 +90,25 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     const closePaymentModal = () => {
         setShowPaymentModal(false);
         setSelectedPurchase(null);
-        setPaymentData({ paid_amount: 0, payment_status: 'unpaid' });
+        setPaymentData({ 
+            paid_amount: 0, 
+            shadow_paid_amount: 0,
+            payment_status: 'unpaid',
+            shadow_payment_status: 'unpaid'
+        });
     };
 
     const handlePaymentUpdate = () => {
         if (!selectedPurchase) return;
 
-        router.patch(route('purchase.updatePayment', selectedPurchase.id), paymentData, {
+        // Calculate due amounts
+        const updatedData = {
+            ...paymentData,
+            due_amount: Math.max(0, selectedPurchase.total_amount - paymentData.paid_amount),
+            shadow_due_amount: Math.max(0, selectedPurchase.shadow_total_amount - paymentData.shadow_paid_amount)
+        };
+
+        router.patch(route('purchase.updatePayment', selectedPurchase.id), updatedData, {
             onSuccess: () => {
                 closePaymentModal();
             },
@@ -156,7 +172,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'BDT'
-        }).format(amount);
+        }).format(amount || 0);
     };
 
     const hasActiveFilters = localFilters.search || localFilters.status || localFilters.date;
@@ -167,7 +183,29 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     };
 
     // Check if user can approve purchases (general users only)
-    const canApprovePurchases = !isShadowUser && auth.role === 'admin';
+    const canApprovePurchases = !isShadowUser && auth?.role === 'admin';
+
+    // Get display amounts based on user type
+    const getDisplayAmounts = (purchase) => {
+        if (isShadowUser) {
+            return {
+                total: purchase.shadow_total_amount,
+                paid: purchase.shadow_paid_amount,
+                due: purchase.shadow_due_amount,
+                payment_status: purchase.shadow_payment_status
+            };
+        }
+        return {
+            total: purchase.total_amount,
+            paid: purchase.paid_amount,
+            due: purchase.due_amount,
+            payment_status: purchase.payment_status
+        };
+    };
+
+    // Safe data access
+    const safePurchases = purchases?.data || [];
+    const safePagination = purchases || {};
 
     return (
         <div className="bg-white rounded-box p-5">
@@ -214,7 +252,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             </button>
                         )}
                     </div>
-                    {auth.role === "admin" && (
+                    {auth?.role === "admin" && (
                         <Link
                             href={route("purchase.create")}
                             className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
@@ -258,7 +296,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
             )}
 
             <div className="overflow-x-auto">
-                {purchases.data.length > 0 ? (
+                {safePurchases.length > 0 ? (
                     <table className="table table-auto w-full">
                         <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                             <tr>
@@ -271,7 +309,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {purchases.data.map((purchase, index) => (
+                            {safePurchases.map((purchase, index) => {
+                                const displayAmounts = getDisplayAmounts(purchase);
+                                return (
                                 <tr key={purchase.id} className="hover:bg-base-100">
                                     <th className="bg-base-200">{index + 1}</th>
                                     <td>
@@ -304,15 +344,15 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                             <div className="flex items-center gap-2">
                                                 <User size={14} className="text-blue-600" />
                                                 <div>
-                                                    <div className="font-medium">{purchase.supplier.name}</div>
-                                                    <div className="text-xs text-gray-500">{purchase.supplier.company}</div>
+                                                    <div className="font-medium">{purchase.supplier?.name || 'N/A'}</div>
+                                                    <div className="text-xs text-gray-500">{purchase.supplier?.company || ''}</div>
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <Warehouse size={14} className="text-green-600" />
                                                 <div>
-                                                    <div className="font-medium">{purchase.warehouse.name}</div>
-                                                    <div className="text-xs text-gray-500">{purchase.warehouse.code}</div>
+                                                    <div className="font-medium">{purchase.warehouse?.name || 'N/A'}</div>
+                                                    <div className="text-xs text-gray-500">{purchase.warehouse?.code || ''}</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -322,16 +362,16 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                             <div className="flex items-center gap-2">
                                                 <Package size={14} className="text-purple-600" />
                                                 <span className="font-medium">
-                                                    {purchase.items.reduce((sum, item) => sum + item.quantity, 0)} units
+                                                    {purchase.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0} units
                                                 </span>
                                                 <span className="text-sm text-gray-500">
-                                                    ({purchase.items.length} items)
+                                                    ({purchase.items?.length || 0} items)
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <DollarSign size={14} className={isShadowUser ? "text-warning" : "text-green-600"} />
                                                 <span className="font-bold">
-                                                    {formatCurrency(purchase.total_amount)}
+                                                    {formatCurrency(displayAmounts.total)}
                                                 </span>
                                             </div>
                                             {purchase.user_type === 'shadow' && purchase.status === 'pending' && (
@@ -339,34 +379,51 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                     Needs Approval
                                                 </div>
                                             )}
+                                            {!isShadowUser && purchase.user_type === 'shadow' && (
+                                                <div className="text-xs text-blue-600">
+                                                    Shadow Total: {formatCurrency(purchase.shadow_total_amount)}
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                     <td>
                                         <div className="flex flex-col gap-1">
-                                            <span className={`badge badge-${purchase.status_color} badge-sm`}>
+                                            <span className={`badge badge-${purchase.status_color || 'neutral'} badge-sm`}>
                                                 {purchase.status}
                                             </span>
                                             <div className="text-xs space-y-1">
                                                 <div className="flex justify-between">
                                                     <span>Paid:</span>
                                                     <span className="text-green-600">
-                                                        {formatCurrency(purchase.paid_amount)}
+                                                        {formatCurrency(displayAmounts.paid)}
                                                     </span>
                                                 </div>
-                                                {purchase.due_amount > 0 && (
+                                                {displayAmounts.due > 0 && (
                                                     <div className="flex justify-between">
                                                         <span>Due:</span>
                                                         <span className="text-orange-600">
-                                                            {formatCurrency(purchase.due_amount)}
+                                                            {formatCurrency(displayAmounts.due)}
                                                         </span>
                                                     </div>
                                                 )}
-                                                <div className={`badge badge-xs ${purchase.payment_status === 'paid' ? 'badge-success' :
-                                                        purchase.payment_status === 'partial' ? 'badge-warning' : 'badge-error'
+                                                <div className={`badge badge-xs ${displayAmounts.payment_status === 'paid' ? 'badge-success' :
+                                                        displayAmounts.payment_status === 'partial' ? 'badge-warning' : 'badge-error'
                                                     }`}>
-                                                    {purchase.payment_status}
+                                                    {displayAmounts.payment_status}
                                                 </div>
                                             </div>
+                                            {!isShadowUser && purchase.shadow_payment_status && (
+                                                <div className="text-xs text-blue-600 mt-1">
+                                                    <div className="flex justify-between">
+                                                        <span>Shadow:</span>
+                                                        <span className={`badge badge-xs ${purchase.shadow_payment_status === 'paid' ? 'badge-success' :
+                                                                purchase.shadow_payment_status === 'partial' ? 'badge-warning' : 'badge-error'
+                                                            }`}>
+                                                            {purchase.shadow_payment_status}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                     <td>
@@ -378,7 +435,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                 <Eye size={12} /> Details
                                             </Link>
 
-                                            {auth.role === "admin" && purchase.status !== 'cancelled' && (
+                                            {auth?.role === "admin" && purchase.status !== 'cancelled' && (
                                                 <button
                                                     onClick={() => openPaymentModal(purchase)}
                                                     className="btn btn-xs btn-warning btn-outline"
@@ -396,7 +453,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                 </button>
                                             )}
 
-                                            {auth.role === "admin" && purchase.status !== 'cancelled' && (
+                                            {auth?.role === "admin" && purchase.status !== 'cancelled' && (
                                                 <button
                                                     onClick={() => handleDelete(purchase.id)}
                                                     className="btn btn-xs btn-error btn-outline"
@@ -407,7 +464,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                         </div>
                                     </td>
                                 </tr>
-                            ))}
+                            )})}
                         </tbody>
                     </table>
                 ) : (
@@ -431,7 +488,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                     Clear Filters
                                 </button>
                             )}
-                            {auth.role === "admin" && (
+                            {auth?.role === "admin" && (
                                 <Link
                                     href={route("purchase.create")}
                                     className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
@@ -445,283 +502,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                 )}
             </div>
 
-            <Pagination data={purchases} />
-
-            {/* Payment Update Modal */}
-            {showPaymentModal && selectedPurchase && (
-                <div className="modal modal-open">
-                    <div className="modal-box">
-                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                            <DollarSign size={18} />
-                            Update Payment Status
-                        </h3>
-
-                        <div className="space-y-4">
-                            <div className="bg-base-200 p-3 rounded-box">
-                                <h4 className="font-semibold mb-2">Purchase Information</h4>
-                                <div className="text-sm space-y-1">
-                                    <div>Purchase #: <strong>{selectedPurchase.purchase_no}</strong></div>
-                                    <div>Total Amount: <strong>{formatCurrency(selectedPurchase.total_amount)}</strong></div>
-                                    <div>Current Paid: <strong>{formatCurrency(selectedPurchase.paid_amount)}</strong></div>
-                                    <div>Current Due: <strong>{formatCurrency(selectedPurchase.due_amount)}</strong></div>
-                                </div>
-                            </div>
-
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Payment Status</span>
-                                </label>
-                                <select
-                                    className="select select-bordered"
-                                    value={paymentData.payment_status}
-                                    onChange={(e) => setPaymentData({ ...paymentData, payment_status: e.target.value })}
-                                >
-                                    <option value="unpaid">Unpaid</option>
-                                    <option value="partial">Partial</option>
-                                    <option value="paid">Paid</option>
-                                </select>
-                            </div>
-
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Paid Amount (৳)</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    max={selectedPurchase.total_amount}
-                                    step="0.01"
-                                    className="input input-bordered"
-                                    value={paymentData.paid_amount}
-                                    onChange={(e) => setPaymentData({ ...paymentData, paid_amount: parseFloat(e.target.value) || 0 })}
-                                />
-                            </div>
-
-                            <div className="bg-base-200 p-3 rounded-box">
-                                <div className="text-sm space-y-1">
-                                    <div className="flex justify-between">
-                                        <span>Total Amount:</span>
-                                        <strong>{formatCurrency(selectedPurchase.total_amount)}</strong>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>New Paid Amount:</span>
-                                        <strong className="text-green-600">{formatCurrency(paymentData.paid_amount)}</strong>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span>New Due Amount:</span>
-                                        <strong className="text-orange-600">
-                                            {formatCurrency(selectedPurchase.total_amount - paymentData.paid_amount)}
-                                        </strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="modal-action">
-                            <button onClick={closePaymentModal} className="btn btn-ghost">Cancel</button>
-                            <button onClick={handlePaymentUpdate} className="btn btn-primary">
-                                Update Payment
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Approve Shadow Purchase Modal */}
-            {showApproveModal && selectedPurchase && (
-                <div className="modal modal-open">
-                    <div className="modal-box max-w-4xl">
-                        <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                            <CheckCircle size={18} className="text-success" />
-                            Approve Shadow Purchase
-                        </h3>
-
-                        <div className="space-y-4">
-                            {/* Purchase Summary */}
-                            <div className="bg-warning/10 p-4 rounded-box border border-warning">
-                                <h4 className="font-semibold mb-3 text-warning flex items-center gap-2">
-                                    <AlertCircle size={16} />
-                                    Purchase Information
-                                </h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <div><strong>Purchase #:</strong> {selectedPurchase.purchase_no}</div>
-                                        <div><strong>Supplier:</strong> {selectedPurchase.supplier.name}</div>
-                                        <div><strong>Warehouse:</strong> {selectedPurchase.warehouse.name}</div>
-                                    </div>
-                                    <div>
-                                        <div><strong>Date:</strong> {formatDate(selectedPurchase.purchase_date)}</div>
-                                        <div><strong>Shadow Total:</strong> {formatCurrency(selectedPurchase.shadow_total_amount)}</div>
-                                        <div><strong>Status:</strong> <span className="badge badge-warning badge-sm">Pending Approval</span></div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Items List with Price Approval */}
-                            <div className="bg-base-200 p-4 rounded-box">
-                                <h4 className="font-semibold mb-3">Approve Item Prices</h4>
-                                <div className="space-y-3">
-                                    {selectedPurchase.items.map((item, index) => (
-                                        <div key={item.id} className="border border-gray-300 rounded-box p-3">
-                                            <div className="flex justify-between items-start mb-3">
-                                                <div className="flex-1">
-                                                    <h5 className="font-medium">{item.product?.name || 'N/A'}</h5>
-                                                    <p className="text-sm text-gray-600">
-                                                        Variant: {item.variant?.name || 'Default Variant'}
-                                                    </p>
-                                                    <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
-                                                </div>
-                                                <div className="text-right">
-                                                    <div className="text-sm text-warning">
-                                                        Shadow Total: {formatCurrency(item.shadow_total_price)}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Price Approval Fields */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                {/* Purchase Price */}
-                                                <div className="form-control">
-                                                    <label className="label">
-                                                        <span className="label-text">Purchase Price (৳) *</span>
-                                                    </label>
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="number"
-                                                            min="0.01"
-                                                            step="0.01"
-                                                            className="input input-bordered input-sm flex-1"
-                                                            value={approveData.items?.[index]?.purchase_price || item.shadow_unit_price}
-                                                            onChange={(e) => {
-                                                                const newItems = [...(approveData.items || [])];
-                                                                if (!newItems[index]) {
-                                                                    newItems[index] = { ...item };
-                                                                }
-                                                                newItems[index].purchase_price = parseFloat(e.target.value) || 0;
-                                                                newItems[index].total_price = newItems[index].purchase_price * item.quantity;
-                                                                setApproveData({ ...approveData, items: newItems });
-                                                            }}
-                                                            required
-                                                        />
-                                                        <div className="text-xs text-gray-500 w-20">
-                                                            Shadow: ৳{item.shadow_unit_price}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Sale Price */}
-                                                <div className="form-control">
-                                                    <label className="label">
-                                                        <span className="label-text">Sale Price (৳) *</span>
-                                                    </label>
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="number"
-                                                            min="0.01"
-                                                            step="0.01"
-                                                            className="input input-bordered input-sm flex-1"
-                                                            value={approveData.items?.[index]?.sale_price || item.shadow_sale_price}
-                                                            onChange={(e) => {
-                                                                const newItems = [...(approveData.items || [])];
-                                                                if (!newItems[index]) {
-                                                                    newItems[index] = { ...item };
-                                                                }
-                                                                newItems[index].sale_price = parseFloat(e.target.value) || 0;
-                                                                setApproveData({ ...approveData, items: newItems });
-                                                            }}
-                                                            required
-                                                        />
-                                                        <div className="text-xs text-gray-500 w-20">
-                                                            Shadow: ৳{item.shadow_sale_price}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Price Summary */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2 pt-2 border-t">
-                                                <div className="text-xs">
-                                                    <div className="flex justify-between">
-                                                        <span>New Purchase Total:</span>
-                                                        <span className="font-medium">
-                                                            ৳{((approveData.items?.[index]?.purchase_price || item.shadow_unit_price) * item.quantity).toFixed(2)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                                <div className="text-xs text-warning">
-                                                    <div className="flex justify-between">
-                                                        <span>Shadow Total:</span>
-                                                        <span className="font-medium">৳{item.shadow_total_price}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Approval Summary */}
-                            <div className="bg-info/10 p-4 rounded-box border border-info">
-                                <h4 className="font-semibold mb-3 text-info">Approval Summary</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <div className="flex justify-between">
-                                            <span>Total Items:</span>
-                                            <strong>{selectedPurchase.items.length} items</strong>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Total Quantity:</span>
-                                            <strong>{selectedPurchase.items.reduce((sum, item) => sum + item.quantity, 0)} units</strong>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <div className="flex justify-between">
-                                            <span>New Purchase Total:</span>
-                                            <strong className="text-success">
-                                                ৳{selectedPurchase.items.reduce((sum, item, index) => {
-                                                    const purchasePrice = approveData.items?.[index]?.purchase_price || item.shadow_unit_price;
-                                                    return sum + (purchasePrice * item.quantity);
-                                                }, 0).toFixed(2)}
-                                            </strong>
-                                        </div>
-                                        <div className="flex justify-between">
-                                            <span>Shadow Total:</span>
-                                            <strong className="text-warning">
-                                                ৳{selectedPurchase.shadow_total_amount}
-                                            </strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Additional Notes */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Approval Notes (Optional)</span>
-                                </label>
-                                <textarea
-                                    className="textarea textarea-bordered"
-                                    rows="3"
-                                    placeholder="Add any notes about this approval..."
-                                    value={approveData.notes || ''}
-                                    onChange={(e) => setApproveData({ ...approveData, notes: e.target.value })}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="modal-action">
-                            <button onClick={closeApproveModal} className="btn btn-ghost">Cancel</button>
-                            <button
-                                onClick={handleApprovePurchase}
-                                className="btn btn-success"
-                                disabled={!approveData.items || approveData.items.length === 0}
-                            >
-                                <CheckCircle size={16} />
-                                Approve Purchase
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {safePurchases.length > 0 && (
+                <Pagination data={safePagination} />
             )}
         </div>
     );

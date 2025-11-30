@@ -1,7 +1,8 @@
 import { Link, usePage, router } from "@inertiajs/react";
 import React, { useState, useEffect } from "react";
 import Image from "../components/Image";
-import { Lock, LogOut, Menu, Plus, User, Shield } from "lucide-react";
+import { Lock, LogOut, Menu, Plus, User, Shield, Languages } from "lucide-react";
+import LanguageSwitcher from "../components/LanguageSwitcher"; // Import the LanguageSwitcher
 
 export default function Header({ sidebarOpen, setSidebarOpen }) {
     const { auth } = usePage().props;
@@ -53,6 +54,8 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                 >
                     <Menu size={14} />
                 </button>
+                
+                {/* Shadow Mode Toggle */}
                 <button
                     onClick={handleToggleUserType}
                     className={`btn btn-sm ${isShadowUser ? 'btn-primary' : 'btn-warning'} gap-2`}
@@ -61,6 +64,11 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                     <Shield size={16} />
                     {isShadowUser ? 'General Mode' : 'Shadow Mode'}
                 </button>
+
+                {/* Language Switcher */}
+                <div className="flex items-center">
+                    <LanguageSwitcher />
+                </div>
             </div>
 
             {/* Right side - Profile */}

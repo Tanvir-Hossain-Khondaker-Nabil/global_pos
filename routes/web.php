@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ExchangeController;
@@ -18,11 +20,14 @@ use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
+<<<<<<< HEAD
+=======
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\SubscriptionController;
+>>>>>>> 0125ca25fb64a38ce080f8cefddec3d327880a96
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -91,7 +96,7 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/{sale}', 'show')->name('sales.show');
         Route::get('/{sale}/{print}', 'show')->name('salesPrint.show');
-        Route::get('/{sale}/print',  'print')->name('sales.print');
+        Route::get('/{sale}/print', 'print')->name('sales.print');
         Route::get('/{sale}/download-pdf', 'downloadPdf')->name('sales.download.pdf');
         Route::delete('/{sale}', 'destroy')->name('sales.destroy');
 
@@ -102,11 +107,11 @@ Route::middleware('auth')->group(function () {
     });
 
 
-    Route::get('/items/{id}',[SalesController::class , 'showItem'])->name('sales.items.show');
-    Route::get('/sales-items',[SalesController::class , 'allSalesItems'])->name('salesItems.list');
-    Route::get('/{sale}/edit', [SalesController::class , 'edit'])->name('sales.edit');
-    Route::patch('/{sale}/update', [SalesController::class , 'update'])->name('sales.update');
-    Route::delete('/{sale}/rejected', [SalesController::class , 'rejected'])->name('sales.rejected');
+    Route::get('/items/{id}', [SalesController::class, 'showItem'])->name('sales.items.show');
+    Route::get('/sales-items', [SalesController::class, 'allSalesItems'])->name('salesItems.list');
+    Route::get('/{sale}/edit', [SalesController::class, 'edit'])->name('sales.edit');
+    Route::patch('/{sale}/update', [SalesController::class, 'update'])->name('sales.update');
+    Route::delete('/{sale}/rejected', [SalesController::class, 'rejected'])->name('sales.rejected');
     Route::post('/sales/{sale}/payments', [SalesController::class, 'storePayment'])->name('sales.payments.store');
 
 
@@ -161,8 +166,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/attributes/{attribute}/values/{value}', [AttributeController::class, 'destroyValue'])->name('attributes.values.destroy');
 
     //payment routes
-     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
-     Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
+    Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
 
 
 
@@ -177,16 +182,31 @@ Route::middleware('auth')->group(function () {
 
     // Purchase Routes
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchase.list');
-    Route::get('/purchases/create', [PurchaseController::class, 'create'])->name('purchase.create');
-    Route::post('/purchases', [PurchaseController::class, 'store'])->name('purchase.store');
-    Route::get('/purchases/{purchase}', [PurchaseController::class, 'show'])->name('purchase.show');
-    Route::delete('/purchases/{purchase}', [PurchaseController::class, 'destroy'])->name('purchase.destroy');
+    Route::get('/purchase/create', [PurchaseController::class, 'create'])->name('purchase.create');
+    Route::post('/purchase/store', [PurchaseController::class, 'store'])->name('purchase.store');
+    Route::get('/purchase/{id}', [PurchaseController::class, 'show'])->name('purchase.show');
+    Route::patch('/purchase/{id}/payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
+    Route::patch('/purchase/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
+    Route::delete('/purchase/{id}', [PurchaseController::class, 'destroy'])->name('purchase.destroy');
 
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 
     Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
     Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
 
+<<<<<<< HEAD
+    Route::get('/purchase/statistics', [PurchaseController::class, 'getStatistics'])->name('purchase.statistics');
+    Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->name('purchase.recent');
+    Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->name('purchase.exportPdf');
+});
+
+
+Route::post('/switch-locale', [Controller::class, 'switchLocale'])->name('locale.switch');
+
+Route::get('/lang/{locale}', [Controller::class, 'setLang'])->name('lang.switch');
+
+Route::get('/current-lang', [Controller::class, 'getLang'])->name('lang.current');
+=======
 
     Route::resource('companies', CompanyController::class)->names([
         'index'   => 'companies.index',
@@ -241,3 +261,4 @@ Route::middleware('auth')->group(function () {
 require __DIR__.'/command.php';
 
 
+>>>>>>> 0125ca25fb64a38ce080f8cefddec3d327880a96
