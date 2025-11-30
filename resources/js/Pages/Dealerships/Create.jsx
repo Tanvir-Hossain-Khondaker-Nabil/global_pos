@@ -142,6 +142,9 @@ export default function Create({ companies, users }) {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                     placeholder="email@example.com"
                                 />
+                                {errors.email && (
+                                    <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.email}</p>
+                                )}
                             </div>
 
                             <div>
@@ -156,6 +159,9 @@ export default function Create({ companies, users }) {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                     placeholder="+1 (555) 000-0000"
                                 />
+                                {errors.phone && (
+                                    <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.phone}</p>
+                                )}
                             </div>
 
                             <div>
@@ -170,6 +176,9 @@ export default function Create({ companies, users }) {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                     placeholder="Full business address"
                                 />
+                                {errors.address && (
+                                    <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.address}</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -194,6 +203,9 @@ export default function Create({ companies, users }) {
                                     className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 bg-white"
                                     placeholder="Trade license number"
                                 />
+                                {errors.trade_license_no && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.trade_license_no}</p>
+                                )}
                             </div>
 
                             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-100">
@@ -207,6 +219,9 @@ export default function Create({ companies, users }) {
                                     className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
                                     placeholder="Tax identification number"
                                 />
+                                {errors.tin_no && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.tin_no}</p>
+                                )}
                             </div>
 
                             <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100">
@@ -220,6 +235,9 @@ export default function Create({ companies, users }) {
                                     className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white"
                                     placeholder="National ID number"
                                 />
+                                {errors.nid_no && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.nid_no}</p>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -246,6 +264,9 @@ export default function Create({ companies, users }) {
                                     placeholder="0.00"
                                     step="0.01"
                                 />
+                                {errors.advance_amount && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.advance_amount}</p>
+                                )}
                             </div>
 
                             <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-4 rounded-xl border border-yellow-100">
@@ -313,6 +334,9 @@ export default function Create({ companies, users }) {
                                     onChange={(e) => setData("contract_start", e.target.value)}
                                     className="w-full px-4 py-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white"
                                 />
+                                {errors.contract_start && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.contract_start}</p>    
+                                )}
                             </div>
 
                             <div className="bg-gradient-to-br from-pink-50 to-rose-50 p-4 rounded-xl border border-pink-100">
@@ -326,8 +350,11 @@ export default function Create({ companies, users }) {
                                     onChange={(e) => setData("contract_end", e.target.value)}
                                     className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-white"
                                 />
+                                {errors.contract_end && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.contract_end}</p>    
+                                )}
                             </div>
-
+{/* 
                             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-xl border border-blue-100">
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <FileCheck size={16} className="text-blue-600" />
@@ -340,7 +367,10 @@ export default function Create({ companies, users }) {
                                     className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
                                     placeholder="Contract file path/URL"
                                 />
-                            </div>
+                                {errors.contract_file && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.contract_file}</p>
+                                )}
+                            </div> */}
 
                             <div className="bg-gradient-to-br from-gray-50 to-slate-50 p-4 rounded-xl border border-gray-100">
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -358,7 +388,7 @@ export default function Create({ companies, users }) {
                     </div>
 
                     {/* Performance & Status Card */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                    {/* <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                         <div className="bg-gradient-to-r from-slate-600 to-gray-700 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <TrendingUp className="text-white" size={24} />
@@ -427,7 +457,7 @@ export default function Create({ companies, users }) {
                                 </select>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Document Uploads Card */}
                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
@@ -438,7 +468,6 @@ export default function Create({ companies, users }) {
                             </div>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {/* Agreement Document */}
                             <div className="file-upload-container">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Agreement Document
@@ -456,6 +485,9 @@ export default function Create({ companies, users }) {
                                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                     />
                                 </div>
+                                {errors.agreement_doc && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.agreement_doc}</p>
+                                )}
                                 {data.agreement_doc && (
                                     <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                                         <CheckCircle size={16} />
@@ -482,6 +514,9 @@ export default function Create({ companies, users }) {
                                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                     />
                                 </div>
+                                {errors.bank_guarantee_doc && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.bank_guarantee_doc}</p>
+                                )}
                                 {data.bank_guarantee_doc && (
                                     <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                                         <CheckCircle size={16} />
@@ -508,6 +543,9 @@ export default function Create({ companies, users }) {
                                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                     />
                                 </div>
+                                {errors.trade_license_doc && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.trade_license_doc}</p>
+                                )}
                                 {data.trade_license_doc && (
                                     <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                                         <CheckCircle size={16} />
@@ -534,6 +572,9 @@ export default function Create({ companies, users }) {
                                         accept=".pdf,.jpg,.jpeg,.png"
                                     />
                                 </div>
+                                {errors.nid_doc && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.nid_doc}</p>
+                                )}
                                 {data.nid_doc && (
                                     <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                                         <CheckCircle size={16} />
@@ -560,6 +601,9 @@ export default function Create({ companies, users }) {
                                         accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
                                     />
                                 </div>
+                                {errors.tax_clearance_doc && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.tax_clearance_doc}</p>
+                                )}
                                 {data.tax_clearance_doc && (
                                     <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                                         <CheckCircle size={16} />
@@ -586,6 +630,9 @@ export default function Create({ companies, users }) {
                                         accept=".pdf,.doc,.docx"
                                     />
                                 </div>
+                                {errors.contract_file && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.contract_file}</p>
+                                )}
                                 {data.contract_file && (
                                     <p className="text-sm text-green-600 mt-2 flex items-center gap-1">
                                         <CheckCircle size={16} />
@@ -633,6 +680,9 @@ export default function Create({ companies, users }) {
                                     rows={4}
                                     placeholder="Any additional notes or remarks about this dealership..."
                                 />
+                                {errors.remarks && (
+                                    <p className="text-sm text-red-600 mt-2">{errors.remarks}</p>
+                                )}
                             </div>
                         </div>
                     </div>

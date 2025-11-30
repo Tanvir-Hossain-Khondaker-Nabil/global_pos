@@ -23,6 +23,33 @@ class SubscriptionPayment extends Model
     // Relation with Subscription
     public function subscription()
     {
-        return $this->belongsTo(Subscription::class);
+        return $this->belongsTo(Subscription::class)->with('plan', 'user');
     }
+
+    //search scope
+    public function scopeSearch($query, $term)
+    {
+        $term = "%$term%";
+        $query->where('transaction_id', 'like', $term)
+              ->orWhereHas('subscription.user', function ($q) use ($term) {
+                  $q->where('name', 'like', $term)
+                    ->orWhere('email', 'like', $term);
+              });
+    }
+
+
+    //status scope
+    public function scopeStatus($query, $value)
+    {
+        return $query->where('status', $value);
+    }
+
+
+    //payment method scope
+    public function scopePaymentMethod($query, $value)
+    {
+        return $query->where('payment_method', $value);
+    }
+
+
 }

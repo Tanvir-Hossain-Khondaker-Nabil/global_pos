@@ -231,7 +231,8 @@ Route::middleware('auth')->group(function () {
     ]);
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
-    Route::get('/subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+    Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');
+    Route::get('/subscriptions_payments/view/{id}', [SubscriptionController::class, 'paymentView'])->name('subscriptions.payments.view');
 
 
 });

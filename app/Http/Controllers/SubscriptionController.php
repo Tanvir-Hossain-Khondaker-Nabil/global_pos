@@ -151,16 +151,37 @@ class SubscriptionController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function payment(Request $request)
     {
-        //
+        $subscription = SubscriptionPayment::with(['subscription.plan', 'subscription.user','subscription'])
+        ->when($request->search, function ($query) use ($request) {
+            $query->search($request->search);
+        })
+        ->when($request->status, function ($query, $status) {
+            $query->where('status', $status);
+        })
+        ->when($request->payment_method, function ($query, $payment_method) {
+            $query->where('payment_method', $payment_method);
+        })
+        ->orderBy('created_at', 'desc')
+        ->paginate(10)
+        ->withQueryString();
+
+        return inertia('Subscriptions/Payment', [
+            'subscription' => $subscription
+        ]);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function paymentView(string $id)
     {
-        //
+        $payment = SubscriptionPayment::with(['subscription.plan', 'subscription.user','subscription'])
+            ->findOrFail($id);
+
+        return inertia('Subscriptions/PaymentView', [
+            'payment' => $payment
+        ]);
     }
 }
