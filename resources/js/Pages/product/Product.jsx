@@ -3,9 +3,11 @@ import Pagination from "../../components/Pagination";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import { Eye, Frown, Pen, Plus, Trash2, Package, DollarSign, BarChart3, Tag } from "lucide-react";
 import { useEffect } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Product({ product, filters }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
 
     // handle search
     const searchForm = useForm({
@@ -26,7 +28,7 @@ export default function Product({ product, filters }) {
     // Format variant display for attribute-based variants
     const formatVariantDisplay = (variant) => {
         if (!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) {
-            return 'Default Variant';
+            return t('product.default_variant', 'Default Variant');
         }
 
         const parts = [];
@@ -95,17 +97,17 @@ export default function Product({ product, filters }) {
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title="Product list"
-                subtitle="Manage your all product from here."
+                title={t('product.product_list', 'Product List')}
+                subtitle={t('product.subtitle', 'Manage your all products from here.')}
             >
                 <div className="flex items-center gap-3">
                     <input
                         type="search"
                         onChange={handleSearch}
                         value={searchForm.data.search}
-                        placeholder="Search.."
+                        placeholder={t('product.search_placeholder', 'Search products...')}
                         className="input input-sm"
                     />
                     {auth.role === "admin" && (
@@ -113,7 +115,7 @@ export default function Product({ product, filters }) {
                             onClick={() => router.visit(route("product.add"))}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new
+                            <Plus size={15} /> {t('product.add_new', 'Add New')}
                         </button>
                     )}
                 </div>
@@ -125,13 +127,13 @@ export default function Product({ product, filters }) {
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th></th>
-                                <th>Product Code</th>
-                                <th>Product Name</th>
-                                <th>Category</th>
-                                <th>Attributes</th>
-                                <th>Total Stock</th>
-                                <th>Variants</th>
-                                <th>Actions</th>
+                                <th>{t('product.product_code', 'Product Code')}</th>
+                                <th>{t('product.product_name', 'Product Name')}</th>
+                                <th>{t('product.category', 'Category')}</th>
+                                <th>{t('product.attributes', 'Attributes')}</th>
+                                <th>{t('product.total_stock', 'Total Stock')}</th>
+                                <th>{t('product.variants', 'Variants')}</th>
+                                <th>{t('product.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -159,14 +161,17 @@ export default function Product({ product, filters }) {
                                         </td>
                                         <td>
                                             <span className="badge badge-outline">
-                                                {productItem.category?.name || 'N/A'}
+                                                {productItem.category?.name || t('product.not_available', 'N/A')}
                                             </span>
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-2">
                                                 <Tag size={14} className="text-purple-600" />
                                                 <span className="text-sm">
-                                                    {attributesCount} {attributesCount === 1 ? 'attribute' : 'attributes'}
+                                                    {attributesCount} {attributesCount === 1 
+                                                        ? t('product.attribute', 'attribute') 
+                                                        : t('product.attributes_plural', 'attributes')
+                                                    }
                                                 </span>
                                             </div>
                                         </td>
@@ -177,7 +182,9 @@ export default function Product({ product, filters }) {
                                                     <div className={`font-bold text-lg ${totalStock === 0 ? 'text-error' : totalStock < 10 ? 'text-warning' : 'text-success'}`}>
                                                         {totalStock}
                                                     </div>
-                                                    <div className="text-xs text-gray-500">units</div>
+                                                    <div className="text-xs text-gray-500">
+                                                        {t('product.units', 'units')}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -204,7 +211,14 @@ export default function Product({ product, filters }) {
                                                                     </div>
                                                                     
                                                                     <div className="flex gap-4 mt-1 text-xs text-gray-600">
-                                                                        <span>Stock: {variantStock}</span>
+                                                                        <span>
+                                                                            {t('product.stock', 'Stock')}: {variantStock}
+                                                                        </span>
+                                                                        {variantPrice > 0 && (
+                                                                            <span>
+                                                                                {t('product.price', 'Price')}: {formatCurrency(variantPrice)}
+                                                                            </span>
+                                                                        )}
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -223,9 +237,9 @@ export default function Product({ product, filters }) {
                                                                 { id: productItem.id }
                                                             )}
                                                             className="btn btn-xs btn-warning"
-                                                            title="Edit Product"
+                                                            title={t('product.edit', 'Edit Product')}
                                                         >
-                                                            <Pen size={10} /> Edit
+                                                            <Pen size={10} /> {t('product.edit', 'Edit')}
                                                         </Link>
                                                         <Link
                                                             href={route(
@@ -237,16 +251,16 @@ export default function Product({ product, filters }) {
                                                             onClick={(e) => {
                                                                 if (
                                                                     !confirm(
-                                                                        "Are you sure you want to delete this product? This action cannot be undone."
+                                                                        t('product.delete_confirmation', 'Are you sure you want to delete this product? This action cannot be undone.')
                                                                     )
                                                                 ) {
                                                                     e.preventDefault();
                                                                 }
                                                             }}
                                                             className="btn btn-xs btn-error"
-                                                            title="Delete Product"
+                                                            title={t('product.delete', 'Delete Product')}
                                                         >
-                                                            <Trash2 size={10} /> Delete
+                                                            <Trash2 size={10} /> {t('product.delete', 'Delete')}
                                                         </Link>
                                                     </>
                                                 )}
@@ -261,13 +275,13 @@ export default function Product({ product, filters }) {
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={20} className="text-gray-500" />
                         <h1 className="text-gray-500 text-sm">
-                            No products found!
+                            {t('product.no_products_found', 'No products found!')}
                         </h1>
                         <button
                             onClick={() => router.visit(route("product.add"))}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new product
+                            <Plus size={15} /> {t('product.add_new_product', 'Add new product')}
                         </button>
                     </div>
                 )}

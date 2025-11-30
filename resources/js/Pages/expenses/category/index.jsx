@@ -3,6 +3,7 @@ import PageHeader from "../../../components/PageHeader";
 import Pagination from "../../../components/Pagination";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { useTranslation } from "../../../hooks/useTranslation";
 
 // Safe icon component with fallback
 const SafeIcon = ({ icon: Icon, fallback, size = 20, className = "", ...props }) => {
@@ -31,13 +32,13 @@ export default function Index({
   amount,
   query,
 }) {
+  const { t, locale } = useTranslation();
+  
   // State for icons
   const [icons, setIcons] = useState({});
   const [iconsLoaded, setIconsLoaded] = useState(false);
 
   const categories = usePage().props.categories.data;
-  console.log("Categories:", categories,todaysCategoriesCount);
-
 
   // Dynamically load icons
   useEffect(() => {
@@ -92,10 +93,10 @@ export default function Index({
       onSuccess: () => {
         reset();
         modelClose();
-        toast.success("Expense added successfully!");
+        toast.success(t('expenses.add_success', "Expense added successfully!"));
       },
       onError: () => {
-        toast.error("Failed to add expense!");
+        toast.error(t('expenses.add_error', "Failed to add expense!"));
       },
     });
   };
@@ -108,7 +109,7 @@ export default function Index({
 
   // Format currency
   const formatCurrency = (value) => {
-    return Number(value || 0).toLocaleString('en-US', {
+    return Number(value || 0).toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
@@ -123,16 +124,16 @@ export default function Index({
     return (
       <div className="flex justify-center items-center h-64">
         <div className="loading loading-spinner loading-lg"></div>
-        <span className="ml-2">Loading...</span>
+        <span className="ml-2">{t('common.loading', 'Loading...')}</span>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-box p-5">
+    <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
       <PageHeader
-        title="Expense List"
-        subtitle="Manage all your expenses from here"
+        title={t('expenses.title', 'Expense List')}
+        subtitle={t('expenses.manage_subtitle', 'Manage all your expenses from here')}
       >
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-2">
@@ -141,14 +142,14 @@ export default function Index({
               value={startdate}
               onChange={(e) => setStartDate(e.target.value)}
               className="input input-sm border-gray-300"
-              placeholder="Start Date"
+              placeholder={t('expenses.start_date', 'Start Date')}
             />
             <input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               className="input input-sm border-gray-300"
-              placeholder="End Date"
+              placeholder={t('expenses.end_date', 'End Date')}
             />
             {(date || startdate) && (
               <button
@@ -158,7 +159,7 @@ export default function Index({
                   router.visit(route("expenses.list"));
                 }}
                 className="btn btn-sm btn-error btn-outline"
-                title="Clear filters"
+                title={t('common.clear_filters', 'Clear filters')}
               >
                 <SafeIcon 
                   icon={icons.X} 
@@ -177,7 +178,7 @@ export default function Index({
               icon={icons.Plus} 
               fallback={FallbackPlus}
               size={15} 
-            /> Add New Expense
+            /> {t('expenses.add_new_expense', 'Add New Expense')}
           </button>
         </div>
       </PageHeader>
@@ -188,11 +189,11 @@ export default function Index({
             <thead className="bg-primary text-white">
               <tr>
                 <th className="px-4 py-2">#</th>
-                <th className="px-4 py-2">Name</th>
-                <th className="px-4 py-2">Slug</th>
-                <th className="px-4 py-2">Descriptions</th>
-                <th className="px-4 py-2">Created At</th>
-                <th className="px-4 py-2">Actions</th>
+                <th className="px-4 py-2">{t('common.name', 'Name')}</th>
+                <th className="px-4 py-2">{t('common.slug', 'Slug')}</th>
+                <th className="px-4 py-2">{t('common.descriptions', 'Descriptions')}</th>
+                <th className="px-4 py-2">{t('common.created_at', 'Created At')}</th>
+                <th className="px-4 py-2">{t('common.actions', 'Actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -218,7 +219,7 @@ export default function Index({
                     <Link
                       href={route("expenses.del", { id: category.id })}
                       onClick={(e) => {
-                        if (!confirm("Are you sure you want to delete this expense?")) {
+                        if (!confirm(t('expenses.confirm_delete', "Are you sure you want to delete this expense?"))) {
                           e.preventDefault();
                         }
                       }}
@@ -228,7 +229,7 @@ export default function Index({
                         icon={icons.Trash2} 
                         fallback={FallbackTrash}
                         size={12} 
-                      /> Delete
+                      /> {t('common.delete', 'Delete')}
                     </Link>
                   </td>
                 </tr>
@@ -243,7 +244,9 @@ export default function Index({
               size={24} 
               className="text-gray-400" 
             />
-            <h1 className="text-gray-500 text-sm">No expenses found!</h1>
+            <h1 className="text-gray-500 text-sm">
+              {t('expenses.no_expenses_found', 'No expenses found!')}
+            </h1>
             <button
               onClick={() => setModel(true)}
               className="btn btn-primary btn-sm mt-2"
@@ -252,13 +255,13 @@ export default function Index({
                 icon={icons.Plus} 
                 fallback={FallbackPlus}
                 size={15} 
-              /> Add New Expense
+              /> {t('expenses.add_new_expense', 'Add New Expense')}
             </button>
           </div>
         )}
       </div>
 
-      {todaysCategoriesCount> 0 && (
+      {todaysCategoriesCount > 0 && (
         <div className="mt-4">
           <Pagination data={categories} />
         </div>
@@ -267,7 +270,7 @@ export default function Index({
       {/* Summary Section */}
       <div className="border-t border-gray-200 p-5 mt-6">
         <h1 className="text-lg font-semibold text-gray-700 mb-4">
-          Today's Summary
+          {t('expenses.todays_summary', 'Today\'s Summary')}
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
@@ -279,9 +282,11 @@ export default function Index({
               className="text-primary mt-1" 
             />
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Banking</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t('expenses.total_banking', 'Total Banking')}
+              </p>
               <h1 className="text-lg font-bold text-gray-800">
-                {formatCurrency(amount?.totals?.bank)} Tk
+                {formatCurrency(amount?.totals?.bank)} {t('expenses.tk', 'Tk')}
               </h1>
             </div>
           </div>
@@ -294,9 +299,11 @@ export default function Index({
               className="text-primary mt-1" 
             />
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Mobile Banking</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t('expenses.total_mobile_banking', 'Total Mobile Banking')}
+              </p>
               <h1 className="text-lg font-bold text-gray-800">
-                {formatCurrency(amount?.totals?.mobilebanking)} Tk
+                {formatCurrency(amount?.totals?.mobilebanking)} {t('expenses.tk', 'Tk')}
               </h1>
             </div>
           </div>
@@ -309,9 +316,11 @@ export default function Index({
               className="text-primary mt-1" 
             />
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Cash</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t('expenses.total_cash', 'Total Cash')}
+              </p>
               <h1 className="text-lg font-bold text-gray-800">
-                {formatCurrency(amount?.totals?.cash)} Tk
+                {formatCurrency(amount?.totals?.cash)} {t('expenses.tk', 'Tk')}
               </h1>
             </div>
           </div>
@@ -324,9 +333,11 @@ export default function Index({
               className="text-primary mt-1" 
             />
             <div>
-              <p className="text-sm font-medium text-gray-600">Extra Cash</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t('expenses.extra_cash', 'Extra Cash')}
+              </p>
               <h1 className="text-lg font-bold text-gray-800">
-                {formatCurrency(extracashTotal)} Tk
+                {formatCurrency(extracashTotal)} {t('expenses.tk', 'Tk')}
               </h1>
             </div>
           </div>
@@ -339,9 +350,11 @@ export default function Index({
               className="text-error mt-1" 
             />
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Expense</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t('expenses.total_expense', 'Total Expense')}
+              </p>
               <h1 className="text-lg font-bold text-error">
-                {formatCurrency(todaysExpenseTotal)} Tk
+                {formatCurrency(todaysExpenseTotal)} {t('expenses.tk', 'Tk')}
               </h1>
             </div>
           </div>
@@ -356,9 +369,11 @@ export default function Index({
               className="text-primary mt-1" 
             />
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Sales</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t('expenses.total_sales', 'Total Sales')}
+              </p>
               <h1 className="text-lg font-bold text-primary">
-                {formatCurrency(amount?.grandTotal)} Tk
+                {formatCurrency(amount?.grandTotal)} {t('expenses.tk', 'Tk')}
               </h1>
             </div>
           </div>
@@ -373,12 +388,16 @@ export default function Index({
                 size={20} 
                 className={isNegativeCash ? 'text-error' : 'text-primary'} 
               />
-              <p className="text-sm font-medium text-gray-600">Total In Cash</p>
+              <p className="text-sm font-medium text-gray-600">
+                {t('expenses.total_in_cash', 'Total In Cash')}
+              </p>
             </div>
             <h1 className={`text-lg font-bold ${isNegativeCash ? 'text-error' : 'text-primary'}`}>
-              {formatCurrency(totalInCash)} Tk
+              {formatCurrency(totalInCash)} {t('expenses.tk', 'Tk')}
               {isNegativeCash && (
-                <span className="text-xs font-normal ml-2">(Deficit)</span>
+                <span className="text-xs font-normal ml-2">
+                  ({t('expenses.deficit', 'Deficit')})
+                </span>
               )}
             </h1>
           </div>
@@ -390,7 +409,7 @@ export default function Index({
         <div className="modal-box max-w-md">
           <div className="flex items-center justify-between border-b border-gray-200 pb-3 mb-4">
             <h1 className="text-lg font-semibold text-gray-900">
-              Add New Expense Category
+              {t('expenses.add_new_category', 'Add New Expense Category')}
             </h1>
             <button
               onClick={modelClose}
@@ -407,7 +426,9 @@ export default function Index({
           <form onSubmit={formSubmit} className="space-y-4">
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">Date *</span>
+                <span className="label-text font-medium">
+                  {t('expenses.date', 'Date')} *
+                </span>
               </label>
               <input
                 type="date"
@@ -423,11 +444,13 @@ export default function Index({
 
             <div className="form-control">
               <label className="label">
-                <span className="label-text font-medium">Details</span>
+                <span className="label-text font-medium">
+                  {t('expenses.details', 'Details')}
+                </span>
               </label>
               <textarea
                 className="textarea textarea-bordered h-24"
-                placeholder="Enter expense details..."
+                placeholder={t('expenses.details_placeholder', 'Enter expense details...')}
                 value={data.details}
                 onChange={(e) => setData("details", e.target.value)}
               />
@@ -439,7 +462,9 @@ export default function Index({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium">Amount *</span>
+                  <span className="label-text font-medium">
+                    {t('expenses.amount', 'Amount')} *
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -458,7 +483,9 @@ export default function Index({
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text font-medium">SH Amount *</span>
+                  <span className="label-text font-medium">
+                    {t('expenses.sh_amount', 'SH Amount')} *
+                  </span>
                 </label>
                 <input
                   type="number"
@@ -483,7 +510,7 @@ export default function Index({
                 className="btn btn-ghost"
                 disabled={processing}
               >
-                Cancel
+                {t('common.cancel', 'Cancel')}
               </button>
               <button
                 type="submit"
@@ -493,7 +520,7 @@ export default function Index({
                 {processing ? (
                   <span className="loading loading-spinner"></span>
                 ) : (
-                  'Add Expense'
+                  t('expenses.add_expense', 'Add Expense')
                 )}
               </button>
             </div>

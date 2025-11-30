@@ -1,8 +1,11 @@
 import React from "react";
 import PageHeader from "../../components/PageHeader";
 import { useForm } from "@inertiajs/react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Security() {
+    const { t, locale } = useTranslation();
+
     // handle form
     const { data, setData, errors, processing, post, reset } = useForm({
         new_password: "",
@@ -16,10 +19,10 @@ export default function Security() {
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title="Update Your Security"
-                subtitle="Keep your details fresh and make your account truly yours."
+                title={t('auth.security_title', 'Update Your Security')}
+                subtitle={t('auth.security_subtitle', 'Keep your details fresh and make your account truly yours.')}
             />
 
             {/* form */}
@@ -27,7 +30,7 @@ export default function Security() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">
-                            New password*
+                            {t('auth.new_password', 'New Password')}*
                         </legend>
                         <input
                             value={data.new_password}
@@ -36,7 +39,7 @@ export default function Security() {
                             }
                             type="password"
                             className="input"
-                            placeholder="Type here"
+                            placeholder={t('auth.type_here', 'Type here')}
                         />
                         {errors.new_password && (
                             <div className="text-red-600">
@@ -46,7 +49,7 @@ export default function Security() {
                     </fieldset>
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">
-                            Confirm Password
+                            {t('auth.confirm_password', 'Confirm Password')}
                         </legend>
                         <input
                             value={data.new_password_confirmation}
@@ -58,7 +61,7 @@ export default function Security() {
                             }
                             type="password"
                             className="input"
-                            placeholder="Type here"
+                            placeholder={t('auth.type_here', 'Type here')}
                         />
                         {errors.new_password_confirmation && (
                             <div className="text-red-600">
@@ -72,7 +75,7 @@ export default function Security() {
                     disabled={processing}
                     className="btn btn-primary mt-3"
                 >
-                    Update security
+                    {processing ? 'Updating...' : t('auth.update_security', 'Update Security')}
                 </button>
             </form>
         </div>

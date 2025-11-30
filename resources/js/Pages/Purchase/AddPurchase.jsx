@@ -2,8 +2,10 @@ import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
 import { ArrowLeft, Plus, Trash2, Search, Shield, DollarSign } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function AddPurchase({ suppliers, warehouses, products, isShadowUser }) {
+    const { t, locale } = useTranslation();
     const [selectedItems, setSelectedItems] = useState([]);
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
@@ -249,17 +251,17 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
         // Validation
         if (!form.data.supplier_id) {
-            alert("Please select a supplier");
+            alert(t('purchase.select_supplier', 'Please select a supplier'));
             return;
         }
 
         if (!form.data.warehouse_id) {
-            alert("Please select a warehouse");
+            alert(t('purchase.select_warehouse', 'Please select a warehouse'));
             return;
         }
 
         if (selectedItems.length === 0) {
-            alert("Please add at least one product");
+            alert(t('purchase.add_products_validation', 'Please add at least one product'));
             return;
         }
 
@@ -271,7 +273,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
         );
 
         if (invalidItems.length > 0) {
-            alert("Please ensure all items have valid quantities and prices greater than 0");
+            alert(t('purchase.valid_prices_validation', 'Please ensure all items have valid quantities and prices greater than 0'));
             return;
         }
 
@@ -311,17 +313,17 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     const shadowDueAmount = getShadowDueAmount();
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title={isShadowUser ? "Create Purchase (Shadow Mode)" : "Create New Purchase"}
-                subtitle={isShadowUser ? "Add products to purchase order with shadow pricing" : "Add products to purchase order with real and shadow pricing"}
+                title={isShadowUser ? t('purchase.create_shadow_purchase', 'Create Purchase (Shadow Mode)') : t('purchase.create_purchase', 'Create New Purchase')}
+                subtitle={isShadowUser ? t('purchase.create_shadow_subtitle', 'Add products to purchase order with shadow pricing') : t('purchase.create_subtitle', 'Add products to purchase order with real and shadow pricing')}
             >
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => router.visit(route("purchase.list"))}
                         className="btn btn-sm btn-ghost"
                     >
-                        <ArrowLeft size={15} /> Back to List
+                        <ArrowLeft size={15} /> {t('purchase.back_to_list', 'Back to List')}
                     </button>
                 </div>
             </PageHeader>
@@ -332,7 +334,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                     <div className="lg:col-span-1 space-y-4">
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Supplier *</span>
+                                <span className="label-text">{t('purchase.supplier', 'Supplier')} *</span>
                             </label>
                             <select
                                 className="select select-bordered"
@@ -340,7 +342,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 onChange={(e) => form.setData("supplier_id", e.target.value)}
                                 required
                             >
-                                <option value="">Select Supplier</option>
+                                <option value="">{t('purchase.select_supplier', 'Select Supplier')}</option>
                                 {suppliers?.map(supplier => (
                                     <option key={supplier.id} value={supplier.id}>
                                         {supplier.name} - {supplier.company}
@@ -351,7 +353,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Warehouse *</span>
+                                <span className="label-text">{t('purchase.warehouse', 'Warehouse')} *</span>
                             </label>
                             <select
                                 className="select select-bordered"
@@ -359,7 +361,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 onChange={(e) => form.setData("warehouse_id", e.target.value)}
                                 required
                             >
-                                <option value="">Select Warehouse</option>
+                                <option value="">{t('purchase.select_warehouse', 'Select Warehouse')}</option>
                                 {warehouses?.map(warehouse => (
                                     <option key={warehouse.id} value={warehouse.id}>
                                         {warehouse.name} ({warehouse.code})
@@ -370,7 +372,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Purchase Date *</span>
+                                <span className="label-text">{t('purchase.purchase_date', 'Purchase Date')} *</span>
                             </label>
                             <input
                                 type="date"
@@ -386,27 +388,27 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                             <div className="card bg-warning/10 border border-warning p-4">
                                 <h3 className="font-semibold mb-3 flex items-center gap-2 text-warning">
                                     <Shield size={16} /> 
-                                    Shadow Payment Information
+                                    {t('purchase.shadow_payment_information', 'Shadow Payment Information')}
                                 </h3>
 
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">Payment Status</span>
+                                        <span className="label-text">{t('purchase.payment_status', 'Payment Status')}</span>
                                     </label>
                                     <select
                                         className="select select-bordered border-warning"
                                         value={shadowPaymentStatus}
                                         onChange={(e) => handleShadowPaymentStatusChange(e.target.value)}
                                     >
-                                        <option value="unpaid">Unpaid</option>
-                                        <option value="partial">Partial</option>
-                                        <option value="paid">Paid</option>
+                                        <option value="unpaid">{t('purchase.unpaid', 'Unpaid')}</option>
+                                        <option value="partial">{t('purchase.partial', 'Partial')}</option>
+                                        <option value="paid">{t('purchase.paid', 'Paid')}</option>
                                     </select>
                                 </div>
 
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">Paid Amount</span>
+                                        <span className="label-text">{t('purchase.paid_amount', 'Paid Amount')}</span>
                                     </label>
                                     <input
                                         type="number"
@@ -420,19 +422,19 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                                 <div className="mt-2 space-y-1 text-sm">
                                     <div className="flex justify-between">
-                                        <span>Total Amount:</span>
+                                        <span>{t('purchase.total_amount', 'Total Amount')}:</span>
                                         <span className="font-semibold text-warning">
-                                            ৳{shadowTotalAmount.toFixed(2)}
+                                            {t('purchase.currency', '৳')}{shadowTotalAmount.toFixed(2)}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span>Paid Amount:</span>
-                                        <span className="text-green-600">৳{shadowPaidAmount.toFixed(2)}</span>
+                                        <span>{t('purchase.paid_amount', 'Paid Amount')}:</span>
+                                        <span className="text-green-600">{t('purchase.currency', '৳')}{shadowPaidAmount.toFixed(2)}</span>
                                     </div>
                                     <div className="flex justify-between">
-                                        <span>Due Amount:</span>
+                                        <span>{t('purchase.due_amount', 'Due Amount')}:</span>
                                         <span className={`font-semibold ${shadowDueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                            ৳{shadowDueAmount.toFixed(2)}
+                                            {t('purchase.currency', '৳')}{shadowDueAmount.toFixed(2)}
                                         </span>
                                     </div>
                                 </div>
@@ -442,27 +444,27 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 <div className="card bg-base-200 p-4">
                                     <h3 className="font-semibold mb-3 flex items-center gap-2">
                                         <DollarSign size={16} /> 
-                                        Real Payment Information
+                                        {t('purchase.payment_information', 'Payment Information')}
                                     </h3>
 
                                     <div className="form-control">
                                         <label className="label">
-                                            <span className="label-text">Payment Status</span>
+                                            <span className="label-text">{t('purchase.payment_status', 'Payment Status')}</span>
                                         </label>
                                         <select
                                             className="select select-bordered"
                                             value={paymentStatus}
                                             onChange={(e) => handlePaymentStatusChange(e.target.value)}
                                         >
-                                            <option value="unpaid">Unpaid</option>
-                                            <option value="partial">Partial</option>
-                                            <option value="paid">Paid</option>
+                                            <option value="unpaid">{t('purchase.unpaid', 'Unpaid')}</option>
+                                            <option value="partial">{t('purchase.partial', 'Partial')}</option>
+                                            <option value="paid">{t('purchase.paid', 'Paid')}</option>
                                         </select>
                                     </div>
 
                                     <div className="form-control">
                                         <label className="label">
-                                            <span className="label-text">Paid Amount</span>
+                                            <span className="label-text">{t('purchase.paid_amount', 'Paid Amount')}</span>
                                         </label>
                                         <input
                                             type="number"
@@ -476,19 +478,19 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                                     <div className="mt-2 space-y-1 text-sm">
                                         <div className="flex justify-between">
-                                            <span>Total Amount:</span>
+                                            <span>{t('purchase.total_amount', 'Total Amount')}:</span>
                                             <span className="font-semibold">
-                                                ৳{totalAmount.toFixed(2)}
+                                                {t('purchase.currency', '৳')}{totalAmount.toFixed(2)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span>Paid Amount:</span>
-                                            <span className="text-green-600">৳{paidAmount.toFixed(2)}</span>
+                                            <span>{t('purchase.paid_amount', 'Paid Amount')}:</span>
+                                            <span className="text-green-600">{t('purchase.currency', '৳')}{paidAmount.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span>Due Amount:</span>
+                                            <span>{t('purchase.due_amount', 'Due Amount')}:</span>
                                             <span className={`font-semibold ${dueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                                ৳{dueAmount.toFixed(2)}
+                                                {t('purchase.currency', '৳')}{dueAmount.toFixed(2)}
                                             </span>
                                         </div>
                                     </div>
@@ -497,27 +499,27 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 <div className="card bg-blue-50 border border-blue-200 p-4">
                                     <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-700">
                                         <Shield size={16} /> 
-                                        Shadow Payment Information
+                                        {t('purchase.shadow_payment_information', 'Shadow Payment Information')}
                                     </h3>
 
                                     <div className="form-control">
                                         <label className="label">
-                                            <span className="label-text">Payment Status</span>
+                                            <span className="label-text">{t('purchase.payment_status', 'Payment Status')}</span>
                                         </label>
                                         <select
                                             className="select select-bordered border-blue-300"
                                             value={shadowPaymentStatus}
                                             onChange={(e) => handleShadowPaymentStatusChange(e.target.value)}
                                         >
-                                            <option value="unpaid">Unpaid</option>
-                                            <option value="partial">Partial</option>
-                                            <option value="paid">Paid</option>
+                                            <option value="unpaid">{t('purchase.unpaid', 'Unpaid')}</option>
+                                            <option value="partial">{t('purchase.partial', 'Partial')}</option>
+                                            <option value="paid">{t('purchase.paid', 'Paid')}</option>
                                         </select>
                                     </div>
 
                                     <div className="form-control">
                                         <label className="label">
-                                            <span className="label-text">Paid Amount</span>
+                                            <span className="label-text">{t('purchase.paid_amount', 'Paid Amount')}</span>
                                         </label>
                                         <input
                                             type="number"
@@ -531,19 +533,19 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                                     <div className="mt-2 space-y-1 text-sm">
                                         <div className="flex justify-between">
-                                            <span>Shadow Total:</span>
+                                            <span>{t('purchase.shadow_total', 'Shadow Total')}:</span>
                                             <span className="font-semibold text-blue-700">
-                                                ৳{shadowTotalAmount.toFixed(2)}
+                                                {t('purchase.currency', '৳')}{shadowTotalAmount.toFixed(2)}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span>Shadow Paid:</span>
-                                            <span className="text-green-600">৳{shadowPaidAmount.toFixed(2)}</span>
+                                            <span>{t('purchase.shadow_paid', 'Shadow Paid')}:</span>
+                                            <span className="text-green-600">{t('purchase.currency', '৳')}{shadowPaidAmount.toFixed(2)}</span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span>Shadow Due:</span>
+                                            <span>{t('purchase.shadow_due', 'Shadow Due')}:</span>
                                             <span className={`font-semibold ${shadowDueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                                ৳{shadowDueAmount.toFixed(2)}
+                                                {t('purchase.currency', '৳')}{shadowDueAmount.toFixed(2)}
                                             </span>
                                         </div>
                                     </div>
@@ -553,14 +555,14 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Notes</span>
+                                <span className="label-text">{t('purchase.notes', 'Notes')}</span>
                             </label>
                             <textarea
                                 className="textarea textarea-bordered"
                                 rows="3"
                                 value={form.data.notes}
                                 onChange={(e) => form.setData("notes", e.target.value)}
-                                placeholder="Additional notes..."
+                                placeholder={t('purchase.additional_notes', 'Additional notes...')}
                             />
                         </div>
                     </div>
@@ -569,7 +571,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                     <div className="lg:col-span-2">
                         <div className="form-control mb-4" ref={searchRef}>
                             <label className="label">
-                                <span className="label-text">Add Products *</span>
+                                <span className="label-text">{t('purchase.add_products', 'Add Products')} *</span>
                             </label>
                             <div className="relative">
                                 <input
@@ -577,7 +579,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                     className="input input-bordered w-full pr-10"
                                     value={productSearch}
                                     onChange={(e) => setProductSearch(e.target.value)}
-                                    placeholder="Search products by name or code..."
+                                    placeholder={t('purchase.search_products', 'Search products by name or code...')}
                                 />
                                 <Search size={16} className="absolute right-3 top-3 text-gray-400" />
                             </div>
@@ -592,7 +594,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                     {product.name} ({product.product_no})
                                                 </span>
                                                 <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
-                                                    {product.variants?.length || 0} variants
+                                                    {product.variants?.length || 0} {t('purchase.items', 'variants')}
                                                 </span>
                                             </div>
                                             {product.variants && product.variants.map(variant => (
@@ -613,10 +615,10 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                             )}
                                                             <div className="text-xs text-gray-600 space-y-1">
                                                                 <div>
-                                                                    <span className="font-medium">Cost:</span> 
-                                                                    ৳{variant.unit_cost || '0.00'} | 
-                                                                    <span className="font-medium ml-2">Shadow:</span> 
-                                                                    ৳{variant.shadow_unit_cost || '0.00'}
+                                                                    <span className="font-medium">{t('purchase.unit_price', 'Cost')}:</span> 
+                                                                    {t('purchase.currency', '৳')}{variant.unit_cost || '0.00'} | 
+                                                                    <span className="font-medium ml-2">{t('purchase.shadow_unit_price', 'Shadow')}:</span> 
+                                                                    {t('purchase.currency', '৳')}{variant.shadow_unit_cost || '0.00'}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -631,7 +633,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                             {productSearch && filteredProducts.length === 0 && (
                                 <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg p-4 text-center text-gray-500">
-                                    No products found matching "{productSearch}"
+                                    {t('purchase.no_products_found', 'No products found matching')} "{productSearch}"
                                 </div>
                             )}
                         </div>
@@ -639,7 +641,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                         {selectedItems.length > 0 ? (
                             <div className="space-y-3">
                                 <h3 className="font-semibold flex items-center gap-2">
-                                    Selected Items ({selectedItems.length})
+                                    {t('purchase.selected_items', 'Selected Items')} ({selectedItems.length})
                                 </h3>
                                 {selectedItems.map((item, index) => (
                                     <div key={index} className="border border-gray-300 rounded-box p-4">
@@ -654,6 +656,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 className="btn btn-xs btn-error"
                                             >
                                                 <Trash2 size={12} />
+                                                {t('purchase.remove', 'Remove')}
                                             </button>
                                         </div>
 
@@ -661,7 +664,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
                                                 <div className="form-control">
                                                     <label className="label">
-                                                        <span className="label-text">Quantity *</span>
+                                                        <span className="label-text">{t('purchase.quantity', 'Quantity')} *</span>
                                                     </label>
                                                     <input
                                                         type="number"
@@ -676,7 +679,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 {!isShadowUser && (
                                                     <div className="form-control">
                                                         <label className="label">
-                                                            <span className="label-text">Unit Price *</span>
+                                                            <span className="label-text">{t('purchase.unit_price', 'Unit Price')} *</span>
                                                         </label>
                                                         <input
                                                             type="number"
@@ -693,7 +696,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text flex items-center gap-1">
-                                                            {isShadowUser ? 'Unit Price *' : 'Shadow Unit Price *'}
+                                                            {isShadowUser ? t('purchase.unit_price', 'Unit Price') : t('purchase.shadow_unit_price', 'Shadow Unit Price')} *
                                                             {isShadowUser && <Shield size={12} className="text-warning" />}
                                                         </span>
                                                     </label>
@@ -711,7 +714,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text">
-                                                            {isShadowUser ? 'Total Price' : 'Real Total'}
+                                                            {isShadowUser ? t('purchase.total_price', 'Total Price') : t('purchase.real_total', 'Real Total')}
                                                         </span>
                                                     </label>
                                                     <input
@@ -727,7 +730,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 {!isShadowUser && (
                                                     <div className="form-control">
                                                         <label className="label">
-                                                            <span className="label-text">Sale Price *</span>
+                                                            <span className="label-text">{t('purchase.sale_price', 'Sale Price')} *</span>
                                                         </label>
                                                         <input
                                                             type="number"
@@ -744,7 +747,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text flex items-center gap-1">
-                                                            {isShadowUser ? 'Sale Price *' : 'Shadow Sale Price *'}
+                                                            {isShadowUser ? t('purchase.sale_price', 'Sale Price') : t('purchase.shadow_sale_price', 'Shadow Sale Price')} *
                                                             {isShadowUser && <Shield size={12} className="text-warning" />}
                                                         </span>
                                                     </label>
@@ -764,23 +767,23 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 {!isShadowUser && (
                                                     <div className="text-xs text-gray-600">
                                                         <div className="flex justify-between">
-                                                            <span>Real Total:</span>
-                                                            <span className="font-medium">৳{item.total_price?.toFixed(2) || '0.00'}</span>
+                                                            <span>{t('purchase.real_total', 'Real Total')}:</span>
+                                                            <span className="font-medium">{t('purchase.currency', '৳')}{item.total_price?.toFixed(2) || '0.00'}</span>
                                                         </div>
                                                         <div className="flex justify-between">
-                                                            <span>Real Sale Price:</span>
-                                                            <span className="font-medium">৳{item.sale_price?.toFixed(2) || '0.00'}</span>
+                                                            <span>{t('purchase.real_sale_price', 'Real Sale Price')}:</span>
+                                                            <span className="font-medium">{t('purchase.currency', '৳')}{item.sale_price?.toFixed(2) || '0.00'}</span>
                                                         </div>
                                                     </div>
                                                 )}
                                                 <div className={`text-xs ${isShadowUser ? 'text-warning' : 'text-blue-600'}`}>
                                                     <div className="flex justify-between">
-                                                        <span>{isShadowUser ? 'Active Total' : 'Shadow Total'}:</span>
-                                                        <span className="font-medium">৳{item.shadow_total_price?.toFixed(2) || '0.00'}</span>
+                                                        <span>{isShadowUser ? t('purchase.active_total', 'Active Total') : t('purchase.shadow_total', 'Shadow Total')}:</span>
+                                                        <span className="font-medium">{t('purchase.currency', '৳')}{item.shadow_total_price?.toFixed(2) || '0.00'}</span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span>{isShadowUser ? 'Active Sale Price' : 'Shadow Sale Price'}:</span>
-                                                        <span className="font-medium">৳{item.shadow_sale_price?.toFixed(2) || '0.00'}</span>
+                                                        <span>{isShadowUser ? t('purchase.active_sale_price', 'Active Sale Price') : t('purchase.shadow_sale_price', 'Shadow Sale Price')}:</span>
+                                                        <span className="font-medium">{t('purchase.currency', '৳')}{item.shadow_sale_price?.toFixed(2) || '0.00'}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -793,31 +796,31 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                     <div className={`grid ${isShadowUser ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-4`}>
                                         {!isShadowUser && (
                                             <div className="p-4 rounded-box bg-base-200">
-                                                <h4 className="font-semibold mb-2">Real Amounts</h4>
+                                                <h4 className="font-semibold mb-2">{t('purchase.real_amounts', 'Real Amounts')}</h4>
                                                 <div className="space-y-1 text-sm">
                                                     <div className="flex justify-between">
-                                                        <span>Total Amount:</span>
+                                                        <span>{t('purchase.total_amount', 'Total Amount')}:</span>
                                                         <span className="font-semibold">
-                                                            ৳{totalAmount.toFixed(2)}
+                                                            {t('purchase.currency', '৳')}{totalAmount.toFixed(2)}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span>Paid Amount:</span>
+                                                        <span>{t('purchase.paid_amount', 'Paid Amount')}:</span>
                                                         <span className="text-green-600">
-                                                            ৳{paidAmount.toFixed(2)}
+                                                            {t('purchase.currency', '৳')}{paidAmount.toFixed(2)}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span>Due Amount:</span>
+                                                        <span>{t('purchase.due_amount', 'Due Amount')}:</span>
                                                         <span className={`font-semibold ${dueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                                            ৳{dueAmount.toFixed(2)}
+                                                            {t('purchase.currency', '৳')}{dueAmount.toFixed(2)}
                                                         </span>
                                                     </div>
                                                     <div className="mt-2 pt-2 border-t">
                                                         <div className="flex justify-between">
-                                                            <span>Payment Status:</span>
+                                                            <span>{t('purchase.payment_status', 'Payment Status')}:</span>
                                                             <span className={`badge badge-${paymentStatus === 'paid' ? 'success' : paymentStatus === 'partial' ? 'warning' : 'error'} badge-sm`}>
-                                                                {paymentStatus}
+                                                                {t(`purchase.${paymentStatus}`, paymentStatus)}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -827,31 +830,31 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
                                         <div className={`p-4 rounded-box ${isShadowUser ? 'bg-warning/10 border border-warning' : 'bg-blue-50 border border-blue-200'}`}>
                                             <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                                {isShadowUser ? 'Active Amounts' : 'Shadow Amounts'}
-                                                {isShadowUser && <span className="badge badge-warning badge-sm">Active</span>}
+                                                {isShadowUser ? t('purchase.active_amounts', 'Active Amounts') : t('purchase.shadow_amounts', 'Shadow Amounts')}
+                                                {isShadowUser && <span className="badge badge-warning badge-sm">{t('purchase.active', 'Active')}</span>}
                                             </h4>
                                             <div className="space-y-1 text-sm">
                                                 <div className="flex justify-between">
-                                                    <span>{isShadowUser ? 'Total Amount' : 'Shadow Total'}:</span>
+                                                    <span>{isShadowUser ? t('purchase.total_amount', 'Total Amount') : t('purchase.shadow_total', 'Shadow Total')}:</span>
                                                     <span className={`font-semibold ${isShadowUser ? 'text-warning' : 'text-blue-700'}`}>
-                                                        ৳{shadowTotalAmount.toFixed(2)}
+                                                        {t('purchase.currency', '৳')}{shadowTotalAmount.toFixed(2)}
                                                     </span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span>{isShadowUser ? 'Paid Amount' : 'Shadow Paid'}:</span>
-                                                    <span className="text-green-600">৳{shadowPaidAmount.toFixed(2)}</span>
+                                                    <span>{isShadowUser ? t('purchase.paid_amount', 'Paid Amount') : t('purchase.shadow_paid', 'Shadow Paid')}:</span>
+                                                    <span className="text-green-600">{t('purchase.currency', '৳')}{shadowPaidAmount.toFixed(2)}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span>{isShadowUser ? 'Due Amount' : 'Shadow Due'}:</span>
+                                                    <span>{isShadowUser ? t('purchase.due_amount', 'Due Amount') : t('purchase.shadow_due', 'Shadow Due')}:</span>
                                                     <span className={`font-semibold ${shadowDueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                                        ৳{shadowDueAmount.toFixed(2)}
+                                                        {t('purchase.currency', '৳')}{shadowDueAmount.toFixed(2)}
                                                     </span>
                                                 </div>
                                                 <div className="mt-2 pt-2 border-t">
                                                     <div className="flex justify-between">
-                                                        <span>Payment Status:</span>
+                                                        <span>{t('purchase.payment_status', 'Payment Status')}:</span>
                                                         <span className={`badge badge-${shadowPaymentStatus === 'paid' ? 'success' : shadowPaymentStatus === 'partial' ? 'warning' : 'error'} badge-sm`}>
-                                                            {shadowPaymentStatus}
+                                                            {t(`purchase.${shadowPaymentStatus}`, shadowPaymentStatus)}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -862,11 +865,11 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                             </div>
                         ) : (
                             <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-box">
-                                <p className="text-gray-500">No items added yet</p>
-                                <p className="text-sm text-gray-400 mt-1">Search and add products above</p>
+                                <p className="text-gray-500">{t('purchase.no_items_added', 'No items added yet')}</p>
+                                <p className="text-sm text-gray-400 mt-1">{t('purchase.search_add_products', 'Search and add products above')}</p>
                                 {isShadowUser && (
                                     <p className="text-sm text-warning mt-2">
-                                        Remember to enter shadow prices for all items
+                                        {t('purchase.enter_shadow_prices', 'Remember to enter shadow prices for all items')}
                                     </p>
                                 )}
                             </div>
@@ -883,15 +886,15 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                         {form.processing ? (
                             <span className="flex items-center gap-2">
                                 <div className="loading loading-spinner loading-sm"></div>
-                                Creating Purchase...
+                                {t('purchase.creating_purchase', 'Creating Purchase...')}
                             </span>
                         ) : isShadowUser ? (
                             <>
                                 <Shield size={16} />
-                                Create Shadow Purchase
+                                {t('purchase.create_shadow_purchase_btn', 'Create Shadow Purchase')}
                             </>
                         ) : (
-                            "Create Purchase"
+                            t('purchase.create_purchase_btn', 'Create Purchase')
                         )}
                     </button>
                     <button
@@ -899,7 +902,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                         onClick={() => router.visit(route("purchase.list"))}
                         className="btn btn-ghost"
                     >
-                        Cancel
+                        {t('purchase.cancel', 'Cancel')}
                     </button>
                 </div>
             </form>

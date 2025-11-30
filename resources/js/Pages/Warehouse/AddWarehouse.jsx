@@ -1,8 +1,10 @@
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function AddWarehouse({ warehouse }) {
+    const { t, locale } = useTranslation();
     const isEdit = !!warehouse;
 
     const form = useForm({
@@ -33,16 +35,16 @@ export default function AddWarehouse({ warehouse }) {
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title={isEdit ? "Edit Warehouse" : "Add New Warehouse"}
-                subtitle={isEdit ? "Update warehouse information" : "Create a new warehouse"}
+                title={isEdit ? t('warehouse.edit_warehouse', 'Edit Warehouse') : t('warehouse.add_warehouse', 'Add New Warehouse')}
+                subtitle={isEdit ? t('warehouse.update_warehouse_info', 'Update warehouse information') : t('warehouse.warehouse_information', 'Warehouse Information')}
             >
                 <button
                     onClick={() => router.visit(route("warehouse.list"))}
                     className="btn btn-sm btn-ghost"
                 >
-                    <ArrowLeft size={15} /> Back to List
+                    <ArrowLeft size={15} /> {t('warehouse.back_to_list', 'Back to List')}
                 </button>
             </PageHeader>
 
@@ -50,7 +52,12 @@ export default function AddWarehouse({ warehouse }) {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text">Warehouse Name *</span>
+                            <span className="label-text">
+                                {t('warehouse.warehouse_name', 'Warehouse Name')} 
+                                <span className="text-red-500 ml-1">
+                                    {t('warehouse.required_field', '*')}
+                                </span>
+                            </span>
                         </label>
                         <input
                             type="text"
@@ -66,7 +73,12 @@ export default function AddWarehouse({ warehouse }) {
 
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text">Warehouse Code *</span>
+                            <span className="label-text">
+                                {t('warehouse.warehouse_code', 'Warehouse Code')} 
+                                <span className="text-red-500 ml-1">
+                                    {t('warehouse.required_field', '*')}
+                                </span>
+                            </span>
                         </label>
                         <input
                             type="text"
@@ -82,7 +94,7 @@ export default function AddWarehouse({ warehouse }) {
 
                     <div className="form-control md:col-span-2">
                         <label className="label">
-                            <span className="label-text">Address</span>
+                            <span className="label-text">{t('warehouse.address', 'Address')}</span>
                         </label>
                         <textarea
                             className="textarea textarea-bordered"
@@ -94,7 +106,7 @@ export default function AddWarehouse({ warehouse }) {
 
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text">Phone</span>
+                            <span className="label-text">{t('warehouse.phone', 'Phone')}</span>
                         </label>
                         <input
                             type="tel"
@@ -106,7 +118,7 @@ export default function AddWarehouse({ warehouse }) {
 
                     <div className="form-control">
                         <label className="label">
-                            <span className="label-text">Email</span>
+                            <span className="label-text">{t('warehouse.email', 'Email')}</span>
                         </label>
                         <input
                             type="email"
@@ -124,7 +136,7 @@ export default function AddWarehouse({ warehouse }) {
                                 checked={form.data.is_active}
                                 onChange={(e) => form.setData("is_active", e.target.checked)}
                             />
-                            <span className="label-text">Active Warehouse</span>
+                            <span className="label-text">{t('warehouse.active_warehouse', 'Active Warehouse')}</span>
                         </label>
                     </div>
                 </div>
@@ -135,14 +147,19 @@ export default function AddWarehouse({ warehouse }) {
                         className="btn btn-primary"
                         disabled={form.processing}
                     >
-                        {form.processing ? "Saving..." : isEdit ? "Update Warehouse" : "Create Warehouse"}
+                        {form.processing 
+                            ? t('warehouse.saving', 'Saving...') 
+                            : isEdit 
+                                ? t('warehouse.update_warehouse', 'Update Warehouse')
+                                : t('warehouse.create_warehouse', 'Create Warehouse')
+                        }
                     </button>
                     <button
                         type="button"
                         onClick={() => router.visit(route("warehouse.list"))}
                         className="btn btn-ghost"
                     >
-                        Cancel
+                        {t('warehouse.cancel', 'Cancel')}
                     </button>
                 </div>
             </form>

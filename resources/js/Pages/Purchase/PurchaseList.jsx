@@ -3,9 +3,11 @@ import Pagination from "../../components/Pagination";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import { Eye, Plus, Trash2, Frown, Calendar, User, Warehouse, DollarSign, Package, Shield, Search, Filter, X, Edit, CheckCircle, Clock, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function PurchaseList({ purchases, filters, isShadowUser }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
 
     const [localFilters, setLocalFilters] = useState({
         search: filters?.search || "",
@@ -152,7 +154,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
         );
 
         if (invalidItems.length > 0) {
-            alert('Please enter valid prices for all items');
+            alert(t('purchase.enter_valid_prices', 'Please enter valid prices for all items'));
             return;
         }
 
@@ -165,11 +167,11 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     };
 
     const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('en-IN');
+        return new Date(date).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-IN');
     };
 
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-IN', {
+        return new Intl.NumberFormat(locale === 'bn' ? 'bn-BD' : 'en-IN', {
             style: 'currency',
             currency: 'BDT'
         }).format(amount || 0);
@@ -208,10 +210,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     const safePagination = purchases || {};
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title={isShadowUser ? "Purchase Management" : "Purchase Management"}
-                subtitle={isShadowUser ? "View purchase data" : "Manage your product purchases"}
+                title={t('purchase.purchase_management', 'Purchase Management')}
+                subtitle={isShadowUser ? t('purchase.view_purchase_data', 'View purchase data') : t('purchase.manage_purchases', 'Manage your product purchases')}
             >
                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                     <div className="flex gap-2">
@@ -222,7 +224,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                 onChange={(e) => handleFilter('search', e.target.value)}
                                 value={localFilters.search}
                                 style={{ padding: '0 0 0 20px', width: '150px' }}
-                                placeholder="Search purchases..."
+                                placeholder={t('purchase.search_purchases', 'Search purchases...')}
                                 className="input input-sm input-bordered pl-9"
                             />
                         </div>
@@ -231,10 +233,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             value={localFilters.status}
                             className="select select-sm select-bordered"
                         >
-                            <option value="">All Status</option>
-                            <option value="pending">Pending</option>
-                            <option value="completed">Completed</option>
-                            <option value="cancelled">Cancelled</option>
+                            <option value="">{t('purchase.all_status', 'All Status')}</option>
+                            <option value="pending">{t('purchase.pending', 'Pending')}</option>
+                            <option value="completed">{t('purchase.completed', 'Completed')}</option>
+                            <option value="cancelled">{t('purchase.cancelled', 'Cancelled')}</option>
                         </select>
                         <input
                             type="date"
@@ -246,7 +248,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             <button
                                 onClick={clearFilters}
                                 className="btn btn-sm btn-ghost"
-                                title="Clear all filters"
+                                title={t('purchase.clear_filters', 'Clear all filters')}
                             >
                                 <X size={14} />
                             </button>
@@ -258,7 +260,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
                         >
                             <Plus size={15} />
-                            {isShadowUser ? 'New Purchase' : 'New Purchase'}
+                            {t('purchase.new_purchase', 'New Purchase')}
                         </Link>
                     )}
                 </div>
@@ -269,27 +271,27 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                 <div className="mb-4 p-3 bg-base-200 rounded-box">
                     <div className="flex items-center gap-2 text-sm">
                         <Filter size={14} className="text-gray-500" />
-                        <span className="font-medium">Active Filters:</span>
+                        <span className="font-medium">{t('purchase.active_filters', 'Active Filters')}:</span>
                         {localFilters.search && (
                             <span className="badge badge-outline">
-                                Search: "{localFilters.search}"
+                                {t('purchase.search', 'Search')}: "{localFilters.search}"
                             </span>
                         )}
                         {localFilters.status && (
                             <span className="badge badge-outline">
-                                Status: {localFilters.status}
+                                {t('purchase.status', 'Status')}: {t(`purchase.${localFilters.status}`, localFilters.status)}
                             </span>
                         )}
                         {localFilters.date && (
                             <span className="badge badge-outline">
-                                Date: {localFilters.date}
+                                {t('purchase.date', 'Date')}: {localFilters.date}
                             </span>
                         )}
                         <button
                             onClick={clearFilters}
                             className="btn btn-xs btn-ghost ml-auto"
                         >
-                            Clear All
+                            {t('purchase.clear_all', 'Clear All')}
                         </button>
                     </div>
                 </div>
@@ -301,11 +303,11 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                         <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                             <tr>
                                 <th className="bg-opacity-20">#</th>
-                                <th>Purchase Details</th>
-                                <th>Supplier & Warehouse</th>
-                                <th>Items & Amount</th>
-                                <th>Payment Status</th>
-                                <th>Actions</th>
+                                <th>{t('purchase.purchase_details', 'Purchase Details')}</th>
+                                <th>{t('purchase.supplier_warehouse', 'Supplier & Warehouse')}</th>
+                                <th>{t('purchase.items_amount', 'Items & Amount')}</th>
+                                <th>{t('purchase.payment_status', 'Payment Status')}</th>
+                                <th>{t('purchase.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -317,10 +319,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                     <td>
                                         <div className="space-y-1">
                                             <div className="font-mono font-bold flex items-center gap-2">
-                                                {purchase.purchase_no}
+                                                {t('purchase.purchase_number', 'Purchase #')}{purchase.purchase_no}
                                                 {isPendingApproval(purchase) && (
                                                     <span className="badge badge-warning badge-sm">
-                                                        <Clock size={12} /> Pending
+                                                        <Clock size={12} /> {t('purchase.pending_approval', 'Pending')}
                                                     </span>
                                                 )}
                                                 {purchase.user_type === 'shadow' && (
@@ -334,7 +336,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                             {purchase.user_type === 'shadow' && (
                                                 <div className="text-xs text-warning flex items-center gap-1">
                                                     <Shield size={12} />
-                                                    Shadow Purchase
+                                                    {t('purchase.shadow_purchase', 'Shadow Purchase')}
                                                 </div>
                                             )}
                                         </div>
@@ -362,10 +364,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                             <div className="flex items-center gap-2">
                                                 <Package size={14} className="text-purple-600" />
                                                 <span className="font-medium">
-                                                    {purchase.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0} units
+                                                    {purchase.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0} {t('purchase.units', 'units')}
                                                 </span>
                                                 <span className="text-sm text-gray-500">
-                                                    ({purchase.items?.length || 0} items)
+                                                    ({purchase.items?.length || 0} {t('purchase.items', 'items')})
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
@@ -376,12 +378,12 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                             </div>
                                             {purchase.user_type === 'shadow' && purchase.status === 'pending' && (
                                                 <div className="text-xs text-warning">
-                                                    Needs Approval
+                                                    {t('purchase.needs_approval', 'Needs Approval')}
                                                 </div>
                                             )}
                                             {!isShadowUser && purchase.user_type === 'shadow' && (
                                                 <div className="text-xs text-blue-600">
-                                                    Shadow Total: {formatCurrency(purchase.shadow_total_amount)}
+                                                    {t('purchase.shadow_total', 'Shadow Total')}: {formatCurrency(purchase.shadow_total_amount)}
                                                 </div>
                                             )}
                                         </div>
@@ -389,18 +391,18 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                     <td>
                                         <div className="flex flex-col gap-1">
                                             <span className={`badge badge-${purchase.status_color || 'neutral'} badge-sm`}>
-                                                {purchase.status}
+                                                {t(`purchase.${purchase.status}`, purchase.status)}
                                             </span>
                                             <div className="text-xs space-y-1">
                                                 <div className="flex justify-between">
-                                                    <span>Paid:</span>
+                                                    <span>{t('purchase.paid_status', 'Paid')}:</span>
                                                     <span className="text-green-600">
                                                         {formatCurrency(displayAmounts.paid)}
                                                     </span>
                                                 </div>
                                                 {displayAmounts.due > 0 && (
                                                     <div className="flex justify-between">
-                                                        <span>Due:</span>
+                                                        <span>{t('purchase.due_amount', 'Due')}:</span>
                                                         <span className="text-orange-600">
                                                             {formatCurrency(displayAmounts.due)}
                                                         </span>
@@ -409,17 +411,17 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                 <div className={`badge badge-xs ${displayAmounts.payment_status === 'paid' ? 'badge-success' :
                                                         displayAmounts.payment_status === 'partial' ? 'badge-warning' : 'badge-error'
                                                     }`}>
-                                                    {displayAmounts.payment_status}
+                                                    {t(`purchase.${displayAmounts.payment_status}`, displayAmounts.payment_status)}
                                                 </div>
                                             </div>
                                             {!isShadowUser && purchase.shadow_payment_status && (
                                                 <div className="text-xs text-blue-600 mt-1">
                                                     <div className="flex justify-between">
-                                                        <span>Shadow:</span>
+                                                        <span>{t('purchase.shadow', 'Shadow')}:</span>
                                                         <span className={`badge badge-xs ${purchase.shadow_payment_status === 'paid' ? 'badge-success' :
                                                                 purchase.shadow_payment_status === 'partial' ? 'badge-warning' : 'badge-error'
                                                             }`}>
-                                                            {purchase.shadow_payment_status}
+                                                            {t(`purchase.${purchase.shadow_payment_status}`, purchase.shadow_payment_status)}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -432,7 +434,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                 href={route("purchase.show", purchase.id)}
                                                 className="btn btn-xs btn-info btn-outline"
                                             >
-                                                <Eye size={12} /> Details
+                                                <Eye size={12} /> {t('purchase.details', 'Details')}
                                             </Link>
 
                                             {auth?.role === "admin" && purchase.status !== 'cancelled' && (
@@ -440,7 +442,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                     onClick={() => openPaymentModal(purchase)}
                                                     className="btn btn-xs btn-warning btn-outline"
                                                 >
-                                                    <Edit size={12} /> Payment
+                                                    <Edit size={12} /> {t('purchase.payment', 'Payment')}
                                                 </button>
                                             )}
 
@@ -449,7 +451,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                     onClick={() => openApproveModal(purchase)}
                                                     className="btn btn-xs btn-success btn-outline"
                                                 >
-                                                    <CheckCircle size={12} /> Approve
+                                                    <CheckCircle size={12} /> {t('purchase.approve', 'Approve')}
                                                 </button>
                                             )}
 
@@ -458,7 +460,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                     onClick={() => handleDelete(purchase.id)}
                                                     className="btn btn-xs btn-error btn-outline"
                                                 >
-                                                    <Trash2 size={12} /> Delete
+                                                    <Trash2 size={12} /> {t('purchase.delete', 'Delete')}
                                                 </button>
                                             )}
                                         </div>
@@ -471,13 +473,13 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                     <div className="border border-gray-200 rounded-box px-5 py-16 flex flex-col justify-center items-center gap-3">
                         <Frown size={40} className="text-gray-400" />
                         <h1 className="text-gray-500 text-lg font-medium">
-                            {hasActiveFilters ? "No purchases match your filters" :
-                                isShadowUser ? "No purchases found!" : "No purchases found!"}
+                            {hasActiveFilters ? t('purchase.no_matching_purchases', 'No purchases match your filters') :
+                                isShadowUser ? t('purchase.no_purchases_found', 'No purchases found!') : t('purchase.no_purchases_found', 'No purchases found!')}
                         </h1>
                         <p className="text-gray-400 text-sm">
-                            {hasActiveFilters ? "Try adjusting your search criteria" :
-                                isShadowUser ? "Get started by creating your first purchase" :
-                                    "Get started by creating your first purchase"}
+                            {hasActiveFilters ? t('purchase.adjust_search_criteria', 'Try adjusting your search criteria') :
+                                isShadowUser ? t('purchase.create_first_purchase', 'Get started by creating your first purchase') :
+                                    t('purchase.create_first_purchase', 'Get started by creating your first purchase')}
                         </p>
                         <div className="flex gap-2 mt-2">
                             {hasActiveFilters && (
@@ -485,7 +487,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                     onClick={clearFilters}
                                     className="btn btn-sm btn-ghost"
                                 >
-                                    Clear Filters
+                                    {t('purchase.clear_filters', 'Clear Filters')}
                                 </button>
                             )}
                             {auth?.role === "admin" && (
@@ -494,7 +496,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                     className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
                                 >
                                     <Plus size={15} />
-                                    {isShadowUser ? 'Create Purchase' : 'Create Purchase'}
+                                    {t('purchase.new_purchase', 'Create Purchase')}
                                 </Link>
                             )}
                         </div>

@@ -2,8 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import BarcodeSticker from "../components/BarcodeSticker";
 import { Printer, X } from "lucide-react";
 import { router, useForm } from "@inertiajs/react";
+import { useTranslation } from "../hooks/useTranslation";
 
 export default function Barcode({ code: severCode, product: allProduct }) {
+    const { t, locale } = useTranslation();
     const [price, setPrice] = useState(allProduct?.gross_price || 0);
     const [product, setProduct] = useState(allProduct?.sizes || null);
     const [selectedSize, setSelectedSize] = useState("");
@@ -13,10 +15,10 @@ export default function Barcode({ code: severCode, product: allProduct }) {
     const handleSizeChange = (e) => {
         const sizeName = e.target.value;
 
-        // নির্বাচিত size object খুঁজে বের করো
+        // Find selected size object
         const selectedSizeObj = product.find((item) => item.name === sizeName);
 
-        // যদি মেলে, তাহলে তার colors set করো
+        // If found, set its colors
         if (selectedSizeObj) {
             setAvailableColors(selectedSizeObj.colors || []);
         } else {
@@ -37,18 +39,18 @@ export default function Barcode({ code: severCode, product: allProduct }) {
     };
 
     return (
-        <div className="p-4">
+        <div className={`p-4 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <div className="print:hidden flex items-center gap-2">
                 <input
                     type="search"
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
-                    placeholder="Enter product code"
+                    placeholder={t('barcode.enter_product_code', 'Enter product code')}
                     className="input"
                 />
                 {code && code !== "" && (
                     <button onClick={findProduct} className="btn btn-primary">
-                        Find Product
+                        {t('barcode.find_product', 'Find Product')}
                     </button>
                 )}
                 {product !== null && (
@@ -67,7 +69,7 @@ export default function Barcode({ code: severCode, product: allProduct }) {
                         onChange={handleSizeChange}
                     >
                         <option value="" disabled>
-                            --Size--
+                            {t('barcode.select_size', '--Size--')}
                         </option>
                         {product.map((val) => (
                             <option key={val.id} value={val.name}>
@@ -82,7 +84,7 @@ export default function Barcode({ code: severCode, product: allProduct }) {
                         onChange={(e) => setBarcode(e.target.value)}
                     >
                         <option value="" disabled selected>
-                            --Color--
+                            {t('barcode.select_color', '--Color--')}
                         </option>
                         {availableColors.length > 0 ? (
                             availableColors.map((color) => (
@@ -101,7 +103,7 @@ export default function Barcode({ code: severCode, product: allProduct }) {
                                 </option>
                             ))
                         ) : (
-                            <option disabled>No colors available</option>
+                            <option disabled>{t('barcode.no_colors_available', 'No colors available')}</option>
                         )}
                     </select>
                 </div>
@@ -118,7 +120,7 @@ export default function Barcode({ code: severCode, product: allProduct }) {
                 disabled={!selectedSize || !barcode}
                 className="mt-4 btn btn-primary print:hidden"
             >
-                <Printer size={13} /> Print Sticker
+                <Printer size={13} /> {t('barcode.print_sticker', 'Print Sticker')}
             </button>
         </div>
     );

@@ -1,0 +1,57 @@
+<?php
+
+return [
+    'title' => 'সাপ্লাইয়ার কন্টাক্টস',
+    'subtitle' => 'আপনার সকল সাপ্লাইয়ার কন্টাক্টস এখান থেকে ব্যবস্থাপনা করুন।',
+    'search_placeholder' => 'সাপ্লাইয়ার খুঁজুন...',
+    'add_new' => 'নতুন যোগ করুন',
+    'add_new_contact' => 'নতুন কন্টাক্ট যোগ করুন',
+    'edit_contact' => 'সাপ্লাইয়ার কন্টাক্ট সম্পাদনা করুন',
+    
+    // Table Headers
+    'contact_info' => 'কন্টাক্ট তথ্য',
+    'company' => 'কোম্পানি',
+    'description' => 'বিবরণ',
+    'added_on' => 'যোগ করার তারিখ',
+    'actions' => 'ক্রিয়াকলাপ',
+    
+    // Contact Details
+    'website' => 'ওয়েবসাইট',
+    'no_description' => 'কোন বিবরণ নেই',
+    'no_permission' => 'অনুমতি নেই',
+    
+    // Form Fields
+    'supply_name' => 'সাপ্লাইয়ারের নাম',
+    'supply_name_placeholder' => 'সাপ্লাইয়ারের নাম লিখুন',
+    'contact_person' => 'কন্টাক্ট পারসন',
+    'contact_person_placeholder' => 'কন্টাক্ট পারসনের নাম লিখুন',
+    'email' => 'ইমেইল',
+    'email_placeholder' => 'ইমেইল ঠিকানা লিখুন',
+    'phone' => 'ফোন',
+    'phone_placeholder' => 'ফোন নম্বর লিখুন',
+    'company_name' => 'কোম্পানি',
+    'company_placeholder' => 'কোম্পানির নাম লিখুন',
+    'website_url' => 'ওয়েবসাইট',
+    'website_placeholder' => 'https://example.com',
+    'address' => 'ঠিকানা',
+    'address_placeholder' => 'সম্পূর্ণ ঠিকানা লিখুন',
+    'description_field' => 'বিবরণ',
+    'description_placeholder' => 'বিবরণ বা নোট লিখুন',
+    
+    // Buttons
+    'edit' => 'সম্পাদনা',
+    'delete' => 'মুছুন',
+    'cancel' => 'বাতিল',
+    'update_contact' => 'কন্টাক্ট আপডেট করুন',
+    'add_contact' => 'কন্টাক্ট যোগ করুন',
+    'processing' => 'প্রক্রিয়াকরণ...',
+    
+    // Messages
+    'no_contacts_found' => 'কোন সাপ্লাইয়ার কন্টাক্ট পাওয়া যায়নি',
+    'no_matching_contacts' => '":search" এর সাথে মিলছে না',
+    'get_started_message' => 'আপনার প্রথম সাপ্লাইয়ার কন্টাক্ট যোগ করে শুরু করুন',
+    'delete_confirmation' => 'আপনি কি নিশ্চিত যে আপনি এই সাপ্লাইয়ার কন্টাক্টটি মুছতে চান?',
+    
+    // Required field indicator
+    'required_field' => '*',
+];

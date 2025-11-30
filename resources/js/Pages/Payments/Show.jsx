@@ -15,9 +15,11 @@ import {
     Globe
 } from "lucide-react";
 import { Link, usePage } from "@inertiajs/react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function PaymentShow({ payment }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
 
     // Format currency
     const formatCurrency = (amount) => {
@@ -29,7 +31,7 @@ export default function PaymentShow({ payment }) {
 
     // Format date
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleString("en-GB", {
+        return new Date(dateString).toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-GB', {
             timeZone: "Asia/Dhaka",
             day: "2-digit",
             month: "short",
@@ -42,7 +44,7 @@ export default function PaymentShow({ payment }) {
 
     // Format date only (without time)
     const formatDateOnly = (dateString) => {
-        return new Date(dateString).toLocaleDateString("en-GB", {
+        return new Date(dateString).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-GB', {
             timeZone: "Asia/Dhaka",
             day: "2-digit",
             month: "short",
@@ -57,31 +59,31 @@ export default function PaymentShow({ payment }) {
                 icon: DollarSign, 
                 color: "text-success",
                 bgColor: "bg-success/10",
-                label: "Cash"
+                label: t('payment.cash', 'Cash')
             },
             card: { 
                 icon: CreditCard, 
                 color: "text-primary",
                 bgColor: "bg-primary/10",
-                label: "Card"
+                label: t('payment.card', 'Card')
             },
             bank: { 
                 icon: Building, 
                 color: "text-info",
                 bgColor: "bg-info/10",
-                label: "Bank Transfer"
+                label: t('payment.bank', 'Bank Transfer')
             },
             mobile: { 
                 icon: Smartphone, 
                 color: "text-warning",
                 bgColor: "bg-warning/10",
-                label: "Mobile Banking"
+                label: t('payment.mobile', 'Mobile Banking')
             },
             online: { 
                 icon: Globe, 
                 color: "text-secondary",
                 bgColor: "bg-secondary/10",
-                label: "Online Payment"
+                label: t('payment.online', 'Online Payment')
             },
         };
         return details[method] || { 
@@ -100,8 +102,18 @@ export default function PaymentShow({ payment }) {
         window.print();
     };
 
+    // Get status label
+    const getStatusLabel = (status) => {
+        const labels = {
+            completed: t('payment.completed', 'Completed'),
+            pending: t('payment.pending', 'Pending'),
+            failed: t('payment.failed', 'Failed'),
+        };
+        return labels[status] || status;
+    };
+
     return (
-        <div className="bg-white rounded-box">
+        <div className={`bg-white rounded-box ${locale === 'bn' ? 'bangla-font' : ''}`}>
             {/* Header */}
             <div className="p-5 border-b print:border-none">
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -111,14 +123,14 @@ export default function PaymentShow({ payment }) {
                             className="btn btn-ghost btn-sm"
                         >
                             <ArrowLeft size={16} />
-                            Back to Payments
+                            {t('payment.back_to_payments', 'Back to Payments')}
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">
-                                Payment Receipt
+                                {t('payment.show_title', 'Payment Receipt')}
                             </h1>
                             <p className="text-gray-500 text-sm">
-                                Payment details and transaction information
+                                {t('payment.show_subtitle', 'Payment details and transaction information')}
                             </p>
                         </div>
                     </div>
@@ -129,14 +141,14 @@ export default function PaymentShow({ payment }) {
                             className="btn btn-outline btn-sm"
                         >
                             <Printer size={16} />
-                            Print
+                            {t('payment.print', 'Print')}
                         </button>
                         <button
                             onClick={handlePrint}
                             className="btn btn-outline btn-sm"
                         >
                             <Download size={16} />
-                            Download
+                            {t('payment.download', 'Download')}
                         </button>
                     </div>
                 </div>
@@ -149,29 +161,37 @@ export default function PaymentShow({ payment }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <DollarSign size={20} className="text-success" />
-                            Payment Information
+                            {t('payment.payment_information', 'Payment Information')}
                         </h2>
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Payment ID:</span>
+                                <span className="text-gray-600">
+                                    {t('payment.payment_id', 'Payment ID')}:
+                                </span>
                                 <span className="font-mono font-semibold">#{payment.id}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Transaction Ref:</span>
+                                <span className="text-gray-600">
+                                    {t('payment.transaction_reference', 'Transaction Ref')}:
+                                </span>
                                 <span className="font-mono font-semibold">
                                     {payment.txn_ref || "N/A"}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Amount:</span>
+                                <span className="text-gray-600">
+                                    {t('payment.amount', 'Amount')}:
+                                </span>
                                 <span className="text-success font-bold text-lg">
-                                    {formatCurrency(payment.amount)} Tk
+                                    {formatCurrency(payment.amount)} {t('payment.currency', 'Tk')}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Status:</span>
+                                <span className="text-gray-600">
+                                    {t('payment.status', 'Status')}:
+                                </span>
                                 <span className="badge badge-success badge-lg">
-                                    Completed
+                                    {getStatusLabel(payment.status)}
                                 </span>
                             </div>
                         </div>
@@ -181,14 +201,14 @@ export default function PaymentShow({ payment }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <CreditCard size={20} className="text-primary" />
-                            Payment Method
+                            {t('payment.payment_method', 'Payment Method')}
                         </h2>
                         <div className="flex items-center gap-4">
                             <div className={`p-3 rounded-full ${methodDetails.bgColor}`}>
                                 <MethodIcon size={24} className={methodDetails.color} />
                             </div>
                             <div>
-                                <p className="font-semibold text-lg capitalize">
+                                <p className="font-semibold text-lg">
                                     {methodDetails.label}
                                 </p>
                                 <p className="text-gray-500 text-sm">
@@ -202,12 +222,14 @@ export default function PaymentShow({ payment }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <Receipt size={20} className="text-info" />
-                            Related Sale
+                            {t('payment.related_sale', 'Related Sale')}
                         </h2>
                         {payment.sale ? (
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Invoice No:</span>
+                                    <span className="text-gray-600">
+                                        {t('payment.invoice_no', 'Invoice No')}:
+                                    </span>
                                     <Link
                                         href={route("sales.show", { sale: payment.sale.id })}
                                         className="font-mono font-semibold text-primary hover:underline"
@@ -216,13 +238,17 @@ export default function PaymentShow({ payment }) {
                                     </Link>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Sale Total:</span>
+                                    <span className="text-gray-600">
+                                        {t('payment.sale_total', 'Sale Total')}:
+                                    </span>
                                     <span className="font-semibold">
-                                        {formatCurrency(payment.sale.grand_total)} Tk
+                                        {formatCurrency(payment.sale.grand_total)} {t('payment.currency', 'Tk')}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Sale Status:</span>
+                                    <span className="text-gray-600">
+                                        {t('payment.sale_status', 'Sale Status')}:
+                                    </span>
                                     <span className={`badge capitalize ${
                                         payment.sale.status === 'completed' 
                                             ? 'badge-success' 
@@ -230,12 +256,14 @@ export default function PaymentShow({ payment }) {
                                             ? 'badge-error'
                                             : 'badge-warning'
                                     }`}>
-                                        {payment.sale.status}
+                                        {getStatusLabel(payment.sale.status)}
                                     </span>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-gray-500 text-sm">No related sale found</p>
+                            <p className="text-gray-500 text-sm">
+                                {t('payment.no_related_sale', 'No related sale found')}
+                            </p>
                         )}
                     </div>
                 </div>
@@ -246,7 +274,7 @@ export default function PaymentShow({ payment }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <User size={20} className="text-warning" />
-                            Customer Information
+                            {t('payment.customer_information', 'Customer Information')}
                         </h2>
                         {payment.customer ? (
                             <div className="space-y-3">
@@ -273,8 +301,12 @@ export default function PaymentShow({ payment }) {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                <p className="font-semibold text-lg">Walk-in Customer</p>
-                                <p className="text-gray-500 text-sm">No customer information available</p>
+                                <p className="font-semibold text-lg">
+                                    {t('payment.walk_in_customer', 'Walk-in Customer')}
+                                </p>
+                                <p className="text-gray-500 text-sm">
+                                    {t('payment.no_customer_info', 'No customer information available')}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -283,24 +315,30 @@ export default function PaymentShow({ payment }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <Calendar size={20} className="text-info" />
-                            Transaction Details
+                            {t('payment.transaction_details', 'Transaction Details')}
                         </h2>
                         <div className="space-y-3">
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Payment Date:</span>
+                                <span className="text-gray-600">
+                                    {t('payment.payment_date', 'Payment Date')}:
+                                </span>
                                 <span className="font-semibold">
                                     {formatDate(payment.created_at)}
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Processed By:</span>
+                                <span className="text-gray-600">
+                                    {t('payment.processed_by', 'Processed By')}:
+                                </span>
                                 <span className="font-semibold">
                                     {auth.user?.name || "System"}
                                 </span>
                             </div>
                             {payment.updated_at !== payment.created_at && (
                                 <div className="flex justify-between">
-                                    <span className="text-gray-600">Last Updated:</span>
+                                    <span className="text-gray-600">
+                                        {t('payment.last_updated', 'Last Updated')}:
+                                    </span>
                                     <span className="font-semibold">
                                         {formatDate(payment.updated_at)}
                                     </span>
@@ -315,7 +353,7 @@ export default function PaymentShow({ payment }) {
                     <div className="bg-base-100 rounded-box p-6 border mb-8">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <FileText size={20} className="text-gray-600" />
-                            Payment Notes
+                            {t('payment.payment_notes', 'Payment Notes')}
                         </h2>
                         <div className="bg-gray-50 rounded-lg p-4">
                             <p className="text-gray-700 whitespace-pre-wrap">
@@ -329,17 +367,17 @@ export default function PaymentShow({ payment }) {
                 {payment.sale?.items && payment.sale.items.length > 0 && (
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4">
-                            Sale Items
+                            {t('payment.sale_items', 'Sale Items')}
                         </h2>
                         <div className="overflow-x-auto">
                             <table className="table table-auto w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th>Product</th>
-                                        <th>Variant</th>
-                                        <th>Quantity</th>
-                                        <th>Unit Price</th>
-                                        <th>Total</th>
+                                        <th>{t('payment.product', 'Product')}</th>
+                                        <th>{t('payment.variant', 'Variant')}</th>
+                                        <th>{t('payment.quantity', 'Quantity')}</th>
+                                        <th>{t('payment.unit_price', 'Unit Price')}</th>
+                                        <th>{t('payment.total', 'Total')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -352,7 +390,7 @@ export default function PaymentShow({ payment }) {
                                                     </p>
                                                     {item.product?.product_no && (
                                                         <p className="text-sm text-gray-500">
-                                                            SKU: {item.product.product_no}
+                                                            {t('payment.sku', 'SKU')}: {item.product.product_no}
                                                         </p>
                                                     )}
                                                 </div>
@@ -378,7 +416,7 @@ export default function PaymentShow({ payment }) {
                                                     })()}
                                                     <br />
                                                     <span className="text-sm text-gray-500">
-                                                        {item.variant?.sku || 'No SKU'}
+                                                        {item.variant?.sku || t('payment.no_sku', 'No SKU')}
                                                     </span>
                                                     </>
                                                 )}
@@ -387,10 +425,10 @@ export default function PaymentShow({ payment }) {
                                                 {item.quantity}
                                             </td>
                                             <td className="font-semibold">
-                                                {formatCurrency(item.unit_price)} Tk
+                                                {formatCurrency(item.unit_price)} {t('payment.currency', 'Tk')}
                                             </td>
                                             <td className="font-semibold text-success">
-                                                {formatCurrency(item.total_price)} Tk
+                                                {formatCurrency(item.total_price)} {t('payment.currency', 'Tk')}
                                             </td>
                                         </tr>
                                     ))}
@@ -403,10 +441,14 @@ export default function PaymentShow({ payment }) {
                 {/* Print Footer */}
                 <div className="hidden print:block mt-12 pt-8 border-t">
                     <div className="text-center text-gray-500">
-                        <p className="font-semibold">Thank you for your business!</p>
-                        <p className="text-sm">This is an computer generated receipt</p>
+                        <p className="font-semibold">
+                            {t('payment.thank_you', 'Thank you for your business!')}
+                        </p>
+                        <p className="text-sm">
+                            {t('payment.computer_generated', 'This is an computer generated receipt')}
+                        </p>
                         <p className="text-xs mt-2">
-                            Printed on: {formatDate(new Date().toISOString())}
+                            {t('payment.printed_on', 'Printed on')}: {formatDate(new Date().toISOString())}
                         </p>
                     </div>
                 </div>
