@@ -2,11 +2,13 @@
 import React, { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { Plus, Trash, Edit, X, Save } from 'lucide-react';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export default function AttributeIndex({ attributes }) {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingAttribute, setEditingAttribute] = useState(null);
     const [addingValues, setAddingValues] = useState({});
+    const { t, locale } = useTranslation();
 
     const attributeForm = useForm({
         id: '',
@@ -14,8 +16,6 @@ export default function AttributeIndex({ attributes }) {
         code: '',
         values: [{ value: '', code: '' }]
     });
-
-    const valueForms = {};
 
     // Handle attribute form
     const handleAddValueField = () => {
@@ -80,7 +80,7 @@ export default function AttributeIndex({ attributes }) {
     };
 
     const handleDeleteAttribute = (attribute) => {
-        if (confirm(`Are you sure you want to delete "${attribute.name}"?`)) {
+        if (confirm(t('attributes.confirm_delete_attribute', `Are you sure you want to delete "${attribute.name}"?`))) {
             router.delete(route('attributes.destroy', { attribute: attribute.id }));
         }
     };
@@ -119,7 +119,7 @@ export default function AttributeIndex({ attributes }) {
     };
 
     const handleDeleteValue = (attributeId, valueId) => {
-        if (confirm('Are you sure you want to delete this value?')) {
+        if (confirm(t('attributes.confirm_delete_value', 'Are you sure you want to delete this value?'))) {
             router.delete(route('attributes.values.destroy', { 
                 attribute: attributeId, 
                 value: valueId 
@@ -128,18 +128,22 @@ export default function AttributeIndex({ attributes }) {
     };
 
     return (
-        <div className="p-6">
+        <div className={`p-6 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <div className="flex justify-between items-center mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold">Attributes Management</h1>
-                    <p className="text-gray-600">Manage product attributes and their values</p>
+                    <h1 className="text-2xl font-bold">
+                        {t('attributes.management', 'Attributes Management')}
+                    </h1>
+                    <p className="text-gray-600">
+                        {t('attributes.management_description', 'Manage product attributes and their values')}
+                    </p>
                 </div>
                 <button
                     onClick={handleCreate}
                     className="btn btn-primary"
                 >
                     <Plus size={16} className="mr-2" />
-                    Create Attribute
+                    {t('attributes.create_attribute', 'Create Attribute')}
                 </button>
             </div>
 
@@ -148,7 +152,10 @@ export default function AttributeIndex({ attributes }) {
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 mb-6">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-semibold">
-                            {editingAttribute ? 'Edit Attribute' : 'Create New Attribute'}
+                            {editingAttribute 
+                                ? t('attributes.edit_attribute', 'Edit Attribute')
+                                : t('attributes.create_new_attribute', 'Create New Attribute')
+                            }
                         </h2>
                         <button
                             onClick={handleCancel}
@@ -161,25 +168,29 @@ export default function AttributeIndex({ attributes }) {
                     <form onSubmit={submitAttribute}>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div>
-                                <label className="label">Attribute Name *</label>
+                                <label className="label">
+                                    {t('attributes.attribute_name', 'Attribute Name')} *
+                                </label>
                                 <input
                                     type="text"
                                     className="input input-bordered w-full"
                                     value={attributeForm.data.name}
                                     onChange={(e) => attributeForm.setData('name', e.target.value)}
-                                    placeholder="e.g., Color, Size, Model"
+                                    placeholder={t('attributes.name_placeholder', 'e.g., Color, Size, Model')}
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="label">Attribute Code *</label>
+                                <label className="label">
+                                    {t('attributes.attribute_code', 'Attribute Code')} *
+                                </label>
                                 <input
                                     type="text"
                                     className="input input-bordered w-full"
                                     value={attributeForm.data.code}
                                     onChange={(e) => attributeForm.setData('code', e.target.value)}
-                                    placeholder="e.g., color, size, model"
+                                    placeholder={t('attributes.code_placeholder', 'e.g., color, size, model')}
                                     required
                                 />
                             </div>
@@ -187,14 +198,16 @@ export default function AttributeIndex({ attributes }) {
 
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-3">
-                                <label className="label">Attribute Values *</label>
+                                <label className="label">
+                                    {t('attributes.attribute_values', 'Attribute Values')} *
+                                </label>
                                 <button
                                     type="button"
                                     onClick={handleAddValueField}
                                     className="btn btn-sm btn-outline"
                                 >
                                     <Plus size={14} className="mr-1" />
-                                    Add Value
+                                    {t('attributes.add_value', 'Add Value')}
                                 </button>
                             </div>
                             
@@ -207,7 +220,7 @@ export default function AttributeIndex({ attributes }) {
                                                 className="input input-bordered w-full"
                                                 value={value.value}
                                                 onChange={(e) => handleValueChange(index, 'value', e.target.value)}
-                                                placeholder="Value (e.g., Small, Red)"
+                                                placeholder={t('attributes.value_placeholder', 'Value (e.g., Small, Red)')}
                                                 required
                                             />
                                         </div>
@@ -217,7 +230,7 @@ export default function AttributeIndex({ attributes }) {
                                                 className="input input-bordered w-full"
                                                 value={value.code}
                                                 onChange={(e) => handleValueChange(index, 'code', e.target.value)}
-                                                placeholder="Code (e.g., sm, red)"
+                                                placeholder={t('attributes.code_placeholder', 'Code (e.g., sm, red)')}
                                                 required
                                             />
                                         </div>
@@ -242,8 +255,11 @@ export default function AttributeIndex({ attributes }) {
                             >
                                 <Save size={16} className="mr-2" />
                                 {attributeForm.processing 
-                                    ? 'Saving...' 
-                                    : (editingAttribute ? 'Update Attribute' : 'Create Attribute')
+                                    ? t('attributes.saving', 'Saving...')
+                                    : (editingAttribute 
+                                        ? t('attributes.update_attribute', 'Update Attribute')
+                                        : t('attributes.create_attribute', 'Create Attribute')
+                                      )
                                 }
                             </button>
                             <button
@@ -251,7 +267,7 @@ export default function AttributeIndex({ attributes }) {
                                 onClick={handleCancel}
                                 className="btn btn-ghost"
                             >
-                                Cancel
+                                {t('common.cancel', 'Cancel')}
                             </button>
                         </div>
                     </form>
@@ -315,7 +331,7 @@ export default function AttributeIndex({ attributes }) {
                                             className="input input-sm input-bordered flex-1"
                                             value={addingValues[attribute.id].value}
                                             onChange={(e) => handleNewValueChange(attribute.id, 'value', e.target.value)}
-                                            placeholder="Value"
+                                            placeholder={t('attributes.value', 'Value')}
                                             required
                                         />
                                         <input
@@ -323,14 +339,14 @@ export default function AttributeIndex({ attributes }) {
                                             className="input input-sm input-bordered flex-1"
                                             value={addingValues[attribute.id].code}
                                             onChange={(e) => handleNewValueChange(attribute.id, 'code', e.target.value)}
-                                            placeholder="Code"
+                                            placeholder={t('attributes.code', 'Code')}
                                             required
                                         />
                                     </div>
                                     <div className="flex gap-2">
                                         <button type="submit" className="btn btn-sm btn-primary flex-1">
                                             <Plus size={12} className="mr-1" />
-                                            Add
+                                            {t('attributes.add', 'Add')}
                                         </button>
                                         <button 
                                             type="button" 
@@ -341,7 +357,7 @@ export default function AttributeIndex({ attributes }) {
                                             })}
                                             className="btn btn-sm btn-ghost"
                                         >
-                                            Cancel
+                                            {t('common.cancel', 'Cancel')}
                                         </button>
                                     </div>
                                 </form>
@@ -351,7 +367,7 @@ export default function AttributeIndex({ attributes }) {
                                     className="btn btn-sm btn-outline w-full"
                                 >
                                     <Plus size={14} className="mr-1" />
-                                    Add Value
+                                    {t('attributes.add_value', 'Add Value')}
                                 </button>
                             )}
                         </div>
@@ -364,14 +380,18 @@ export default function AttributeIndex({ attributes }) {
                     <div className="text-gray-400 mb-4">
                         <Plus size={48} className="mx-auto" />
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-600 mb-2">No attributes found</h3>
-                    <p className="text-gray-500 mb-4">Get started by creating your first attribute</p>
+                    <h3 className="text-lg font-semibold text-gray-600 mb-2">
+                        {t('attributes.no_attributes_found', 'No attributes found')}
+                    </h3>
+                    <p className="text-gray-500 mb-4">
+                        {t('attributes.get_started', 'Get started by creating your first attribute')}
+                    </p>
                     <button
                         onClick={handleCreate}
                         className="btn btn-primary"
                     >
                         <Plus size={16} className="mr-2" />
-                        Create Attribute
+                        {t('attributes.create_attribute', 'Create Attribute')}
                     </button>
                 </div>
             )}
