@@ -19,9 +19,11 @@ import {
     PauseCircle
 } from "lucide-react";
 import { Link, usePage } from "@inertiajs/react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function SubscriptionShow({ subscription }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
 
     // Format currency
     const formatCurrency = (amount) => {
@@ -35,7 +37,7 @@ export default function SubscriptionShow({ subscription }) {
 
     // Format date
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleString("en-US", {
+        return new Date(dateString).toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-US', {
             day: "2-digit",
             month: "short",
             year: "numeric",
@@ -47,7 +49,7 @@ export default function SubscriptionShow({ subscription }) {
 
     // Format date only (without time)
     const formatDateOnly = (dateString) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
+        return new Date(dateString).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-US', {
             day: "2-digit",
             month: "short",
             year: "numeric",
@@ -62,28 +64,28 @@ export default function SubscriptionShow({ subscription }) {
                 color: "text-success",
                 bgColor: "bg-success/10",
                 badge: "badge-success",
-                label: "Active"
+                label: t('payments.active', 'Active')
             },
             3: { 
                 icon: XCircle, 
                 color: "text-error",
                 bgColor: "bg-error/10",
                 badge: "badge-error",
-                label: "Canceled"
+                label: t('payments.cancelled', 'Canceled')
             },
             2: { 
                 icon: AlertCircle, 
                 color: "text-warning",
                 bgColor: "bg-warning/10",
                 badge: "badge-warning",
-                label: "Expired"
+                label: t('payments.expired', 'Expired')
             },
             4: { 
                 icon: Clock, 
                 color: "text-info",
                 bgColor: "bg-info/10",
                 badge: "badge-info",
-                label: "Pending"
+                label: t('payments.pending', 'Pending')
             },
             
         };
@@ -99,10 +101,10 @@ export default function SubscriptionShow({ subscription }) {
     // Get billing cycle details
     const getBillingCycleDetails = (cycle) => {
         const details = {
-            monthly: { label: "Monthly", icon: Calendar },
-            yearly: { label: "Yearly", icon: Building },
-            quarterly: { label: "Quarterly", icon: Clock },
-            weekly: { label: "Weekly", icon: Calendar },
+            monthly: { label: t('payments.monthly', 'Monthly'), icon: Calendar },
+            yearly: { label: t('payments.yearly', 'Yearly'), icon: Building },
+            quarterly: { label: t('payments.quarterly', 'Quarterly'), icon: Clock },
+            weekly: { label: t('payments.weekly', 'Weekly'), icon: Calendar },
         };
         return details[cycle] || { label: cycle, icon: Calendar };
     };
@@ -130,7 +132,7 @@ export default function SubscriptionShow({ subscription }) {
     const daysRemaining = getDaysRemaining();
 
     return (
-        <div className="bg-white rounded-box">
+        <div className={`bg-white rounded-box ${locale === 'bn' ? 'bangla-font' : ''}`}>
             {/* Header */}
             <div className="p-5 border-b print:border-none">
                 <div className="flex items-center justify-between flex-wrap gap-4">
@@ -140,14 +142,14 @@ export default function SubscriptionShow({ subscription }) {
                             className="btn btn-ghost btn-sm"
                         >
                             <ArrowLeft size={16} />
-                            Back to Subscriptions
+                            {t('payments.back', 'Back to Subscriptions')}
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold text-gray-900">
-                                Subscription Details
+                                {t('payments.subscription_details', 'Subscription Details')}
                             </h1>
                             <p className="text-gray-500 text-sm">
-                                Subscription information and billing history
+                                {t('payments.subscription_information', 'Subscription information and billing history')}
                             </p>
                         </div>
                     </div>
@@ -158,14 +160,14 @@ export default function SubscriptionShow({ subscription }) {
                             className="btn btn-outline btn-sm"
                         >
                             <Printer size={16} />
-                            Print
+                            {t('payments.print', 'Print')}
                         </button>
                         <button
                             onClick={handlePrint}
                             className="btn btn-outline btn-sm"
                         >
                             <Download size={16} />
-                            Download
+                            {t('payments.download', 'Download')}
                         </button>
                     </div>
                 </div>
@@ -178,27 +180,27 @@ export default function SubscriptionShow({ subscription }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <Zap size={20} className="text-warning" />
-                            Subscription Information
+                            {t('payments.subscription_information', 'Subscription Information')}
                         </h2>
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Subscription ID:</span>
+                                <span className="text-gray-600">{t('payments.subscription_id', 'Subscription ID')}:</span>
                                 <span className="font-mono font-semibold">#{subscription.id}</span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Status:</span>
+                                <span className="text-gray-600">{t('payments.status', 'Status')}:</span>
                                 <span className={`badge ${statusDetails.badge} badge-lg capitalize`}>
                                     {statusDetails.label}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Plan:</span>
+                                <span className="text-gray-600">{t('payments.plan', 'Plan')}:</span>
                                 <span className="font-semibold">
                                     {subscription.plan?.name || "N/A"}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Price:</span>
+                                <span className="text-gray-600">{t('payments.price', 'Price')}:</span>
                                 <span className="text-success font-bold text-lg">
                                     {formatCurrency(subscription.plan?.price || 0)}
                                 </span>
@@ -210,11 +212,11 @@ export default function SubscriptionShow({ subscription }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <CreditCard size={20} className="text-primary" />
-                            Billing Information
+                            {t('payments.billing_information', 'Billing Information')}
                         </h2>
                         <div className="space-y-3">
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Billing Cycle:</span>
+                                <span className="text-gray-600">{t('payments.billing_cycle', 'Billing Cycle')}:</span>
                                 <div className="flex items-center gap-2">
                                     <BillingIcon size={16} className="text-gray-400" />
                                     <span className="font-semibold capitalize">
@@ -223,25 +225,25 @@ export default function SubscriptionShow({ subscription }) {
                                 </div>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Next Billing:</span>
+                                <span className="text-gray-600">{t('payments.next_billing', 'Next Billing')}:</span>
                                 <span className="font-semibold">
                                     {subscription.end_date ? formatDateOnly(subscription.end_date) : "N/A"}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Days Remaining:</span>
+                                <span className="text-gray-600">{t('payments.days_remaining', 'Days Remaining')}:</span>
                                 <span className={`font-semibold ${
                                     daysRemaining < 7 ? 'text-error' : 'text-success'
                                 }`}>
-                                    {daysRemaining} days
+                                    {daysRemaining} {t('payments.days', 'days')}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Auto-renew:</span>
+                                <span className="text-gray-600">{t('payments.auto_renew', 'Auto-renew')}:</span>
                                 <span className={`badge ${
                                     subscription.auto_renew ? 'badge-success' : 'badge-error'
                                 }`}>
-                                    {subscription.auto_renew ? 'Yes' : 'No'}
+                                    {subscription.auto_renew ? t('payments.yes', 'Yes') : t('payments.no', 'No')}
                                 </span>
                             </div>
                         </div>
@@ -251,7 +253,7 @@ export default function SubscriptionShow({ subscription }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <User size={20} className="text-info" />
-                            User Information
+                            {t('payments.user_information', 'User Information')}
                         </h2>
                         {subscription.user ? (
                             <div className="space-y-3">
@@ -266,14 +268,14 @@ export default function SubscriptionShow({ subscription }) {
                                     )}
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Member since:</span>
+                                    <span className="text-gray-600">{t('payments.member_since', 'Member since')}:</span>
                                     <span className="font-semibold text-sm">
                                         {subscription.user.created_at ? formatDateOnly(subscription.user.created_at) : "N/A"}
                                     </span>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-gray-500 text-sm">No user information available</p>
+                            <p className="text-gray-500 text-sm">{t('payments.no_user_information', 'No user information available')}</p>
                         )}
                     </div>
                 </div>
@@ -284,28 +286,27 @@ export default function SubscriptionShow({ subscription }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <Calendar size={20} className="text-success" />
-                            Subscription Timeline
+                            {t('payments.subscription_timeline', 'Subscription Timeline')}
                         </h2>
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Created:</span>
+                                <span className="text-gray-600">{t('payments.created', 'Created')}:</span>
                                 <span className="font-semibold">
                                     {formatDate(subscription.created_at)}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Started:</span>
+                                <span className="text-gray-600">{t('payments.started', 'Started')}:</span>
                                 <span className="font-semibold">
                                     {subscription.start_date ? formatDate(subscription.start_date) : "N/A"}
                                 </span>
                             </div>
                             <div className="flex justify-between items-center">
-                                <span className="text-gray-600">Expires:</span>
+                                <span className="text-gray-600">{t('payments.expires', 'Expires')}:</span>
                                 <span className="font-semibold">
                                     {subscription.end_date ? formatDate(subscription.end_date) : "N/A"}
                                 </span>
                             </div>
-                 
                         </div>
                     </div>
 
@@ -313,35 +314,35 @@ export default function SubscriptionShow({ subscription }) {
                     <div className="bg-base-100 rounded-box p-6 border">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <FileText size={20} className="text-primary" />
-                            Plan Details
+                            {t('payments.plan_details', 'Plan Details')}
                         </h2>
                         {subscription.plan ? (
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Plan Name:</span>
+                                    <span className="text-gray-600">{t('payments.plan_name', 'Plan Name')}:</span>
                                     <span className="font-semibold">{subscription.plan.name}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Description:</span>
+                                    <span className="text-gray-600">{t('payments.description', 'Description')}:</span>
                                     <span className="font-semibold text-sm text-right">
-                                        {subscription.plan.description || "No description"}
+                                        {subscription.plan.description || t('payments.no_description', 'No description')}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Features:</span>
+                                    <span className="text-gray-600">{t('payments.features', 'Features')}:</span>
                                     <span className="font-semibold">
-                                        {subscription.plan.features.length || 0} features
+                                        {subscription.plan.features.length || 0} {t('payments.features', 'features')}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Max Users:</span>
+                                    <span className="text-gray-600">{t('payments.max_users', 'Max Users')}:</span>
                                     <span className="font-semibold">
-                                        {subscription.plan.max_users || "Unlimited"}
+                                        {subscription.plan.max_users || t('payments.unlimited', 'Unlimited')}
                                     </span>
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-gray-500 text-sm">No plan information available</p>
+                            <p className="text-gray-500 text-sm">{t('payments.no_plan_information', 'No plan information available')}</p>
                         )}
                     </div>
                 </div>
@@ -350,19 +351,19 @@ export default function SubscriptionShow({ subscription }) {
                 <div className="bg-base-100 rounded-box p-6 border mb-8">
                     <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                         <CreditCard size={20} className="text-success" />
-                        Payment History
+                        {t('payments.payment_history', 'Payment History')}
                     </h2>
                     {subscription.payments && subscription.payments.length > 0 ? (
                         <div className="overflow-x-auto">
                             <table className="table table-auto w-full">
                                 <thead className="bg-gray-50">
                                     <tr>
-                                        <th>Payment ID</th>
-                                        <th>Date</th>
-                                        <th>Amount</th>
-                                        <th>Method</th>
-                                        <th>Status</th>
-                                        <th>Reference</th>
+                                        <th>{t('payments.payment_id', 'Payment ID')}</th>
+                                        <th>{t('payments.date', 'Date')}</th>
+                                        <th>{t('payments.amount', 'Amount')}</th>
+                                        <th>{t('payments.method', 'Method')}</th>
+                                        <th>{t('payments.status', 'Status')}</th>
+                                        <th>{t('payments.reference', 'Reference')}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -402,7 +403,7 @@ export default function SubscriptionShow({ subscription }) {
                     ) : (
                         <div className="text-center py-8">
                             <CreditCard size={48} className="text-gray-300 mx-auto mb-4" />
-                            <p className="text-gray-500">No payment history available</p>
+                            <p className="text-gray-500">{t('payments.no_payment_history', 'No payment history available')}</p>
                         </div>
                     )}
                 </div>
@@ -412,7 +413,7 @@ export default function SubscriptionShow({ subscription }) {
                     <div className="bg-base-100 rounded-box p-6 border mb-8">
                         <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                             <FileText size={20} className="text-gray-600" />
-                            Subscription Notes
+                            {t('payments.subscription_notes', 'Subscription Notes')}
                         </h2>
                         <div className="bg-gray-50 rounded-lg p-4">
                             <p className="text-gray-700 whitespace-pre-wrap">
@@ -425,10 +426,10 @@ export default function SubscriptionShow({ subscription }) {
                 {/* Print Footer */}
                 <div className="hidden print:block mt-12 pt-8 border-t">
                     <div className="text-center text-gray-500">
-                        <p className="font-semibold">Subscription Management System</p>
-                        <p className="text-sm">This is an computer generated subscription report</p>
+                        <p className="font-semibold">{t('payments.subscription_management_system', 'Subscription Management System')}</p>
+                        <p className="text-sm">{t('payments.computer_generated_report', 'This is a computer generated subscription report')}</p>
                         <p className="text-xs mt-2">
-                            Printed on: {formatDate(new Date().toISOString())}
+                            {t('payments.printed_on', 'Printed on')}: {formatDate(new Date().toISOString())}
                         </p>
                     </div>
                 </div>

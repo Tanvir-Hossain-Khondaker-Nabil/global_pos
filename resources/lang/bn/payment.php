@@ -89,4 +89,5 @@ return [
     
     // Currency
     'currency' => 'টাকা',
+    
 ];
