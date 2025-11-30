@@ -23,6 +23,7 @@ return new class extends Migration {
             $table->decimal('due_amount', 12, 2)->default(0);
             $table->decimal('shadow_due_amount', 12, 2)->default(0);
             $table->enum('payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
+            $table->enum('shadow_payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
             $table->unsignedBigInteger('created_by')->nullable();

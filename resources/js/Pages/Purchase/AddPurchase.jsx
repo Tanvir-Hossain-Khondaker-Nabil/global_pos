@@ -1,14 +1,18 @@
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
 import { ArrowLeft, Plus, Trash2, Search, Shield, DollarSign } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function AddPurchase({ suppliers, warehouses, products, isShadowUser }) {
     const [selectedItems, setSelectedItems] = useState([]);
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
-    const [paymentStatus, setPaymentStatus] = useState('unpaid'); // unpaid, partial, paid
+    const [paymentStatus, setPaymentStatus] = useState('unpaid');
+    const [shadowPaymentStatus, setShadowPaymentStatus] = useState('unpaid');
     const [paidAmount, setPaidAmount] = useState(0);
+    const [shadowPaidAmount, setShadowPaidAmount] = useState(0);
+    
+    const searchRef = useRef(null);
 
     const form = useForm({
         supplier_id: "",
@@ -16,7 +20,9 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
         purchase_date: new Date().toISOString().split('T')[0],
         notes: "",
         paid_amount: 0,
+        shadow_paid_amount: 0,
         payment_status: 'unpaid',
+        shadow_payment_status: 'unpaid',
         items: [],
     });
 
@@ -27,17 +33,27 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
     // Sync payment data with form
     useEffect(() => {
-        form.setData({
-            ...form.data,
-            paid_amount: paidAmount,
-            payment_status: paymentStatus
-        });
-    }, [paidAmount, paymentStatus]);
+        if (isShadowUser) {
+            form.setData({
+                ...form.data,
+                paid_amount: 0,
+                shadow_paid_amount: shadowPaidAmount,
+                payment_status: 'unpaid',
+                shadow_payment_status: shadowPaymentStatus
+            });
+        } else {
+            form.setData({
+                ...form.data,
+                paid_amount: paidAmount,
+                shadow_paid_amount: shadowPaidAmount,
+                payment_status: paymentStatus,
+                shadow_payment_status: shadowPaymentStatus
+            });
+        }
+    }, [paidAmount, shadowPaidAmount, paymentStatus, shadowPaymentStatus, isShadowUser]);
 
     // Helper function to get variant display name
-    // Helper function to get variant display name
     const getVariantDisplayName = (variant) => {
-        // Check if variant has attribute_values (new format)
         if (variant.attribute_values && Object.keys(variant.attribute_values).length > 0) {
             const parts = [];
             for (const [attribute, value] of Object.entries(variant.attribute_values)) {
@@ -46,7 +62,6 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
             return parts.join(', ');
         }
 
-        // Fallback to old format for backward compatibility
         const parts = [];
         if (variant.size) parts.push(`Size: ${variant.size}`);
         if (variant.color) parts.push(`Color: ${variant.color}`);
@@ -63,9 +78,23 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
             );
             setFilteredProducts(filtered);
         } else {
-            setFilteredProducts(products.slice(0, 10));
+            setFilteredProducts([]);
         }
     }, [productSearch, products]);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+                setFilteredProducts([]);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     const addItem = (product, variant) => {
         const existingItem = selectedItems.find(
@@ -84,11 +113,10 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                     : item
             ));
         } else {
-            // FIX: Set proper default sale prices
-            const defaultUnitPrice = 1;
-            const defaultSalePrice = 1; // Make sure sale price is also 1, not 0
-            const defaultShadowUnitPrice = 1;
-            const defaultShadowSalePrice = 1;
+            const defaultUnitPrice = variant.unit_cost || 1;
+            const defaultSalePrice = variant.selling_price || 1;
+            const defaultShadowUnitPrice = variant.shadow_unit_cost || 1;
+            const defaultShadowSalePrice = variant.shadow_selling_price || 1;
 
             setSelectedItems([
                 ...selectedItems,
@@ -99,9 +127,9 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                     variant_name: getVariantDisplayName(variant),
                     quantity: 1,
                     unit_price: defaultUnitPrice,
-                    sale_price: defaultSalePrice, // This was probably missing or 0
+                    sale_price: defaultSalePrice,
                     shadow_unit_price: defaultShadowUnitPrice,
-                    shadow_sale_price: defaultShadowSalePrice, // This was probably missing or 0
+                    shadow_sale_price: defaultShadowSalePrice,
                     total_price: defaultUnitPrice * 1,
                     shadow_total_price: defaultShadowUnitPrice * 1
                 }
@@ -119,7 +147,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
     const updateItem = (index, field, value) => {
         const updated = [...selectedItems];
-        const numericValue = parseFloat(value) || 0;
+        const numericValue = field === 'quantity' ? parseInt(value) || 1 : parseFloat(value) || 0;
 
         updated[index][field] = numericValue;
 
@@ -135,7 +163,6 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
         // Also update sale prices immediately when changed
         if (field === 'sale_price' || field === 'shadow_sale_price') {
-            // Ensure sale prices are properly set
             updated[index][field] = numericValue;
         }
 
@@ -151,20 +178,38 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
     };
 
     const handlePaymentStatusChange = (status) => {
-        setPaymentStatus(status);
+        if (isShadowUser) {
+            setShadowPaymentStatus(status);
+            if (status === 'paid') {
+                setShadowPaidAmount(calculateShadowTotal());
+            } else if (status === 'unpaid') {
+                setShadowPaidAmount(0);
+            }
+        } else {
+            setPaymentStatus(status);
+            if (status === 'paid') {
+                setPaidAmount(calculateTotal());
+            } else if (status === 'unpaid') {
+                setPaidAmount(0);
+            }
+        }
+    };
+
+    const handleShadowPaymentStatusChange = (status) => {
+        setShadowPaymentStatus(status);
         if (status === 'paid') {
-            setPaidAmount(isShadowUser ? calculateShadowTotal() : calculateTotal());
+            setShadowPaidAmount(calculateShadowTotal());
         } else if (status === 'unpaid') {
-            setPaidAmount(0);
+            setShadowPaidAmount(0);
         }
     };
 
     const handlePaidAmountChange = (amount) => {
-        const totalAmount = isShadowUser ? calculateShadowTotal() : calculateTotal();
+        const totalAmount = calculateTotal();
         const paid = parseFloat(amount) || 0;
 
         setPaidAmount(paid);
-
+        
         if (paid === 0) {
             setPaymentStatus('unpaid');
         } else if (paid >= totalAmount) {
@@ -174,62 +219,35 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
         }
     };
 
+    const handleShadowPaidAmountChange = (amount) => {
+        const shadowTotalAmount = calculateShadowTotal();
+        const paid = parseFloat(amount) || 0;
+
+        setShadowPaidAmount(paid);
+        
+        if (paid === 0) {
+            setShadowPaymentStatus('unpaid');
+        } else if (paid >= shadowTotalAmount) {
+            setShadowPaymentStatus('paid');
+        } else {
+            setShadowPaymentStatus('partial');
+        }
+    };
+
     const getDueAmount = () => {
-        const totalAmount = isShadowUser ? calculateShadowTotal() : calculateTotal();
+        const totalAmount = calculateTotal();
         return Math.max(0, totalAmount - paidAmount);
     };
 
-    const validateItems = () => {
-        for (let item of selectedItems) {
-            // Validate quantity
-            if (!item.quantity || item.quantity <= 0) {
-                alert(`Please enter valid quantity for ${item.product_name}`);
-                return false;
-            }
-
-            if (isShadowUser) {
-                // Validate shadow prices for shadow users
-                if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
-                    alert(`Please enter unit price for ${item.product_name}`);
-                    return false;
-                }
-                if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
-                    alert(`Please enter sale price for ${item.product_name}`);
-                    return false;
-                }
-            } else {
-                // Validate real prices for general users
-                if (!item.unit_price || item.unit_price <= 0) {
-                    alert(`Please enter unit price for ${item.product_name}`);
-                    return false;
-                }
-                if (!item.sale_price || item.sale_price <= 0) {
-                    alert(`Please enter sale price for ${item.product_name}`);
-                    return false;
-                }
-
-                // Also validate shadow prices for general users
-                if (!item.shadow_unit_price || item.shadow_unit_price <= 0) {
-                    alert(`Please enter unit price for ${item.product_name}`);
-                    return false;
-                }
-                if (!item.shadow_sale_price || item.shadow_sale_price <= 0) {
-                    alert(`Please enter sale price for ${item.product_name}`);
-                    return false;
-                }
-            }
-        }
-        return true;
+    const getShadowDueAmount = () => {
+        const shadowTotalAmount = calculateShadowTotal();
+        return Math.max(0, shadowTotalAmount - shadowPaidAmount);
     };
 
     const submit = (e) => {
         e.preventDefault();
 
-        if (selectedItems.length === 0) {
-            alert("Please add at least one item to the purchase");
-            return;
-        }
-
+        // Validation
         if (!form.data.supplier_id) {
             alert("Please select a supplier");
             return;
@@ -240,13 +258,43 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
             return;
         }
 
-        // Validate all items
-        if (!validateItems()) {
+        if (selectedItems.length === 0) {
+            alert("Please add at least one product");
             return;
         }
 
-        // Items are already synced via useEffect, so just submit
-        form.post(route("purchase.store"), {
+        // Check if all items have valid prices
+        const invalidItems = selectedItems.filter(item => 
+            item.quantity <= 0 || 
+            item.unit_price <= 0 || 
+            item.shadow_unit_price <= 0
+        );
+
+        if (invalidItems.length > 0) {
+            alert("Please ensure all items have valid quantities and prices greater than 0");
+            return;
+        }
+
+        // Calculate final amounts for submission
+        const finalData = {
+            ...form.data,
+            total_amount: calculateTotal(),
+            shadow_total_amount: calculateShadowTotal(),
+            due_amount: getDueAmount(),
+            shadow_due_amount: getShadowDueAmount(),
+        };
+
+        // For shadow users, ensure real payment data is reset
+        if (isShadowUser) {
+            finalData.paid_amount = 0;
+            finalData.payment_status = 'unpaid';
+            finalData.due_amount = finalData.total_amount;
+        }
+
+        console.log('Submitting form with data:', finalData);
+
+        // FIXED: Use form.post instead of router.post
+        form.transform(() => finalData).post(route("purchase.store"), {
             onSuccess: () => {
                 router.visit(route("purchase.list"));
             },
@@ -257,15 +305,16 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
         });
     };
 
-    const totalAmount = isShadowUser ? calculateShadowTotal() : calculateTotal();
+    const totalAmount = calculateTotal();
     const shadowTotalAmount = calculateShadowTotal();
     const dueAmount = getDueAmount();
+    const shadowDueAmount = getShadowDueAmount();
 
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title={isShadowUser ? "Create Purchase" : "Create New Purchase"}
-                subtitle={isShadowUser ? "Add products to purchase order with pricing" : "Add products to purchase order"}
+                title={isShadowUser ? "Create Purchase (Shadow Mode)" : "Create New Purchase"}
+                subtitle={isShadowUser ? "Add products to purchase order with shadow pricing" : "Add products to purchase order with real and shadow pricing"}
             >
                 <div className="flex items-center gap-3">
                     <button
@@ -279,6 +328,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
             <form onSubmit={submit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    {/* Left Column - Basic Information */}
                     <div className="lg:col-span-1 space-y-4">
                         <div className="form-control">
                             <label className="label">
@@ -291,15 +341,12 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 required
                             >
                                 <option value="">Select Supplier</option>
-                                {suppliers.map(supplier => (
+                                {suppliers?.map(supplier => (
                                     <option key={supplier.id} value={supplier.id}>
                                         {supplier.name} - {supplier.company}
                                     </option>
                                 ))}
                             </select>
-                            {form.errors.supplier_id && (
-                                <div className="text-error text-sm mt-1">{form.errors.supplier_id}</div>
-                            )}
                         </div>
 
                         <div className="form-control">
@@ -313,15 +360,12 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 required
                             >
                                 <option value="">Select Warehouse</option>
-                                {warehouses.map(warehouse => (
+                                {warehouses?.map(warehouse => (
                                     <option key={warehouse.id} value={warehouse.id}>
                                         {warehouse.name} ({warehouse.code})
                                     </option>
                                 ))}
                             </select>
-                            {form.errors.warehouse_id && (
-                                <div className="text-error text-sm mt-1">{form.errors.warehouse_id}</div>
-                            )}
                         </div>
 
                         <div className="form-control">
@@ -338,58 +382,174 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                         </div>
 
                         {/* Payment Section */}
-                        <div className="card bg-base-200 p-4">
-                            <h3 className="font-semibold mb-3 flex items-center gap-2">
-                                <DollarSign size={16} /> Payment Information
-                            </h3>
+                        {isShadowUser ? (
+                            <div className="card bg-warning/10 border border-warning p-4">
+                                <h3 className="font-semibold mb-3 flex items-center gap-2 text-warning">
+                                    <Shield size={16} /> 
+                                    Shadow Payment Information
+                                </h3>
 
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Payment Status</span>
-                                </label>
-                                <select
-                                    className="select select-bordered"
-                                    value={paymentStatus}
-                                    onChange={(e) => handlePaymentStatusChange(e.target.value)}
-                                >
-                                    <option value="unpaid">Unpaid</option>
-                                    <option value="partial">Partial</option>
-                                    <option value="paid">Paid</option>
-                                </select>
-                            </div>
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Payment Status</span>
+                                    </label>
+                                    <select
+                                        className="select select-bordered border-warning"
+                                        value={shadowPaymentStatus}
+                                        onChange={(e) => handleShadowPaymentStatusChange(e.target.value)}
+                                    >
+                                        <option value="unpaid">Unpaid</option>
+                                        <option value="partial">Partial</option>
+                                        <option value="paid">Paid</option>
+                                    </select>
+                                </div>
 
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Paid Amount</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    max={totalAmount}
-                                    className="input input-bordered"
-                                    value={paidAmount}
-                                    onChange={(e) => handlePaidAmountChange(e.target.value)}
-                                />
-                            </div>
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Paid Amount</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        className="input input-bordered border-warning"
+                                        value={shadowPaidAmount}
+                                        onChange={(e) => handleShadowPaidAmountChange(e.target.value)}
+                                    />
+                                </div>
 
-                            <div className="mt-2 space-y-1 text-sm">
-                                <div className="flex justify-between">
-                                    <span>Total Amount:</span>
-                                    <span className="font-semibold">৳{totalAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Paid Amount:</span>
-                                    <span className="text-green-600">৳{paidAmount.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Due Amount:</span>
-                                    <span className={`font-semibold ${dueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                        ৳{dueAmount.toFixed(2)}
-                                    </span>
+                                <div className="mt-2 space-y-1 text-sm">
+                                    <div className="flex justify-between">
+                                        <span>Total Amount:</span>
+                                        <span className="font-semibold text-warning">
+                                            ৳{shadowTotalAmount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Paid Amount:</span>
+                                        <span className="text-green-600">৳{shadowPaidAmount.toFixed(2)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span>Due Amount:</span>
+                                        <span className={`font-semibold ${shadowDueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                            ৳{shadowDueAmount.toFixed(2)}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="card bg-base-200 p-4">
+                                    <h3 className="font-semibold mb-3 flex items-center gap-2">
+                                        <DollarSign size={16} /> 
+                                        Real Payment Information
+                                    </h3>
+
+                                    <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text">Payment Status</span>
+                                        </label>
+                                        <select
+                                            className="select select-bordered"
+                                            value={paymentStatus}
+                                            onChange={(e) => handlePaymentStatusChange(e.target.value)}
+                                        >
+                                            <option value="unpaid">Unpaid</option>
+                                            <option value="partial">Partial</option>
+                                            <option value="paid">Paid</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text">Paid Amount</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            className="input input-bordered"
+                                            value={paidAmount}
+                                            onChange={(e) => handlePaidAmountChange(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="mt-2 space-y-1 text-sm">
+                                        <div className="flex justify-between">
+                                            <span>Total Amount:</span>
+                                            <span className="font-semibold">
+                                                ৳{totalAmount.toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Paid Amount:</span>
+                                            <span className="text-green-600">৳{paidAmount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Due Amount:</span>
+                                            <span className={`font-semibold ${dueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                                ৳{dueAmount.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="card bg-blue-50 border border-blue-200 p-4">
+                                    <h3 className="font-semibold mb-3 flex items-center gap-2 text-blue-700">
+                                        <Shield size={16} /> 
+                                        Shadow Payment Information
+                                    </h3>
+
+                                    <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text">Payment Status</span>
+                                        </label>
+                                        <select
+                                            className="select select-bordered border-blue-300"
+                                            value={shadowPaymentStatus}
+                                            onChange={(e) => handleShadowPaymentStatusChange(e.target.value)}
+                                        >
+                                            <option value="unpaid">Unpaid</option>
+                                            <option value="partial">Partial</option>
+                                            <option value="paid">Paid</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text">Paid Amount</span>
+                                        </label>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            step="0.01"
+                                            className="input input-bordered border-blue-300"
+                                            value={shadowPaidAmount}
+                                            onChange={(e) => handleShadowPaidAmountChange(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <div className="mt-2 space-y-1 text-sm">
+                                        <div className="flex justify-between">
+                                            <span>Shadow Total:</span>
+                                            <span className="font-semibold text-blue-700">
+                                                ৳{shadowTotalAmount.toFixed(2)}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Shadow Paid:</span>
+                                            <span className="text-green-600">৳{shadowPaidAmount.toFixed(2)}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Shadow Due:</span>
+                                            <span className={`font-semibold ${shadowDueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                                ৳{shadowDueAmount.toFixed(2)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="form-control">
                             <label className="label">
@@ -405,11 +565,11 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                         </div>
                     </div>
 
-                    {/* Product Selection */}
+                    {/* Right Column - Product Selection */}
                     <div className="lg:col-span-2">
-                        <div className="form-control mb-4">
+                        <div className="form-control mb-4" ref={searchRef}>
                             <label className="label">
-                                <span className="label-text">Add Products</span>
+                                <span className="label-text">Add Products *</span>
                             </label>
                             <div className="relative">
                                 <input
@@ -422,30 +582,45 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 <Search size={16} className="absolute right-3 top-3 text-gray-400" />
                             </div>
 
-                            {/* Product Search Results */}
+                            {/* Product Search Dropdown - FIXED POSITIONING */}
                             {productSearch && filteredProducts.length > 0 && (
-                                <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-96 overflow-y-auto">
                                     {filteredProducts.map(product => (
                                         <div key={product.id} className="border-b last:border-b-0">
-                                            <div className="p-3 font-medium bg-gray-50">
-                                                {product.name} ({product.product_no})
+                                            <div className="p-3 font-medium bg-gray-50 flex justify-between items-center sticky top-0 bg-white border-b">
+                                                <span className="font-semibold">
+                                                    {product.name} ({product.product_no})
+                                                </span>
+                                                <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
+                                                    {product.variants?.length || 0} variants
+                                                </span>
                                             </div>
                                             {product.variants && product.variants.map(variant => (
                                                 <div
                                                     key={variant.id}
-                                                    className="p-3 hover:bg-gray-100 cursor-pointer border-t"
+                                                    className="p-3 hover:bg-blue-50 cursor-pointer border-b last:border-b-0 transition-colors duration-150"
                                                     onClick={() => addItem(product, variant)}
                                                 >
-                                                    <div className="flex justify-between items-center">
-                                                        <div className="text-sm">
-                                                            <div>{getVariantDisplayName(variant)}</div>
+                                                    <div className="flex justify-between items-start">
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-sm mb-1">
+                                                                {getVariantDisplayName(variant)}
+                                                            </div>
                                                             {variant.sku && (
-                                                                <div className="text-xs text-gray-500 font-mono mt-1">
+                                                                <div className="text-xs text-gray-500 font-mono mb-1">
                                                                     SKU: {variant.sku}
                                                                 </div>
                                                             )}
+                                                            <div className="text-xs text-gray-600 space-y-1">
+                                                                <div>
+                                                                    <span className="font-medium">Cost:</span> 
+                                                                    ৳{variant.unit_cost || '0.00'} | 
+                                                                    <span className="font-medium ml-2">Shadow:</span> 
+                                                                    ৳{variant.shadow_unit_cost || '0.00'}
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <Plus size={14} className="text-primary" />
+                                                        <Plus size={16} className="text-primary flex-shrink-0 ml-2 mt-1" />
                                                     </div>
                                                 </div>
                                             ))}
@@ -453,9 +628,14 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                     ))}
                                 </div>
                             )}
+
+                            {productSearch && filteredProducts.length === 0 && (
+                                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg p-4 text-center text-gray-500">
+                                    No products found matching "{productSearch}"
+                                </div>
+                            )}
                         </div>
 
-                        {/* Selected Items */}
                         {selectedItems.length > 0 ? (
                             <div className="space-y-3">
                                 <h3 className="font-semibold flex items-center gap-2">
@@ -477,11 +657,8 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                             </button>
                                         </div>
 
-                                        {/* Item Input Fields */}
                                         <div className="space-y-3">
-                                            {/* First Row: Quantity and Unit Prices */}
                                             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                                {/* Quantity */}
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text">Quantity *</span>
@@ -496,7 +673,6 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                     />
                                                 </div>
 
-                                                {/* Real Unit Price - Hidden for shadow users */}
                                                 {!isShadowUser && (
                                                     <div className="form-control">
                                                         <label className="label">
@@ -514,25 +690,24 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                     </div>
                                                 )}
 
-                                                {/* Shadow Unit Price */}
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text flex items-center gap-1">
                                                             {isShadowUser ? 'Unit Price *' : 'Shadow Unit Price *'}
+                                                            {isShadowUser && <Shield size={12} className="text-warning" />}
                                                         </span>
                                                     </label>
                                                     <input
                                                         type="number"
                                                         min="0.01"
                                                         step="0.01"
-                                                        className={`input input-bordered input-sm ${isShadowUser ? 'border-warning' : ''}`}
+                                                        className={`input input-bordered input-sm ${isShadowUser ? 'border-warning' : 'border-blue-300'}`}
                                                         value={item.shadow_unit_price}
                                                         onChange={(e) => updateItem(index, 'shadow_unit_price', parseFloat(e.target.value) || 0)}
                                                         required
                                                     />
                                                 </div>
 
-                                                {/* Total Price Display */}
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text">
@@ -548,9 +723,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 </div>
                                             </div>
 
-                                            {/* Second Row: Sale Prices */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                                {/* Real Sale Price - Hidden for shadow users */}
                                                 {!isShadowUser && (
                                                     <div className="form-control">
                                                         <label className="label">
@@ -568,18 +741,18 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                     </div>
                                                 )}
 
-                                                {/* Shadow Sale Price */}
                                                 <div className="form-control">
                                                     <label className="label">
                                                         <span className="label-text flex items-center gap-1">
                                                             {isShadowUser ? 'Sale Price *' : 'Shadow Sale Price *'}
+                                                            {isShadowUser && <Shield size={12} className="text-warning" />}
                                                         </span>
                                                     </label>
                                                     <input
                                                         type="number"
                                                         min="0.01"
                                                         step="0.01"
-                                                        className={`input input-bordered input-sm ${isShadowUser ? 'border-warning' : ''}`}
+                                                        className={`input input-bordered input-sm ${isShadowUser ? 'border-warning' : 'border-blue-300'}`}
                                                         value={item.shadow_sale_price}
                                                         onChange={(e) => updateItem(index, 'shadow_sale_price', parseFloat(e.target.value) || 0)}
                                                         required
@@ -587,7 +760,6 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 </div>
                                             </div>
 
-                                            {/* Price Summary for the item */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t">
                                                 {!isShadowUser && (
                                                     <div className="text-xs text-gray-600">
@@ -616,47 +788,24 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                     </div>
                                 ))}
 
-                                {/* Total Amounts Summary */}
+                                {/* Totals Section */}
                                 <div className="border-t pt-4 mt-4 space-y-3">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className={`p-4 rounded-box ${isShadowUser ? 'bg-warning/10 border border-warning' : 'bg-base-200'}`}>
-                                            <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                                {isShadowUser ? 'Active Amounts' : 'Real Amounts'}
-                                                {isShadowUser && <span className="badge badge-warning badge-sm">Active</span>}
-                                            </h4>
-                                            <div className="space-y-1 text-sm">
-                                                <div className="flex justify-between">
-                                                    <span>Total Amount:</span>
-                                                    <span className="font-semibold">
-                                                        ৳{isShadowUser ? shadowTotalAmount.toFixed(2) : totalAmount.toFixed(2)}
-                                                    </span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Paid Amount:</span>
-                                                    <span className="text-green-600">৳{paidAmount.toFixed(2)}</span>
-                                                </div>
-                                                <div className="flex justify-between">
-                                                    <span>Due Amount:</span>
-                                                    <span className={`font-semibold ${dueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                                        ৳{dueAmount.toFixed(2)}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-
+                                    <div className={`grid ${isShadowUser ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-4`}>
                                         {!isShadowUser && (
-                                            <div className="p-4 rounded-box bg-blue-50 border border-blue-200">
-                                                <h4 className="font-semibold mb-2 text-blue-700">Shadow Amounts</h4>
+                                            <div className="p-4 rounded-box bg-base-200">
+                                                <h4 className="font-semibold mb-2">Real Amounts</h4>
                                                 <div className="space-y-1 text-sm">
                                                     <div className="flex justify-between">
-                                                        <span>Shadow Total:</span>
-                                                        <span className="font-semibold text-blue-700">
-                                                            ৳{shadowTotalAmount.toFixed(2)}
+                                                        <span>Total Amount:</span>
+                                                        <span className="font-semibold">
+                                                            ৳{totalAmount.toFixed(2)}
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span>Paid Amount:</span>
-                                                        <span className="text-green-600">৳{paidAmount.toFixed(2)}</span>
+                                                        <span className="text-green-600">
+                                                            ৳{paidAmount.toFixed(2)}
+                                                        </span>
                                                     </div>
                                                     <div className="flex justify-between">
                                                         <span>Due Amount:</span>
@@ -664,9 +813,50 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                             ৳{dueAmount.toFixed(2)}
                                                         </span>
                                                     </div>
+                                                    <div className="mt-2 pt-2 border-t">
+                                                        <div className="flex justify-between">
+                                                            <span>Payment Status:</span>
+                                                            <span className={`badge badge-${paymentStatus === 'paid' ? 'success' : paymentStatus === 'partial' ? 'warning' : 'error'} badge-sm`}>
+                                                                {paymentStatus}
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
+
+                                        <div className={`p-4 rounded-box ${isShadowUser ? 'bg-warning/10 border border-warning' : 'bg-blue-50 border border-blue-200'}`}>
+                                            <h4 className="font-semibold mb-2 flex items-center gap-2">
+                                                {isShadowUser ? 'Active Amounts' : 'Shadow Amounts'}
+                                                {isShadowUser && <span className="badge badge-warning badge-sm">Active</span>}
+                                            </h4>
+                                            <div className="space-y-1 text-sm">
+                                                <div className="flex justify-between">
+                                                    <span>{isShadowUser ? 'Total Amount' : 'Shadow Total'}:</span>
+                                                    <span className={`font-semibold ${isShadowUser ? 'text-warning' : 'text-blue-700'}`}>
+                                                        ৳{shadowTotalAmount.toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>{isShadowUser ? 'Paid Amount' : 'Shadow Paid'}:</span>
+                                                    <span className="text-green-600">৳{shadowPaidAmount.toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>{isShadowUser ? 'Due Amount' : 'Shadow Due'}:</span>
+                                                    <span className={`font-semibold ${shadowDueAmount > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                                        ৳{shadowDueAmount.toFixed(2)}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-2 pt-2 border-t">
+                                                    <div className="flex justify-between">
+                                                        <span>Payment Status:</span>
+                                                        <span className={`badge badge-${shadowPaymentStatus === 'paid' ? 'success' : shadowPaymentStatus === 'partial' ? 'warning' : 'error'} badge-sm`}>
+                                                            {shadowPaymentStatus}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -676,7 +866,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                 <p className="text-sm text-gray-400 mt-1">Search and add products above</p>
                                 {isShadowUser && (
                                     <p className="text-sm text-warning mt-2">
-                                        Remember to enter prices for all items
+                                        Remember to enter shadow prices for all items
                                     </p>
                                 )}
                             </div>
@@ -691,11 +881,14 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                         disabled={form.processing || selectedItems.length === 0}
                     >
                         {form.processing ? (
-                            "Creating Purchase..."
+                            <span className="flex items-center gap-2">
+                                <div className="loading loading-spinner loading-sm"></div>
+                                Creating Purchase...
+                            </span>
                         ) : isShadowUser ? (
                             <>
                                 <Shield size={16} />
-                                Create Purchase
+                                Create Shadow Purchase
                             </>
                         ) : (
                             "Create Purchase"

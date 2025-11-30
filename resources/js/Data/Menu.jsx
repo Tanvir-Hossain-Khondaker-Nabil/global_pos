@@ -16,7 +16,7 @@ import {
     DollarSign,
 } from "lucide-react";
 
-// Common menu
+// Common menu - Keep original English titles
 const baseMenu = [
     {
         title: "Dashboard",
@@ -46,7 +46,6 @@ const baseMenu = [
         active: "sales.index",
         role: "all",
     },
-
     {
         title: "All Orders (POS)",
         icon: <BadgeCent size={16} />,
@@ -54,7 +53,6 @@ const baseMenu = [
         active: "salesPos.index",
         role: "all",
     },
-
     {
         title: "All Sales Items",
         icon: <BadgeCent size={16} />,
@@ -62,7 +60,6 @@ const baseMenu = [
         active: "salesItems.list",
         role: "all",
     },
-    // New Purchase Menu Items
     {
         title: "Purchase",
         icon: <Receipt size={16} />,
@@ -77,7 +74,6 @@ const baseMenu = [
         active: "purchase.create",
         role: "admin",
     },
-    // New Warehouse Menu Item
     {
         title: "Warehouse",
         icon: <Warehouse size={16} />,
@@ -114,7 +110,7 @@ const baseMenu = [
         role: "admin",
     },
     {
-        title: "Categorys",
+        title: "Categories", // Fixed typo from "Categorys"
         icon: <Box size={16} />,
         route: route("category.view"),
         active: "category.view",
