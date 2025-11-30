@@ -20,6 +20,14 @@ use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
+<<<<<<< HEAD
+=======
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\PlanController;
+use App\Http\Controllers\SubscriptionController;
+>>>>>>> 0125ca25fb64a38ce080f8cefddec3d327880a96
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -28,71 +36,7 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 });
 
 
-Route::get('/clear', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('config:cache');
-    Artisan::call('view:clear');
-    return "Cache is cleared";
-});
 
-
-Route::get('/migrate', function () {
-    Artisan::call('migrate:fresh --seed');
-    return "Database migrated fresh with seeders";
-});
-
-
-Route::get('/module', function () {
-    $modules = collect(Route::getRoutes())
-        ->map(fn($route) => $route->getName())
-        ->filter()
-        ->map(fn($name) => explode('.', $name)[0])
-        ->unique()
-        ->values()
-        ->toArray();
-
-    return $modules;
-});
-
-
-Route::get('/actions', function () {
-
-    $actionMap = [
-        'index' => 'view',
-        'show' => 'view',
-        'create' => 'create',
-        'store' => 'create',
-        'edit' => 'edit',
-        'update' => 'edit',
-        'destroy' => 'delete',
-        'delete' => 'delete'
-    ];
-
-
-    $allActions = collect(Route::getRoutes())
-        ->map(fn($route) => $route->getName())
-        ->filter()
-        ->map(function ($name) use ($actionMap) {
-
-            $parts = explode('.', $name);
-
-            if (count($parts) < 2)
-                return null;
-
-            $method = end($parts);
-
-            return $actionMap[$method] ?? null;
-        })
-        ->filter()
-        ->unique()
-        ->values()
-        ->toArray();
-
-    return $allActions;
-
-
-});
 
 
 // auth routes
@@ -184,6 +128,9 @@ Route::middleware('auth')->group(function () {
     // Expense
     Route::controller(ExpenseController::class)->group(function () {
         Route::get('/expense', 'index')->name('expenses.list');
+        Route::get('/expense/category', 'category')->name('expenses.category');
+        Route::post('/expense/category', 'categoryStore')->name('expenses.category.store');
+
         Route::post('/expense', 'store')->name('expenses.post');
         Route::get('/expense/{id}', 'distroy')->name('expenses.del');
     });
@@ -247,6 +194,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
     Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
 
+<<<<<<< HEAD
     Route::get('/purchase/statistics', [PurchaseController::class, 'getStatistics'])->name('purchase.statistics');
     Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->name('purchase.recent');
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->name('purchase.exportPdf');
@@ -258,3 +206,59 @@ Route::post('/switch-locale', [Controller::class, 'switchLocale'])->name('locale
 Route::get('/lang/{locale}', [Controller::class, 'setLang'])->name('lang.switch');
 
 Route::get('/current-lang', [Controller::class, 'getLang'])->name('lang.current');
+=======
+
+    Route::resource('companies', CompanyController::class)->names([
+        'index'   => 'companies.index',
+        'create'  => 'companies.create',
+        'store'   => 'companies.store',
+        'show'    => 'companies.show',
+        'edit'    => 'companies.edit',
+        'update'  => 'companies.update',
+        'destroy' => 'companies.destroy',
+    ]);
+
+    Route::resource('dealerships', DealershipController::class)->names([
+        'index'   => 'dealerships.index',
+        'create'  => 'dealerships.create',
+        'store'   => 'dealerships.store',
+        'show'    => 'dealerships.show',
+        'edit'    => 'dealerships.edit',
+        'update'  => 'dealerships.update',
+        'destroy' => 'dealerships.destroy',
+    ]);
+
+
+    Route::resource('plans', PlanController::class)->names([
+        'index'   => 'plans.index',
+        'create'  => 'plans.create',
+        'store'   => 'plans.store',
+        'show'    => 'plans.show',
+        'edit'    => 'plans.edit',
+        'update'  => 'plans.update',
+        'destroy' => 'plans.destroy',
+    ]);
+
+
+    Route::resource('subscriptions', SubscriptionController::class)->names([
+        'index'   => 'subscriptions.index',
+        'create'  => 'subscriptions.create',
+        'store'   => 'subscriptions.store',
+        'show'    => 'subscriptions.show',
+        'edit'    => 'subscriptions.edit',
+        'update'  => 'subscriptions.update',
+        'destroy' => 'subscriptions.destroy',
+    ]);
+
+    Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
+    Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');
+    Route::get('/subscriptions_payments/view/{id}', [SubscriptionController::class, 'paymentView'])->name('subscriptions.payments.view');
+
+
+});
+
+
+require __DIR__.'/command.php';
+
+
+>>>>>>> 0125ca25fb64a38ce080f8cefddec3d327880a96

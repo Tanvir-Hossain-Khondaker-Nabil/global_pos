@@ -52,6 +52,10 @@ export default function SaleItemShow({ saleItem }) {
 
     return (
         <div className="bg-white rounded-box p-5">
+                <PageHeader 
+                    title="Iduvisul Sales Items" 
+                    description="Comprehensive list of all sold items with detailed information"
+                />
             {/* Header with Actions */}
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
@@ -108,8 +112,33 @@ export default function SaleItemShow({ saleItem }) {
                                 </div>
                                 <div>
                                     <label className="label font-semibold">Variant</label>
-                                    <p className="text-lg">{saleItem.variant?.size || 'No Variant'} ({saleItem.variant?.color || 'No Color'})</p>
+
+                                    {saleItem.variant && (
+                                        <p>
+                                        {(() => {
+                                            const variant = saleItem.variant;
+                                            let attrsText = '';
+
+                                            if (variant.attribute_values) {
+                                            if (typeof variant.attribute_values === 'object') {
+                                                attrsText = Object.entries(variant.attribute_values)
+                                                .map(([key, value]) => `${key}: ${value}`)
+                                                .join(', ');
+                                            } else {
+                                                attrsText = variant.attribute_values;
+                                            }
+                                            }
+
+                                            return <>{attrsText || 'N/A'}</>;
+                                        })()}
+                                        </p>
+                                    )}
+
+                                        <span className="text-sm text-gray-500">
+                                           ( {saleItem.variant?.sku|| 'No SKU'})
+                                        </span>
                                 </div>
+
                                 <div>
                                     <label className="label font-semibold">Product Number</label>
                                     <p className="text-lg">{saleItem.product?.product_no || 'N/A'}</p>

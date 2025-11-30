@@ -45,6 +45,7 @@ export default function Index({
         date: new Date().toLocaleDateString("sv-SE"),
         details: "",
         amount: "",
+        sh_amount: "",
     });
     const formSubmit = (e) => {
         e.preventDefault();
@@ -68,6 +69,8 @@ export default function Index({
                 title="Expense list"
                 subtitle="Manage your all expenses from here."
             >
+
+               
                 <div className="flex items-center gap-2">
                     <input
                         type="date"
@@ -345,6 +348,25 @@ export default function Index({
                             {errors.amount && (
                                 <p className="label text-error">
                                     {errors.amount}
+                                </p>
+                            )}
+                        </fieldset>
+
+                        <fieldset className="fieldset">
+                            <legend className="fieldset-legend">Sh Amount*</legend>
+                            <input
+                                type="number"
+                                step={0.01}
+                                min={1}
+                                value={data.sh_amount}
+                                onChange={(e) =>
+                                    setData("sh_amount", e.target.value)
+                                }
+                                className="input"
+                            />
+                            {errors.sh_amount && (
+                                <p className="label text-error">
+                                    {errors.sh_amount}
                                 </p>
                             )}
                         </fieldset>

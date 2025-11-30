@@ -82,10 +82,23 @@ export default function AddSale({ customers, productstocks }) {
 
     const getVariantDisplayName = (variant) => {
         const parts = [];
-        if (variant.size) parts.push(`Size: ${variant.size}`);
-        if (variant.color) parts.push(`Color: ${variant.color}`);
+
+        if (variant.attribute_values) {
+            if (typeof variant.attribute_values === 'object') {
+                const attrs = Object.entries(variant.attribute_values)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(', ');
+                parts.push(`Attribute: ${attrs}`);
+            } else {
+                parts.push(`Attribute: ${variant.attribute_values}`);
+            }
+        }
+
+        if (variant.sku) parts.push(`Sku: ${variant.sku}`);
+
         return parts.join(', ') || 'Default Variant';
     };
+
 
     // Filter products based on search
     useEffect(() => {
@@ -294,7 +307,7 @@ export default function AddSale({ customers, productstocks }) {
                             />
 
                             {/* Product Search Results */}
-                            {productSearch && filteredProducts.length > 0 && (
+                            {/* {productSearch && filteredProducts.length > 0 && (
                                 <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
                                     {filteredProducts.map(filteredProduct => (
                                         <div
@@ -303,12 +316,46 @@ export default function AddSale({ customers, productstocks }) {
                                             onClick={() => addItem(filteredProduct, filteredProduct.variant)}
                                         >
                                             <div className="flex justify-between items-center">
-                                                <span>{filteredProduct.product.name} ({filteredProduct.variant.size} size + {filteredProduct.variant.color} color)</span>
+                                                <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
                                                 <Plus size={14} className="text-primary" />
                                             </div>
                                         </div>
                                     ))}
                                 </div>
+                            )} */}
+
+
+                            
+                            {productSearch && filteredProducts.length > 0 && (
+                                    <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        {filteredProducts.map(filteredProduct => {
+                                            const attributes = filteredProduct.variant?.attribute_values
+                                                ? Object.entries(filteredProduct.variant.attribute_values)
+                                                    .map(([key, value]) => `${key}: ${value}`)
+                                                    .join(', ')
+                                                : null;
+
+                                            return (
+                                                <div
+                                                    key={filteredProduct.product.id}
+                                                    className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                                    onClick={() => addItem(filteredProduct, filteredProduct.variant)}
+                                                >
+                                                    <div className="flex flex-col">
+                                                        <div className="flex justify-between items-center">
+                                                            <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
+                                                            <Plus size={14} className="text-primary" />
+                                                        </div>
+                                                        {attributes && (
+                                                            <div className="text-sm text-gray-500 mt-1">
+                                                                {attributes}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                             )}
                         </div>
 
@@ -322,8 +369,8 @@ export default function AddSale({ customers, productstocks }) {
                                             <div className="flex-1">
                                                 <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
                                                 <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
-                                                <p className="text-sm text-gray-600"> <strong>Available Stock:</strong> {item.stockQuantity} | 
-                                                <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
+                                                <p className="text-sm text-gray-600"> <strong>Available Stock: </strong> {item.stockQuantity} | 
+                                                <strong> Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
                                             </div>
                                             <button
                                                 type="button"

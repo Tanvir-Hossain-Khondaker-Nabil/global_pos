@@ -15,7 +15,9 @@ return new class extends Migration {
             $table->date('date')->nullable();
             $table->longText('details')->nullable();
             $table->decimal('amount', 10, 2);
-            $table->unsignedBigInteger('created_by');
+            $table->decimal('sh_amount', 10, 2);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('category_id')->nullable();
             $table->timestamps();
         });
     }
