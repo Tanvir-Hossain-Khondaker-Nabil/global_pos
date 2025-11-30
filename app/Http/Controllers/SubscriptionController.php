@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SubscriptionStore;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class SubscriptionController extends Controller
 {
@@ -43,20 +46,26 @@ class SubscriptionController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(SubscriptionStore $request)
     {
-        $plan_type = Plan::where('id', $request->plan_id)->value('plan_type');
 
-        dd($plan_type,$request->all());
-        $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'email' => 'nullable|email|exists:users,email',
-            'plan_id' => 'required|exists:plans,id',
-            'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
-            'payment_method' => 'required|string',
-            'transaction_id' => 'required|string',
-        ]);
+        $validity = Plan::where('id', $request->plan_id)->value('validity');
+        $validated = $request->validated();
+
+        if(!empty($request->user_email) && empty($request->user_id)) {
+            $user = User::where('email', $request->user_email)->first();
+            if ($user) {
+                $validated['user_id'] = $user->id;
+            }
+        }
+
+        if(Subscription::where('user_id', $validated['user_id'])->where('plan_id', $validated['plan_id'])->where('status', 1)->exists()) 
+        {
+            return back()->withErrors(['user_id' => 'This user already has an active subscription for the selected plan.'])->withInput();
+        }
+
+        $validated['validity'] = $validity;
+        $validated['status'] = 1; //active
 
        $subscriptions = Subscription::create($validated);
 
@@ -64,30 +73,79 @@ class SubscriptionController extends Controller
           SubscriptionPayment::create([
               'subscription_id' => $subscriptions->id,
               'payment_method' => $request->payment_method ?? 'manual',
-              'transaction_id' => $request->transaction_id ?? 'N/A',
+              'transaction_id' => $request->transaction_id ?? 'nexoryn-' . uniqid(),
               'amount' => $subscriptions->plan->price,
               'status' => 'completed',
               'payment_date' => now(),
           ]);
        }
 
-        return redirect()->route('subscriptions.index')->with('success', 'Subscription created successfully.');
+        return to_route('subscriptions.index')->with('success', 'Subscription created successfully.');
+    }
+
+    /**
+     * edit the specified resource.
+     */
+    public function edit(string $id)
+    {
+        $subscription = Subscription::with(['user', 'plan'])->findOrFail($id);
+        
+        return Inertia::render('Subscriptions/Edit', [
+            'subscription' => $subscription,
+            'plans' => Plan::active()->get(),
+        ]);
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function renew(Request $request, string $id)
     {
-        //
+        $subscription = Subscription::with(['user', 'plan'])->findOrFail($id);
+        $plan = Plan::findOrFail($request->plan_id);
+        $plan_type = $plan->plan_type;
+
+        if ($plan_type == Plan::PLAN_PAID) {
+            $request->validate([
+                'payment_method' => 'required|string',
+                'transaction_id' => 'required|string',
+            ]);
+        }
+
+        $startDate = Carbon::parse($subscription->end_date);
+        $endDate = $startDate->addDays($plan->validity);
+
+        $subscription->update([
+            'end_date' => $endDate,
+            'validity' => $subscription->validity + $plan->validity,
+            'status' => Subscription::STATUS_ACTIVE,
+        ]);
+
+        if ($plan_type !== Plan::PLAN_FREE) {
+            \App\Models\SubscriptionPayment::create([
+                'subscription_id' => $subscription->id,
+                'amount' => $plan->price,
+                'payment_method' => $request->payment_method,
+                'transaction_id' => $request->transaction_id,
+                'status' => \App\Models\SubscriptionPayment::STATUS_COMPLETED,
+                'payment_date' => now(),
+            ]);
+        }
+
+        return to_route('subscriptions.index')->with('success', 'Subscription renewed and payment recorded successfully.');
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function show(string $id)
     {
-        //
+        $subscription = Subscription::with(['plan', 'user', 'payments'])
+        ->withCount('payments')
+        ->findOrFail($id);
+        return inertia('Subscriptions/Show', [
+            'subscription' => $subscription
+        ]);
     }
 
     /**

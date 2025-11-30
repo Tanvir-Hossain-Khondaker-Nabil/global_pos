@@ -13,7 +13,13 @@ class Subscription extends Model
         'start_date',
         'end_date',
         'status',
+        'notes',
     ];
+
+    const STATUS_ACTIVE = 1;
+    const STATUS_EXPIRED = 2;
+    const STATUS_CANCELLED = 3;
+    const STATUS_PENDING = 4;
 
 
     //relations with plan

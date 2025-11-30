@@ -230,6 +230,9 @@ Route::middleware('auth')->group(function () {
         'destroy' => 'subscriptions.destroy',
     ]);
 
+    Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
+    Route::get('/subscriptions/{subscription}/cancel', [SubscriptionController::class, 'cancel'])->name('subscriptions.cancel');
+
 
 });
 

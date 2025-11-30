@@ -17,6 +17,10 @@ class Plan extends Model
         'total_sell',
     ];
 
+
+    const PLAN_FREE = 1;
+    const PLAN_PAID = 2;
+
     protected $casts = [
         'features' => 'array', 
     ];
@@ -29,8 +33,6 @@ class Plan extends Model
     {
         return $this->hasMany(Subscription::class);
     }
-
-
 
 
     // Scope for active plans

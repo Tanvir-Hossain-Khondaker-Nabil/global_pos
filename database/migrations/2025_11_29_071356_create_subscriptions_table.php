@@ -21,6 +21,7 @@ return new class extends Migration
             $table->enum('status', [1, 2, 3, 4])
             ->default(4)
             ->comment('1=active, 2=expired, 3=canceled, 4=pending');
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }

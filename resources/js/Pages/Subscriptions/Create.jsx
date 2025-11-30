@@ -19,8 +19,6 @@ export default function Create({ plans, users }) {
         plan_id: "",
         start_date: new Date().toISOString().split('T')[0],
         end_date: "",
-        status: "active",
-        payment_status: "pending",
         amount: "",
         transaction_id: "",
         notes: "",
@@ -332,7 +330,7 @@ export default function Create({ plans, users }) {
                     </div>
 
                     {/* Status & Payment Card */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                    {/* <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                         <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <CheckCircle className="text-white" size={24} />
@@ -383,7 +381,7 @@ export default function Create({ plans, users }) {
                                 )}
                             </div>
                         </div>
-                    </div>
+                    </div> */}
 
                     {/* Additional Information Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
