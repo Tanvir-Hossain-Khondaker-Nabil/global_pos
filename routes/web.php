@@ -20,14 +20,10 @@ use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
-<<<<<<< HEAD
-=======
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DealershipController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\SubscriptionController;
->>>>>>> 0125ca25fb64a38ce080f8cefddec3d327880a96
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -194,11 +190,10 @@ Route::middleware('auth')->group(function () {
     Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
     Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
 
-<<<<<<< HEAD
     Route::get('/purchase/statistics', [PurchaseController::class, 'getStatistics'])->name('purchase.statistics');
     Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->name('purchase.recent');
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->name('purchase.exportPdf');
-});
+
 
 
 Route::post('/switch-locale', [Controller::class, 'switchLocale'])->name('locale.switch');
@@ -206,7 +201,6 @@ Route::post('/switch-locale', [Controller::class, 'switchLocale'])->name('locale
 Route::get('/lang/{locale}', [Controller::class, 'setLang'])->name('lang.switch');
 
 Route::get('/current-lang', [Controller::class, 'getLang'])->name('lang.current');
-=======
 
     Route::resource('companies', CompanyController::class)->names([
         'index'   => 'companies.index',
@@ -261,4 +255,3 @@ Route::get('/current-lang', [Controller::class, 'getLang'])->name('lang.current'
 require __DIR__.'/command.php';
 
 
->>>>>>> 0125ca25fb64a38ce080f8cefddec3d327880a96
