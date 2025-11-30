@@ -1,0 +1,25 @@
+<?php
+
+return [
+    'management' => 'অ্যাট্রিবিউট ব্যবস্থাপনা',
+    'management_description' => 'পণ্যের অ্যাট্রিবিউট এবং তাদের মানগুলি পরিচালনা করুন',
+    'create_attribute' => 'অ্যাট্রিবিউট তৈরি করুন',
+    'edit_attribute' => 'অ্যাট্রিবিউট সম্পাদনা করুন',
+    'create_new_attribute' => 'নতুন অ্যাট্রিবিউট তৈরি করুন',
+    'attribute_name' => 'অ্যাট্রিবিউটের নাম',
+    'attribute_code' => 'অ্যাট্রিবিউট কোড',
+    'attribute_values' => 'অ্যাট্রিবিউটের মানসমূহ',
+    'add_value' => 'মান যোগ করুন',
+    'update_attribute' => 'অ্যাট্রিবিউট আপডেট করুন',
+    'saving' => 'সংরক্ষণ করা হচ্ছে...',
+    'name_placeholder' => 'যেমন: রং, সাইজ, মডেল',
+    'code_placeholder' => 'যেমন: color, size, model',
+    'value_placeholder' => 'মান (যেমন: ছোট, লাল)',
+    'value' => 'মান',
+    'code' => 'কোড',
+    'add' => 'যোগ করুন',
+    'no_attributes_found' => 'কোন অ্যাট্রিবিউট পাওয়া যায়নি',
+    'get_started' => 'আপনার প্রথম অ্যাট্রিবিউট তৈরি করে শুরু করুন',
+    'confirm_delete_attribute' => 'আপনি কি নিশ্চিত যে আপনি ":name" ডিলিট করতে চান?',
+    'confirm_delete_value' => 'আপনি কি নিশ্চিত যে আপনি এই মানটি ডিলিট করতে চান?',
+];

@@ -1,5 +1,6 @@
 import { Head, usePage } from "@inertiajs/react";
 import { Annoyed, DollarSign, ShoppingCart } from "lucide-react";
+import { useTranslation } from "../hooks/useTranslation";
 
 export default function Dashboard({
     totalSales,
@@ -10,20 +11,27 @@ export default function Dashboard({
     totalPaid
 }) {
     const { auth, appName } = usePage().props;
+    const { t, locale } = useTranslation();
 
     return (
-        <div>
+        <div className={locale === 'bn' ? 'bangla-font' : ''}>
             <div>
                 <h1 className="text-lg text-gray-900 font-semibold">
-                    Dashboard
+                    {t('dashboard.title', 'Dashboard')}
                 </h1>
                 <p className="text-xs text-gray-500">
-                    Hi, {auth.name}. Welcome back to {appName} {auth.role}!
+                    {t('dashboard.welcome_message', 'Hi, :name. Welcome back to :app :role!', {
+                        name: auth.name,
+                        app: appName,
+                        
+                        role: auth.role
+                    })}
                 </p>
             </div>
 
             {auth.role == "admin" ? (
                 <div className="grid mt-5 grid-cols-1 md:grid-cols-5 gap-3">
+                    {/* Total Sales */}
                     <div className="bg-primary rounded-box p-7 flex items-center gap-3">
                         <div className="bg-white/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
                             <span className="text-white text-xl font-bold">৳</span>
@@ -33,10 +41,12 @@ export default function Dashboard({
                                ৳ {Number(totalSales)?.toFixed(2) ?? "0.00"}
                             </h1>
                             <small className="text-xs text-white">
-                                Total seles
+                                {t('dashboard.total_sales', 'Total Sales')}
                             </small>
                         </div>
                     </div>
+
+                    {/* Total Payment */}
                     <div className="bg-orange-300 rounded-box p-7 flex items-center gap-3">
                         <div className="bg-white/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
                             <span className="text-white text-xl font-bold">৳</span>
@@ -46,45 +56,52 @@ export default function Dashboard({
                                ৳ {Number(totalPaid)?.toFixed(2) ?? "0.00"}
                             </h1>
                             <small className="text-xs text-gray-600">
-                                Total Payment
+                                {t('dashboard.total_payment', 'Total Payment')}
                             </small>
                         </div>
                     </div>
+
+                    {/* Total Due */}
                     <div className="bg-red-400 rounded-box p-7 flex items-center gap-3">
                         <div className="bg-white/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
                             <span className="text-white text-xl font-bold">৳</span>
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-white">
-                                ৳ {Number(totalDue)?.toFixed(2)}
+                                ৳ {Number(totalDue)?.toFixed(2) ?? "0.00"}
                             </h1>
-                            <small className="text-xs text-white">Total Due</small>
+                            <small className="text-xs text-white">
+                                {t('dashboard.total_due', 'Total Due')}
+                            </small>
                         </div>
                     </div>
 
+                    {/* Total Orders */}
                     <div className="bg-white rounded-box p-7 flex items-center gap-3">
                         <div className="bg-primary/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
                             <ShoppingCart size={20} className="text-primary" />
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-gray-900">
-                                {totalselas}
+                                {totalselas ?? 0}
                             </h1>
                             <small className="text-xs text-gray-600">
-                                Total Orders
+                                {t('dashboard.total_orders', 'Total Orders')}
                             </small>
                         </div>
                     </div>
+
+                    {/* Total Expenses */}
                     <div className="bg-error rounded-box p-7 flex items-center gap-3">
                         <div className="bg-white/10 rounded-full p-1 flex items-center justify-center w-10 h-10">
                             <ShoppingCart size={20} className="text-white" />
                         </div>
                         <div>
                             <h1 className="text-lg font-bold text-white">
-                                {totalexpense} Tk
+                                {totalexpense ?? 0} {t('dashboard.currency_tk', 'Tk')}
                             </h1>
                             <small className="text-xs text-white">
-                                Total Expenses
+                                {t('dashboard.total_expenses', 'Total Expenses')}
                             </small>
                         </div>
                     </div>
@@ -92,11 +109,13 @@ export default function Dashboard({
             ) : (
                 <div className="border border-gray-400 border-dashed rounded-box py-8 px-5 mt-5 flex flex-col items-center">
                     <Annoyed size={25} className="mb-2 text-gray-500"/>
-                    <p className="text-gray-500">You have no permission!</p>
+                    <p className="text-gray-500">
+                        {t('dashboard.no_permission', 'You have no permission!')}
+                    </p>
                 </div>
             )}
 
-            <Head title="Dashboard" />
+            <Head title={t('dashboard.title', 'Dashboard')} />
         </div>
     );
 }
