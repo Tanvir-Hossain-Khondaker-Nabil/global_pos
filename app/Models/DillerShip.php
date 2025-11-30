@@ -36,7 +36,7 @@ class DillerShip extends Model
 
     public function approver()
     {
-            return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
 

@@ -26,6 +26,7 @@ class DealershipController extends Controller
                 ->orderBy('created_at', 'desc')
                 ->paginate(10)
                 ->withQueryString();
+
             
             return Inertia::render('Dealerships/Index', [
                 'dellerships' => $dellerships,
@@ -95,7 +96,10 @@ class DealershipController extends Controller
          */
         public function show(string $id)
         {
-            //
+            $delership = DillerShip::with('company', 'approver')->findOrFail($id);
+            return Inertia::render('Dealerships/Show', [
+                'delership' => $delership,
+            ]);
         }
 
         /**
@@ -103,7 +107,12 @@ class DealershipController extends Controller
          */
         public function edit(string $id)
         {
-            //
+           $dealership = DillerShip::findOrFail($id);
+
+           return Inertia::render('Dealerships/Edit', [
+                'dealership' => $dealership,
+                'companies' => Company::select('id', 'name')->get(),
+            ]);
         }
 
         /**
