@@ -16,6 +16,7 @@ class DillerShip extends Model
         'status', 'approved_by', 'approved_at', 'remarks',
         'total_sales', 'total_orders', 'rating', 'last_order_date',
         'agreement_doc', 'bank_guarantee_doc', 'trade_license_doc', 'nid_doc',
+        'tax_clearance_doc',
     ];
 
     protected $casts = [
@@ -54,5 +55,16 @@ class DillerShip extends Model
     return Carbon::now()->diffInDays(Carbon::parse($this->contract_end), false); 
     }
 
+
+    public function scopeSearch($query, $term)
+    {
+        $term = "%$term%";
+        $query->where(function ($query) use ($term) {
+            $query->where('name', 'like', $term)
+                  ->orWhere('owner_name', 'like', $term)
+                  ->orWhere('email', 'like', $term)
+                  ->orWhere('phone', 'like', $term);
+        });
+    }
 
 }

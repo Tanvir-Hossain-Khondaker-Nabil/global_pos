@@ -11,7 +11,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+            $this->app->bind('uploadService', function () {
+                return new \App\Services\ServiceClass();
+            });
     }
 
     /**
