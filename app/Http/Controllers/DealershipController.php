@@ -120,7 +120,43 @@ class DealershipController extends Controller
          */
         public function update(Request $request, string $id)
         {
-            //
+            $validated = $request->validate([
+                'company_id' => 'required|exists:companies,id',
+                'contract_start' => 'required|date',
+                'contract_end' => 'required|date|after_or_equal:contract_start',
+                'status' => 'required|in:pending,approved,rejected',
+                'remarks' => 'nullable|string',
+            ]);
+
+            $dealership = DillerShip::findOrFail($id);
+            DB::beginTransaction();
+            try {
+                $uploadedFiles = $this->fileFunction($request);
+                $validated = array_merge($validated, $uploadedFiles);
+
+                if (($validated['status'] ?? null) == 'approved' && !$dealership->approved_at) {
+                    $validated['approved_by'] = Auth::id();
+                    $validated['approved_at'] = now();
+                }
+
+                $dealership->update($validated);
+
+                DB::commit();
+
+                return to_route('dealerships.index')->with('success', 'Dealership updated successfully!');
+            } catch (\Exception $e) {
+                DB::rollBack();
+
+                foreach ($uploadedFiles ?? [] as $path) {
+                    if ($path && Storage::disk('public')->exists($path)) {
+                        Storage::disk('public')->delete($path);
+                    }
+                }
+
+                return redirect()->back()
+                    ->with('error', 'Failed to update dealership: ' . $e->getMessage())
+                    ->withInput();
+            }
         }
 
         /**
@@ -132,29 +168,48 @@ class DealershipController extends Controller
         }
 
 
+        //aproved 
 
-    private function fileFunction(Request $request)
-    {
-        $files = [];
+        public function approve(Request $request, string $id)
+        {
+            $dealership = DillerShip::findOrFail($id);
 
-        $map = [
-            'contract_file'       => 'DelerShip/contracts',
-            'agreement_doc'       => 'DelerShip/agreement',
-            'bank_guarantee_doc'  => 'DelerShip/bank_guarantee',
-            'trade_license_doc'   => 'DelerShip/trade_license',
-            'nid_doc'             => 'DelerShip/nid',
-            'tax_clearance_doc'   => 'DelerShip/tax_clearance',
-        ];
-
-        foreach ($map as $field => $path) {
-            if ($request->hasFile($field)) {
-                $files[$field] = ServiceClass::uploadFile($request->file($field), $path);
-            } else {
-                $files[$field] = null;
+            if ($dealership->status == 'approved') {
+                return redirect()->back()->with('info', 'Dealership is already approved.');
             }
+
+            $dealership->update([
+                'status' => 'approved',
+                'approved_by' => Auth::id(),
+                'approved_at' => now(),
+            ]);
+
+            return redirect()->back()->with('success', 'Dealership approved successfully.');
         }
 
-        return $files;
-    }
+
+        private function fileFunction(Request $request)
+        {
+            $files = [];
+
+            $map = [
+                'contract_file'       => 'DelerShip/contracts',
+                'agreement_doc'       => 'DelerShip/agreement',
+                'bank_guarantee_doc'  => 'DelerShip/bank_guarantee',
+                'trade_license_doc'   => 'DelerShip/trade_license',
+                'nid_doc'             => 'DelerShip/nid',
+                'tax_clearance_doc'   => 'DelerShip/tax_clearance',
+            ];
+
+            foreach ($map as $field => $path) {
+                if ($request->hasFile($field)) {
+                    $files[$field] = ServiceClass::uploadFile($request->file($field), $path);
+                } else {
+                    $files[$field] = null;
+                }
+            }
+
+            return $files;
+        }
 
     }

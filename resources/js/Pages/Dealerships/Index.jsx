@@ -21,7 +21,8 @@ import {
     FileText,
     Star,
     CreditCard,
-    Shield
+    Shield,
+    Check
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -354,17 +355,26 @@ export default function Index({ dellerships, filters }) {
                                                 href={route("dealerships.show", dealership.id)}
                                                 className="btn btn-primary btn-xs"
                                             >
-                                                <Eye size={12} /> View
+                                                <Eye size={12} />
                                             </Link>
 
                                             <Link
                                                 href={route("dealerships.edit", dealership.id)}
                                                 className="btn btn-warning btn-xs"
                                             >
-                                                <Edit size={12} /> Edit
+                                                <Edit size={12} /> 
                                             </Link>
+                                                {dealership.status !== 'approved' && (
+                                                    <Link
+                                                        href={route("dealerships.approved", dealership.id)}
+                                                        method="post"
+                                                        title="Approve this dealership"
+                                                        className="btn btn-green btn-xs flex items-center gap-1"
+                                                    >
+                                                        <Check size={12} />
+                                                    </Link>
+                                                )}
 
-                    
                                         </div>
                                     </td>
                                 </tr>

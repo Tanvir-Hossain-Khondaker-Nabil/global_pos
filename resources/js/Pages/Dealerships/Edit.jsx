@@ -29,12 +29,7 @@ export default function Edit({ dealership, companies, users }) {
         contract_end: "",
         contract_file: null,
         status: "pending",
-        approved_by: "",
-        approved_at: "",
         remarks: "",
-        total_sales: "",
-        total_orders: "",
-        rating: "",
         last_order_date: "",
         agreement_doc: null,
         bank_guarantee_doc: null,
@@ -72,12 +67,7 @@ export default function Edit({ dealership, companies, users }) {
                 contract_end: dealership.contract_end || "",
                 contract_file: null,
                 status: dealership.status || "pending",
-                approved_by: dealership.approved_by || "",
-                approved_at: dealership.approved_at || "",
                 remarks: dealership.remarks || "",
-                total_sales: dealership.total_sales || "",
-                total_orders: dealership.total_orders || "",
-                rating: dealership.rating || "",
                 last_order_date: dealership.last_order_date || "",
                 agreement_doc: null,
                 bank_guarantee_doc: null,
@@ -232,8 +222,9 @@ export default function Edit({ dealership, companies, users }) {
                                 </label>
                                 <select
                                     value={data.company_id}
+                                    disabled
                                     onChange={(e) => setData("company_id", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300"
                                 >
                                     <option value="">Select Company</option>
                                     {companies?.map((c) => (
@@ -244,7 +235,7 @@ export default function Edit({ dealership, companies, users }) {
                                 </select>
                                 {errors.company_id && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                        ⚠️ {errors.company_id}
+                                         {errors.company_id}
                                     </p>
                                 )}
                             </div>
@@ -257,12 +248,13 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.name}
                                     onChange={(e) => setData("name", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300 "
                                     placeholder="Enter dealership name"
+                                    readOnly
                                 />
                                 {errors.name && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                        ⚠️ {errors.name}
+                                         {errors.name}
                                     </p>
                                 )}
                             </div>
@@ -276,8 +268,9 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.owner_name}
                                     onChange={(e) => setData("owner_name", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300 "
                                     placeholder="Enter owner's full name"
+                                    readOnly
                                 />
                             </div>
 
@@ -290,8 +283,9 @@ export default function Edit({ dealership, companies, users }) {
                                     type="email"
                                     value={data.email}
                                     onChange={(e) => setData("email", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300"
                                     placeholder="email@example.com"
+                                    readOnly
                                 />
                                 {errors.email && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.email}</p>
@@ -307,8 +301,9 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.phone}
                                     onChange={(e) => setData("phone", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300 "
                                     placeholder="+1 (555) 000-0000"
+                                    readOnly
                                 />
                                 {errors.phone && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.phone}</p>
@@ -324,8 +319,9 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.address}
                                     onChange={(e) => setData("address", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300"
                                     placeholder="Full business address"
+                                    readOnly
                                 />
                                 {errors.address && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.address}</p>
@@ -348,10 +344,11 @@ export default function Edit({ dealership, companies, users }) {
                                     Trade License No.
                                 </label>
                                 <input
+                                    readOnly
                                     type="text"
                                     value={data.trade_license_no}
                                     onChange={(e) => setData("trade_license_no", e.target.value)}
-                                    className="w-full px-4 py-3 border border-amber-200 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all duration-200 bg-white"
+                                    className="w-full px-4 py-3  rounded-lg 0 transition-all duration-200 bg-gray-300"
                                     placeholder="Trade license number"
                                 />
                                 {errors.trade_license_no && (
@@ -367,8 +364,9 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.tin_no}
                                     onChange={(e) => setData("tin_no", e.target.value)}
-                                    className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                                    className="w-full px-4 py-3  rounded-lg  transition-all duration-200 bg-gray-300"
                                     placeholder="Tax identification number"
+                                    readOnly
                                 />
                                 {errors.tin_no && (
                                     <p className="text-sm text-red-600 mt-2">{errors.tin_no}</p>
@@ -383,8 +381,9 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.nid_no}
                                     onChange={(e) => setData("nid_no", e.target.value)}
-                                    className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white"
+                                    className="w-full px-4 py-3  rounded-lg  transition-all duration-200 bg-gray-300"
                                     placeholder="National ID number"
+                                    readOnly
                                 />
                                 {errors.nid_no && (
                                     <p className="text-sm text-red-600 mt-2">{errors.nid_no}</p>
@@ -537,80 +536,6 @@ export default function Edit({ dealership, companies, users }) {
                         </div>
                     </div>
 
-                    {/* Performance & Business Metrics */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className="bg-gradient-to-r from-slate-600 to-gray-700 px-6 py-4">
-                            <div className="flex items-center gap-3">
-                                <TrendingUp className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Performance & Business Metrics</h2>
-                            </div>
-                        </div>
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-xl border border-green-100">
-                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                    <TrendingUp size={16} className="text-green-600" />
-                                    Total Sales (Tk)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={data.total_sales}
-                                    onChange={(e) => setData("total_sales", e.target.value)}
-                                    className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white"
-                                    placeholder="0.00"
-                                    step="0.01"
-                                />
-                            </div>
-
-                            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-100">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Total Orders
-                                </label>
-                                <input
-                                    type="number"
-                                    value={data.total_orders}
-                                    onChange={(e) => setData("total_orders", e.target.value)}
-                                    className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
-                                    placeholder="0"
-                                />
-                            </div>
-
-                            <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-4 rounded-xl border border-yellow-100">
-                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                    <Star size={16} className="text-yellow-600" />
-                                    Rating (0-5)
-                                </label>
-                                <input
-                                    type="number"
-                                    value={data.rating}
-                                    onChange={(e) => setData("rating", e.target.value)}
-                                    className="w-full px-4 py-3 border border-yellow-200 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 bg-white"
-                                    placeholder="0.0"
-                                    min="0"
-                                    max="5"
-                                    step="0.1"
-                                />
-                            </div>
-
-                            <div className="bg-gradient-to-br from-purple-50 to-violet-50 p-4 rounded-xl border border-purple-100">
-                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                    <User size={16} className="text-purple-600" />
-                                    Approved By
-                                </label>
-                                <select
-                                    value={data.approved_by}
-                                    onChange={(e) => setData("approved_by", e.target.value)}
-                                    className="w-full px-4 py-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white"
-                                >
-                                    <option value="">Select Approver</option>
-                                    {users?.map((user) => (
-                                        <option key={user.id} value={user.id}>
-                                            {user.name}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
 
                     {/* Document Uploads Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
@@ -634,7 +559,7 @@ export default function Edit({ dealership, companies, users }) {
                                                 File exists
                                             </span>
                                             <a 
-                                                href={existingFiles.agreement_doc} 
+                                                href={`/storage/${existingFiles.agreement_doc}`} 
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 className="btn btn-xs btn-outline"
@@ -668,7 +593,7 @@ export default function Edit({ dealership, companies, users }) {
                                                 File exists
                                             </span>
                                             <a 
-                                                href={existingFiles.bank_guarantee_doc} 
+                                                href={`/storage/${existingFiles.bank_guarantee_doc}`} 
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
                                                 className="btn btn-xs btn-outline"
@@ -698,9 +623,9 @@ export default function Edit({ dealership, companies, users }) {
                                                 <CheckCircle size={14} />
                                                 File exists
                                             </span>
-                                            <a 
-                                                href={existingFiles.trade_license_doc} 
-                                                target="_blank" 
+                                            <a
+                                                href={`/storage/${existingFiles.trade_license_doc}`}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="btn btn-xs btn-outline"
                                             >
@@ -729,9 +654,9 @@ export default function Edit({ dealership, companies, users }) {
                                                 <CheckCircle size={14} />
                                                 File exists
                                             </span>
-                                            <a 
-                                                href={existingFiles.nid_doc} 
-                                                target="_blank" 
+                                            <a
+                                                href={`/storage/${existingFiles.nid_doc}`}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="btn btn-xs btn-outline"
                                             >
@@ -760,9 +685,9 @@ export default function Edit({ dealership, companies, users }) {
                                                 <CheckCircle size={14} />
                                                 File exists
                                             </span>
-                                            <a 
-                                                href={existingFiles.tax_clearance_doc} 
-                                                target="_blank" 
+                                            <a
+                                                href={`/storage/${existingFiles.tax_clearance_doc}`}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="btn btn-xs btn-outline"
                                             >
@@ -791,9 +716,9 @@ export default function Edit({ dealership, companies, users }) {
                                                 <CheckCircle size={14} />
                                                 File exists
                                             </span>
-                                            <a 
-                                                href={existingFiles.contract_file} 
-                                                target="_blank" 
+                                            <a
+                                                href={`/storage/${existingFiles.contract_file}`}
+                                                target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="btn btn-xs btn-outline"
                                             >
@@ -811,21 +736,7 @@ export default function Edit({ dealership, companies, users }) {
                             </div>
                         </div>
 
-                        <div className="px-6 pb-6 border-t border-gray-100 pt-4">
-                            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                                <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                                    <FileCheck size={18} />
-                                    Upload Guidelines
-                                </h4>
-                                <ul className="text-sm text-blue-700 space-y-1">
-                                    <li>• Accepted formats: PDF, DOC, DOCX, JPG, JPEG, PNG</li>
-                                    <li>• Maximum file size: 10MB per document</li>
-                                    <li>• Ensure documents are clear and readable</li>
-                                    <li>• All documents should be valid and up-to-date</li>
-                                    <li>• Existing files will be replaced if new files are uploaded</li>
-                                </ul>
-                            </div>
-                        </div>
+  
                     </div>
 
                     {/* Additional Information Card */}

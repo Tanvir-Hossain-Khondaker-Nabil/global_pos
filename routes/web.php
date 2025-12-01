@@ -221,6 +221,7 @@ Route::middleware('auth')->group(function () {
         'update' => 'dealerships.update',
         'destroy' => 'dealerships.destroy',
     ]);
+    Route::post('/dealerships/{dealership}/approve', [DealershipController::class, 'approve'])->name('dealerships.approved');
 
 
     Route::resource('plans', PlanController::class)->names([
