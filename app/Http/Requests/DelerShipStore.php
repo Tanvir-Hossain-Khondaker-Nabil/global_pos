@@ -44,12 +44,12 @@ class DelerShipStore extends FormRequest
             'rating' => 'nullable|numeric|min:0|max:5',
             'last_order_date' => 'nullable|date',
             
-            'agreement_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
-            'bank_guarantee_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
-            'trade_license_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
-            'nid_doc' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-            'tax_clearance_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
-            'contract_file' => 'required|file|mimes:pdf,doc,docx|max:10240',
+            // 'agreement_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            // 'bank_guarantee_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            // 'trade_license_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            // 'nid_doc' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            // 'tax_clearance_doc' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240',
+            // 'contract_file' => 'required|file|mimes:pdf,doc,docx|max:10240',
         ];
     }
 }

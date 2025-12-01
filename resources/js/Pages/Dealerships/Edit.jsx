@@ -12,25 +12,16 @@ export default function Edit({ dealership, companies, users }) {
     console.log("Dealership Data:", dealership);
     
     const { data, setData, put, processing, errors } = useForm({
-        company_id: "",
-        name: "",
-        owner_name: "",
         email: "",
         phone: "",
         address: "",
-        trade_license_no: "",
-        tin_no: "",
-        nid_no: "",
-        advance_amount: "",
-        due_amount: "",
         credit_limit: "",
         payment_terms: "",
         contract_start: "",
         contract_end: "",
-        contract_file: null,
         status: "pending",
         remarks: "",
-        last_order_date: "",
+        contract_file: null,
         agreement_doc: null,
         bank_guarantee_doc: null,
         trade_license_doc: null,
@@ -301,9 +292,8 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.phone}
                                     onChange={(e) => setData("phone", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300 "
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-whitw-50 "
                                     placeholder="+1 (555) 000-0000"
-                                    readOnly
                                 />
                                 {errors.phone && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.phone}</p>
@@ -319,9 +309,8 @@ export default function Edit({ dealership, companies, users }) {
                                     type="text"
                                     value={data.address}
                                     onChange={(e) => setData("address", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white-50"
                                     placeholder="Full business address"
-                                    readOnly
                                 />
                                 {errors.address && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">{errors.address}</p>
@@ -410,9 +399,10 @@ export default function Edit({ dealership, companies, users }) {
                                     type="number"
                                     value={data.advance_amount}
                                     onChange={(e) => setData("advance_amount", e.target.value)}
-                                    className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white"
+                                    className="w-full px-4 py-3  rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-gray-300"
                                     placeholder="0.00"
                                     step="0.01"
+                                    readOnly
                                 />
                                 {errors.advance_amount && (
                                     <p className="text-sm text-red-600 mt-2">{errors.advance_amount}</p>
@@ -428,9 +418,10 @@ export default function Edit({ dealership, companies, users }) {
                                     type="number"
                                     value={data.due_amount}
                                     onChange={(e) => setData("due_amount", e.target.value)}
-                                    className="w-full px-4 py-3 border border-yellow-200 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 bg-white"
+                                    className="w-full px-4 py-3  rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 bg-gray-300"
                                     placeholder="0.00"
                                     step="0.01"
+                                    readOnly
                                 />
                             </div>
 
@@ -482,7 +473,8 @@ export default function Edit({ dealership, companies, users }) {
                                     type="date"
                                     value={formatDateForInput(data.contract_start)}
                                     onChange={(e) => setData("contract_start", e.target.value)}
-                                    className="w-full px-4 py-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white"
+                                    readOnly
+                                    className="w-full px-4 py-3 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-gray-300"
                                 />
                                 {errors.contract_start && (
                                     <p className="text-sm text-red-600 mt-2">{errors.contract_start}</p>    
@@ -498,7 +490,8 @@ export default function Edit({ dealership, companies, users }) {
                                     type="date"
                                     value={formatDateForInput(data.contract_end)}
                                     onChange={(e) => setData("contract_end", e.target.value)}
-                                    className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-white"
+                                    readOnly
+                                    className="w-full px-4 py-3 border border-pink-200 rounded-lg focus:ring-2 focus:ring-pink-500 focus:border-pink-500 transition-all duration-200 bg-gray-300"
                                 />
                                 {errors.contract_end && (
                                     <p className="text-sm text-red-600 mt-2">{errors.contract_end}</p>    
@@ -513,8 +506,9 @@ export default function Edit({ dealership, companies, users }) {
                                 <input
                                     type="date"
                                     value={formatDateForInput(data.last_order_date)}
+                                    readOnly
                                     onChange={(e) => setData("last_order_date", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-all duration-200 bg-white"
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition-all duration-200 bg-gray-300"
                                 />
                             </div>
 
@@ -523,9 +517,10 @@ export default function Edit({ dealership, companies, users }) {
                                     Status
                                 </label>
                                 <select
+                                    disabled
                                     value={data.status}
                                     onChange={(e) => setData("status", e.target.value)}
-                                    className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
+                                    className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-300"
                                 >
                                     <option value="pending">Pending</option>
                                     <option value="active">Active</option>
@@ -568,12 +563,7 @@ export default function Edit({ dealership, companies, users }) {
                                             </a>
                                         </div>
                                     )}
-                                    <input
-                                        type="file"
-                                        onChange={(e) => handleFileChange("agreement_doc", e.target.files[0])}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                    />
+                              
                                 </div>
                                 {errors.agreement_doc && (
                                     <p className="text-sm text-red-600 mt-2">{errors.agreement_doc}</p>
@@ -602,12 +592,7 @@ export default function Edit({ dealership, companies, users }) {
                                             </a>
                                         </div>
                                     )}
-                                    <input
-                                        type="file"
-                                        onChange={(e) => handleFileChange("bank_guarantee_doc", e.target.files[0])}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                    />
+                           
                                 </div>
                             </div>
 
@@ -633,12 +618,6 @@ export default function Edit({ dealership, companies, users }) {
                                             </a>
                                         </div>
                                     )}
-                                    <input
-                                        type="file"
-                                        onChange={(e) => handleFileChange("trade_license_doc", e.target.files[0])}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                    />
                                 </div>
                             </div>
 
@@ -664,12 +643,7 @@ export default function Edit({ dealership, companies, users }) {
                                             </a>
                                         </div>
                                     )}
-                                    <input
-                                        type="file"
-                                        onChange={(e) => handleFileChange("nid_doc", e.target.files[0])}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        accept=".pdf,.jpg,.jpeg,.png"
-                                    />
+                           
                                 </div>
                             </div>
 
@@ -695,12 +669,7 @@ export default function Edit({ dealership, companies, users }) {
                                             </a>
                                         </div>
                                     )}
-                                    <input
-                                        type="file"
-                                        onChange={(e) => handleFileChange("tax_clearance_doc", e.target.files[0])}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                                    />
+                                
                                 </div>
                             </div>
 
@@ -726,12 +695,7 @@ export default function Edit({ dealership, companies, users }) {
                                             </a>
                                         </div>
                                     )}
-                                    <input
-                                        type="file"
-                                        onChange={(e) => handleFileChange("contract_file", e.target.files[0])}
-                                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                                        accept=".pdf,.doc,.docx"
-                                    />
+                             
                                 </div>
                             </div>
                         </div>

@@ -285,7 +285,7 @@ export default function Index({ dellerships, filters }) {
                                                 <Calendar size={12} className="text-orange-600" />
                                                 <span>End: {formatDate(dealership.contract_end)}</span>
                                             </div>
-                                            {dealership.contract_end && (
+                                            {/* {dealership.contract_end && (
                                                 <div className={`text-xs font-medium ${
                                                     getContractDaysRemaining(dealership.contract_end) < 30 
                                                         ? 'text-red-600' 
@@ -293,7 +293,7 @@ export default function Index({ dellerships, filters }) {
                                                 }`}>
                                                     {getContractDaysRemaining(dealership.contract_end)} days remaining
                                                 </div>
-                                            )}
+                                            )} */}
                                             {dealership.payment_terms && (
                                                 <div className="text-xs text-gray-500">
                                                     Terms: {dealership.payment_terms}
@@ -418,7 +418,6 @@ export default function Index({ dellerships, filters }) {
                                 </Link>
                             )}
                             
-                            {/* Page Numbers */}
                             {dellerships.links && dellerships.links.links && dellerships.links.links.slice(1, -1).map((link, index) => (
                                 <Link
                                     key={index}
@@ -428,7 +427,6 @@ export default function Index({ dellerships, filters }) {
                                 />
                             ))}
                             
-                            {/* Next Button */}
                             {dellerships.links.next && (
                                 <Link
                                     href={dellerships.links.next}
@@ -463,7 +461,7 @@ export default function Index({ dellerships, filters }) {
                                 <div>
                                     <p className="text-sm font-medium text-green-800">Active Dealerships</p>
                                     <p className="text-xl font-bold text-green-900">
-                                        {dellerships.data.filter(dealership => dealership.status === 'active').length}
+                                        {dellerships.data.filter(dealership => dealership.status == 'approved').length}
                                     </p>
                                 </div>
                             </div>

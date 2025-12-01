@@ -16,6 +16,7 @@ return [
 
     // Form Fields
     'company' => 'Company',
+    'address' => 'Address',
     'dealership_name' => 'Dealership Name',
     'owner_name' => 'Owner Name',
     'email_address' => 'Email Address',

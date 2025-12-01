@@ -16,6 +16,7 @@ return [
 
     // Form Fields
     'company' => 'কোম্পানি',
+    'address' => 'ঠিকানা',
     'dealership_name' => 'ডিলারশিপ নাম',
     'owner_name' => 'মালিকের নাম',
     'email_address' => 'ইমেইল ঠিকানা',

@@ -1,5 +1,5 @@
 import { useForm, router } from "@inertiajs/react";
-import { useState } from "react";
+import { useEffect } from "react";
 import { 
     ArrowLeft, Save, Building2, User, Mail, Phone, MapPin, 
     FileText, CreditCard, Calendar, DollarSign, Shield, 
@@ -9,6 +9,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Create({ companies, users }) {
     const { t, locale } = useTranslation();
+
     const { data, setData, post, processing, errors, reset } = useForm({
         company_id: "",
         name: "",
@@ -40,6 +41,38 @@ export default function Create({ companies, users }) {
         nid_doc: "",
         tax_clearance_doc: ""
     });
+
+    // Calculate due amount whenever credit_limit or advance_amount changes
+    useEffect(() => {
+        const credit = parseFloat(data.credit_limit) || 0;
+        const advance = parseFloat(data.advance_amount) || 0;
+        
+        const due = credit - advance;
+        
+        setData("due_amount", Math.max(due, 0).toString());
+    }, [data.credit_limit, data.advance_amount]);
+
+    const handleCreditLimitChange = (e) => {
+        const value = e.target.value;
+        setData("credit_limit", value);
+        
+        // Recalculate due amount
+        const credit = parseFloat(value) || 0;
+        const advance = parseFloat(data.advance_amount) || 0;
+        const due = credit - advance;
+        setData("due_amount", Math.max(due, 0).toString());
+    };
+
+    const handleAdvanceAmountChange = (e) => {
+        const value = e.target.value;
+        setData("advance_amount", value);
+        
+        // Recalculate due amount
+        const credit = parseFloat(data.credit_limit) || 0;
+        const advance = parseFloat(value) || 0;
+        const due = credit - advance;
+        setData("due_amount", Math.max(due, 0).toString());
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -103,7 +136,7 @@ export default function Create({ companies, users }) {
                                 </select>
                                 {errors.company_id && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                        ⚠️ {errors.company_id}
+                                         {errors.company_id}
                                     </p>
                                 )}
                             </div>
@@ -273,10 +306,11 @@ export default function Create({ companies, users }) {
                                 <input
                                     type="number"
                                     value={data.advance_amount}
-                                    onChange={(e) => setData("advance_amount", e.target.value)}
+                                    onChange={handleAdvanceAmountChange}
                                     className="w-full px-4 py-3 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white"
                                     placeholder="0.00"
                                     step="0.01"
+                                    min="0"
                                 />
                                 {errors.advance_amount && (
                                     <p className="text-sm text-red-600 mt-2">{errors.advance_amount}</p>
@@ -291,11 +325,14 @@ export default function Create({ companies, users }) {
                                 <input
                                     type="number"
                                     value={data.due_amount}
-                                    onChange={(e) => setData("due_amount", e.target.value)}
-                                    className="w-full px-4 py-3 border border-yellow-200 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 bg-white"
+                                    readOnly
+                                    className="w-full px-4 py-3 border border-yellow-200 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all duration-200 bg-gray-50 cursor-not-allowed"
                                     placeholder="0.00"
                                     step="0.01"
                                 />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {t('dealership.calculated_automatically', 'Calculated automatically: Credit Limit - Advance Amount')}
+                                </p>
                             </div>
 
                             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-4 rounded-xl border border-blue-100">
@@ -306,10 +343,11 @@ export default function Create({ companies, users }) {
                                 <input
                                     type="number"
                                     value={data.credit_limit}
-                                    onChange={(e) => setData("credit_limit", e.target.value)}
+                                    onChange={handleCreditLimitChange}
                                     className="w-full px-4 py-3 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white"
                                     placeholder="0.00"
                                     step="0.01"
+                                    min="0"
                                 />
                             </div>
 
@@ -387,7 +425,7 @@ export default function Create({ companies, users }) {
                     </div>
 
                     {/* Document Uploads Card */}
-                   <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                         <div className="bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <FileCheck className="text-white" size={24} />

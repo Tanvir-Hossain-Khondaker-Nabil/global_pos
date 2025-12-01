@@ -49,7 +49,14 @@ class DealershipController extends Controller
          */
         public function store(DelerShipStore $request)
         {
+
             $validated = $request->validated();
+
+            if(DillerShip::where('company_id', $validated['company_id'])->exists()){
+               return back()->withErrors(['company_id' => 'A dealership for the selected company already exists.'])->withInput();
+            }
+
+
             DB::beginTransaction();
 
             try {
@@ -121,18 +128,20 @@ class DealershipController extends Controller
         public function update(Request $request, string $id)
         {
             $validated = $request->validate([
-                'company_id' => 'required|exists:companies,id',
-                'contract_start' => 'required|date',
-                'contract_end' => 'required|date|after_or_equal:contract_start',
-                'status' => 'required|in:pending,approved,rejected',
+                'phone' => 'required',
+                'address' => 'required|string|max:255', 
+                'credit_limit' => 'nullable|numeric|min:0',
+                'payment_terms' => 'nullable|string|max:255',
                 'remarks' => 'nullable|string',
             ]);
 
+
             $dealership = DillerShip::findOrFail($id);
+
             DB::beginTransaction();
             try {
-                $uploadedFiles = $this->fileFunction($request);
-                $validated = array_merge($validated, $uploadedFiles);
+                // $uploadedFiles = $this->fileFunction($request);
+                // $validated = array_merge($validated, $uploadedFiles);
 
                 if (($validated['status'] ?? null) == 'approved' && !$dealership->approved_at) {
                     $validated['approved_by'] = Auth::id();
