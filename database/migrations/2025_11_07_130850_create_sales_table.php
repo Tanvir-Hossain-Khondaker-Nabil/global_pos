@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->string('invoice_no')->unique();
 
             $table->decimal('sub_total', 10,2)->default(0);

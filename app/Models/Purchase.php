@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\UserScope;
 
 class Purchase extends Model
 {
@@ -15,24 +16,43 @@ class Purchase extends Model
         'warehouse_id',
         'purchase_date',
         'total_amount',
-        'shadow_total_amount', // Add this
-        'shadow_paid_amount',  // Add this
+        'shadow_total_amount', 
+        'shadow_paid_amount',  
+        'due_amount',
+        'shadow_due_amount',
+        'payment_status',
         'paid_amount',
         'notes',
-        'status'
+        'status',
+        'user_type',
+        'created_by',
     ];
 
     protected $casts = [
         'purchase_date' => 'date',
         'total_amount' => 'decimal:2',
-        'shadow_total_amount' => 'decimal:2', // Add this
-        'shadow_paid_amount' => 'decimal:2',  // Add this
+        'shadow_total_amount' => 'decimal:2', 
+        'shadow_paid_amount' => 'decimal:2',  
         'paid_amount' => 'decimal:2'
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
+
+
+
+    // all relations 
 
     public function supplier()
     {
         return $this->belongsTo(Supplier::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class,'created_by');
     }
 
     public function warehouse()
@@ -70,4 +90,28 @@ class Purchase extends Model
     {
         return $this->belongsTo(Variant::class);
     }
+
+
+    public function scopeFilter($query, $filters)
+    {
+        return $query
+            ->when($filters['search'] ?? null, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('purchase_no', 'like', "%{$search}%")
+                    ->orWhereHas('supplier', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('company', 'like', "%{$search}%");
+                    });
+                });
+            })
+
+            ->when($filters['status'] ?? null, function ($query, $status) {
+                $query->where('status', $status);
+            })
+
+            ->when($filters['date'] ?? null, function ($query, $date) {
+                $query->whereDate('purchase_date', $date);
+            });
+    }
+
 }

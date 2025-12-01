@@ -19,7 +19,8 @@ class PurchaseItem extends Model
         'total_price',
         'shadow_total_price',
         'sale_price',
-        'shadow_sale_price'
+        'shadow_sale_price',
+        'created_by',
     ];
 
     protected $casts = [

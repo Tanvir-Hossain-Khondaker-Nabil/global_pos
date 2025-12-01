@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('purchase_id');
             $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('variant_id')->nullable();
             $table->integer('quantity');
             $table->decimal('unit_price', 10, 2);

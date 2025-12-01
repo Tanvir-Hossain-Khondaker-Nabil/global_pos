@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\UserScope;
 
 class Sale extends Model
 {
@@ -25,15 +26,20 @@ class Sale extends Model
         'shadow_paid_amount',
         'shadow_due_amount',
         'shadow_type',
+        'created_by',
     ];
 
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
 
     //relation to customer
     public function customer()
     {
         return $this->belongsTo(Customer::class, 'customer_id');
     }
-
 
     // relation to sale items
     public function items()

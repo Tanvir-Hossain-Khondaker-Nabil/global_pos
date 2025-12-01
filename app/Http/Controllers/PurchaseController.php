@@ -17,32 +17,18 @@ use Illuminate\Support\Str;
 
 class PurchaseController extends Controller
 {
+
+
+    /**
+     * Display a listing of the resource.
+    */
     public function index(Request $request)
     {
-        $query = Purchase::with(['supplier', 'warehouse', 'items.product', 'items.variant', 'creator'])
-            ->latest();
-
-        // Apply filters
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('purchase_no', 'like', "%{$search}%")
-                    ->orWhereHas('supplier', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('company', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        if ($request->has('status') && $request->status) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('date') && $request->date) {
-            $query->whereDate('purchase_date', $request->date);
-        }
-
-        $purchases = $query->paginate(10);
+        $purchases = Purchase::with(['supplier', 'warehouse', 'items.product', 'items.variant', 'creator'])
+            ->filter($request->all()) 
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Purchase/PurchaseList', [
             'purchases' => $purchases,
@@ -51,20 +37,29 @@ class PurchaseController extends Controller
         ]);
     }
 
+
+
+    /**
+     * Show the form for creating a new resource.
+     */
+
     public function create()
     {
-        // Remove status filter if the column doesn't exist
         return Inertia::render('Purchase/AddPurchase', [
-            'suppliers' => Supplier::all(), // Removed status filter
-            'warehouses' => Warehouse::all(), // Removed status filter
-            'products' => Product::with(['variants'])->get(), // Removed status filter
+            'suppliers' => Supplier::all(), 
+            'warehouses' => Warehouse::all(), 
+            'products' => Product::with(['variants'])->get(), 
             'isShadowUser' => Auth::user()->user_type === 'shadow',
         ]);
     }
 
+
+
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
-        dd($request->all());
 
         DB::beginTransaction();
         try {
@@ -126,6 +121,7 @@ class PurchaseController extends Controller
                     'shadow_sale_price' => $item['shadow_sale_price'],
                     'total_price' => $itemTotalPrice,
                     'shadow_total_price' => $itemShadowTotalPrice,
+                    'user_id' => Auth::id(),
                 ]);
             }
 
@@ -135,7 +131,6 @@ class PurchaseController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Purchase creation error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to create purchase: ' . $e->getMessage());
         }
     }
@@ -185,7 +180,6 @@ class PurchaseController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Payment update error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to update payment: ' . $e->getMessage());
         }
     }
@@ -251,7 +245,6 @@ class PurchaseController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Purchase approval error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to approve purchase: ' . $e->getMessage());
         }
     }
@@ -286,7 +279,6 @@ class PurchaseController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            \Log::error('Purchase deletion error: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to delete purchase: ' . $e->getMessage());
         }
     }

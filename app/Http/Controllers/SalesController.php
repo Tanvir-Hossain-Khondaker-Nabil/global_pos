@@ -134,8 +134,6 @@ class SalesController extends Controller
      */
     public function store(Request $request)
     {
-
-
         $type = $request->input('type', 'pos');
 
         if ($type == 'inventory') {
@@ -551,58 +549,15 @@ class SalesController extends Controller
 
     public function allSalesItems()
     {
-
-
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
         $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'warehouse'])
             ->where('status', '!=', 'cancelled')
             ->orderBy('created_at', 'desc')
-            ->when(request('search'), function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->whereHas('product', function ($q1) use ($search) {
-                        $q1->where('name', 'like', "%{$search}%")
-                        ->orWhere('product_no', 'like', "%{$search}%");
-                    })->orWhereHas('sale', function ($q1) use ($search) {
-                        $q1->where('invoice_no', 'like', "%{$search}%")
-                        ->orWhereHas('customer', function ($q2) use ($search) {
-                            $q2->where('customer_name', 'like', "%{$search}%")
-                                ->orWhere('phone', 'like', "%{$search}%");
-                        });
-                    })->orWhereHas('variant', function ($q1) use ($search) {
-                        $q1->where('size', 'like', "%{$search}%")
-                        ->orWhere('color', 'like', "%{$search}%");
-                    })->orWhereHas('warehouse', function ($q1) use ($search) {
-                        $q1->where('name', 'like', "%{$search}%");
-                    });
-                });
-            })
-            ->when(request('customer_id'), function ($query, $customerId) {
-                $query->whereHas('sale.customer', function ($q) use ($customerId) {
-                    $q->where('customer_name', 'like', "%{$customerId}%")
-                    ->orWhere('phone', 'like', "%{$customerId}%");
-                });
-            })
-            ->when(request('product_id'), function ($query, $productId) {
-                $query->whereHas('product', function ($q) use ($productId) {
-                    $q->where('name', 'like', "%{$productId}%")
-                    ->orWhere('product_no', 'like', "%{$productId}%");
-                });
-            })
-            ->when(request('warehouse_id'), function ($query, $warehouseId) {
-                $query->whereHas('warehouse', function ($q) use ($warehouseId) {
-                    $q->where('name', 'like', "%{$warehouseId}%");
-                });
-            })
-            ->when(request('date_from'), function ($query, $dateFrom) {
-                $query->whereDate('created_at', '>=', $dateFrom);
-            })
-            ->when(request('date_to'), function ($query, $dateTo) {
-                $query->whereDate('created_at', '<=', $dateTo);
-            })
-            ->paginate(15);
-
+            ->filter(request()->all())
+            ->paginate(15)             
+            ->withQueryString();       
 
         if ($isShadowUser) {
             $salesItems->getCollection()->transform(function ($item) {
@@ -610,12 +565,12 @@ class SalesController extends Controller
             });
         }
 
-        
         return Inertia::render('sales/SalesItem', [
             'salesItems' => $salesItems,
             'isShadowUser' => $isShadowUser,
         ]);
     }
+
 
 
 
