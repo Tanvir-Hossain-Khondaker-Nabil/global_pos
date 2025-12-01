@@ -19,8 +19,10 @@ import {
     FileText
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Payments({ subscription }) {
+    const { t, locale } = useTranslation();
     // Search and filter states
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("");
@@ -67,7 +69,7 @@ export default function Payments({ subscription }) {
 
     // Format date
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
+        return new Date(dateString).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
@@ -76,7 +78,7 @@ export default function Payments({ subscription }) {
 
     // Format date with time
     const formatDateTime = (dateString) => {
-        return new Date(dateString).toLocaleString('en-US', {
+        return new Date(dateString).toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-US', {
             year: 'numeric',
             month: 'short',
             day: 'numeric',
@@ -88,10 +90,10 @@ export default function Payments({ subscription }) {
     // Get status badge color
     const getStatusBadge = (status) => {
         const statusMap = {
-            completed: { label: 'Completed', class: 'badge-success', icon: BadgeCheck },
-            pending: { label: 'Pending', class: 'badge-warning', icon: Clock },
-            failed: { label: 'Failed', class: 'badge-error', icon: Ban },
-            refunded: { label: 'Refunded', class: 'badge-info', icon: DollarSign },
+            completed: { label: t('payments.completed', 'Completed'), class: 'badge-success', icon: BadgeCheck },
+            pending: { label: t('payments.pending', 'Pending'), class: 'badge-warning', icon: Clock },
+            failed: { label: t('payments.failed', 'Failed'), class: 'badge-error', icon: Ban },
+            refunded: { label: t('payments.refunded', 'Refunded'), class: 'badge-info', icon: DollarSign },
         };
         
         const statusInfo = statusMap[status] || { label: status, class: 'badge-warning', icon: Clock };
@@ -106,11 +108,11 @@ export default function Payments({ subscription }) {
     // Get payment method details
     const getPaymentMethodDetails = (method) => {
         const methodMap = {
-            cash: { label: 'Cash', class: 'text-green-600 bg-green-50 border-green-200' },
-            card: { label: 'Credit Card', class: 'text-blue-600 bg-blue-50 border-blue-200' },
-            bank: { label: 'Bank Transfer', class: 'text-purple-600 bg-purple-50 border-purple-200' },
-            mobile: { label: 'Mobile Banking', class: 'text-orange-600 bg-orange-50 border-orange-200' },
-            online: { label: 'Online Payment', class: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
+            cash: { label: t('payments.cash', 'Cash'), class: 'text-green-600 bg-green-50 border-green-200' },
+            card: { label: t('payments.card', 'Credit Card'), class: 'text-blue-600 bg-blue-50 border-blue-200' },
+            bank: { label: t('payments.bank', 'Bank Transfer'), class: 'text-purple-600 bg-purple-50 border-purple-200' },
+            mobile: { label: t('payments.mobile', 'Mobile Banking'), class: 'text-orange-600 bg-orange-50 border-orange-200' },
+            online: { label: t('payments.online', 'Online Payment'), class: 'text-cyan-600 bg-cyan-50 border-cyan-200' },
         };
         
         return methodMap[method] || { label: method, class: 'text-gray-600 bg-gray-50 border-gray-200' };
@@ -119,29 +121,33 @@ export default function Payments({ subscription }) {
     // Export payments data
     const handleExport = () => {
         // This would typically generate a CSV or PDF report
-        alert('Export functionality would be implemented here');
+        alert(t('payments.export_functionality', 'Export functionality would be implemented here'));
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Subscription Payments</h1>
-                    <p className="text-gray-600 mt-1">Manage and track subscription payment records</p>
+                    <h1 className="text-2xl font-bold text-gray-800">
+                        {t('payments.subscription_payments', 'Subscription Payments')}
+                    </h1>
+                    <p className="text-gray-600 mt-1">
+                        {t('payments.manage_track_payments', 'Manage and track subscription payment records')}
+                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
                         onClick={handleExport}
                         className="btn btn-outline btn-sm"
                     >
-                        <Download size={15} /> Export
+                        <Download size={15} /> {t('payments.export', 'Export')}
                     </button>
                     <Link
                         href={route("subscriptions.index")}
                         className="btn btn-primary btn-sm"
                     >
-                        <CreditCard size={15} /> View Subscriptions
+                        <CreditCard size={15} /> {t('payments.view_subscriptions', 'View Subscriptions')}
                     </Link>
                 </div>
             </div>
@@ -152,7 +158,7 @@ export default function Payments({ subscription }) {
                     {/* Search Input */}
                     <div className="flex-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Search Payments
+                            {t('payments.search_payments', 'Search Payments')}
                         </label>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -160,7 +166,7 @@ export default function Payments({ subscription }) {
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search by transaction ID, user name, plan name..."
+                                placeholder={t('payments.search_placeholder', 'Search by transaction ID, user name, plan name...')}
                                 className="input input-bordered w-full pl-10"
                             />
                         </div>
@@ -169,37 +175,37 @@ export default function Payments({ subscription }) {
                     {/* Status Filter */}
                     <div className="w-full lg:w-48">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Payment Status
+                            {t('payments.payment_status', 'Payment Status')}
                         </label>
                         <select
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
                             className="select select-bordered w-full"
                         >
-                            <option value="">All Status</option>
-                            <option value="completed">Completed</option>
-                            <option value="pending">Pending</option>
-                            <option value="failed">Failed</option>
-                            <option value="refunded">Refunded</option>
+                            <option value="">{t('payments.all_status', 'All Status')}</option>
+                            <option value="completed">{t('payments.completed', 'Completed')}</option>
+                            <option value="pending">{t('payments.pending', 'Pending')}</option>
+                            <option value="failed">{t('payments.failed', 'Failed')}</option>
+                            <option value="refunded">{t('payments.refunded', 'Refunded')}</option>
                         </select>
                     </div>
 
                     {/* Payment Method Filter */}
                     <div className="w-full lg:w-48">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Payment Method
+                            {t('payments.payment_method', 'Payment Method')}
                         </label>
                         <select
                             value={paymentMethod}
                             onChange={(e) => setPaymentMethod(e.target.value)}
                             className="select select-bordered w-full"
                         >
-                            <option value="">All Methods</option>
-                            <option value="cash">Cash</option>
-                            <option value="card">Credit Card</option>
-                            <option value="bank">Bank Transfer</option>
-                            <option value="mobile">Mobile Banking</option>
-                            <option value="online">Online Payment</option>
+                            <option value="">{t('payments.all_methods', 'All Methods')}</option>
+                            <option value="cash">{t('payments.cash', 'Cash')}</option>
+                            <option value="card">{t('payments.card', 'Credit Card')}</option>
+                            <option value="bank">{t('payments.bank', 'Bank Transfer')}</option>
+                            <option value="mobile">{t('payments.mobile', 'Mobile Banking')}</option>
+                            <option value="online">{t('payments.online', 'Online Payment')}</option>
                         </select>
                     </div>
 
@@ -209,7 +215,7 @@ export default function Payments({ subscription }) {
                             onClick={clearFilters}
                             className="btn btn-error btn-sm"
                         >
-                            <X size={15} /> Clear
+                            <X size={15} /> {t('payments.clear', 'Clear')}
                         </button>
                     )}
                 </div>
@@ -221,15 +227,15 @@ export default function Payments({ subscription }) {
                     <table className="table table-auto w-full">
                         <thead className="bg-primary text-white">
                             <tr>
-                                <th className="text-center">SL</th>
-                                <th>Transaction Details</th>
-                                <th>Subscription Info</th>
-                                <th>User</th>
-                                <th>Payment Method</th>
-                                <th>Amount</th>
-                                <th>Payment Date</th>
-                                <th>Status</th>
-                                <th className="text-center">Actions</th>
+                                <th className="text-center">{t('payments.sl', 'SL')}</th>
+                                <th>{t('payments.transaction_details', 'Transaction Details')}</th>
+                                <th>{t('payments.subscription_info', 'Subscription Info')}</th>
+                                <th>{t('payments.user', 'User')}</th>
+                                <th>{t('payments.payment_method', 'Payment Method')}</th>
+                                <th>{t('payments.amount', 'Amount')}</th>
+                                <th>{t('payments.payment_date', 'Payment Date')}</th>
+                                <th>{t('payments.status', 'Status')}</th>
+                                <th className="text-center">{t('payments.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -248,7 +254,7 @@ export default function Payments({ subscription }) {
                                             </div>
                                             {payment.payment_date && (
                                                 <div className="text-xs text-gray-500">
-                                                    Paid on {formatDate(payment.payment_date)}
+                                                    {t('payments.paid_on', 'Paid on')} {formatDate(payment.payment_date)}
                                                 </div>
                                             )}
                                         </div>
@@ -263,11 +269,11 @@ export default function Payments({ subscription }) {
                                                     {payment.subscription.plan?.name || 'N/A'}
                                                 </Link>
                                                 <div className="text-xs text-gray-500">
-                                                    Sub ID: #{payment.subscription.id}
+                                                    {t('payments.subscription_id', 'Sub ID')}: #{payment.subscription.id}
                                                 </div>
                                             </div>
                                         ) : (
-                                            <span className="text-gray-400 text-sm">No subscription</span>
+                                            <span className="text-gray-400 text-sm">{t('payments.no_subscription', 'No subscription')}</span>
                                         )}
                                     </td>
                                     <td>
@@ -284,7 +290,7 @@ export default function Payments({ subscription }) {
                                                 </div>
                                             </div>
                                         ) : (
-                                            <span className="text-gray-400 text-sm">No user</span>
+                                            <span className="text-gray-400 text-sm">{t('payments.no_user', 'No user')}</span>
                                         )}
                                     </td>
                                     <td>
@@ -321,18 +327,18 @@ export default function Payments({ subscription }) {
                                                 href={`/subscriptions_payments/view/${payment.id}`}
                                                 className="btn btn-primary btn-xs"
                                             >
-                                                <Eye size={12} /> View
+                                                <Eye size={12} /> {t('payments.view', 'View')}
                                             </Link>
                                             
                                             <button
                                                 onClick={() => {
-                                                    if (confirm("Are you sure you want to delete this payment record?")) {
+                                                    if (confirm(t('payments.delete_confirmation', 'Are you sure you want to delete this payment record?'))) {
                                                         router.delete(route("subscriptions.payments.destroy", payment.id));
                                                     }
                                                 }}
                                                 className="btn btn-error btn-xs"
                                             >
-                                                <Trash2 size={12} /> Delete
+                                                <Trash2 size={12} /> {t('payments.delete', 'Delete')}
                                             </button>
                                         </div>
                                     </td>
@@ -343,15 +349,20 @@ export default function Payments({ subscription }) {
                 ) : (
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={40} className="text-gray-400" />
-                        <h1 className="text-gray-500 text-lg font-medium">No payment records found!</h1>
+                        <h1 className="text-gray-500 text-lg font-medium">
+                            {t('payments.no_payment_records', 'No payment records found!')}
+                        </h1>
                         <p className="text-gray-400 text-sm mb-4">
-                            {search || status || paymentMethod ? "Try adjusting your search or filters" : "No payment records available"}
+                            {search || status || paymentMethod 
+                                ? t('payments.adjust_search_filters', 'Try adjusting your search or filters') 
+                                : t('payments.no_payment_records_available', 'No payment records available')
+                            }
                         </p>
                         <Link
                             href={route("subscriptions.index")}
                             className="btn btn-primary btn-sm"
                         >
-                            <CreditCard size={15} /> View Subscriptions
+                            <CreditCard size={15} /> {t('payments.view_subscriptions', 'View Subscriptions')}
                         </Link>
                     </div>
                 )}
@@ -362,7 +373,7 @@ export default function Payments({ subscription }) {
                 <div className="mt-6">
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                         <div className="text-sm text-gray-600">
-                            Showing {subscription.from} to {subscription.to} of {subscription.total} payment records
+                            {t('payments.showing_records', 'Showing')} {subscription.from} {t('payments.to', 'to')} {subscription.to} {t('payments.of', 'of')} {subscription.total} {t('payments.payment_records', 'payment records')}
                         </div>
                         
                         {/* Custom Pagination Component */}
@@ -404,13 +415,17 @@ export default function Payments({ subscription }) {
             {/* Summary Cards */}
             {subscription.data.length > 0 && (
                 <div className="border-t border-gray-200 p-5 mt-6">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-4">Payments Summary</h2>
+                    <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                        {t('payments.payments_summary', 'Payments Summary')}
+                    </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div className="flex items-center gap-3">
                                 <CreditCard className="text-blue-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-blue-800">Total Payments</p>
+                                    <p className="text-sm font-medium text-blue-800">
+                                        {t('payments.total_payments', 'Total Payments')}
+                                    </p>
                                     <p className="text-xl font-bold text-blue-900">{subscription.total}</p>
                                 </div>
                             </div>
@@ -420,7 +435,9 @@ export default function Payments({ subscription }) {
                             <div className="flex items-center gap-3">
                                 <BadgeCheck className="text-green-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-green-800">Completed Payments</p>
+                                    <p className="text-sm font-medium text-green-800">
+                                        {t('payments.completed_payments', 'Completed Payments')}
+                                    </p>
                                     <p className="text-xl font-bold text-green-900">
                                         {subscription.data.filter(payment => payment.status == 'completed').length}
                                     </p>
@@ -431,7 +448,9 @@ export default function Payments({ subscription }) {
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                             <div className="flex items-center gap-3">
                                 <div>
-                                    <p className="text-sm font-medium text-purple-800">Total Revenue</p>
+                                    <p className="text-sm font-medium text-purple-800">
+                                        {t('payments.total_revenue', 'Total Revenue')}
+                                    </p>
                                     <p className="text-xl font-bold text-purple-900">
                                         {formatCurrency(
                                             subscription.data
@@ -447,7 +466,9 @@ export default function Payments({ subscription }) {
                             <div className="flex items-center gap-3">
                                 <Clock className="text-orange-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-orange-800">Pending Payments</p>
+                                    <p className="text-sm font-medium text-orange-800">
+                                        {t('payments.pending_payments', 'Pending Payments')}
+                                    </p>
                                     <p className="text-xl font-bold text-orange-900">
                                         {subscription.data.filter(payment => payment.status == 'pending').length}
                                     </p>
@@ -458,7 +479,9 @@ export default function Payments({ subscription }) {
 
                     {/* Payment Methods Breakdown */}
                     <div className="mt-6">
-                        <h3 className="text-md font-semibold text-gray-800 mb-3">Payment Methods Breakdown</h3>
+                        <h3 className="text-md font-semibold text-gray-800 mb-3">
+                            {t('payments.payment_methods_breakdown', 'Payment Methods Breakdown')}
+                        </h3>
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                             {['cash', 'card', 'bank', 'mobile', 'online'].map(method => {
                                 const methodPayments = subscription.data.filter(payment => payment.payment_method == method);

@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Index({
     todaysExpense,
@@ -22,6 +23,8 @@ export default function Index({
     amount,
     query,
 }) {
+    const { t, locale } = useTranslation();
+    
     // model
     const [model, setModel] = useState(false);
 
@@ -64,13 +67,11 @@ export default function Index({
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title="Expense list"
-                subtitle="Manage your all expenses from here."
+                title={t('expenses.title', 'Expense list')}
+                subtitle={t('expenses.subtitle', 'Manage your all expenses from here.')}
             >
-
-               
                 <div className="flex items-center gap-2">
                     <input
                         type="date"
@@ -85,9 +86,7 @@ export default function Index({
                         className="input input-sm"
                     />
                     {((date && date !== "" && date !== null) ||
-                        (startdate &&
-                            startdate !== "" &&
-                            startdate !== null)) && (
+                        (startdate && startdate !== "" && startdate !== null)) && (
                         <button
                             onClick={() => router.visit(route("expenses.list"))}
                             className="btn btn-sm btn-error"
@@ -100,7 +99,7 @@ export default function Index({
                         onClick={() => setModel(!model)}
                         className="btn btn-primary btn-sm"
                     >
-                        <Plus size={15} /> Add new
+                        <Plus size={15} /> {t('expenses.add_new', 'Add new')}
                     </button>
                 </div>
             </PageHeader>
@@ -111,11 +110,11 @@ export default function Index({
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th></th>
-                                <th>Created by</th>
-                                <th>Details</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                <th>Actions</th>
+                                <th>{t('expenses.created_by', 'Created by')}</th>
+                                <th>{t('expenses.details', 'Details')}</th>
+                                <th>{t('expenses.amount', 'Amount')}</th>
+                                <th>{t('expenses.date', 'Date')}</th>
+                                <th>{t('common.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -124,16 +123,16 @@ export default function Index({
                                     <th>{index + 1}</th>
                                     <td>
                                         <p>
-                                            <strong>Name: </strong>{" "}
+                                            <strong>{t('expenses.name', 'Name')}: </strong>{" "}
                                             {user?.createdby?.name}
                                         </p>
                                         <p>
-                                            <strong>Email: </strong>{" "}
+                                            <strong>{t('expenses.email', 'Email')}: </strong>{" "}
                                             {user?.createdby?.email}
                                         </p>
                                     </td>
                                     <td>{user?.details}</td>
-                                    <td>{user.amount} Tk</td>
+                                    <td>{user.amount} {t('expenses.tk', 'Tk')}</td>
                                     <td>{user.date}</td>
                                     <td>
                                         <Link
@@ -143,7 +142,7 @@ export default function Index({
                                             onClick={(e) => {
                                                 if (
                                                     !confirm(
-                                                        "Are you sure you want to delete this expense?"
+                                                        t('expenses.confirm_delete', 'Are you sure you want to delete this expense?')
                                                     )
                                                 ) {
                                                     e.preventDefault();
@@ -151,7 +150,7 @@ export default function Index({
                                             }}
                                             className="btn btn-xs btn-error"
                                         >
-                                            <Trash2 size={10} /> Delete
+                                            <Trash2 size={10} /> {t('common.delete', 'Delete')}
                                         </Link>
                                     </td>
                                 </tr>
@@ -162,13 +161,13 @@ export default function Index({
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={20} className="text-gray-500" />
                         <h1 className="text-gray-500 text-sm">
-                            Data not found!
+                            {t('expenses.data_not_found', 'Data not found!')}
                         </h1>
                         <button
                             onClick={() => setModel(!model)}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new
+                            <Plus size={15} /> {t('expenses.add_new', 'Add new')}
                         </button>
                     </div>
                 )}
@@ -178,7 +177,7 @@ export default function Index({
 
             <div className="border-t h-auto border-gray-200 p-5 mt-5">
                 <h1 className="text-base font-medium text-gray-500">
-                    Today's summary
+                    {t('expenses.todays_summary', 'Today\'s summary')}
                 </h1>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 lg:grid-cols-5 mt-4">
@@ -186,10 +185,10 @@ export default function Index({
                         <Landmark size={18} className="text-primary" />
                         <div>
                             <p className="text-sm font-medium text-neutral">
-                                Total Banking
+                                {t('expenses.total_banking', 'Total Banking')}
                             </p>
                             <h1 className="text-md font-bold mt-2">
-                                {Number(amount?.totals?.bank).toFixed(2)} Tk
+                                {Number(amount?.totals?.bank).toFixed(2)} {t('expenses.tk', 'Tk')}
                             </h1>
                         </div>
                     </div>
@@ -197,13 +196,10 @@ export default function Index({
                         <Wallet size={18} className="text-primary" />
                         <div>
                             <p className="text-sm font-medium text-neutral">
-                                Total Mobilebanking
+                                {t('expenses.total_mobilebanking', 'Total Mobilebanking')}
                             </p>
                             <h1 className="text-md font-bold mt-2">
-                                {Number(amount?.totals?.mobilebanking).toFixed(
-                                    2
-                                )}{" "}
-                                Tk
+                                {Number(amount?.totals?.mobilebanking).toFixed(2)} {t('expenses.tk', 'Tk')}
                             </h1>
                         </div>
                     </div>
@@ -211,10 +207,10 @@ export default function Index({
                         <HandCoins size={18} className="text-primary" />
                         <div>
                             <p className="text-sm font-medium text-neutral">
-                                Total Cash
+                                {t('expenses.total_cash', 'Total Cash')}
                             </p>
                             <h1 className="text-md font-bold mt-2">
-                                {Number(amount?.totals?.cash).toFixed(2)} Tk
+                                {Number(amount?.totals?.cash).toFixed(2)} {t('expenses.tk', 'Tk')}
                             </h1>
                         </div>
                     </div>
@@ -222,10 +218,10 @@ export default function Index({
                         <HandCoins size={18} className="text-primary" />
                         <div>
                             <p className="text-sm font-medium text-neutral">
-                                Extra Cash
+                                {t('expenses.extra_cash', 'Extra Cash')}
                             </p>
                             <h1 className="text-md font-bold mt-2">
-                                {Number(extracashTotal).toFixed(2)} Tk
+                                {Number(extracashTotal).toFixed(2)} {t('expenses.tk', 'Tk')}
                             </h1>
                         </div>
                     </div>
@@ -233,10 +229,10 @@ export default function Index({
                         <BanknoteX size={18} className="text-primary" />
                         <div>
                             <p className="text-sm font-medium text-neutral">
-                                Total Expense
+                                {t('expenses.total_expense', 'Total Expense')}
                             </p>
                             <h1 className="text-md font-bold text-error mt-2">
-                                {Number(todaysExpenseTotal).toFixed(2)} Tk
+                                {Number(todaysExpenseTotal).toFixed(2)} {t('expenses.tk', 'Tk')}
                             </h1>
                         </div>
                     </div>
@@ -247,16 +243,16 @@ export default function Index({
                         <BanknoteX size={18} className="text-primary" />
                         <div>
                             <p className="text-sm font-medium text-neutral">
-                                Total Sales
+                                {t('expenses.total_sales', 'Total Sales')}
                             </p>
                             <h1 className="text-md font-bold text-primary mt-2">
-                                {Number(amount?.grandTotal).toFixed(2)} Tk
+                                {Number(amount?.grandTotal).toFixed(2)} {t('expenses.tk', 'Tk')}
                             </h1>
                         </div>
                     </div>
                     <div className="border border-dashed border-primary rounded-box p-5 flex items-center justify-end gap-4">
                         <p className="text-sm font-medium text-neutral">
-                            Total Incash:
+                            {t('expenses.total_incash', 'Total Incash')}:
                         </p>
                         <h1 className="text-md font-bold">
                             {(Number(amount?.totals?.cash) || 0) -
@@ -267,7 +263,7 @@ export default function Index({
                                         (Number(amount?.totals?.cash) || 0) -
                                         (Number(todaysExpenseTotal) || 0)
                                     ).toFixed(2)}{" "}
-                                    Tk
+                                    {t('expenses.tk', 'Tk')}
                                 </p>
                             ) : (
                                 <p className="text-primary">
@@ -275,7 +271,7 @@ export default function Index({
                                         (
                                             Number(todaysExpenseTotal) || 0
                                         ).toFixed(2)}{" "}
-                                    Tk
+                                    {t('expenses.tk', 'Tk')}
                                 </p>
                             )}
                         </h1>
@@ -288,7 +284,7 @@ export default function Index({
                 <div className="modal-box">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
                         <h1 className="text-base font-medium text-gray-900">
-                            Add new Expense
+                            {t('expenses.add_new_expense', 'Add new Expense')}
                         </h1>
                         <button
                             onClick={modelClose}
@@ -300,7 +296,7 @@ export default function Index({
 
                     <form onSubmit={formSubmit} className="space-y-2">
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Date*</legend>
+                            <legend className="fieldset-legend">{t('expenses.date', 'Date')}*</legend>
                             <input
                                 type="date"
                                 value={data.date}
@@ -317,10 +313,10 @@ export default function Index({
                         </fieldset>
 
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Details</legend>
+                            <legend className="fieldset-legend">{t('expenses.details', 'Details')}</legend>
                             <textarea
                                 className="textarea h-24"
-                                placeholder="Write details here"
+                                placeholder={t('expenses.details_placeholder', 'Write details here')}
                                 value={data.details}
                                 onChange={(e) =>
                                     setData("details", e.target.value)
@@ -334,7 +330,7 @@ export default function Index({
                         </fieldset>
 
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Amount*</legend>
+                            <legend className="fieldset-legend">{t('expenses.amount', 'Amount')}*</legend>
                             <input
                                 type="number"
                                 step={0.01}
@@ -353,7 +349,7 @@ export default function Index({
                         </fieldset>
 
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Sh Amount*</legend>
+                            <legend className="fieldset-legend">{t('expenses.sh_amount', 'Sh Amount')}*</legend>
                             <input
                                 type="number"
                                 step={0.01}
@@ -376,7 +372,7 @@ export default function Index({
                             className="btn btn-sm btn-primary"
                             type="submit"
                         >
-                            Add now
+                            {processing ? t('common.processing', 'Processing...') : t('expenses.add_now', 'Add now')}
                         </button>
                     </form>
                 </div>

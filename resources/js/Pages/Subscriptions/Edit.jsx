@@ -15,8 +15,10 @@ import {
     AlertTriangle
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Edit({ subscription, plans }) {
+    const { t, locale } = useTranslation();
     const { data, setData, post, processing, errors } = useForm({
         plan_id: subscription.plan_id,
         start_date: new Date().toISOString().split('T')[0],
@@ -26,7 +28,7 @@ export default function Edit({ subscription, plans }) {
         transaction_id: "",
         notes: subscription.notes || "",
         auto_renew: subscription.auto_renew || false,
-        renew_type: "same_plan", // same_plan, upgrade, downgrade
+        renew_type: "same_plan",
     });
 
     const [selectedPlan, setSelectedPlan] = useState(subscription.plan || null);
@@ -118,18 +120,21 @@ export default function Edit({ subscription, plans }) {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className={`min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-800">
-                            {subscription.status == 1 ? 'Renew Subscription' : 'Update Subscription'}
+                            {subscription.status == 1 
+                                ? t('subscription.renew_subscription', 'Renew Subscription')
+                                : t('subscription.update_subscription', 'Update Subscription')
+                            }
                         </h1>
                         <p className="text-gray-600 mt-2">
                             {subscription.status == 1
-                                ? 'Extend or upgrade the current subscription plan'
-                                : 'Reactivate or modify the subscription plan'
+                                ? t('subscription.extend_upgrade_plan', 'Extend or upgrade the current subscription plan')
+                                : t('subscription.reactivate_modify_plan', 'Reactivate or modify the subscription plan')
                             }
                         </p>
                     </div>
@@ -138,7 +143,9 @@ export default function Edit({ subscription, plans }) {
                         className="group flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-blue-300"
                     >
                         <ArrowLeft size={18} className="text-gray-600 group-hover:text-blue-600 transition-colors" />
-                        <span className="font-medium text-gray-700 group-hover:text-blue-600 transition-colors">Back</span>
+                        <span className="font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                            {t('subscription.back', 'Back')}
+                        </span>
                     </a>
                 </div>
 
@@ -148,30 +155,40 @@ export default function Edit({ subscription, plans }) {
                         <div className="bg-gradient-to-r from-gray-600 to-slate-700 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <Zap className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Current Subscription</h2>
+                                <h2 className="text-xl font-semibold text-white">
+                                    {t('subscription.current_subscription', 'Current Subscription')}
+                                </h2>
                             </div>
                         </div>
                         <div className="p-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                                 <div className="text-center p-4 border rounded-xl bg-blue-50 border-blue-200">
-                                    <p className="text-sm text-gray-600">Current Plan</p>
+                                    <p className="text-sm text-gray-600">
+                                        {t('subscription.current_plan', 'Current Plan')}
+                                    </p>
                                     <p className="font-semibold text-blue-700">{subscription.plan?.name}</p>
                                 </div>
                                 <div className="text-center p-4 border rounded-xl bg-green-50 border-green-200">
-                                    <p className="text-sm text-gray-600">Current Price</p>
+                                    <p className="text-sm text-gray-600">
+                                        {t('subscription.current_price', 'Current Price')}
+                                    </p>
                                     <p className="font-semibold text-green-700">{formatCurrency(subscription.plan?.price)}</p>
                                 </div>
                                 <div className="text-center p-4 border rounded-xl bg-orange-50 border-orange-200">
-                                    <p className="text-sm text-gray-600">Status</p>
+                                    <p className="text-sm text-gray-600">
+                                        {t('subscription.status', 'Status')}
+                                    </p>
                                     <p className={`font-semibold capitalize ${getStatusColor(subscription.status).split(' ')[0]}`}>
-                                        {subscription.status == 1 ? 'active' :
-                                         subscription.status == 2 ? 'expired' :
-                                         subscription.status == 3 ? 'cancelled' :
-                                         subscription.status == 4 ? 'pending' : 'unknown'}
+                                        {subscription.status == 1 ? t('subscription.active', 'active') :
+                                         subscription.status == 2 ? t('subscription.expired', 'expired') :
+                                         subscription.status == 3 ? t('subscription.cancelled', 'cancelled') :
+                                         subscription.status == 4 ? t('subscription.pending', 'pending') : 'unknown'}
                                     </p>
                                 </div>
                                 <div className="text-center p-4 border rounded-xl bg-purple-50 border-purple-200">
-                                    <p className="text-sm text-gray-600">Expires</p>
+                                    <p className="text-sm text-gray-600">
+                                        {t('subscription.expires', 'Expires')}
+                                    </p>
                                     <p className="font-semibold text-purple-700">
                                         {subscription.end_date ? new Date(subscription.end_date).toLocaleDateString() : 'N/A'}
                                     </p>
@@ -181,7 +198,7 @@ export default function Edit({ subscription, plans }) {
                             <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
                                 <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
                                     <User size={18} />
-                                    User Information
+                                    {t('subscription.user_information', 'User Information')}
                                 </h4>
                                 <p className="text-gray-700">
                                     <strong>{subscription.user?.name}</strong> • {subscription.user?.email}
@@ -190,75 +207,24 @@ export default function Edit({ subscription, plans }) {
                         </div>
                     </div>
 
-                    {/* Renewal Options */}
-                    
-                    {/* <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+                    {/* Plan Selection */}
+                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                         <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
                             <div className="flex items-center gap-3">
-                                <RefreshCw className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Renewal Options</h2>
+                                <Star className="text-white" size={24} />
+                                <h2 className="text-xl font-semibold text-white">
+                                    {t('subscription.select_plan', 'Select Plan')}
+                                </h2>
                             </div>
                         </div>
                         <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                                <label className={`relative cursor-pointer ${renewOption === 'same_plan' ? 'ring-2 ring-green-500' : ''}`}>
-                                    <input
-                                        type="radio"
-                                        name="renew_option"
-                                        value="same_plan"
-                                        checked={renewOption == 'same_plan'}
-                                        onChange={(e) => setRenewOption(e.target.value)}
-                                        className="sr-only"
-                                    />
-                                    <div className="border-2 border-gray-200 rounded-xl p-4 text-center hover:border-green-300 transition-all duration-200">
-                                        <CheckCircle size={32} className="mx-auto text-green-500 mb-2" />
-                                        <h3 className="font-semibold text-gray-800">Same Plan</h3>
-                                        <p className="text-sm text-gray-600 mt-1">Renew with current plan</p>
-                                        <p className="text-lg font-bold text-green-600 mt-2">
-                                            {formatCurrency(subscription.plan?.price)}
-                                        </p>
-                                    </div>
-                                </label>
-
-                                <label className={`relative cursor-pointer ${renewOption === 'upgrade' ? 'ring-2 ring-blue-500' : ''}`}>
-                                    <input
-                                        type="radio"
-                                        name="renew_option"
-                                        value="upgrade"
-                                        checked={renewOption === 'upgrade'}
-                                        onChange={(e) => setRenewOption(e.target.value)}
-                                        className="sr-only"
-                                    />
-                                    <div className="border-2 border-gray-200 rounded-xl p-4 text-center hover:border-blue-300 transition-all duration-200">
-                                        <Star size={32} className="mx-auto text-blue-500 mb-2" />
-                                        <h3 className="font-semibold text-gray-800">Upgrade</h3>
-                                        <p className="text-sm text-gray-600 mt-1">Switch to a better plan</p>
-                                        <p className="text-xs text-blue-600 mt-2">Select plan below</p>
-                                    </div>
-                                </label>
-
-                                <label className={`relative cursor-pointer ${renewOption === 'downgrade' ? 'ring-2 ring-orange-500' : ''}`}>
-                                    <input
-                                        type="radio"
-                                        name="renew_option"
-                                        value="downgrade"
-                                        checked={renewOption === 'downgrade'}
-                                        onChange={(e) => setRenewOption(e.target.value)}
-                                        className="sr-only"
-                                    />
-                                    <div className="border-2 border-gray-200 rounded-xl p-4 text-center hover:border-orange-300 transition-all duration-200">
-                                        <AlertTriangle size={32} className="mx-auto text-orange-500 mb-2" />
-                                        <h3 className="font-semibold text-gray-800">Downgrade</h3>
-                                        <p className="text-sm text-gray-600 mt-1">Switch to a basic plan</p>
-                                        <p className="text-xs text-orange-600 mt-2">Select plan below</p>
-                                    </div>
-                                </label>
-                            </div>
-
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <Star size={16} className="text-green-600" />
-                                    Select Plan *
+                                    {t('subscription.select_plan', 'Select Plan')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('subscription.required_field', '*')}
+                                    </span>
                                 </label>
                                 <select
                                     value={data.plan_id}
@@ -266,13 +232,13 @@ export default function Edit({ subscription, plans }) {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                 >
                                     <option value={subscription.plan_id}>
-                                        {subscription.plan?.name} - {formatCurrency(subscription.plan?.price)} (Current)
+                                        {subscription.plan?.name} - {formatCurrency(subscription.plan?.price)} ({t('subscription.current', 'Current')})
                                     </option>
                                     {plans
                                         .filter(plan => plan.id !== subscription.plan_id)
                                         .map((plan) => (
                                         <option key={plan.id} value={plan.id}>
-                                            {plan.name} - {formatCurrency(plan.price)} - {plan.validity} days
+                                            {plan.name} - {formatCurrency(plan.price)} - {plan.validity} {t('subscription.days', 'days')}
                                         </option>
                                     ))}
                                 </select>
@@ -300,12 +266,17 @@ export default function Edit({ subscription, plans }) {
                                                     ? 'text-orange-600'
                                                     : 'text-green-600'
                                             } />
-                                            {selectedPlan.price > subscription.plan.price ? 'Upgrade' : 
-                                             selectedPlan.price < subscription.plan.price ? 'Downgrade' : 'Same'} Plan Details
+                                            {selectedPlan.price > subscription.plan.price 
+                                                ? t('subscription.upgrade', 'Upgrade') 
+                                                : selectedPlan.price < subscription.plan.price
+                                                ? t('subscription.downgrade', 'Downgrade')
+                                                : t('subscription.same_plan', 'Same')} {t('subscription.plan_details', 'Plan Details')}
                                         </h4>
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                                             <div>
-                                                <span className="font-medium text-gray-700">Plan Name:</span>
+                                                <span className="font-medium text-gray-700">
+                                                    {t('subscription.plan_name', 'Plan Name')}:
+                                                </span>
                                                 <p className={
                                                     selectedPlan.price > subscription.plan.price 
                                                         ? 'text-blue-700' 
@@ -315,7 +286,9 @@ export default function Edit({ subscription, plans }) {
                                                 }>{selectedPlan.name}</p>
                                             </div>
                                             <div>
-                                                <span className="font-medium text-gray-700">Price:</span>
+                                                <span className="font-medium text-gray-700">
+                                                    {t('subscription.price', 'Price')}:
+                                                </span>
                                                 <p className={
                                                     selectedPlan.price > subscription.plan.price 
                                                         ? 'text-blue-700' 
@@ -325,33 +298,25 @@ export default function Edit({ subscription, plans }) {
                                                 }>{formatCurrency(selectedPlan.price)}</p>
                                             </div>
                                             <div>
-                                                <span className="font-medium text-gray-700">Validity:</span>
+                                                <span className="font-medium text-gray-700">
+                                                    {t('subscription.validity', 'Validity')}:
+                                                </span>
                                                 <p className={
                                                     selectedPlan.price > subscription.plan.price 
                                                         ? 'text-blue-700' 
                                                         : selectedPlan.price < subscription.plan.price
                                                         ? 'text-orange-700'
                                                         : 'text-green-700'
-                                                }>{selectedPlan.validity} days</p>
+                                                }>{selectedPlan.validity} {t('subscription.days', 'days')}</p>
                                             </div>
-                                            {selectedPlan.description && (
-                                                <div className="md:col-span-3">
-                                                    <span className="font-medium text-gray-700">Description:</span>
-                                                    <p className={
-                                                        selectedPlan.price > subscription.plan.price 
-                                                            ? 'text-blue-700' 
-                                                            : selectedPlan.price < subscription.plan.price
-                                                            ? 'text-orange-700'
-                                                            : 'text-green-700'
-                                                    }>{selectedPlan.description}</p>
-                                                </div>
-                                            )}
                                         </div>
                                         
                                         {selectedPlan.price !== subscription.plan.price && (
                                             <div className="mt-3 pt-3 border-t border-gray-200">
                                                 <div className="flex justify-between items-center">
-                                                    <span className="font-medium text-gray-700">Price Difference:</span>
+                                                    <span className="font-medium text-gray-700">
+                                                        {t('subscription.price_difference', 'Price Difference')}:
+                                                    </span>
                                                     <span className={`font-bold text-lg ${
                                                         getPriceDifference() > 0 ? 'text-blue-600' : 'text-orange-600'
                                                     }`}>
@@ -364,21 +329,26 @@ export default function Edit({ subscription, plans }) {
                                 </div>
                             )}
                         </div>
-                    </div> */}
+                    </div>
 
                     {/* Subscription Details Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <Calendar className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Subscription Period</h2>
+                                <h2 className="text-xl font-semibold text-white">
+                                    {t('subscription.subscription_period', 'Subscription Period')}
+                                </h2>
                             </div>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <Calendar size={16} className="text-purple-600" />
-                                    Start Date *
+                                    {t('subscription.start_date', 'Start Date')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('subscription.required_field', '*')}
+                                    </span>
                                 </label>
                                 <input
                                     type="date"
@@ -396,7 +366,10 @@ export default function Edit({ subscription, plans }) {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <Clock size={16} className="text-orange-600" />
-                                    End Date *
+                                    {t('subscription.end_date', 'End Date')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('subscription.required_field', '*')}
+                                    </span>
                                 </label>
                                 <input
                                     type="date"
@@ -421,9 +394,11 @@ export default function Edit({ subscription, plans }) {
                                         className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                     />
                                     <div>
-                                        <span className="font-medium text-gray-700">Enable Auto-Renewal</span>
+                                        <span className="font-medium text-gray-700">
+                                            {t('subscription.enable_auto_renewal', 'Enable Auto-Renewal')}
+                                        </span>
                                         <p className="text-sm text-gray-500">
-                                            Automatically renew this subscription when it expires
+                                            {t('subscription.auto_renew_description', 'Automatically renew this subscription when it expires')}
                                         </p>
                                     </div>
                                 </label>
@@ -436,14 +411,19 @@ export default function Edit({ subscription, plans }) {
                         <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <CreditCard className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Payment Information</h2>
+                                <h2 className="text-xl font-semibold text-white">
+                                    {t('subscription.payment_information', 'Payment Information')}
+                                </h2>
                             </div>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     ৳
-                                    Amount *
+                                    {t('subscription.amount', 'Amount')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('subscription.required_field', '*')}
+                                    </span>
                                 </label>
                                 <input
                                     type="number"
@@ -465,19 +445,19 @@ export default function Edit({ subscription, plans }) {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <Building size={16} className="text-blue-600" />
-                                    Payment Method
+                                    {t('subscription.payment_method', 'Payment Method')}
                                 </label>
                                 <select
                                     value={data.payment_method}
                                     onChange={(e) => setData("payment_method", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white-50 hover:bg-white"
                                 >
-                                    <option value="">Select payment method</option>
-                                    <option value="cash">Cash</option>
-                                    <option value="card">Credit Card</option>
-                                    <option value="bank">Bank Transfer</option>
-                                    <option value="mobile">Mobile Banking</option>
-                                    <option value="online">Online Payment</option>
+                                    <option value="">{t('subscription.select_payment_method', 'Select payment method')}</option>
+                                    <option value="cash">{t('subscription.cash', 'Cash')}</option>
+                                    <option value="card">{t('subscription.card', 'Credit Card')}</option>
+                                    <option value="bank">{t('subscription.bank', 'Bank Transfer')}</option>
+                                    <option value="mobile">{t('subscription.mobile', 'Mobile Banking')}</option>
+                                    <option value="online">{t('subscription.online', 'Online Payment')}</option>
                                 </select>
                                 {errors.payment_method && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -489,14 +469,14 @@ export default function Edit({ subscription, plans }) {
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <CreditCard size={16} className="text-blue-600" />
-                                    Transaction ID
+                                    {t('subscription.transaction_id', 'Transaction ID')}
                                 </label>
                                 <input
                                     type="text"
                                     value={data.transaction_id}
                                     onChange={(e) => setData("transaction_id", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white-50 hover:bg-white"
-                                    placeholder="Enter transaction ID (if applicable)"
+                                    placeholder={t('subscription.transaction_placeholder', 'Enter transaction ID (if applicable)')}
                                 />
                                 {errors.transaction_id && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -512,20 +492,22 @@ export default function Edit({ subscription, plans }) {
                         <div className="bg-gradient-to-r from-gray-600 to-slate-700 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <FileText className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Additional Information</h2>
+                                <h2 className="text-xl font-semibold text-white">
+                                    {t('subscription.additional_information', 'Additional Information')}
+                                </h2>
                             </div>
                         </div>
                         <div className="p-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Renewal Notes
+                                    {t('subscription.renewal_notes', 'Renewal Notes')}
                                 </label>
                                 <textarea
                                     value={data.notes}
                                     onChange={(e) => setData("notes", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white-50 hover:bg-white resize-none"
                                     rows={4}
-                                    placeholder="Any additional notes about this renewal or upgrade..."
+                                    placeholder={t('subscription.renewal_notes_placeholder', 'Any additional notes about this renewal or upgrade...')}
                                 />
                                 {errors.notes && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -541,7 +523,7 @@ export default function Edit({ subscription, plans }) {
                             href={route("subscriptions.index")}
                             className="group flex items-center gap-2 px-6 py-3 bg-white rounded-xl font-semibold text-gray-700 border border-gray-300 hover:border-red-300 hover:text-red-700 transition-all duration-200"
                         >
-                            Cancel
+                            {t('subscription.cancel', 'Cancel')}
                         </a>
                         <button
                             disabled={processing}
@@ -556,8 +538,12 @@ export default function Edit({ subscription, plans }) {
                         >
                             <Save size={20} className={processing ? 'animate-pulse' : 'group-hover:animate-bounce'} />
                             {processing 
-                                ? (subscription.status == 1 ? "Renewing..." : "Updating...")
-                                : (subscription.status == 1 ? "Renew Subscription" : "Update Subscription")
+                                ? (subscription.status == 1 
+                                    ? t('subscription.renewing_subscription', 'Renewing...')
+                                    : t('subscription.updating_subscription', 'Updating...'))
+                                : (subscription.status == 1 
+                                    ? t('subscription.renew_subscription', 'Renew Subscription')
+                                    : t('subscription.update_subscription', 'Update Subscription'))
                             }
                         </button>
                     </div>

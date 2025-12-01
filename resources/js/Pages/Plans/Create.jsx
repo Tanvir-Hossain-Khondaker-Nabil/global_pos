@@ -11,8 +11,10 @@ import {
     Trash2, 
     Star
 } from "lucide-react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Create() {
+    const { t, locale } = useTranslation();
     const { data, setData, post, processing, errors, reset } = useForm({
         name: "",
         price: "",
@@ -56,20 +58,22 @@ export default function Create() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
+        <div className={`min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-3xl font-bold text-gray-800">Create New Plan</h1>
-                        <p className="text-gray-600 mt-2">Add a new subscription plan to your system</p>
+                        <h1 className="text-3xl font-bold text-gray-800">{t('plan.create_title', 'Create New Plan')}</h1>
+                        <p className="text-gray-600 mt-2">{t('plan.create_subtitle', 'Add a new subscription plan to your system')}</p>
                     </div>
                     <a
                         href={route("plans.index")}
                         className="group flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-blue-300"
                     >
                         <ArrowLeft size={18} className="text-gray-600 group-hover:text-blue-600 transition-colors" />
-                        <span className="font-medium text-gray-700 group-hover:text-blue-600 transition-colors">Back</span>
+                        <span className="font-medium text-gray-700 group-hover:text-blue-600 transition-colors">
+                            {t('plan.back', 'Back')}
+                        </span>
                     </a>
                 </div>
 
@@ -79,21 +83,23 @@ export default function Create() {
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <Tag className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Basic Information</h2>
+                                <h2 className="text-xl font-semibold text-white">
+                                    {t('plan.basic_information', 'Basic Information')}
+                                </h2>
                             </div>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <Tag size={16} className="text-blue-600" />
-                                    Plan Name *
+                                    {t('plan.plan_name', 'Plan Name')} *
                                 </label>
                                 <input
                                     type="text"
                                     value={data.name}
                                     onChange={(e) => setData("name", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
-                                    placeholder="Enter plan name"
+                                    placeholder={t('plan.enter_plan_name', 'Enter plan name')}
                                 />
                                 {errors.name && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -104,15 +110,15 @@ export default function Create() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                     ৳
-                                    Price *
+                                    {t('plan.currency', '৳')}
+                                    {t('plan.price', 'Price')} *
                                 </label>
                                 <input
                                     type="number"
                                     value={data.price}
                                     onChange={(e) => setData("price", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
-                                    placeholder="0.00"
+                                    placeholder={t('plan.enter_price', '0.00')}
                                     step="0.01"
                                     min="0"
                                 />
@@ -125,16 +131,16 @@ export default function Create() {
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Plan Type *
+                                    {t('plan.plan_type', 'Plan Type')} *
                                 </label>
                                 <select
                                     value={data.plan_type}
                                     onChange={(e) => setData("plan_type", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                 >
-                                    <option value="">Select Plan Type</option>
-                                    <option value="1">Free</option>
-                                    <option value="2">Premium</option>
+                                    <option value="">{t('plan.select_plan_type', 'Select Plan Type')}</option>
+                                    <option value="1">{t('plan.free', 'Free')}</option>
+                                    <option value="2">{t('plan.premium', 'Premium')}</option>
                                 </select>
                                 {errors.plan_type && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -146,14 +152,14 @@ export default function Create() {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <Calendar size={16} className="text-purple-600" />
-                                    Validity (Days) *
+                                    {t('plan.validity', 'Validity')} ({t('plan.validity_days', 'Days')}) *
                                 </label>
                                 <input
                                     type="number"
                                     value={data.validity}
                                     onChange={(e) => setData("validity", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
-                                    placeholder="30"
+                                    placeholder={t('plan.enter_validity', '30')}
                                     min="1"
                                 />
                                 {errors.validity && (
@@ -166,14 +172,14 @@ export default function Create() {
                             <div className="md:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <FileText size={16} className="text-gray-600" />
-                                    Description
+                                    {t('plan.description', 'Description')}
                                 </label>
                                 <textarea
                                     value={data.description}
                                     onChange={(e) => setData("description", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white resize-none"
                                     rows={3}
-                                    placeholder="Describe the plan features and benefits..."
+                                    placeholder={t('plan.enter_description', 'Describe the plan features and benefits...')}
                                 />
                                 {errors.description && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -190,7 +196,9 @@ export default function Create() {
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <CheckCircle className="text-white" size={24} />
-                                    <h2 className="text-xl font-semibold text-black">Plan Features</h2>
+                                    <h2 className="text-xl font-semibold text-white">
+                                        {t('plan.plan_features', 'Plan Features')}
+                                    </h2>
                                 </div>
                                 <button
                                     type="button"
@@ -198,7 +206,9 @@ export default function Create() {
                                     className="flex items-center gap-2 px-4 py-2 bg-primary bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-all duration-200 hover:scale-105"
                                 >
                                     <Plus size={18} className="text-white" />
-                                    <span className="text-white font-medium">Add Feature</span>
+                                    <span className="text-white font-medium">
+                                        {t('plan.add_feature', 'Add Feature')}
+                                    </span>
                                 </button>
                             </div>
                         </div>
@@ -210,7 +220,7 @@ export default function Create() {
                                             <div className="flex items-center gap-2 mb-2">
                                                 <CheckCircle size={16} className="text-green-500" />
                                                 <span className="text-sm font-medium text-gray-700">
-                                                    Feature {index + 1}
+                                                    {t('plan.features', 'Feature')} {index + 1}
                                                 </span>
                                             </div>
                                             <input
@@ -218,14 +228,14 @@ export default function Create() {
                                                 value={feature}
                                                 onChange={(e) => updateFeature(index, e.target.value)}
                                                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all duration-200 bg-white"
-                                                placeholder="Enter feature description..."
+                                                placeholder={t('plan.enter_feature', 'Enter feature description...')}
                                             />
                                         </div>
                                         <button
                                             type="button"
                                             onClick={() => removeFeature(index)}
                                             className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 hover:scale-110 mt-7"
-                                            title="Remove feature"
+                                            title={t('plan.remove', 'Remove feature')}
                                         >
                                             <Trash2 size={18} />
                                         </button>
@@ -247,7 +257,7 @@ export default function Create() {
                                     className="flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-medium transition-all duration-200 transform hover:scale-105"
                                 >
                                     <Plus size={18} />
-                                    Add Another Feature
+                                    {t('plan.add_another_feature', 'Add Another Feature')}
                                 </button>
                             </div>
                             
@@ -255,14 +265,14 @@ export default function Create() {
                             <div className="bg-green-50 rounded-lg p-4 border border-green-200 mt-6">
                                 <h4 className="font-semibold text-green-800 mb-2 flex items-center gap-2">
                                     <CheckCircle size={18} />
-                                    Features Guidelines
+                                    {t('plan.features_guidelines', 'Features Guidelines')}
                                 </h4>
                                 <ul className="text-sm text-green-700 space-y-1">
-                                    <li>• Click "Add Feature" to add multiple features at once</li>
-                                    <li>• Be specific and clear about what users get</li>
-                                    <li>• Empty features will be automatically removed when saving</li>
-                                    <li>• Order features by importance</li>
-                                    <li>• You can add unlimited features</li>
+                                    <li>• {t('plan.guideline_1', 'Click "Add Feature" to add multiple features at once')}</li>
+                                    <li>• {t('plan.guideline_2', 'Be specific and clear about what users get')}</li>
+                                    <li>• {t('plan.guideline_3', 'Empty features will be automatically removed when saving')}</li>
+                                    <li>• {t('plan.guideline_4', 'Order features by importance')}</li>
+                                    <li>• {t('plan.guideline_5', 'You can add unlimited features')}</li>
                                 </ul>
                             </div>
                         </div>
@@ -273,21 +283,23 @@ export default function Create() {
                         <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <Star className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">Status & Performance</h2>
+                                <h2 className="text-xl font-semibold text-white">
+                                    {t('plan.status_performance', 'Status & Performance')}
+                                </h2>
                             </div>
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Status *
+                                    {t('plan.status', 'Status')} *
                                 </label>
                                 <select
                                     value={data.status}
                                     onChange={(e) => setData("status", e.target.value)}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                 >
-                                    <option value="1">Active</option>
-                                    <option value="2">Inactive</option>
+                                    <option value="1">{t('plan.active', 'Active')}</option>
+                                    <option value="2">{t('plan.inactive', 'Inactive')}</option>
                                 </select>
                                 {errors.status && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -313,7 +325,7 @@ export default function Create() {
                             `}
                         >
                             <Save size={20} className={processing ? 'animate-pulse' : 'group-hover:animate-bounce'} />
-                            {processing ? "Creating Plan..." : "Create Plan"}
+                            {processing ? t('plan.creating_plan', 'Creating Plan...') : t('plan.create_plan', 'Create Plan')}
                         </button>
                     </div>
                 </form>

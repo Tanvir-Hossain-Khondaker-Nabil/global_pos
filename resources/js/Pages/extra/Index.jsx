@@ -3,8 +3,11 @@ import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
 import { useEffect, useState } from "react";
 import { Frown, Trash2, X, Plus } from "lucide-react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Index({ extracashdata, query }) {
+    const { t, locale } = useTranslation();
+    
     // model
     const [model, setModel] = useState(false);
 
@@ -42,10 +45,10 @@ export default function Index({ extracashdata, query }) {
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title="Extra cash list"
-                subtitle="Manage your all extra cash from here."
+                title={t('extra_cash.title', 'Extra cash list')}
+                subtitle={t('extra_cash.subtitle', 'Manage your all extra cash from here.')}
             >
                 <div className="flex items-center gap-3">
                     <input
@@ -63,7 +66,7 @@ export default function Index({ extracashdata, query }) {
                         onClick={() => setModel(!model)}
                         className="btn btn-primary btn-sm"
                     >
-                        <Plus size={15} /> Add new
+                        <Plus size={15} /> {t('extra_cash.add_new', 'Add new')}
                     </button>
                 </div>
             </PageHeader>
@@ -74,10 +77,10 @@ export default function Index({ extracashdata, query }) {
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th></th>
-                                <th>Created by</th>
-                                <th>Amount</th>
-                                <th>Date</th>
-                                <th>Actions</th>
+                                <th>{t('extra_cash.created_by', 'Created by')}</th>
+                                <th>{t('extra_cash.amount', 'Amount')}</th>
+                                <th>{t('extra_cash.date', 'Date')}</th>
+                                <th>{t('common.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -86,15 +89,15 @@ export default function Index({ extracashdata, query }) {
                                     <th>{index + 1}</th>
                                     <td>
                                         <p>
-                                            <strong>Name: </strong>{" "}
+                                            <strong>{t('extra_cash.name', 'Name')}: </strong>{" "}
                                             {user?.createdby?.name}
                                         </p>
                                         <p>
-                                            <strong>Email: </strong>{" "}
+                                            <strong>{t('extra_cash.email', 'Email')}: </strong>{" "}
                                             {user?.createdby?.email}
                                         </p>
                                     </td>
-                                    <td>{user.amount} Tk</td>
+                                    <td>{user.amount} {t('common.tk', 'Tk')}</td>
                                     <td>{user.date}</td>
                                     <td>
                                         <Link
@@ -104,7 +107,7 @@ export default function Index({ extracashdata, query }) {
                                             onClick={(e) => {
                                                 if (
                                                     !confirm(
-                                                        "Are you sure you want to delete this?"
+                                                        t('extra_cash.confirm_delete', 'Are you sure you want to delete this?')
                                                     )
                                                 ) {
                                                     e.preventDefault();
@@ -112,7 +115,7 @@ export default function Index({ extracashdata, query }) {
                                             }}
                                             className="btn btn-xs btn-error"
                                         >
-                                            <Trash2 size={10} /> Delete
+                                            <Trash2 size={10} /> {t('common.delete', 'Delete')}
                                         </Link>
                                     </td>
                                 </tr>
@@ -123,26 +126,26 @@ export default function Index({ extracashdata, query }) {
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={20} className="text-gray-500" />
                         <h1 className="text-gray-500 text-sm">
-                            Data not found!
+                            {t('extra_cash.data_not_found', 'Data not found!')}
                         </h1>
                         <button
                             onClick={() => setModel(!model)}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new
+                            <Plus size={15} /> {t('extra_cash.add_new', 'Add new')}
                         </button>
                     </div>
                 )}
             </div>
             {/* pagination */}
-            <Pagination data={data} />
+            <Pagination data={extracashdata} />
 
             {/* add model */}
             <dialog className="modal" open={model}>
                 <div className="modal-box">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
                         <h1 className="text-base font-medium text-gray-900">
-                            Add extra cash
+                            {t('extra_cash.add_extra_cash', 'Add extra cash')}
                         </h1>
                         <button
                             onClick={modelClose}
@@ -154,7 +157,7 @@ export default function Index({ extracashdata, query }) {
 
                     <form onSubmit={formSubmit} className="space-y-2">
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Date*</legend>
+                            <legend className="fieldset-legend">{t('extra_cash.date', 'Date')}*</legend>
                             <input
                                 type="date"
                                 value={data.date}
@@ -171,7 +174,7 @@ export default function Index({ extracashdata, query }) {
                         </fieldset>
 
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Amount*</legend>
+                            <legend className="fieldset-legend">{t('extra_cash.amount', 'Amount')}*</legend>
                             <input
                                 type="number"
                                 step={0.01}
@@ -194,7 +197,7 @@ export default function Index({ extracashdata, query }) {
                             className="btn btn-sm btn-primary"
                             type="submit"
                         >
-                            Add now
+                            {processing ? t('common.processing', 'Processing...') : t('extra_cash.add_now', 'Add now')}
                         </button>
                     </form>
                 </div>

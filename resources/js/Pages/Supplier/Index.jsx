@@ -4,9 +4,11 @@ import Pagination from "../../components/Pagination";
 import { Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, Globe } from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Index({ suppliers, filters }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
     const [editProcessing, setEditProcessing] = useState(false);
 
@@ -94,7 +96,7 @@ export default function Index({ suppliers, filters }) {
 
     // Handle supplier delete
     const handleDelete = (id) => {
-        if (confirm("Are you sure you want to delete this supplier contact?")) {
+        if (confirm(t('supplier.delete_confirmation', 'Are you sure you want to delete this supplier contact?'))) {
             router.delete(route("supplier.del", { id }), {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -104,27 +106,35 @@ export default function Index({ suppliers, filters }) {
         }
     };
 
-    // Format date
+    // Format date based on locale
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
+        const options = {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
-        });
+        };
+        
+        if (locale === 'bn') {
+            // Bengali locale formatting
+            return new Date(dateString).toLocaleDateString('bn-BD', options);
+        } else {
+            // English locale formatting
+            return new Date(dateString).toLocaleDateString('en-US', options);
+        }
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title="Supply Contacts"
-                subtitle="Manage your all supplier contacts from here."
+                title={t('supplier.title', 'Supplier Contacts')}
+                subtitle={t('supplier.subtitle', 'Manage your all supplier contacts from here.')}
             >
                 <div className="flex items-center gap-3">
                     <input
                         type="search"
                         onChange={handleSearch}
                         value={searchForm.data.search}
-                        placeholder="Search suppliers..."
+                        placeholder={t('supplier.search_placeholder', 'Search suppliers...')}
                         className="input input-sm input-bordered w-64"
                     />
                     {auth.role === "admin" && (
@@ -132,7 +142,7 @@ export default function Index({ suppliers, filters }) {
                             onClick={() => setModel(true)}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add New
+                            <Plus size={15} /> {t('supplier.add_new', 'Add New')}
                         </button>
                     )}
                 </div>
@@ -144,11 +154,11 @@ export default function Index({ suppliers, filters }) {
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th className="w-12">#</th>
-                                <th>Contact Info</th>
-                                <th>Company</th>
-                                <th>Description</th>
-                                <th>Added On</th>
-                                <th className="w-32">Actions</th>
+                                <th>{t('supplier.contact_info', 'Contact Info')}</th>
+                                <th>{t('supplier.company', 'Company')}</th>
+                                <th>{t('supplier.description', 'Description')}</th>
+                                <th>{t('supplier.added_on', 'Added On')}</th>
+                                <th className="w-32">{t('supplier.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -189,7 +199,7 @@ export default function Index({ suppliers, filters }) {
                                                         rel="noopener noreferrer"
                                                         className="hover:underline"
                                                     >
-                                                        Website
+                                                        {t('supplier.website', 'Website')}
                                                     </a>
                                                 </div>
                                             )}
@@ -201,7 +211,9 @@ export default function Index({ suppliers, filters }) {
                                                 {supplier.description}
                                             </div>
                                         ) : (
-                                            <span className="text-gray-400 text-sm">No description</span>
+                                            <span className="text-gray-400 text-sm">
+                                                {t('supplier.no_description', 'No description')}
+                                            </span>
                                         )}
                                     </td>
                                     <td>
@@ -217,17 +229,19 @@ export default function Index({ suppliers, filters }) {
                                                     onClick={() => handleSupplyEdit(supplier.id)}
                                                     className="btn btn-xs btn-warning"
                                                 >
-                                                    <Pen size={12} /> Edit
+                                                    <Pen size={12} /> {t('supplier.edit', 'Edit')}
                                                 </button>
                                                 <button
                                                     onClick={() => handleDelete(supplier.id)}
                                                     className="btn btn-xs btn-error"
                                                 >
-                                                    <Trash2 size={12} /> Delete
+                                                    <Trash2 size={12} /> {t('supplier.delete', 'Delete')}
                                                 </button>
                                             </div>
                                         ) : (
-                                            <p className="text-sm text-gray-500">No permission</p>
+                                            <p className="text-sm text-gray-500">
+                                                {t('supplier.no_permission', 'No permission')}
+                                            </p>
                                         )}
                                     </td>
                                 </tr>
@@ -239,12 +253,14 @@ export default function Index({ suppliers, filters }) {
                         <Frown size={40} className="text-gray-400" />
                         <div>
                             <h3 className="text-gray-500 font-medium mb-1">
-                                No supplier contacts found
+                                {t('supplier.no_contacts_found', 'No supplier contacts found')}
                             </h3>
                             <p className="text-gray-400 text-sm">
                                 {searchForm.data.search 
-                                    ? `No contacts matching "${searchForm.data.search}"`
-                                    : 'Get started by adding your first supplier contact'
+                                    ? t('supplier.no_matching_contacts', 'No contacts matching ":search"', {
+                                        search: searchForm.data.search
+                                    })
+                                    : t('supplier.get_started_message', 'Get started by adding your first supplier contact')
                                 }
                             </p>
                         </div>
@@ -253,7 +269,7 @@ export default function Index({ suppliers, filters }) {
                                 onClick={() => setModel(true)}
                                 className="btn btn-primary btn-sm"
                             >
-                                <Plus size={15} /> Add New Contact
+                                <Plus size={15} /> {t('supplier.add_new_contact', 'Add New Contact')}
                             </button>
                         )}
                     </div>
@@ -272,7 +288,10 @@ export default function Index({ suppliers, filters }) {
                 <div className="modal-box max-w-2xl">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
                         <h1 className="text-lg font-semibold text-gray-900">
-                            {supplyForm.data.id ? "Edit Supply Contact" : "Add New Supply Contact"}
+                            {supplyForm.data.id 
+                                ? t('supplier.edit_contact', 'Edit Supply Contact')
+                                : t('supplier.add_new_contact', 'Add New Contact')
+                            }
                         </h1>
                         <button
                             onClick={modelClose}
@@ -286,13 +305,19 @@ export default function Index({ suppliers, filters }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Supply Name */}
                             <fieldset className="fieldset">
-                                <legend className="fieldset-legend">Supply Name*</legend>
+                                <legend className="fieldset-legend">
+                                    {t('supplier.supply_name', 'Supply Name')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('supplier.required_field', '*')}
+                                    </span>
+                                </legend>
                                 <input
                                     type="text"
                                     value={supplyForm.data.name}
                                     onChange={(e) => supplyForm.setData("name", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder="Enter supplier name"
+                                    placeholder={t('supplier.supply_name_placeholder', 'Enter supplier name')}
+                                    required
                                 />
                                 {supplyForm.errors.name && (
                                     <div className="text-red-500 text-sm mt-1">
@@ -303,13 +328,19 @@ export default function Index({ suppliers, filters }) {
 
                             {/* Contact Person */}
                             <fieldset className="fieldset">
-                                <legend className="fieldset-legend">Contact Person*</legend>
+                                <legend className="fieldset-legend">
+                                    {t('supplier.contact_person', 'Contact Person')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('supplier.required_field', '*')}
+                                    </span>
+                                </legend>
                                 <input
                                     type="text"
                                     value={supplyForm.data.contact_person}
                                     onChange={(e) => supplyForm.setData("contact_person", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder="Enter contact person name"
+                                    placeholder={t('supplier.contact_person_placeholder', 'Enter contact person name')}
+                                    required
                                 />
                                 {supplyForm.errors.contact_person && (
                                     <div className="text-red-500 text-sm mt-1">
@@ -320,13 +351,19 @@ export default function Index({ suppliers, filters }) {
 
                             {/* Email */}
                             <fieldset className="fieldset">
-                                <legend className="fieldset-legend">Email*</legend>
+                                <legend className="fieldset-legend">
+                                    {t('supplier.email', 'Email')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('supplier.required_field', '*')}
+                                    </span>
+                                </legend>
                                 <input
                                     type="email"
                                     value={supplyForm.data.email}
                                     onChange={(e) => supplyForm.setData("email", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder="Enter email address"
+                                    placeholder={t('supplier.email_placeholder', 'Enter email address')}
+                                    required
                                 />
                                 {supplyForm.errors.email && (
                                     <div className="text-red-500 text-sm mt-1">
@@ -337,13 +374,19 @@ export default function Index({ suppliers, filters }) {
 
                             {/* Phone */}
                             <fieldset className="fieldset">
-                                <legend className="fieldset-legend">Phone*</legend>
+                                <legend className="fieldset-legend">
+                                    {t('supplier.phone', 'Phone')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('supplier.required_field', '*')}
+                                    </span>
+                                </legend>
                                 <input
                                     type="tel"
                                     value={supplyForm.data.phone}
                                     onChange={(e) => supplyForm.setData("phone", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder="Enter phone number"
+                                    placeholder={t('supplier.phone_placeholder', 'Enter phone number')}
+                                    required
                                 />
                                 {supplyForm.errors.phone && (
                                     <div className="text-red-500 text-sm mt-1">
@@ -354,25 +397,29 @@ export default function Index({ suppliers, filters }) {
 
                             {/* Company */}
                             <fieldset className="fieldset">
-                                <legend className="fieldset-legend">Company</legend>
+                                <legend className="fieldset-legend">
+                                    {t('supplier.company_name', 'Company')}
+                                </legend>
                                 <input
                                     type="text"
                                     value={supplyForm.data.company}
                                     onChange={(e) => supplyForm.setData("company", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder="Enter company name"
+                                    placeholder={t('supplier.company_placeholder', 'Enter company name')}
                                 />
                             </fieldset>
 
                             {/* Website */}
                             <fieldset className="fieldset">
-                                <legend className="fieldset-legend">Website</legend>
+                                <legend className="fieldset-legend">
+                                    {t('supplier.website_url', 'Website')}
+                                </legend>
                                 <input
                                     type="url"
                                     value={supplyForm.data.website}
                                     onChange={(e) => supplyForm.setData("website", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder="https://example.com"
+                                    placeholder={t('supplier.website_placeholder', 'https://example.com')}
                                 />
                                 {supplyForm.errors.website && (
                                     <div className="text-red-500 text-sm mt-1">
@@ -384,25 +431,29 @@ export default function Index({ suppliers, filters }) {
 
                         {/* Address */}
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Address</legend>
+                            <legend className="fieldset-legend">
+                                {t('supplier.address', 'Address')}
+                            </legend>
                             <textarea
                                 value={supplyForm.data.address}
                                 onChange={(e) => supplyForm.setData("address", e.target.value)}
                                 className="textarea textarea-bordered w-full"
                                 rows="2"
-                                placeholder="Enter full address"
+                                placeholder={t('supplier.address_placeholder', 'Enter full address')}
                             />
                         </fieldset>
 
                         {/* Description */}
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Description</legend>
+                            <legend className="fieldset-legend">
+                                {t('supplier.description_field', 'Description')}
+                            </legend>
                             <textarea
                                 value={supplyForm.data.description}
                                 onChange={(e) => supplyForm.setData("description", e.target.value)}
                                 className="textarea textarea-bordered w-full"
                                 rows="3"
-                                placeholder="Enter description or notes"
+                                placeholder={t('supplier.description_placeholder', 'Enter description or notes')}
                             />
                         </fieldset>
 
@@ -412,15 +463,19 @@ export default function Index({ suppliers, filters }) {
                                 disabled={supplyForm.processing}
                                 className="btn btn-primary flex-1"
                             >
-                                {supplyForm.processing ? "Processing..." : 
-                                 supplyForm.data.id ? "Update Contact" : "Add Contact"}
+                                {supplyForm.processing 
+                                    ? t('supplier.processing', 'Processing...')
+                                    : supplyForm.data.id 
+                                        ? t('supplier.update_contact', 'Update Contact')
+                                        : t('supplier.add_contact', 'Add Contact')
+                                }
                             </button>
                             <button
                                 type="button"
                                 onClick={modelClose}
                                 className="btn btn-ghost"
                             >
-                                Cancel
+                                {t('supplier.cancel', 'Cancel')}
                             </button>
                         </div>
                     </form>

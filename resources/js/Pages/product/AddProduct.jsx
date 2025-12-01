@@ -3,8 +3,10 @@ import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
 import { Trash, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "react-toastify";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function AddProduct({ category, update, attributes }) {
+    const { t, locale } = useTranslation();
     const [variants, setVariants] = useState([]);
     const [errors, setErrors] = useState({});
     const [categories, setCategories] = useState([]);
@@ -145,17 +147,17 @@ export default function AddProduct({ category, update, attributes }) {
 
         if (!productForm.data.product_name?.trim()) {
             hasError = true;
-            newErrors.product_name = "Product name is required";
+            newErrors.product_name = t('product.product_name_required', 'Product name is required');
         }
 
         if (!productForm.data.category_id) {
             hasError = true;
-            newErrors.category_id = "Category is required";
+            newErrors.category_id = t('product.category_required', 'Category is required');
         }
 
         if (!productForm.data.product_no?.trim()) {
             hasError = true;
-            newErrors.product_no = "Product code is required";
+            newErrors.product_no = t('product.product_code_required', 'Product code is required');
         }
 
         // Validate variants - check if at least one variant has attributes
@@ -165,14 +167,14 @@ export default function AddProduct({ category, update, attributes }) {
 
         if (!hasValidVariants) {
             hasError = true;
-            newErrors.variants = "At least one variant must have attributes selected";
+            newErrors.variants = t('product.variants_required', 'At least one variant must have attributes selected');
         }
 
         // Check each variant
         variants.forEach((variant, index) => {
             if (!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) {
                 hasError = true;
-                newErrors[`variant-${index}`] = "Please select attributes for this variant";
+                newErrors[`variant-${index}`] = t('product.variant_attributes_required', 'Please select attributes for this variant');
             }
         });
 
@@ -185,7 +187,7 @@ export default function AddProduct({ category, update, attributes }) {
         e.preventDefault();
 
         if (validateForm()) {
-            toast.error("Please fix the validation errors");
+            toast.error(t('product.fix_validation_errors', 'Please fix the validation errors'));
             return;
         }
 
@@ -209,7 +211,10 @@ export default function AddProduct({ category, update, attributes }) {
             data: submitData,
             preserveScroll: true,
             onSuccess: () => {
-                toast.success(`Product ${update ? 'updated' : 'added'} successfully!`);
+                toast.success(update 
+                    ? t('product.product_updated_success', 'Product updated successfully!')
+                    : t('product.product_added_success', 'Product added successfully!')
+                );
                 if (!update) {
                     productForm.reset();
                     setVariants([{ attribute_values: {}}]);
@@ -217,7 +222,7 @@ export default function AddProduct({ category, update, attributes }) {
                 }
             },
             onError: (errors) => {
-                toast.error("Something went wrong. Please try again!");
+                toast.error(t('product.something_went_wrong', 'Something went wrong. Please try again!'));
                 console.error('Form errors:', errors);
             },
         });
@@ -280,17 +285,22 @@ export default function AddProduct({ category, update, attributes }) {
     }, [selectedAttributes]);
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title={update ? "Update Product" : "Add New Product"}
-                subtitle="Add or update product with variants"
+                title={update 
+                    ? t('product.update_title', 'Update Product') 
+                    : t('product.from_title', 'Add New Product')
+                }
+                subtitle={t('product.subtitle', 'Add or update product with variants')}
             />
 
             <form onSubmit={formSubmit}>
                 {/* Product Basic Information */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                     <fieldset className="fieldset col-span-2">
-                        <legend className="fieldset-legend">Product Name*</legend>
+                        <legend className="fieldset-legend">
+                            {t('product.from_product_name', 'Product Name')}*
+                        </legend>
                         <input
                             type="text"
                             className="input"
@@ -298,7 +308,7 @@ export default function AddProduct({ category, update, attributes }) {
                             onChange={(e) =>
                                 productForm.setData("product_name", e.target.value)
                             }
-                            placeholder="Enter product name"
+                            placeholder={t('product.enter_product_name', 'Enter product name')}
                         />
                         {errors.product_name && (
                             <p className="text-sm text-error">{errors.product_name}</p>
@@ -306,7 +316,9 @@ export default function AddProduct({ category, update, attributes }) {
                     </fieldset>
 
                     <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Category*</legend>
+                        <legend className="fieldset-legend">
+                            {t('product.from_category', 'Category')}*
+                        </legend>
                         <select
                             value={productForm.data.category_id}
                             className="select"
@@ -314,7 +326,9 @@ export default function AddProduct({ category, update, attributes }) {
                                 productForm.setData("category_id", e.target.value)
                             }
                         >
-                            <option value="">--Pick a category--</option>
+                            <option value="">
+                                {t('product.pick_category', '--Pick a category--')}
+                            </option>
                             {categories.map((cat) => (
                                 <option key={cat.id} value={cat.id}>
                                     {cat.name}
@@ -327,7 +341,9 @@ export default function AddProduct({ category, update, attributes }) {
                     </fieldset>
 
                     <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Product Code*</legend>
+                        <legend className="fieldset-legend">
+                            {t('product.from_product_code', 'Product Code')}*
+                        </legend>
                         <input
                             type="text"
                             className="input"
@@ -335,7 +351,7 @@ export default function AddProduct({ category, update, attributes }) {
                             onChange={(e) =>
                                 productForm.setData("product_no", e.target.value)
                             }
-                            placeholder="Enter product code"
+                            placeholder={t('product.enter_product_code', 'Enter product code')}
                         />
                         {errors.product_no && (
                             <p className="text-sm text-error">{errors.product_no}</p>
@@ -343,7 +359,9 @@ export default function AddProduct({ category, update, attributes }) {
                     </fieldset>
 
                     <fieldset className="fieldset col-span-2">
-                        <legend className="fieldset-legend">Description</legend>
+                        <legend className="fieldset-legend">
+                            {t('product.from_description', 'Description')}
+                        </legend>
                         <textarea
                             className="textarea"
                             rows="3"
@@ -351,7 +369,7 @@ export default function AddProduct({ category, update, attributes }) {
                             onChange={(e) =>
                                 productForm.setData("description", e.target.value)
                             }
-                            placeholder="Enter product description"
+                            placeholder={t('product.enter_description', 'Enter product description')}
                         />
                     </fieldset>
                 </div>
@@ -359,20 +377,27 @@ export default function AddProduct({ category, update, attributes }) {
                 {/* Attribute Selection */}
                 <div className="border-t pt-6 mb-6">
                     <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold">Product Attributes</h3>
+                        <h3 className="text-lg font-semibold">
+                            {t('product.product_attributes', 'Product Attributes')}
+                        </h3>
                         <button
                             type="button"
                             className="btn btn-primary btn-sm"
                             onClick={() => setShowAttributeSelector(!showAttributeSelector)}
                         >
                             {showAttributeSelector ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                            {showAttributeSelector ? "Hide Attributes" : "Select Attributes"}
+                            {showAttributeSelector 
+                                ? t('product.hide_attributes', 'Hide Attributes') 
+                                : t('product.select_attributes', 'Select Attributes')
+                            }
                         </button>
                     </div>
 
                     {showAttributeSelector && (
                         <div className="border border-gray-300 p-4 rounded-box bg-gray-50 mb-4">
-                            <h4 className="font-semibold mb-3">Select Attribute Values</h4>
+                            <h4 className="font-semibold mb-3">
+                                {t('product.select_attribute_values', 'Select Attribute Values')}
+                            </h4>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                 {availableAttributes.map((attribute) => (
                                     <div key={attribute.code} className="border rounded-box p-3">
@@ -407,7 +432,7 @@ export default function AddProduct({ category, update, attributes }) {
                                     className="btn btn-primary btn-sm"
                                     onClick={applyAttributeSelection}
                                 >
-                                    Apply Attributes
+                                    {t('product.apply_attributes', 'Apply Attributes')}
                                 </button>
                             </div>
                         </div>
@@ -416,7 +441,9 @@ export default function AddProduct({ category, update, attributes }) {
                     {/* Selected Attributes Summary */}
                     {Object.keys(selectedAttributes).length > 0 && (
                         <div className="mb-4">
-                            <h4 className="font-semibold mb-2">Selected Attributes:</h4>
+                            <h4 className="font-semibold mb-2">
+                                {t('product.selected_attributes', 'Selected Attributes')}:
+                            </h4>
                             <div className="flex flex-wrap gap-2">
                                 {Object.entries(selectedAttributes).map(([attributeCode, values]) => (
                                     <div key={attributeCode} className="badge badge-primary">
@@ -432,7 +459,7 @@ export default function AddProduct({ category, update, attributes }) {
                 <div className="border-t pt-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">
-                            Product Variants ({variants.length})
+                            {t('product.product_variants', 'Product Variants')} ({variants.length})
                         </h3>
                     </div>
 
@@ -448,7 +475,7 @@ export default function AddProduct({ category, update, attributes }) {
                             >
                                 <div className="flex justify-between items-center mb-3">
                                     <h4 className="font-medium text-gray-700">
-                                        Variant #{index + 1}
+                                        {t('product.variant', 'Variant')} #{index + 1}
                                         {variant.id && (
                                             <span className="text-xs text-gray-500 ml-2">
                                                 (ID: {variant.id})
@@ -466,7 +493,9 @@ export default function AddProduct({ category, update, attributes }) {
                                             </span>
                                         ))}
                                         {(!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) && (
-                                            <span className="text-sm text-gray-500">No attributes selected</span>
+                                            <span className="text-sm text-gray-500">
+                                                {t('product.no_attributes_selected', 'No attributes selected')}
+                                            </span>
                                         )}
                                     </div>
                                 </div>
@@ -486,7 +515,13 @@ export default function AddProduct({ category, update, attributes }) {
                     type="submit"
                     disabled={productForm.processing}
                 >
-                    {productForm.processing ? "Saving..." : (update ? "Update Product" : "Save Product")}
+                    {productForm.processing 
+                        ? t('product.saving', 'Saving...')
+                        : (update 
+                            ? t('product.update_product', 'Update Product') 
+                            : t('product.save_product', 'Save Product')
+                          )
+                    }
                 </button>
             </form>
         </div>

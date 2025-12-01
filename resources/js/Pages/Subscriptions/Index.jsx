@@ -17,8 +17,10 @@ import {
     Ban
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Index({ subscriptions }) {
+    const { t, locale } = useTranslation();
     // Search and filter states
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("");
@@ -62,7 +64,7 @@ export default function Index({ subscriptions }) {
 
     // Format date
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-BD', {
+        return new Date(dateString).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-BD', {
             year: 'numeric',
             month: 'short',
             day: 'numeric'
@@ -72,10 +74,10 @@ export default function Index({ subscriptions }) {
     // Get status badge color
     const getStatusBadge = (status) => {
         const statusMap = {
-            1: { label: 'Active', class: 'badge-success', icon: BadgeCheck },
-            2: { label: 'Expired', class: 'badge-neutral', icon: Calendar },
-            3: { label: 'Cancelled', class: 'badge-error', icon: Ban },
-            4: { label: 'Pending', class: 'badge-warning', icon: Clock },
+            1: { label: t('subscription.active', 'Active'), class: 'badge-success', icon: BadgeCheck },
+            2: { label: t('subscription.expired', 'Expired'), class: 'badge-neutral', icon: Calendar },
+            3: { label: t('subscription.cancelled', 'Cancelled'), class: 'badge-error', icon: Ban },
+            4: { label: t('subscription.pending', 'Pending'), class: 'badge-warning', icon: Clock },
         };
         
         const statusInfo = statusMap[status] || { label: status, class: 'badge-warning', icon: Clock };
@@ -102,19 +104,23 @@ export default function Index({ subscriptions }) {
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Subscriptions Management</h1>
-                    <p className="text-gray-600 mt-1">Manage user subscriptions and billing</p>
+                    <h1 className="text-2xl font-bold text-gray-800">
+                        {t('subscription.subscription_management', 'Subscriptions Management')}
+                    </h1>
+                    <p className="text-gray-600 mt-1">
+                        {t('subscription.manage_user_subscriptions', 'Manage user subscriptions and billing')}
+                    </p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Link
                         href={route("subscriptions.create")}
                         className="btn btn-primary btn-sm"
                     >
-                        <Plus size={15} /> Create New Subscription
+                        <Plus size={15} /> {t('subscription.create_subscription', 'Create New Subscription')}
                     </Link>
                 </div>
             </div>
@@ -125,7 +131,7 @@ export default function Index({ subscriptions }) {
                     {/* Search Input */}
                     <div className="flex-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Search Subscriptions
+                            {t('subscription.search_subscriptions', 'Search Subscriptions')}
                         </label>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -133,7 +139,7 @@ export default function Index({ subscriptions }) {
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search by user name, email, plan name..."
+                                placeholder={t('subscription.search_placeholder', 'Search by user name, email, plan name...')}
                                 className="input input-bordered w-full pl-10"
                             />
                         </div>
@@ -142,19 +148,19 @@ export default function Index({ subscriptions }) {
                     {/* Status Filter */}
                     <div className="w-full lg:w-48">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Status
+                            {t('subscription.status', 'Status')}
                         </label>
                         <select
                             value={status}
                             onChange={(e) => setStatus(e.target.value)}
                             className="select select-bordered w-full"
                         >
-                            <option value="">All Status</option>
-                            <option value="active">Active</option>
-                            <option value="pending">Pending</option>
-                            <option value="expired">Expired</option>
-                            <option value="cancelled">Cancelled</option>
-                            <option value="inactive">Inactive</option>
+                            <option value="">{t('subscription.all_status', 'All Status')}</option>
+                            <option value="active">{t('subscription.active', 'Active')}</option>
+                            <option value="pending">{t('subscription.pending', 'Pending')}</option>
+                            <option value="expired">{t('subscription.expired', 'Expired')}</option>
+                            <option value="cancelled">{t('subscription.cancelled', 'Cancelled')}</option>
+                            <option value="inactive">{t('subscription.inactive', 'Inactive')}</option>
                         </select>
                     </div>
 
@@ -164,7 +170,7 @@ export default function Index({ subscriptions }) {
                             onClick={clearFilters}
                             className="btn btn-error btn-sm"
                         >
-                            <X size={15} /> Clear
+                            <X size={15} /> {t('subscription.clear', 'Clear')}
                         </button>
                     )}
                 </div>
@@ -176,14 +182,14 @@ export default function Index({ subscriptions }) {
                     <table className="table table-auto w-full">
                         <thead className="bg-primary text-white">
                             <tr>
-                                <th className="text-center">SL</th>
-                                <th>User</th>
-                                <th>Plan</th>
-                                <th>Price</th>
-                                <th>Period</th>
-                                <th>Payments</th>
-                                <th>Status</th>
-                                <th className="text-center">Actions</th>
+                                <th className="text-center">{t('subscription.sl', 'SL')}</th>
+                                <th>{t('subscription.user', 'User')}</th>
+                                <th>{t('subscription.plan', 'Plan')}</th>
+                                <th>{t('subscription.price', 'Price')}</th>
+                                <th>{t('subscription.period', 'Period')}</th>
+                                <th>{t('subscription.payments', 'Payments')}</th>
+                                <th>{t('subscription.status', 'Status')}</th>
+                                <th className="text-center">{t('subscription.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -232,15 +238,15 @@ export default function Index({ subscriptions }) {
                                         <div className="flex flex-col gap-1 text-sm">
                                             <div className="flex items-center gap-1">
                                                 <Calendar size={12} className="text-purple-600" />
-                                                <span>Start: {formatDate(subscription.start_date)}</span>
+                                                <span>{t('subscription.start', 'Start')}: {formatDate(subscription.start_date)}</span>
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Calendar size={12} className="text-orange-600" />
-                                                <span>End: {formatDate(subscription.end_date)}</span>
+                                                <span>{t('subscription.end', 'End')}: {formatDate(subscription.end_date)}</span>
                                             </div>
                                             {subscription.status == 1 && (
                                                 <div className="text-xs text-primary font-medium">
-                                                    {getDaysRemaining(subscription.end_date)} days remaining
+                                                    {getDaysRemaining(subscription.end_date)} {t('subscription.days_remaining', 'days remaining')}
                                                 </div>
                                             )}
                                         </div>
@@ -251,9 +257,9 @@ export default function Index({ subscriptions }) {
                                                 <span className="font-semibold">
                                                     {formatCurrency(getTotalPayments(subscription.payments || []))}
                                                 </span>
-                                            </div> <b></b>
+                                            </div>
                                             <div className="text-xs text-gray-500">
-                                                {subscription.payments?.length || 0} payment(s)
+                                                {subscription.payments?.length || 0} {t('subscription.payment_count', 'payment(s)')}
                                             </div>
                                         </div>
                                     </td>
@@ -265,34 +271,32 @@ export default function Index({ subscriptions }) {
                                     </td>
                                     <td>
                                         <div className="flex items-center gap-2 justify-center">
-                                         
                                             <Link
                                                 href={route("subscriptions.show", subscription.id)}
                                                 className="btn btn-primary btn-xs"
                                             >
-                                                <Eye size={12} /> View
+                                                <Eye size={12} /> {t('subscription.view', 'View')}
                                             </Link>
 
                                             <Link
                                                 href={route("subscriptions.edit", subscription.id)}
-                                                className="btn btn-[sliver] btn-xs"
+                                                className="btn btn-warning btn-xs"
                                             >
-                                                <DollarSign size={12} /> Renew
+                                                <DollarSign size={12} /> {t('subscription.renew', 'Renew')}
                                             </Link>
 
-                                         
                                             <Link
                                                 href={route("subscriptions.destroy", subscription.id)}
                                                 method="delete"
                                                 as="button"
                                                 onClick={(e) => {
-                                                    if (!confirm("Are you sure you want to delete this subscription?")) {
+                                                    if (!confirm(t('subscription.delete_confirmation', 'Are you sure you want to delete this subscription?'))) {
                                                         e.preventDefault();
                                                     }
                                                 }}
                                                 className="btn btn-error btn-xs"
                                             >
-                                                <Trash2 size={12} /> Delete
+                                                <Trash2 size={12} /> {t('subscription.delete', 'Delete')}
                                             </Link>
                                         </div>
                                     </td>
@@ -303,15 +307,20 @@ export default function Index({ subscriptions }) {
                 ) : (
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={40} className="text-gray-400" />
-                        <h1 className="text-gray-500 text-lg font-medium">No subscriptions found!</h1>
+                        <h1 className="text-gray-500 text-lg font-medium">
+                            {t('subscription.no_subscriptions_found', 'No subscriptions found!')}
+                        </h1>
                         <p className="text-gray-400 text-sm mb-4">
-                            {search || status ? "Try adjusting your search or filters" : "Get started by creating your first subscription"}
+                            {search || status 
+                                ? t('subscription.adjust_search_filters', 'Try adjusting your search or filters')
+                                : t('subscription.get_started_create', 'Get started by creating your first subscription')
+                            }
                         </p>
                         <Link
                             href={route("subscriptions.create")}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Create New Subscription
+                            <Plus size={15} /> {t('subscription.create_subscription', 'Create New Subscription')}
                         </Link>
                     </div>
                 )}
@@ -322,7 +331,7 @@ export default function Index({ subscriptions }) {
                 <div className="mt-6">
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                         <div className="text-sm text-gray-600">
-                            Showing {subscriptions.from} to {subscriptions.to} of {subscriptions.total} entries
+                            {t('subscription.showing_entries', 'Showing')} {subscriptions.from} {t('subscription.to', 'to')} {subscriptions.to} {t('subscription.of', 'of')} {subscriptions.total} {t('subscription.entries', 'entries')}
                         </div>
                         
                         {/* Custom Pagination Component */}
@@ -364,13 +373,17 @@ export default function Index({ subscriptions }) {
             {/* Summary Cards */}
             {subscriptions.data.length > 0 && (
                 <div className="border-t border-gray-200 p-5 mt-6">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-4">Subscriptions Summary</h2>
+                    <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                        {t('subscription.subscriptions_summary', 'Subscriptions Summary')}
+                    </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div className="flex items-center gap-3">
                                 <CreditCard className="text-blue-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-blue-800">Total Subscriptions</p>
+                                    <p className="text-sm font-medium text-blue-800">
+                                        {t('subscription.total_subscriptions', 'Total Subscriptions')}
+                                    </p>
                                     <p className="text-xl font-bold text-blue-900">{subscriptions.total}</p>
                                 </div>
                             </div>
@@ -380,7 +393,9 @@ export default function Index({ subscriptions }) {
                             <div className="flex items-center gap-3">
                                 <BadgeCheck className="text-green-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-green-800">Active Subscriptions</p>
+                                    <p className="text-sm font-medium text-green-800">
+                                        {t('subscription.active_subscriptions', 'Active Subscriptions')}
+                                    </p>
                                     <p className="text-xl font-bold text-green-900">
                                         {subscriptions.data.filter(sub => sub.status == 1).length}
                                     </p>
@@ -391,7 +406,9 @@ export default function Index({ subscriptions }) {
                         <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
                             <div className="flex items-center gap-3">
                                 <div>
-                                    <p className="text-sm font-medium text-purple-800">Total Revenue</p>
+                                    <p className="text-sm font-medium text-purple-800">
+                                        {t('subscription.total_revenue', 'Total Revenue')}
+                                    </p>
                                     <p className="text-xl font-bold text-purple-900">
                                         {formatCurrency(
                                             subscriptions.data.reduce((sum, sub) => 
@@ -407,7 +424,9 @@ export default function Index({ subscriptions }) {
                             <div className="flex items-center gap-3">
                                 <User className="text-orange-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-orange-800">Active Users</p>
+                                    <p className="text-sm font-medium text-orange-800">
+                                        {t('subscription.active_users', 'Active Users')}
+                                    </p>
                                     <p className="text-xl font-bold text-orange-900">
                                         {new Set(
                                             subscriptions.data

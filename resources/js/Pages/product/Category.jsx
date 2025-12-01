@@ -4,9 +4,11 @@ import Pagination from "../../components/Pagination";
 import { Frown, Pen, Plus, Trash2, X, Package, BarChart3 } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Category({ category, filters }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
     const [editProccesing, setEditProccesing] = useState(false);
 
@@ -62,17 +64,17 @@ export default function Category({ category, filters }) {
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title="Category list"
-                subtitle="Manage your all category from here."
+                title={t('category.title', 'Category List')}
+                subtitle={t('category.subtitle', 'Manage your all categories from here.')}
             >
                 <div className="flex items-center gap-3">
                     <input
                         type="search"
                         onChange={handleSearch}
                         value={searchForm.data.search}
-                        placeholder="Search.."
+                        placeholder={t('category.search_placeholder', 'Search categories...')}
                         className="input input-sm"
                     />
                     {auth.role == "admin" && (
@@ -80,7 +82,7 @@ export default function Category({ category, filters }) {
                             onClick={() => setModel(!model)}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new
+                            <Plus size={15} /> {t('category.add_new', 'Add New')}
                         </button>
                     )}
                 </div>
@@ -92,10 +94,10 @@ export default function Category({ category, filters }) {
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th></th>
-                                <th>Name</th>
-                                <th>Products</th>
-                                <th>Join at</th>
-                                <th>Actions</th>
+                                <th>{t('category.name', 'Name')}</th>
+                                <th>{t('category.products', 'Products')}</th>
+                                <th>{t('category.join_at', 'Join at')}</th>
+                                <th>{t('category.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -110,7 +112,9 @@ export default function Category({ category, filters }) {
                                             <Package size={16} className="text-blue-600" />
                                             <div>
                                                 <div className="font-bold text-lg">{user.products_count || 0}</div>
-                                                <div className="text-xs text-gray-500">products</div>
+                                                <div className="text-xs text-gray-500">
+                                                    {t('category.products', 'products')}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -125,7 +129,7 @@ export default function Category({ category, filters }) {
                                                     }
                                                     className="btn btn-xs btn-info"
                                                 >
-                                                    <Pen size={10} /> Edit
+                                                    <Pen size={10} /> {t('category.edit', 'Edit')}
                                                 </button>
                                                 <Link
                                                     href={route(
@@ -137,7 +141,7 @@ export default function Category({ category, filters }) {
                                                     onClick={(e) => {
                                                         if (
                                                             !confirm(
-                                                                "Are you sure you want to delete this category?"
+                                                                t('category.delete_confirmation', 'Are you sure you want to delete this category?')
                                                             )
                                                         ) {
                                                             e.preventDefault();
@@ -145,12 +149,12 @@ export default function Category({ category, filters }) {
                                                     }}
                                                     className="btn btn-xs btn-error"
                                                 >
-                                                    <Trash2 size={10} /> Delete
+                                                    <Trash2 size={10} /> {t('category.delete', 'Delete')}
                                                 </Link>
                                             </div>
                                         ) : (
                                             <p className="text-sm text-gray-500">
-                                                No permission
+                                                {t('category.no_permission', 'No permission')}
                                             </p>
                                         )}
                                     </td>
@@ -162,13 +166,13 @@ export default function Category({ category, filters }) {
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={20} className="text-gray-500" />
                         <h1 className="text-gray-500 text-sm">
-                            Data not found!
+                            {t('category.no_categories_found', 'No categories found!')}
                         </h1>
                         <button
                             onClick={() => setModel(!model)}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new
+                            <Plus size={15} /> {t('category.add_new', 'Add New')}
                         </button>
                     </div>
                 )}
@@ -182,7 +186,10 @@ export default function Category({ category, filters }) {
                 <div className="modal-box">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
                         <h1 className="text-base font-medium text-gray-900">
-                            {userForm.data.id ? "Update Category" : "Add new category"}
+                            {userForm.data.id 
+                                ? t('category.update_category', 'Update Category') 
+                                : t('category.add_new_category', 'Add New Category')
+                            }
                         </h1>
                         <button
                             onClick={modelClose}
@@ -194,7 +201,9 @@ export default function Category({ category, filters }) {
 
                     <form onSubmit={handleUserCreateForm} className="space-y-2">
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Name*</legend>
+                            <legend className="fieldset-legend">
+                                {t('category.category_name', 'Category Name')}*
+                            </legend>
                             <input
                                 type="text"
                                 value={userForm.data.name}
@@ -202,7 +211,7 @@ export default function Category({ category, filters }) {
                                     userForm.setData("name", e.target.value)
                                 }
                                 className="input"
-                                placeholder="Type here"
+                                placeholder={t('category.type_here', 'Type here')}
                             />
                             {userForm.errors.name && (
                                 <div className="text-red-500 text-sm">
@@ -215,7 +224,10 @@ export default function Category({ category, filters }) {
                             className="btn btn-primary"
                             type="submit"
                         >
-                            {userForm.data.id ? "Update Category" : "Add now"}
+                            {userForm.data.id 
+                                ? t('category.update_category_btn', 'Update Category') 
+                                : t('category.add_now_btn', 'Add Now')
+                            }
                         </button>
                     </form>
                 </div>

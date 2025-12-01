@@ -18,9 +18,11 @@ import {
     BadgeCheck
 } from "lucide-react";
 import { useRef } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function PaymentView({ payment }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
     const printRef = useRef();
 
     const formatCurrency = (amount) => {
@@ -33,7 +35,7 @@ export default function PaymentView({ payment }) {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleString("en-US", {
+        return new Date(dateString).toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-US', {
             timeZone: "UTC",
             day: "2-digit",
             month: "short",
@@ -45,7 +47,7 @@ export default function PaymentView({ payment }) {
     };
 
     const formatDateOnly = (dateString) => {
-        return new Date(dateString).toLocaleDateString("en-US", {
+        return new Date(dateString).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-US', {
             timeZone: "UTC",
             day: "2-digit",
             month: "short",
@@ -60,35 +62,35 @@ export default function PaymentView({ payment }) {
                 color: "text-green-600",
                 bgColor: "bg-green-50",
                 borderColor: "border-green-200",
-                label: "Cash"
+                label: t('payments.cash', 'Cash')
             },
             card: { 
                 icon: CreditCard, 
                 color: "text-blue-600",
                 bgColor: "bg-blue-50",
                 borderColor: "border-blue-200",
-                label: "Credit Card"
+                label: t('payments.card', 'Credit Card')
             },
             bank: { 
                 icon: Building, 
                 color: "text-purple-600",
                 bgColor: "bg-purple-50",
                 borderColor: "border-purple-200",
-                label: "Bank Transfer"
+                label: t('payments.bank', 'Bank Transfer')
             },
             mobile: { 
                 icon: Smartphone, 
                 color: "text-orange-600",
                 bgColor: "bg-orange-50",
                 borderColor: "border-orange-200",
-                label: "Mobile Banking"
+                label: t('payments.mobile', 'Mobile Banking')
             },
             online: { 
                 icon: Globe, 
                 color: "text-cyan-600",
                 bgColor: "bg-cyan-50",
                 borderColor: "border-cyan-200",
-                label: "Online Payment"
+                label: t('payments.online', 'Online Payment')
             },
         };
         return details[method] || { 
@@ -107,28 +109,28 @@ export default function PaymentView({ payment }) {
                 color: "text-green-600",
                 bgColor: "bg-green-50",
                 borderColor: "border-green-200",
-                label: "Completed"
+                label: t('payments.completed', 'Completed')
             },
             pending: { 
                 icon: Clock, 
                 color: "text-yellow-600",
                 bgColor: "bg-yellow-50",
                 borderColor: "border-yellow-200",
-                label: "Pending"
+                label: t('payments.pending', 'Pending')
             },
             failed: { 
                 icon: XCircle, 
                 color: "text-red-600",
                 bgColor: "bg-red-50",
                 borderColor: "border-red-200",
-                label: "Failed"
+                label: t('payments.failed', 'Failed')
             },
             refunded: { 
                 icon: BadgeCheck, 
                 color: "text-blue-600",
                 bgColor: "bg-blue-50",
                 borderColor: "border-blue-200",
-                label: "Refunded"
+                label: t('payments.refunded', 'Refunded')
             },
         };
         return details[status] || { 
@@ -152,7 +154,7 @@ export default function PaymentView({ payment }) {
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Payment Receipt - #${payment.id}</title>
+                <title>${t('payments.payment_receipt', 'Payment Receipt')} - #${payment.id}</title>
                 <style>
                     @media print {
                         @page {
@@ -249,7 +251,7 @@ export default function PaymentView({ payment }) {
 
     return (
         <>
-            <div className="bg-white rounded-box">
+            <div className={`bg-white rounded-box ${locale === 'bn' ? 'bangla-font' : ''}`}>
                 <div className="p-3 border-b print:border-none no-print">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <div className="flex items-center gap-3">
@@ -258,14 +260,14 @@ export default function PaymentView({ payment }) {
                                 className="btn btn-ghost btn-sm no-print"
                             >
                                 <ArrowLeft size={16} />
-                                Back to Payments
+                                {t('payments.back', 'Back to Payments')}
                             </Link>
                             <div>
                                 <h1 className="text-2xl font-bold text-gray-900">
-                                    Payment Receipt
+                                    {t('payments.payment_receipt', 'Payment Receipt')}
                                 </h1>
                                 <p className="text-gray-500 text-sm">
-                                    Payment details and transaction information
+                                    {t('payments.payment_details', 'Payment details and transaction information')}
                                 </p>
                             </div>
                         </div>
@@ -276,14 +278,14 @@ export default function PaymentView({ payment }) {
                                 className="btn btn-outline btn-sm"
                             >
                                 <Printer size={16} />
-                                Print
+                                {t('payments.print', 'Print')}
                             </button>
                             <button
                                 onClick={handleDownload}
                                 className="btn btn-outline btn-sm"
                             >
                                 <Download size={16} />
-                                Download
+                                {t('payments.download', 'Download')}
                             </button>
                         </div>
                     </div>
@@ -294,27 +296,27 @@ export default function PaymentView({ payment }) {
                         <div className="bg-base-100 rounded-box p-6 border">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <DollarSign size={20} className="text-green-600" />
-                                Payment Information
+                                {t('payments.payment_information', 'Payment Information')}
                             </h2>
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Payment ID:</span>
+                                    <span className="text-gray-600">{t('payments.payment_id', 'Payment ID')}:</span>
                                     <span className="font-mono font-semibold">#{payment.id}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Transaction Ref:</span>
+                                    <span className="text-gray-600">{t('payments.transaction_ref', 'Transaction Ref')}:</span>
                                     <span className="font-mono font-semibold">
                                         {payment.transaction_id || "N/A"}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Amount:</span>
+                                    <span className="text-gray-600">{t('payments.amount', 'Amount')}:</span>
                                     <span className="text-green-600 font-bold text-lg">
                                         {formatCurrency(payment.amount)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">Status:</span>
+                                    <span className="text-gray-600">{t('payments.status', 'Status')}:</span>
                                     <span className={`badge ${statusDetails.bgColor} ${statusDetails.borderColor} ${statusDetails.color} badge-lg capitalize flex items-center gap-1`}>
                                         <StatusIcon size={14} />
                                         {statusDetails.label}
@@ -326,7 +328,7 @@ export default function PaymentView({ payment }) {
                         <div className="bg-base-100 rounded-box p-6 border">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <CreditCard size={20} className="text-blue-600" />
-                                Payment Method
+                                {t('payments.payment_method', 'Payment Method')}
                             </h2>
                             <div className="flex items-center gap-4">
                                 <div className={`p-3 rounded-full ${methodDetails.bgColor}`}>
@@ -346,12 +348,12 @@ export default function PaymentView({ payment }) {
                         <div className="bg-base-100 rounded-box p-6 border">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <Receipt size={20} className="text-purple-600" />
-                                Related Subscription
+                                {t('payments.related_subscription', 'Related Subscription')}
                             </h2>
                             {payment.subscription ? (
                                 <div className="space-y-3">
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Subscription ID:</span>
+                                        <span className="text-gray-600">{t('payments.subscription_id', 'Subscription ID')}:</span>
                                         <Link
                                             href={route("subscriptions.show", { subscription: payment.subscription.id })}
                                             className="font-mono font-semibold text-primary hover:underline"
@@ -360,20 +362,20 @@ export default function PaymentView({ payment }) {
                                         </Link>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Plan:</span>
+                                        <span className="text-gray-600">{t('payments.plan', 'Plan')}:</span>
                                         <span className="font-semibold">
                                             {payment.subscription.plan?.name || "N/A"}
                                         </span>
                                     </div>
                                     <div className="flex justify-between items-center">
-                                        <span className="text-gray-600">Plan Price:</span>
+                                        <span className="text-gray-600">{t('payments.plan_price', 'Plan Price')}:</span>
                                         <span className="font-semibold">
                                             {formatCurrency(payment.subscription.plan?.price || 0)}
                                         </span>
                                     </div>
                                 </div>
                             ) : (
-                                <p className="text-gray-500 text-sm">No related subscription found</p>
+                                <p className="text-gray-500 text-sm">{t('payments.no_related_subscription', 'No related subscription found')}</p>
                             )}
                         </div>
                     </div>
@@ -382,7 +384,7 @@ export default function PaymentView({ payment }) {
                         <div className="bg-base-100 rounded-box p-6 border">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <User size={20} className="text-orange-600" />
-                                Customer Information
+                                {t('payments.customer_information', 'Customer Information')}
                             </h2>
                             {payment.subscription?.user ? (
                                 <div className="space-y-3">
@@ -409,8 +411,8 @@ export default function PaymentView({ payment }) {
                                 </div>
                             ) : (
                                 <div className="space-y-3">
-                                    <p className="font-semibold text-lg">No Customer Information</p>
-                                    <p className="text-gray-500 text-sm">Customer details not available</p>
+                                    <p className="font-semibold text-lg">{t('payments.no_customer_information', 'No Customer Information')}</p>
+                                    <p className="text-gray-500 text-sm">{t('payments.customer_details_not_available', 'Customer details not available')}</p>
                                 </div>
                             )}
                         </div>
@@ -418,24 +420,24 @@ export default function PaymentView({ payment }) {
                         <div className="bg-base-100 rounded-box p-6 border">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <Calendar size={20} className="text-cyan-600" />
-                                Transaction Details
+                                {t('payments.transaction_details', 'Transaction Details')}
                             </h2>
                             <div className="space-y-3">
                                 <div className="flex justify-between">
-                                    <span className="text-gray-600">Payment Date:</span>
+                                    <span className="text-gray-600">{t('payments.payment_date', 'Payment Date')}:</span>
                                     <span className="font-semibold">
                                         {payment.payment_date ? formatDate(payment.payment_date) : formatDate(payment.created_at)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span className="text-gray-600">Processed At:</span>
+                                    <span className="text-gray-600">{t('payments.processed_at', 'Processed At')}:</span>
                                     <span className="font-semibold">
                                         {formatDate(payment.created_at)}
                                     </span>
                                 </div>
                                 {payment.updated_at !== payment.created_at && (
                                     <div className="flex justify-between">
-                                        <span className="text-gray-600">Last Updated:</span>
+                                        <span className="text-gray-600">{t('payments.last_updated', 'Last Updated')}:</span>
                                         <span className="font-semibold">
                                             {formatDate(payment.updated_at)}
                                         </span>
@@ -449,33 +451,33 @@ export default function PaymentView({ payment }) {
                         <div className="bg-base-100 rounded-box p-6 border mb-8">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <FileText size={20} className="text-gray-600" />
-                                Plan Details
+                                {t('payments.plan_details', 'Plan Details')}
                             </h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div className="text-center p-4 border rounded-lg bg-blue-50 border-blue-200">
-                                    <p className="text-sm text-gray-600">Plan Name</p>
+                                    <p className="text-sm text-gray-600">{t('payments.plan_name', 'Plan Name')}</p>
                                     <p className="font-semibold text-blue-700">{payment.subscription.plan.name}</p>
                                 </div>
                                 <div className="text-center p-4 border rounded-lg bg-green-50 border-green-200">
-                                    <p className="text-sm text-gray-600">Plan Price</p>
+                                    <p className="text-sm text-gray-600">{t('payments.plan_price', 'Plan Price')}</p>
                                     <p className="font-semibold text-green-700">{formatCurrency(payment.subscription.plan.price)}</p>
                                 </div>
                                 <div className="text-center p-4 border rounded-lg bg-purple-50 border-purple-200">
-                                    <p className="text-sm text-gray-600">Billing Cycle</p>
+                                    <p className="text-sm text-gray-600">{t('payments.billing_cycle', 'Billing Cycle')}</p>
                                     <p className="font-semibold text-purple-700 capitalize">
                                         {payment.subscription.plan.billing_cycle || 'Monthly'}
                                     </p>
                                 </div>
                                 <div className="text-center p-4 border rounded-lg bg-orange-50 border-orange-200">
-                                    <p className="text-sm text-gray-600">Validity</p>
+                                    <p className="text-sm text-gray-600">{t('payments.validity', 'Validity')}</p>
                                     <p className="font-semibold text-orange-700">
-                                        {payment.subscription.plan.validity || '30'} days
+                                        {payment.subscription.plan.validity || '30'} {t('payments.days', 'days')}
                                     </p>
                                 </div>
                             </div>
                             {payment.subscription.plan.description && (
                                 <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                                    <p className="text-sm font-medium text-gray-700 mb-2">Description:</p>
+                                    <p className="text-sm font-medium text-gray-700 mb-2">{t('payments.description', 'Description')}:</p>
                                     <p className="text-gray-600">{payment.subscription.plan.description}</p>
                                 </div>
                             )}
@@ -486,7 +488,7 @@ export default function PaymentView({ payment }) {
                         <div className="bg-base-100 rounded-box p-6 border mb-8">
                             <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
                                 <FileText size={20} className="text-gray-600" />
-                                Payment Notes
+                                {t('payments.payment_notes', 'Payment Notes')}
                             </h2>
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <p className="text-gray-700 whitespace-pre-wrap">
@@ -501,10 +503,10 @@ export default function PaymentView({ payment }) {
             <div className="hidden">
                 <div ref={printRef} className="print-p-4">
                     <div className="print-text-center print-border-b print-pb-2 print-mb-4">
-                        <h1 className="print-text-3xl print-font-bold print-text-gray-900">PAYMENT RECEIPT</h1>
-                        <p className="print-text-gray-600">Official Payment Confirmation</p>
+                        <h1 className="print-text-3xl print-font-bold print-text-gray-900">{t('payments.payment_receipt', 'PAYMENT RECEIPT')}</h1>
+                        <p className="print-text-gray-600">{t('payments.official_payment_confirmation', 'Official Payment Confirmation')}</p>
                         <p className="print-text-sm print-text-gray-500 print-mt-2">
-                            Generated on: {formatDate(new Date().toISOString())}
+                            {t('payments.generated_on', 'Generated on')}: {formatDate(new Date().toISOString())}
                         </p>
                     </div>
 
@@ -516,83 +518,83 @@ export default function PaymentView({ payment }) {
                             <p className="print-text-gray-600">contact@company.com</p>
                         </div>
                         <div className="print-text-right">
-                            <p className="print-text-lg print-font-semibold">Receipt #: {payment.id}</p>
-                            <p className="print-text-gray-600">Date: {formatDateOnly(payment.payment_date || payment.created_at)}</p>
+                            <p className="print-text-lg print-font-semibold">{t('payments.receipt', 'Receipt')} #: {payment.id}</p>
+                            <p className="print-text-gray-600">{t('payments.date', 'Date')}: {formatDateOnly(payment.payment_date || payment.created_at)}</p>
                         </div>
                     </div>
 
                     <div className="print-grid print-grid-cols-2 print-gap-8 print-mb-4 print-break">
                         <div>
-                            <h3 className="print-text-lg print-font-semibold print-mb-3 print-border-b print-pb-2">Payment Information</h3>
+                            <h3 className="print-text-lg print-font-semibold print-mb-3 print-border-b print-pb-2">{t('payments.payment_information', 'Payment Information')}</h3>
                             <div className="print-space-y-2">
                                 <div className="print-flex print-justify-between">
-                                    <span className="print-font-medium">Payment ID:</span>
+                                    <span className="print-font-medium">{t('payments.payment_id', 'Payment ID')}:</span>
                                     <span>#{payment.id}</span>
                                 </div>
                                 <div className="print-flex print-justify-between">
-                                    <span className="print-font-medium">Transaction ID:</span>
+                                    <span className="print-font-medium">{t('payments.transaction_id', 'Transaction ID')}:</span>
                                     <span>{payment.transaction_id || "N/A"}</span>
                                 </div>
                                 <div className="print-flex print-justify-between">
-                                    <span className="print-font-medium">Amount:</span>
+                                    <span className="print-font-medium">{t('payments.amount', 'Amount')}:</span>
                                     <span className="print-font-bold">{formatCurrency(payment.amount)}</span>
                                 </div>
                                 <div className="print-flex print-justify-between">
-                                    <span className="print-font-medium">Status:</span>
+                                    <span className="print-font-medium">{t('payments.status', 'Status')}:</span>
                                     <span className="print-font-semibold print-capitalize">{payment.status}</span>
                                 </div>
                                 <div className="print-flex print-justify-between">
-                                    <span className="print-font-medium">Method:</span>
+                                    <span className="print-font-medium">{t('payments.method', 'Method')}:</span>
                                     <span className="print-capitalize">{payment.payment_method}</span>
                                 </div>
                             </div>
                         </div>
 
                         <div>
-                            <h3 className="print-text-lg print-font-semibold print-mb-3 print-border-b print-pb-2">Customer Information</h3>
+                            <h3 className="print-text-lg print-font-semibold print-mb-3 print-border-b print-pb-2">{t('payments.customer_information', 'Customer Information')}</h3>
                             {payment.subscription?.user ? (
                                 <div className="print-space-y-2">
                                     <div>
-                                        <span className="print-font-medium">Name: </span>
+                                        <span className="print-font-medium">{t('payments.name', 'Name')}: </span>
                                         <span>{ payment.subscription.user.name}</span>
                                     </div>
                                     {payment.subscription.user.email && (
                                         <div>
-                                            <span className="print-font-medium">Email: </span>
+                                            <span className="print-font-medium">{t('payments.email', 'Email')}: </span>
                                             <span>{ payment.subscription.user.email}</span>
                                         </div>
                                     )}
                                     {payment.subscription.user.phone && (
                                         <div>
-                                            <span className="print-font-medium">Phone: </span>
+                                            <span className="print-font-medium">{t('payments.phone', 'Phone')}: </span>
                                             <span>{ payment.subscription.user.phone}</span>
                                         </div>
                                     )}
                                 </div>
                             ) : (
-                                <p>No customer information available</p>
+                                <p>{t('payments.no_customer_information_available', 'No customer information available')}</p>
                             )}
                         </div>
                     </div>
 
                     {payment.subscription && (
                         <div className="print-mb-6 print-break">
-                            <h3 className="print-text-lg print-font-semibold print-mb-3 print-border-b print-pb-2">Subscription Details</h3>
+                            <h3 className="print-text-lg print-font-semibold print-mb-3 print-border-b print-pb-2">{t('payments.subscription_details', 'Subscription Details')}</h3>
                             <div className="print-grid print-grid-cols-2 print-gap-4">
                                 <div>
-                                    <span className="print-font-medium">Subscription ID: </span>
+                                    <span className="print-font-medium">{t('payments.subscription_id', 'Subscription ID')}: </span>
                                     <p>#{ payment.subscription.id}</p>
                                 </div>
                                 <div>
-                                    <span className="print-font-medium">Plan:</span>
+                                    <span className="print-font-medium">{t('payments.plan', 'Plan')}:</span>
                                     <p>{payment.subscription.plan?.name || "N/A"}</p>
                                 </div>
                                 <div>
-                                    <span className="print-font-medium">Plan Price:</span>
+                                    <span className="print-font-medium">{t('payments.plan_price', 'Plan Price')}:</span>
                                     <p>{payment.subscription.plan?.price || 0} Tk Only</p>
                                 </div>
                                 <div>
-                                    <span className="print-font-medium">Billing Cycle:</span>
+                                    <span className="print-font-medium">{t('payments.billing_cycle', 'Billing Cycle')}:</span>
                                     <p className="print-capitalize">{payment.subscription.plan?.billing_cycle || "Monthly"}</p>
                                 </div>
                             </div>
@@ -601,15 +603,15 @@ export default function PaymentView({ payment }) {
 
                     {payment.notes && (
                         <div className="print-mb-6 print-break">
-                            <h3 className="print-text-lg print-font-semibold print-mb-2">Notes</h3>
+                            <h3 className="print-text-lg print-font-semibold print-mb-2">{t('payments.notes', 'Notes')}</h3>
                             <p className="print-text-gray-700 print-border print-p-4 print-rounded print-bg-gray-50">{payment.notes}</p>
                         </div>
                     )}
 
                     <div className="print-border-t print-pt-6 print-mt-8 print-text-center">
-                        <p className="print-text-gray-600">Thank you for your business!</p>
+                        <p className="print-text-gray-600">{t('payments.thank_you_business', 'Thank you for your business!')}</p>
                         <p className="print-text-sm print-text-gray-500 print-mt-2">
-                            This is a computer-generated receipt. No signature required.
+                            {t('payments.computer_generated_receipt', 'This is a computer-generated receipt. No signature required.')}
                         </p>
                     </div>
                 </div>

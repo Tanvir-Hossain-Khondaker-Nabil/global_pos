@@ -14,8 +14,11 @@ import {
     Star
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Index({ plans }) {
+    const { t, locale } = useTranslation();
+    
     // Search and filter states
     const [search, setSearch] = useState("");
     const [planType, setPlanType] = useState("");
@@ -50,7 +53,7 @@ export default function Index({ plans }) {
 
     // Format currency
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-BD', {
+        return new Intl.NumberFormat(locale === 'bn' ? 'bn-BD' : 'en-BD', {
             style: 'currency',
             currency: 'BDT',
             minimumFractionDigits: 2
@@ -60,8 +63,8 @@ export default function Index({ plans }) {
     // Get status badge color
     const getStatusBadge = (status) => {
         const statusMap = {
-            '1': { label: 'Active', class: 'badge-success' },
-            '2': { label: 'Inactive', class: 'badge-error' },
+            '1': { label: t('plan.active', 'Active'), class: 'badge-success' },
+            '2': { label: t('plan.inactive', 'Inactive'), class: 'badge-error' },
         };
         
         return statusMap[status] || { label: status, class: 'badge-warning' };
@@ -70,27 +73,27 @@ export default function Index({ plans }) {
     // Get plan type badge
     const getPlanTypeBadge = (type) => {
         const typeMap = {
-            '1': { label: 'Free', class: 'badge-info' },
-            '2': { label: 'Premium', class: 'badge-primary' },
+            '1': { label: t('plan.free', 'Free'), class: 'badge-info' },
+            '2': { label: t('plan.premium', 'Premium'), class: 'badge-primary' },
         };
         
         return typeMap[type] || { label: type, class: 'badge-neutral' };
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             {/* Header */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-800">Plans Management</h1>
-                    <p className="text-gray-600 mt-1">Manage your subscription plans and pricing</p>
+                    <h1 className="text-2xl font-bold text-gray-800">{t('plan.index_title', 'Plans Management')}</h1>
+                    <p className="text-gray-600 mt-1">{t('plan.index_subtitle', 'Manage your subscription plans and pricing')}</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Link
                         href={route("plans.create")}
                         className="btn btn-primary btn-sm"
                     >
-                        <Plus size={15} /> Create New Plan
+                        <Plus size={15} /> {t('plan.create_new_plan', 'Create New Plan')}
                     </Link>
                 </div>
             </div>
@@ -101,7 +104,7 @@ export default function Index({ plans }) {
                     {/* Search Input */}
                     <div className="flex-1">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Search Plans
+                            {t('plan.search_plans', 'Search Plans')}
                         </label>
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -109,7 +112,7 @@ export default function Index({ plans }) {
                                 type="text"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search by plan name, description..."
+                                placeholder={t('plan.search_placeholder', 'Search by plan name, description...')}
                                 className="input input-bordered w-full pl-10"
                             />
                         </div>
@@ -118,16 +121,16 @@ export default function Index({ plans }) {
                     {/* Plan Type Filter */}
                     <div className="w-full lg:w-48">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Plan Type
+                            {t('plan.plan_type', 'Plan Type')}
                         </label>
                         <select
                             value={planType}
                             onChange={(e) => setPlanType(e.target.value)}
                             className="select select-bordered w-full"
                         >
-                            <option value="">All Types</option>
-                            <option value="1">Free</option>
-                            <option value="2">Premium</option>
+                            <option value="">{t('plan.all_types', 'All Types')}</option>
+                            <option value="1">{t('plan.free', 'Free')}</option>
+                            <option value="2">{t('plan.premium', 'Premium')}</option>
                         </select>
                     </div>
 
@@ -137,7 +140,7 @@ export default function Index({ plans }) {
                             onClick={clearFilters}
                             className="btn btn-error btn-sm"
                         >
-                            <X size={15} /> Clear
+                            <X size={15} /> {t('plan.clear_filters', 'Clear')}
                         </button>
                     )}
                 </div>
@@ -149,15 +152,15 @@ export default function Index({ plans }) {
                     <table className="table table-auto w-full">
                         <thead className="bg-primary text-white">
                             <tr>
-                                <th className="text-center">SL</th>
-                                <th>Plan Name</th>
-                                <th>Type</th>
-                                <th>Price</th>
-                                <th>Validity</th>
-                                <th>Features</th>
-                                <th>Total Sales</th>
-                                <th>Status</th>
-                                <th className="text-center">Actions</th>
+                                <th className="text-center">{t('plan.sl', 'SL')}</th>
+                                <th>{t('plan.plan_name', 'Plan Name')}</th>
+                                <th>{t('plan.type', 'Type')}</th>
+                                <th>{t('plan.price', 'Price')}</th>
+                                <th>{t('plan.validity', 'Validity')}</th>
+                                <th>{t('plan.features', 'Features')}</th>
+                                <th>{t('plan.total_sales', 'Total Sales')}</th>
+                                <th>{t('plan.status', 'Status')}</th>
+                                <th className="text-center">{t('plan.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -195,7 +198,7 @@ export default function Index({ plans }) {
                                     <td>
                                         <div className="flex items-center gap-1">
                                             <Calendar size={14} className="text-purple-600" />
-                                            <span>{plan.validity} days</span>
+                                            <span>{plan.validity} {t('plan.validity_days', 'days')}</span>
                                         </div>
                                     </td>
                                     <td>
@@ -203,7 +206,7 @@ export default function Index({ plans }) {
                                             {plan.features && plan.features.length > 0 ? (
                                                 <div className="text-sm">
                                                     <span className="badge badge-outline badge-sm">
-                                                        {plan.features.length} features
+                                                        {plan.features.length} {t('plan.total_features', 'features')}
                                                     </span>
                                                     <div className="mt-1 text-xs text-gray-500">
                                                         {plan.features.slice(0, 2).map((feature, i) => (
@@ -213,13 +216,15 @@ export default function Index({ plans }) {
                                                         ))}
                                                         {plan.features.length > 2 && (
                                                             <div className="text-primary">
-                                                                +{plan.features.length - 2} more
+                                                                +{plan.features.length - 2} {t('plan.more', 'more')}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             ) : (
-                                                <span className="text-gray-400 text-sm">No features</span>
+                                                <span className="text-gray-400 text-sm">
+                                                    {t('plan.no_features', 'No features')}
+                                                </span>
                                             )}
                                         </div>
                                     </td>
@@ -240,26 +245,26 @@ export default function Index({ plans }) {
                                                 href={route("plans.edit", plan.id)}
                                                 className="btn btn-info btn-xs"
                                             >
-                                                <Edit size={12} /> Edit
+                                                <Edit size={12} /> {t('plan.edit', 'Edit')}
                                             </Link>
                                             <Link
                                                 href={route("plans.show", plan.id)}
                                                 className="btn btn-primary btn-xs"
                                             >
-                                                <Eye size={12} /> View
+                                                <Eye size={12} /> {t('plan.view', 'View')}
                                             </Link>
                                             <Link
                                                 href={route("plans.destroy", plan.id)}
                                                 method="delete"
                                                 as="button"
                                                 onClick={(e) => {
-                                                    if (!confirm("Are you sure you want to delete this plan?")) {
+                                                    if (!confirm(t('plan.delete_confirmation', 'Are you sure you want to delete this plan?'))) {
                                                         e.preventDefault();
                                                     }
                                                 }}
                                                 className="btn btn-error btn-xs"
                                             >
-                                                <Trash2 size={12} /> Delete
+                                                <Trash2 size={12} /> {t('plan.delete', 'Delete')}
                                             </Link>
                                         </div>
                                     </td>
@@ -270,15 +275,20 @@ export default function Index({ plans }) {
                 ) : (
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={40} className="text-gray-400" />
-                        <h1 className="text-gray-500 text-lg font-medium">No plans found!</h1>
+                        <h1 className="text-gray-500 text-lg font-medium">
+                            {t('plan.no_plans_found', 'No plans found!')}
+                        </h1>
                         <p className="text-gray-400 text-sm mb-4">
-                            {search || planType ? "Try adjusting your search or filters" : "Get started by creating your first plan"}
+                            {search || planType ? 
+                                t('plan.adjust_search', 'Try adjusting your search or filters') : 
+                                t('plan.get_started', 'Get started by creating your first plan')
+                            }
                         </p>
                         <Link
                             href={route("plans.create")}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Create New Plan
+                            <Plus size={15} /> {t('plan.create_new_plan', 'Create New Plan')}
                         </Link>
                     </div>
                 )}
@@ -289,7 +299,11 @@ export default function Index({ plans }) {
                 <div className="mt-6">
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                         <div className="text-sm text-gray-600">
-                            Showing {plans.from} to {plans.to} of {plans.total} entries
+                            {t('plan.showing_entries', 'Showing :from to :to of :total entries', {
+                                from: plans.from,
+                                to: plans.to,
+                                total: plans.total
+                            })}
                         </div>
                         
                         {/* Custom Pagination Component */}
@@ -331,13 +345,17 @@ export default function Index({ plans }) {
             {/* Summary Cards */}
             {plans.data.length > 0 && (
                 <div className="border-t border-gray-200 p-5 mt-6">
-                    <h2 className="text-lg font-semibold text-gray-800 mb-4">Plans Summary</h2>
+                    <h2 className="text-lg font-semibold text-gray-800 mb-4">
+                        {t('plan.plans_summary', 'Plans Summary')}
+                    </h2>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                             <div className="flex items-center gap-3">
                                 <Tag className="text-blue-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-blue-800">Total Plans</p>
+                                    <p className="text-sm font-medium text-blue-800">
+                                        {t('plan.total_plans', 'Total Plans')}
+                                    </p>
                                     <p className="text-xl font-bold text-blue-900">{plans.total}</p>
                                 </div>
                             </div>
@@ -347,7 +365,9 @@ export default function Index({ plans }) {
                             <div className="flex items-center gap-3">
                                 <DollarSign className="text-green-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-green-800">Active Plans</p>
+                                    <p className="text-sm font-medium text-green-800">
+                                        {t('plan.active_plans', 'Active Plans')}
+                                    </p>
                                     <p className="text-xl font-bold text-green-900">
                                         {plans.data.filter(plan => plan.status === '1' || plan.status === 'active').length}
                                     </p>
@@ -359,7 +379,9 @@ export default function Index({ plans }) {
                             <div className="flex items-center gap-3">
                                 <Star className="text-purple-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-purple-800">Total Sales</p>
+                                    <p className="text-sm font-medium text-purple-800">
+                                        {t('plan.total_sales', 'Total Sales')}
+                                    </p>
                                     <p className="text-xl font-bold text-purple-900">
                                         {plans.data.reduce((sum, plan) => sum + (parseInt(plan.total_sell) || 0), 0)}
                                     </p>
@@ -371,7 +393,9 @@ export default function Index({ plans }) {
                             <div className="flex items-center gap-3">
                                 <Filter className="text-orange-600" size={20} />
                                 <div>
-                                    <p className="text-sm font-medium text-orange-800">Premium Plans</p>
+                                    <p className="text-sm font-medium text-orange-800">
+                                        {t('plan.premium_plans', 'Premium Plans')}
+                                    </p>
                                     <p className="text-xl font-bold text-orange-900">
                                         {plans.data.filter(plan => 
                                             plan.plan_type === '2' || 

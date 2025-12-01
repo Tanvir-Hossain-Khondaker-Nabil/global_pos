@@ -1,12 +1,14 @@
 import PageHeader from "../../components/PageHeader";
 import { Link, router, usePage } from "@inertiajs/react";
 import { ArrowLeft, Printer, Download, Calendar, User, Warehouse, Package, DollarSign, FileText, Hash, Shield } from "lucide-react";
+import { useTranslation } from "../../hooks/useTranslation";
 
 export default function PurchaseShow({ purchase, isShadowUser }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
 
     const formatDate = (date) => {
-        return new Date(date).toLocaleDateString('en-IN', {
+        return new Date(date).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-IN', {
             year: 'numeric',
             month: 'long',
             day: 'numeric'
@@ -14,7 +16,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
     };
 
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-IN', {
+        return new Intl.NumberFormat(locale === 'bn' ? 'bn-BD' : 'en-IN', {
             style: 'currency',
             currency: 'BDT'
         }).format(amount || 0);
@@ -93,11 +95,11 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
     console.log('Items data:', purchase.items);
 
     return (
-        <div className="bg-white rounded-box p-5 print:p-0">
+        <div className={`bg-white rounded-box p-5 print:p-0 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             {/* Header */}
             <PageHeader
-                title={isShadowUser ? "Purchase Details" : "Purchase Details"}
-                subtitle={`Purchase #${purchase.purchase_no}`}
+                title={t('purchase.purchase_details_title', 'Purchase Details')}
+                subtitle={`${t('purchase.purchase_number_label', 'Purchase #')}${purchase.purchase_no}`}
             >
                 <div className="flex flex-col sm:flex-row gap-2 print:hidden">
                     <div className="flex gap-2">
@@ -105,17 +107,17 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                             onClick={() => router.visit(route("purchase.list"))}
                             className="btn btn-sm btn-ghost"
                         >
-                            <ArrowLeft size={15} /> Back to List
+                            <ArrowLeft size={15} /> {t('purchase.back_to_list', 'Back to List')}
                         </button>
                         <button
                             onClick={handlePrint}
                             className="btn btn-sm btn-outline"
                         >
-                            <Printer size={15} /> Print
+                            <Printer size={15} /> {t('purchase.print', 'Print')}
                         </button>
                         {auth.role === "admin" && (
                             <button className="btn btn-sm btn-outline">
-                                <Download size={15} /> Export
+                                <Download size={15} /> {t('purchase.export', 'Export')}
                             </button>
                         )}
                     </div>
@@ -136,7 +138,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     <div>
                                         <h3 className="font-bold text-lg">{purchase.purchase_no}</h3>
                                         <p className="text-sm text-gray-600">
-                                            Purchase Number
+                                            {t('purchase.purchase_number_label', 'Purchase Number')}
                                         </p>
                                     </div>
                                 </div>
@@ -144,7 +146,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     <div className="mt-2">
                                         <span className="badge badge-warning badge-sm">
                                             <Shield size={12} className="mr-1" />
-                                            Shadow Purchase
+                                            {t('purchase.shadow_purchase', 'Shadow Purchase')}
                                         </span>
                                     </div>
                                 )}
@@ -159,7 +161,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     </div>
                                     <div>
                                         <h3 className="font-bold">{formatDate(purchase.purchase_date)}</h3>
-                                        <p className="text-sm text-gray-600">Purchase Date</p>
+                                        <p className="text-sm text-gray-600">{t('purchase.purchase_date_label', 'Purchase Date')}</p>
                                     </div>
                                 </div>
                             </div>
@@ -171,26 +173,26 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                         <div className="card bg-base-100 shadow-sm border">
                             <div className="card-body p-4">
                                 <h3 className="font-bold mb-3 flex items-center gap-2">
-                                    <User size={16} /> Supplier Information
+                                    <User size={16} /> {t('purchase.supplier_information', 'Supplier Information')}
                                 </h3>
                                 <div className="space-y-2">
                                     <div>
-                                        <label className="text-sm text-gray-600">Name</label>
+                                        <label className="text-sm text-gray-600">{t('purchase.name', 'Name')}</label>
                                         <p className="font-medium">{purchase.supplier?.name || 'N/A'}</p>
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-600">Company</label>
+                                        <label className="text-sm text-gray-600">{t('purchase.company', 'Company')}</label>
                                         <p className="font-medium">{purchase.supplier?.company || 'N/A'}</p>
                                     </div>
                                     {purchase.supplier?.phone && (
                                         <div>
-                                            <label className="text-sm text-gray-600">Phone</label>
+                                            <label className="text-sm text-gray-600">{t('purchase.phone', 'Phone')}</label>
                                             <p className="font-medium">{purchase.supplier.phone}</p>
                                         </div>
                                     )}
                                     {purchase.supplier?.email && (
                                         <div>
-                                            <label className="text-sm text-gray-600">Email</label>
+                                            <label className="text-sm text-gray-600">{t('purchase.email', 'Email')}</label>
                                             <p className="font-medium">{purchase.supplier.email}</p>
                                         </div>
                                     )}
@@ -201,20 +203,20 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                         <div className="card bg-base-100 shadow-sm border">
                             <div className="card-body p-4">
                                 <h3 className="font-bold mb-3 flex items-center gap-2">
-                                    <Warehouse size={16} /> Warehouse Information
+                                    <Warehouse size={16} /> {t('purchase.warehouse_information', 'Warehouse Information')}
                                 </h3>
                                 <div className="space-y-2">
                                     <div>
-                                        <label className="text-sm text-gray-600">Name</label>
+                                        <label className="text-sm text-gray-600">{t('purchase.name', 'Name')}</label>
                                         <p className="font-medium">{purchase.warehouse?.name || 'N/A'}</p>
                                     </div>
                                     <div>
-                                        <label className="text-sm text-gray-600">Code</label>
+                                        <label className="text-sm text-gray-600">{t('purchase.code', 'Code')}</label>
                                         <p className="font-medium">{purchase.warehouse?.code || 'N/A'}</p>
                                     </div>
                                     {purchase.warehouse?.address && (
                                         <div>
-                                            <label className="text-sm text-gray-600">Address</label>
+                                            <label className="text-sm text-gray-600">{t('purchase.address', 'Address')}</label>
                                             <p className="font-medium text-sm">{purchase.warehouse.address}</p>
                                         </div>
                                     )}
@@ -229,26 +231,26 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                     {/* Status Card */}
                     <div className="card bg-base-100 shadow-sm border">
                         <div className="card-body p-4">
-                            <h3 className="font-bold mb-3">Purchase Status</h3>
+                            <h3 className="font-bold mb-3">{t('purchase.purchase_status', 'Purchase Status')}</h3>
                             <div className="text-center">
                                 <span className={`badge badge-lg badge-${purchase.status === 'completed' ? 'success' : 'warning'}`}>
-                                    {purchase.status?.toUpperCase() || 'PENDING'}
+                                    {t(`purchase.${purchase.status}`, purchase.status?.toUpperCase() || 'PENDING')}
                                 </span>
                             </div>
                             <div className="divider my-3"></div>
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between">
-                                    <span>Payment Status:</span>
+                                    <span>{t('purchase.payment_status', 'Payment Status')}:</span>
                                     <span className={`badge badge-${getPaymentStatusColor(purchase.payment_status)}`}>
-                                        {purchase.payment_status}
+                                        {t(`purchase.${purchase.payment_status}`, purchase.payment_status)}
                                     </span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>Created:</span>
+                                    <span>{t('purchase.created', 'Created')}:</span>
                                     <span>{formatDate(purchase.created_at)}</span>
                                 </div>
                                 <div className="flex justify-between">
-                                    <span>Last Updated:</span>
+                                    <span>{t('purchase.last_updated', 'Last Updated')}:</span>
                                     <span>{formatDate(purchase.updated_at)}</span>
                                 </div>
                             </div>
@@ -260,25 +262,25 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                         <div className="card-body p-4">
                             <h3 className="font-bold mb-3 flex items-center gap-2">
                                 <DollarSign size={16} /> 
-                                Amount Summary
+                                {t('purchase.amount_summary', 'Amount Summary')}
                             </h3>
                             <div className="space-y-3">
                                 <div className="flex justify-between items-center">
-                                    <span>Total Amount:</span>
+                                    <span>{t('purchase.total_amount', 'Total Amount')}:</span>
                                     <span className={`font-bold text-lg ${isShadowUser ? 'text-warning' : 'text-primary'}`}>
                                         {formatCurrency(getPurchaseAmount('total_amount'))}
                                     </span>
                                 </div>
                                 
                                 <div className="flex justify-between items-center text-green-600">
-                                    <span>Paid Amount:</span>
+                                    <span>{t('purchase.paid_amount', 'Paid Amount')}:</span>
                                     <span className="font-bold">
                                         {formatCurrency(getPurchaseAmount('paid_amount'))}
                                     </span>
                                 </div>
                                 
                                 <div className={`flex justify-between items-center ${getPurchaseAmount('due_amount') > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                    <span>Due Amount:</span>
+                                    <span>{t('purchase.due_amount', 'Due Amount')}:</span>
                                     <span className="font-bold">
                                         {formatCurrency(getPurchaseAmount('due_amount'))}
                                     </span>
@@ -295,10 +297,10 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                     <div className="p-4 border-b">
                         <h3 className="font-bold flex items-center gap-2">
                             <Package size={16} /> 
-                            Purchase Items ({purchase.items?.length || 0})
+                            {t('purchase.purchase_items', 'Purchase Items')} ({purchase.items?.length || 0})
                         </h3>
                         <p className="text-sm text-gray-600">
-                            Total {calculateTotalQuantity()} units purchased
+                            {t('purchase.total_units_purchased', 'Total units purchased')} {calculateTotalQuantity()}
                         </p>
                     </div>
                     
@@ -307,17 +309,17 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                             <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                                 <tr>
                                     <th className="bg-opacity-20">#</th>
-                                    <th>Product</th>
-                                    <th>Variant</th>
-                                    <th className="text-right">Quantity</th>
+                                    <th>{t('purchase.product', 'Product')}</th>
+                                    <th>{t('purchase.variant', 'Variant')}</th>
+                                    <th className="text-right">{t('purchase.quantity', 'Quantity')}</th>
                                     <th className="text-right">
-                                        Unit Price
+                                        {t('purchase.unit_price', 'Unit Price')}
                                     </th>
                                     <th className="text-right">
-                                        Sale Price
+                                        {t('purchase.sale_price', 'Sale Price')}
                                     </th>
                                     <th className="text-right">
-                                        Total Price
+                                        {t('purchase.total_price', 'Total Price')}
                                     </th>
                                 </tr>
                             </thead>
@@ -360,14 +362,14 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                 {(!purchase.items || purchase.items.length === 0) && (
                                     <tr>
                                         <td colSpan="7" className="text-center py-8 text-gray-500">
-                                            No items found in this purchase
+                                            {t('purchase.no_items_found', 'No items found in this purchase')}
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                             <tfoot className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
                                 <tr>
-                                    <th colSpan="3" className="text-right bg-opacity-20">Totals:</th>
+                                    <th colSpan="3" className="text-right bg-opacity-20">{t('purchase.totals', 'Totals')}:</th>
                                     <th className="text-right bg-opacity-20 font-bold">{calculateTotalQuantity()}</th>
                                     <th className="text-right bg-opacity-20"></th>
                                     <th className="text-right bg-opacity-20"></th>
@@ -386,7 +388,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                 <div className="card bg-base-100 shadow-sm border mt-6">
                     <div className="card-body p-4">
                         <h3 className="font-bold mb-3 flex items-center gap-2">
-                            <FileText size={16} /> Notes
+                            <FileText size={16} /> {t('purchase.notes', 'Notes')}
                         </h3>
                         <p className="text-gray-700 whitespace-pre-wrap">{purchase.notes}</p>
                     </div>

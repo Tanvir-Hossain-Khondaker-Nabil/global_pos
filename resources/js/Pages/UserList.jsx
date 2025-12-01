@@ -1,13 +1,15 @@
-import React, { use, useState } from "react";
+import React, { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import Image from "../components/Image";
 import Pagination from "../components/Pagination";
 import { Frown, Pen, Plus, Trash2, X } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
+import { useTranslation } from "../hooks/useTranslation";
 
 export default function UserList({ users, filters }) {
     const { auth } = usePage().props;
+    const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
     const [editProccesing, setEditProccesing] = useState(false);
 
@@ -72,24 +74,24 @@ export default function UserList({ users, filters }) {
     };
 
     return (
-        <div className="bg-white rounded-box p-5">
+        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title="Users list"
-                subtitle="Manage your all users from here."
+                title={t('user.title', 'Users list')}
+                subtitle={t('user.subtitle', 'Manage your all users from here.')}
             >
                 <div className="flex items-center gap-3">
                     <input
                         type="search"
                         onChange={handleSearch}
                         value={searchForm.data.search}
-                        placeholder="Search.."
-                        className="input input-sm"
+                        placeholder={t('user.search_placeholder', 'Search..')}
+                        className="input input-sm input-bordered"
                     />
                     <button
                         onClick={() => setModel(!model)}
                         className="btn btn-primary btn-sm"
                     >
-                        <Plus size={15} /> Add new
+                        <Plus size={15} /> {t('user.add_new', 'Add new')}
                     </button>
                 </div>
             </PageHeader>
@@ -100,12 +102,12 @@ export default function UserList({ users, filters }) {
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th></th>
-                                <th>User</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Address</th>
-                                <th>Join at</th>
-                                <th>Actions</th>
+                                <th>{t('user.user', 'User')}</th>
+                                <th>{t('user.email', 'Email')}</th>
+                                <th>{t('user.role', 'Role')}</th>
+                                <th>{t('user.address', 'Address')}</th>
+                                <th>{t('user.join_at', 'Join at')}</th>
+                                <th>{t('user.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -133,14 +135,11 @@ export default function UserList({ users, filters }) {
                                         </a>
                                     </td>
                                     <td>
-                                        <div
-                                            className={`badge ${
-                                                user.role == "admin"
-                                                    ? "badge-info"
-                                                    : "badge-accent"
-                                            } capitalize`}
-                                        >
-                                            {user.role}
+                                        <div className={`badge ${user.role == "admin" ? "badge-info" : "badge-accent"} capitalize`}>
+                                            {user.role === "admin" 
+                                                ? t('user.admin', 'Admin')
+                                                : t('user.saller', 'Seller')
+                                            }
                                         </div>
                                     </td>
                                     <td>{user.address}</td>
@@ -150,37 +149,26 @@ export default function UserList({ users, filters }) {
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     disabled={editProccesing}
-                                                    onClick={() =>
-                                                        userEdithandle(user.id)
-                                                    }
+                                                    onClick={() => userEdithandle(user.id)}
                                                     className="btn btn-xs btn-info"
                                                 >
-                                                    <Pen size={10} /> Edit
+                                                    <Pen size={10} /> {t('user.edit', 'Edit')}
                                                 </button>
                                                 <Link
-                                                    href={route(
-                                                        "userlist.delete",
-                                                        {
-                                                            id: user.id,
-                                                        }
-                                                    )}
+                                                    href={route("userlist.delete", { id: user.id })}
                                                     onClick={(e) => {
-                                                        if (
-                                                            !confirm(
-                                                                "Are you sure you want to delete this user?"
-                                                            )
-                                                        ) {
+                                                        if (!confirm(t('user.delete_confirmation', 'Are you sure you want to delete this user?'))) {
                                                             e.preventDefault();
                                                         }
                                                     }}
                                                     className="btn btn-xs btn-error"
                                                 >
-                                                    <Trash2 size={10} /> Delete
+                                                    <Trash2 size={10} /> {t('user.delete', 'Delete')}
                                                 </Link>
                                             </div>
                                         ) : (
                                             <p className="text-xs font-medium text-gray-500">
-                                                This you
+                                                {t('user.this_is_you', 'This is you')}
                                             </p>
                                         )}
                                     </td>
@@ -192,13 +180,13 @@ export default function UserList({ users, filters }) {
                     <div className="border border-gray-200 rounded-box px-5 py-10 flex flex-col justify-center items-center gap-2">
                         <Frown size={20} className="text-gray-500" />
                         <h1 className="text-gray-500 text-sm">
-                            Data not found!
+                            {t('user.data_not_found', 'Data not found!')}
                         </h1>
                         <button
                             onClick={() => setModel(!model)}
                             className="btn btn-primary btn-sm"
                         >
-                            <Plus size={15} /> Add new
+                            <Plus size={15} /> {t('user.add_new', 'Add new')}
                         </button>
                     </div>
                 )}
@@ -212,7 +200,7 @@ export default function UserList({ users, filters }) {
                 <div className="modal-box">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-3">
                         <h1 className="text-base font-medium text-gray-900">
-                            Add new user
+                            {t('user.add_user', 'Add new user')}
                         </h1>
                         <button
                             onClick={modelClose}
@@ -224,16 +212,19 @@ export default function UserList({ users, filters }) {
 
                     <form onSubmit={handleUserCreateForm} className="space-y-2">
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Role*</legend>
+                            <legend className="fieldset-legend">
+                                {t('user.role', 'Role')}
+                                <span className="text-red-500 ml-1">
+                                    {t('user.required_field', '*')}
+                                </span>
+                            </legend>
                             <select
-                                className="select"
+                                className="select select-bordered"
                                 value={userForm.data.role}
-                                onChange={(e) =>
-                                    userForm.setData("role", e.target.value)
-                                }
+                                onChange={(e) => userForm.setData("role", e.target.value)}
                             >
-                                <option value="saller">Saller</option>
-                                <option value="admin">Admin</option>
+                                <option value="saller">{t('user.saller', 'Seller')}</option>
+                                <option value="admin">{t('user.admin', 'Admin')}</option>
                             </select>
                             {userForm.errors.role && (
                                 <div className="text-red-500 text-sm">
@@ -244,16 +235,17 @@ export default function UserList({ users, filters }) {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <fieldset className="fieldset">
                                 <legend className="fieldset-legend">
-                                    Name*
+                                    {t('user.name', 'Name')}
+                                    <span className="text-red-500 ml-1">
+                                        {t('user.required_field', '*')}
+                                    </span>
                                 </legend>
                                 <input
                                     type="text"
                                     value={userForm.data.name}
-                                    onChange={(e) =>
-                                        userForm.setData("name", e.target.value)
-                                    }
-                                    className="input"
-                                    placeholder="Type here"
+                                    onChange={(e) => userForm.setData("name", e.target.value)}
+                                    className="input input-bordered"
+                                    placeholder={t('user.name', 'Type here')}
                                 />
                                 {userForm.errors.name && (
                                     <div className="text-red-500 text-sm">
@@ -263,19 +255,14 @@ export default function UserList({ users, filters }) {
                             </fieldset>
                             <fieldset className="fieldset">
                                 <legend className="fieldset-legend">
-                                    Phone
+                                    {t('user.phone', 'Phone')}
                                 </legend>
                                 <input
                                     type="tel"
                                     value={userForm.data.phone}
-                                    onChange={(e) =>
-                                        userForm.setData(
-                                            "phone",
-                                            e.target.value
-                                        )
-                                    }
-                                    className="input"
-                                    placeholder="Type here"
+                                    onChange={(e) => userForm.setData("phone", e.target.value)}
+                                    className="input input-bordered"
+                                    placeholder={t('user.phone', 'Type here')}
                                 />
                                 {userForm.errors.phone && (
                                     <div className="text-red-500 text-sm">
@@ -285,15 +272,18 @@ export default function UserList({ users, filters }) {
                             </fieldset>
                         </div>
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Email*</legend>
+                            <legend className="fieldset-legend">
+                                {t('user.email', 'Email')}
+                                <span className="text-red-500 ml-1">
+                                    {t('user.required_field', '*')}
+                                </span>
+                            </legend>
                             <input
                                 type="email"
                                 value={userForm.data.email}
-                                onChange={(e) =>
-                                    userForm.setData("email", e.target.value)
-                                }
-                                className="input"
-                                placeholder="Type here"
+                                onChange={(e) => userForm.setData("email", e.target.value)}
+                                className="input input-bordered"
+                                placeholder={t('user.email', 'Type here')}
                             />
                             {userForm.errors.email && (
                                 <div className="text-red-500 text-sm">
@@ -303,16 +293,17 @@ export default function UserList({ users, filters }) {
                         </fieldset>
                         <fieldset className="fieldset">
                             <legend className="fieldset-legend">
-                                Password*
+                                {t('user.password', 'Password')}
+                                <span className="text-red-500 ml-1">
+                                    {t('user.required_field', '*')}
+                                </span>
                             </legend>
                             <input
                                 type="password"
                                 value={userForm.data.password}
-                                onChange={(e) =>
-                                    userForm.setData("password", e.target.value)
-                                }
-                                className="input"
-                                placeholder="Type here"
+                                onChange={(e) => userForm.setData("password", e.target.value)}
+                                className="input input-bordered"
+                                placeholder={t('user.password', 'Type here')}
                             />
                             {userForm.errors.password && (
                                 <div className="text-red-500 text-sm">
@@ -321,13 +312,14 @@ export default function UserList({ users, filters }) {
                             )}
                         </fieldset>
                         <fieldset className="fieldset">
-                            <legend className="fieldset-legend">Address</legend>
+                            <legend className="fieldset-legend">
+                                {t('user.address', 'Address')}
+                            </legend>
                             <textarea
-                                className="textarea"
+                                className="textarea textarea-bordered"
                                 value={userForm.data.address}
-                                onChange={(e) =>
-                                    userForm.setData("address", e.target.value)
-                                }
+                                onChange={(e) => userForm.setData("address", e.target.value)}
+                                placeholder={t('user.address', 'Type here')}
                             ></textarea>
                             {userForm.errors.address && (
                                 <div className="text-red-500 text-sm">
@@ -340,7 +332,7 @@ export default function UserList({ users, filters }) {
                             className="btn btn-primary"
                             type="submit"
                         >
-                            Add now
+                            {userForm.processing ? t('user.saving', 'Saving...') : t('user.add_now', 'Add now')}
                         </button>
                     </form>
                 </div>
