@@ -199,6 +199,7 @@ class SalesController extends Controller
                 'payment_type'=> 'cash',
                 'status'      => $status ?? 'pending',
                 'type'        => $type ?? 'pos',
+                'created_by' => Auth::id(),
             ]);
 
 
@@ -235,6 +236,7 @@ class SalesController extends Controller
                     'total_price'=> $totalPrice,
                     'shadow_unit_price' => $shadowUnitPrice,
                     'shadow_total_price'=> $shadowtotalPrice,
+                    'created_by' => Auth::id(),
                 ]);
 
                 $shadowSubTotal += $shadowtotalPrice;

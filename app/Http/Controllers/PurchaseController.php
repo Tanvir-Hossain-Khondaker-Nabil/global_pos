@@ -38,6 +38,30 @@ class PurchaseController extends Controller
     }
 
 
+    public function allPurchasesItems(Request $request)
+    {
+        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant','warehouse'])
+            ->when($request->filled('product_id'), function ($query) use ($request) {
+                $query->where('product_id', $request->product_id);
+            })
+            ->when($request->filled('date_from') && $request->filled('date_to'), function ($query) use ($request) {
+                $query->whereHas('purchase', function ($q) use ($request) {
+                    $q->whereBetween('purchase_date', [$request->date_from, $request->date_to]);
+                });
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+
+        return Inertia::render('Purchase/PurchaseItemsList', [
+            'purchaseItems' => $purchaseItems,
+            'filters' => $request->only(['product_id', 'date_from', 'date_to']),
+            'isShadowUser' => Auth::user()->user_type === 'shadow',
+        ]);
+    }
+
+
 
     /**
      * Show the form for creating a new resource.
@@ -114,6 +138,7 @@ class PurchaseController extends Controller
                     'purchase_id' => $purchase->id,
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
+                    'warehouse_id' => $request->warehouse_id,
                     'quantity' => $item['quantity'],
                     'unit_price' => $item['unit_price'],
                     'shadow_unit_price' => $item['shadow_unit_price'],
@@ -121,7 +146,7 @@ class PurchaseController extends Controller
                     'shadow_sale_price' => $item['shadow_sale_price'],
                     'total_price' => $itemTotalPrice,
                     'shadow_total_price' => $itemShadowTotalPrice,
-                    'user_id' => Auth::id(),
+                    'created_by' => Auth::id(),
                 ]);
             }
 
