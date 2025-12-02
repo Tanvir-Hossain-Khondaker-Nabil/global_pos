@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
 use Inertia\Inertia;
 use App\Models\Purchase;
 use App\Models\PurchaseItem;
@@ -10,6 +11,7 @@ use App\Models\Warehouse;
 use App\Models\Product;
 use App\Models\Variant;
 use App\Models\Stock;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -84,7 +86,6 @@ class PurchaseController extends Controller
      */
     public function store(Request $request)
     {
-
         DB::beginTransaction();
         try {
             // Generate purchase number
@@ -149,6 +150,21 @@ class PurchaseController extends Controller
                     'created_by' => Auth::id(),
                 ]);
             }
+
+
+            if ($paidAmount > 0) {
+                $payment = new Payment();
+                $payment->purchase_id = $purchase->id;
+                $payment->amount = $paidAmount;
+                $payment->shadow_amount = $shadowPaidAmount;
+                $payment->payment_method = $request->payment_method ?? 'cash';
+                $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
+                $payment->note = $request->notes ?? null;
+                $payment->supplier_id = $request->supplier_id ?? null;
+                $payment->paid_at = Carbon::now();
+                $payment->save();
+            }
+
 
             DB::commit();
 

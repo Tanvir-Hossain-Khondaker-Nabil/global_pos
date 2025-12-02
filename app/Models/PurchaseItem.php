@@ -26,9 +26,9 @@ class PurchaseItem extends Model
 
     protected $casts = [
         'unit_price' => 'decimal:2',
-        'shadow_unit_price' => 'decimal:2', // Add this
+        'shadow_unit_price' => 'decimal:2', 
         'total_price' => 'decimal:2',
-        'shadow_total_price' => 'decimal:2' // Add this
+        'shadow_total_price' => 'decimal:2' 
     ];
 
     public function purchase()

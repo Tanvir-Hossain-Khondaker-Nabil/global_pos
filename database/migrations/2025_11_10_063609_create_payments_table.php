@@ -14,14 +14,17 @@ return new class extends Migration
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('sale_id')->default(0)->nullable();
+            $table->unsignedBigInteger('purchase_id')->default(0)->nullable();
             $table->decimal('amount', 15, 2)->nullable();
             $table->decimal('shadow_amount', 15, 2)->nullable();
             $table->string('payment_method')->default('cash'); // e.g., cash, card, online
             $table->string('txn_ref')->nullable();
             $table->text('note')->nullable();
             $table->unsignedBigInteger('customer_id')->nullable();
+            $table->unsignedBigInteger('supplier_id')->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->string('status')->default('completed'); // e.g., completed, pending, failed
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
     }
