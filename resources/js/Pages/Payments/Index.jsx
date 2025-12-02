@@ -168,7 +168,8 @@ export default function PaymentIndex({ payments, filters, isShadowUser }) {
                                 <tr>
                                     <th>{t('payment.transaction_ref', 'Transaction Ref')}</th>
                                     <th>{t('payment.customer', 'Customer')}</th>
-                                    <th>{t('payment.invoice_no', 'Invoice No')}</th>
+                                    <th>{t('payment.supplier', 'Supplier')}</th>
+                                    {/* <th>{t('payment.invoice_no', 'Invoice No')}</th> */}
                                     <th>{t('payment.amount', 'Amount')}</th>
                                     <th>{t('payment.payment_method', 'Payment Method')}</th>
                                     <th>{t('payment.status', 'Status')}</th>
@@ -204,12 +205,27 @@ export default function PaymentIndex({ payments, filters, isShadowUser }) {
                                             </td>
                                             <td>
                                                 <div className="flex items-center gap-2">
-                                                    <Receipt size={16} className="text-gray-400" />
-                                                    <span className="font-mono font-semibold">
-                                                        {payment.sale?.invoice_no || "N/A"}
-                                                    </span>
+                                                    <User size={16} className="text-gray-400" />
+                                                    <div>
+                                                        <p className="font-medium">
+                                                            {payment.supplier?.name || t('payment.walk_in_supplier', 'Walk-in Supplier')}
+                                                        </p>
+                                                        {payment.supplier?.phone && (
+                                                            <p className="text-sm text-gray-500">
+                                                                {payment.supplier.phone}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </td>
+                                            {/* <td>
+                                                <div className="flex items-center gap-2">
+                                                    <Receipt size={16} className="text-gray-400" />
+                                                    <span className="font-mono font-semibold">
+                                                        {payment.sale?.invoice_no  || payment.purchase?.invoice_no}
+                                                    </span>
+                                                </div>
+                                            </td> */}
                                             <td className="font-semibold text-success">
                                                 {formatCurrency(payment.amount)} {t('payment.currency', 'Tk')}
                                             </td>

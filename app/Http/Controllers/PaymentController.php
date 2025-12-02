@@ -12,41 +12,87 @@ class PaymentController extends Controller
     
     public function index(Request $request)
     {
+        $isShadowUser = Auth::user()->type === 'shadow';
+        $search = $request->input('search');
 
-        $user = Auth::user();
-        $isShadowUser = $user->type === 'shadow';
-
-        $filters = [
-            'search' => $request->input('search', ''),
-        ];
-
-        $payments = Payment::with(['sale', 'customer'])
+        $payments = Payment::with([
+                'sale',
+                'purchase',
+                'customer',
+                'creator',
+                'supplier'
+            ])
             ->where('status', '!=', 'cancelled')
-            ->when($request->input('search'), function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('payment_method', 'like', "%{$search}%")
-                        ->orWhere('txn_ref', 'like', "%{$search}%")
-                        ->orWhere('note', 'like', "%{$search}%")
-                        ->orWhereHas('customer', function ($q2) use ($search) {
-                            $q2->where('customer_name', 'like', "%{$search}%");
-                        })
-                        ->orWhereHas('sale', function ($q3) use ($search) {
-                            $q3->where('invoice_no', 'like', "%{$search}%");
-                        });
-                });
-            })
+            ->search($search)
             ->latest()
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
+        
 
         if ($isShadowUser) {
-            $payments->getCollection()->transform(function ($payment) {
-                return $this->transformToShadowData($payment);
-            });
+            $payments->getCollection()->transform(
+                fn ($payment) => $this->transformToShadowData($payment)
+            );
         }
 
         return Inertia::render('Payments/Index', [
             'payments' => $payments,
-            'filters' => $filters,
+            'filters' => ['search' => $search],
+            'isShadowUser' => $isShadowUser,
+        ]);
+    }
+
+
+
+    // ledger function
+    public function ledger(Request $request)
+    {
+        $isShadowUser = Auth::user()->type === 'shadow';
+        $search = $request->input('search');
+        $type = $request->input('type', 'all');
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
+
+        $payments = Payment::with([
+                'sale',
+                'purchase',
+                'customer',
+                'creator',
+                'supplier'
+            ])
+            ->where('status', '!=', 'cancelled')
+            ->search($search)
+            ->when($type == 'customer', function ($query) {
+                return $query->whereNotNull('customer_id')->where('supplier_id', 0);
+            })
+            ->when($type == 'supplier', function ($query) {
+                return $query->whereNotNull('supplier_id')->where('customer_id', 0);
+            })
+            ->when($startDate, function ($query) use ($startDate) {
+                return $query->whereDate('created_at', '>=', $startDate);
+            })
+            ->when($endDate, function ($query) use ($endDate) {
+                return $query->whereDate('created_at', '<=', $endDate);
+            })
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
+        
+
+        if ($isShadowUser) {
+            $payments->getCollection()->transform(
+                fn ($payment) => $this->transformToShadowData($payment)
+            );
+        }
+
+        return Inertia::render('Payments/Ledger', [
+            'payments' => $payments,
+            'filters' => [
+                'search' => $search,
+                'type' => $type,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+            ],
             'isShadowUser' => $isShadowUser,
         ]);
     }

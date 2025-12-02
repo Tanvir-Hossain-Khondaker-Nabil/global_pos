@@ -29,7 +29,6 @@ class SaleItem extends Model
     }
 
 
-
     //relation to sale
     public function sale()
     {

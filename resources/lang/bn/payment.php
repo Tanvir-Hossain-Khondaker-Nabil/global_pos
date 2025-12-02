@@ -14,6 +14,7 @@ return [
     // Table Headers
     'transaction_ref' => 'লেনদেন রেফারেন্স',
     'customer' => 'গ্রাহক',
+    'supplier' => 'সরবরাহকারী',
     'invoice_no' => 'ইনভয়েস নং',
     'amount' => 'পরিমাণ',
     'payment_method' => 'পেমেন্ট পদ্ধতি',
@@ -36,6 +37,7 @@ return [
     
     // Customer Info
     'walk_in_customer' => 'ওয়াক-ইন গ্রাহক',
+    'walk_in_supplier' => 'ওয়াক-ইন সরবরাহকারী',
     'no_note' => 'কোন নোট নেই',
     'no_customer_info' => 'কোন গ্রাহক তথ্য পাওয়া যায়নি',
     

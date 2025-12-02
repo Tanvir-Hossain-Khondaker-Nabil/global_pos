@@ -14,9 +14,11 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->text('description')->nullable();
-            $table->string('contact_person');
-            $table->string('email');
-            $table->string('phone');
+            $table->decimal('advance_amount', 15, 2)->default(0)->nullable();
+            $table->decimal('due_amount', 15, 2)->default(0)->nullable();
+            $table->string('contact_person')->nullable();
+            $table->string('email')->nullable();
+            $table->string('phone')->nullable();
             $table->string('company')->nullable();
             $table->text('address')->nullable();
             $table->string('website')->nullable();

@@ -15,7 +15,9 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log as FacadesLog;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Log;
 
 class PurchaseController extends Controller
 {
@@ -86,6 +88,7 @@ class PurchaseController extends Controller
      */
     public function store(Request $request)
     {
+
         DB::beginTransaction();
         try {
             // Generate purchase number
@@ -125,9 +128,9 @@ class PurchaseController extends Controller
                 'payment_status' => $paymentStatus,
                 'shadow_payment_status' => $shadowPaymentStatus,
                 'notes' => $request->notes,
-                'status' => Auth::user()->user_type === 'shadow' ? 'pending' : 'completed',
+                'status' => Auth::user()->type === 'shadow' ? 'pending' : 'completed',
                 'created_by' => Auth::id(),
-                'user_type' => Auth::user()->user_type,
+                'user_type' => Auth::user()->type ?? 'general',
             ]);
 
             // Create purchase items
@@ -162,6 +165,7 @@ class PurchaseController extends Controller
                 $payment->note = $request->notes ?? null;
                 $payment->supplier_id = $request->supplier_id ?? null;
                 $payment->paid_at = Carbon::now();
+                $payment->created_by = Auth::id();
                 $payment->save();
             }
 
@@ -172,6 +176,7 @@ class PurchaseController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::alert($e->getMessage());
             return redirect()->back()->with('error', 'Failed to create purchase: ' . $e->getMessage());
         }
     }

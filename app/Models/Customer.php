@@ -13,6 +13,8 @@ class Customer extends Model
         'phone',
         'email',
         'is_active',
+        'advance_amount',
+        'due_amount',
     ];
 
     public function scopeFilter($query, array $filters)

@@ -20,11 +20,11 @@ return new class extends Migration
             $table->string('payment_method')->default('cash'); // e.g., cash, card, online
             $table->string('txn_ref')->nullable();
             $table->text('note')->nullable();
-            $table->unsignedBigInteger('customer_id')->nullable();
-            $table->unsignedBigInteger('supplier_id')->nullable();
+            $table->unsignedBigInteger('customer_id')->default(0)->nullable();
+            $table->unsignedBigInteger('supplier_id')->default(0)->nullable();
             $table->timestamp('paid_at')->nullable();
             $table->string('status')->default('completed'); // e.g., completed, pending, failed
-            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('created_by')->default(0)->nullable();
             $table->timestamps();
         });
     }

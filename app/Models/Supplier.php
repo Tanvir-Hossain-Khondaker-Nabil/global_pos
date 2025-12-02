@@ -18,5 +18,7 @@ class Supplier extends Model
         'company',
         'address',
         'website',
+        'advance_amount',
+        'due_amount',
     ];
 }

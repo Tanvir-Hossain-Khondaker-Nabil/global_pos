@@ -163,6 +163,8 @@ Route::middleware('auth')->group(function () {
 
     //payment routes
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/ledger', [PaymentController::class, 'ledger'])->name('payments.ledger');
+
     Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
 
 

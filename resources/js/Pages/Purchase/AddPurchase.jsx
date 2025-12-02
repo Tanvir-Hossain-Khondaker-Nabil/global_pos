@@ -295,16 +295,24 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
 
         console.log('Submitting form with data:', finalData);
 
-        // FIXED: Use form.post instead of router.post
-        form.transform(() => finalData).post(route("purchase.store"), {
+    
+
+        form.post(route("purchase.store"), {
             onSuccess: () => {
+                console.log("Purchase created successfully");
                 router.visit(route("purchase.list"));
             },
             onError: (errors) => {
-                console.error('Form errors:', errors);
-                alert("There was an error creating the purchase. Please check all fields and try again.");
+                console.error("Error occurred:", errors);
+                if (errors.items) {
+                    alert("Please check the product items: " + errors.items);
+                } else {
+                    console.error("Error occurred:", errors);
+                    alert(errors.error || "There was an error creating the purchase. Please check all fields and try again.");
+                }
             }
         });
+
     };
 
     const totalAmount = calculateTotal();

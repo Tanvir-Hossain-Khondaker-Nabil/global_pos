@@ -14,6 +14,7 @@ return [
     // Table Headers
     'transaction_ref' => 'Transaction Ref',
     'customer' => 'Customer',
+    'supplier' => 'Supplier',
     'invoice_no' => 'Invoice No',
     'amount' => 'Amount',
     'payment_method' => 'Payment Method',
@@ -36,6 +37,7 @@ return [
     
     // Customer Info
     'walk_in_customer' => 'Walk-in Customer',
+    'walk_in_supplier' => 'Walk-in Supplier',
     'no_note' => 'No note',
     'no_customer_info' => 'No customer information available',
     
