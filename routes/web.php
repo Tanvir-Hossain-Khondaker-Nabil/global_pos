@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/add', 'store')->name('customer.store');
         Route::get('/delete/{id}', 'del')->name('customer.del');
         Route::get('/edit/{id}', 'edit')->name('customer.edit');
+        Route::put('/update/{id}', 'update')->name('customer.update');
     });
 
     // sector

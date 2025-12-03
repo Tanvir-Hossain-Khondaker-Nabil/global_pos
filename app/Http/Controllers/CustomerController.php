@@ -22,7 +22,6 @@ class CustomerController extends Controller
             $query->where(function($q) use ($search) {
                 $q->where('customer_name', 'like', "%{$search}%")
                   ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('address', 'like', "%{$search}%");
             });
         }
@@ -35,7 +34,6 @@ class CustomerController extends Controller
                     'id' => $customer->id,
                     'customer_name' => $customer->customer_name,
                     'phone' => $customer->phone,
-                    'email' => $customer->email,
                     'address' => $customer->address,
                     'is_active' => (bool) $customer->is_active,
                     'advance_amount' => (float) $customer->advance_amount,
@@ -106,7 +104,6 @@ class CustomerController extends Controller
                     'id' => $customer->id,
                     'customer_name' => $customer->customer_name,
                     'phone' => $customer->phone,
-                    'email' => $customer->email,
                     'address' => $customer->address,
                     'advance_amount' => $customer->advance_amount,
                     'due_amount' => $customer->due_amount,
