@@ -286,12 +286,12 @@ export default function AddSale({ customers, productstocks }) {
                             <input
                                 type="text"
                                 className="input input-bordered"
-                                value={form.data.customer_phone}
-                                onChange={(e) => form.setData("customer_phone", e.target.value)}
+                                value={form.data.phone}
+                                onChange={(e) => form.setData("phone", e.target.value)}
                                 required
                             />
-                            {form.errors.customer_phone && (
-                                <div className="text-error text-sm mt-1">{form.errors.customer_phone}</div>
+                            {form.errors.phone && (
+                                <div className="text-error text-sm mt-1">{form.errors.phone}</div>
                             )}
                         </div>
 

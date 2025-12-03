@@ -11,6 +11,7 @@ return [
     'name' => 'Name',
     'phone' => 'Phone',
     'address' => 'Address',
+    'no_address' => 'No Address',
     'join_at' => 'Join At',
     'actions' => 'Actions',
     

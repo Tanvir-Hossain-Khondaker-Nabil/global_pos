@@ -35,4 +35,10 @@ class Customer extends Model
     {
         return $this->hasMany(Sale::class, 'customer_id');
     }
+
+    //active scrope 
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', 1);
+    }
 }

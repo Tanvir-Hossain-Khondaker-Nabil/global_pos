@@ -1,6 +1,6 @@
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
-import { ArrowLeft, Plus, Trash2, Search } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Search, User, Phone, Mail, MapPin, DollarSign } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
 export default function AddSale({ customers, productstocks }) {
@@ -11,10 +11,17 @@ export default function AddSale({ customers, productstocks }) {
     const [discountRate, setDiscountRate] = useState(0);
     const [paidAmount, setPaidAmount] = useState(0);
     const [shadowPaidAmount, setShadowPaidAmount] = useState(0);
+    
+    // New state variables for customer info and payment options
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
+    const [usePartialPayment, setUsePartialPayment] = useState(false);
+    const [adjustFromAdvance, setAdjustFromAdvance] = useState(false);
+    const [availableAdvance, setAvailableAdvance] = useState(0);
 
     console.log("Customers:", customers);
     console.log("Product Stocks:", productstocks);
 
+    // Define calculate functions first before any useEffect that uses them
     const calculateSubTotal = useCallback(() => {
         if (!selectedItems || selectedItems.length === 0) return 0;
         return selectedItems.reduce((total, item) => {
@@ -46,6 +53,52 @@ export default function AddSale({ customers, productstocks }) {
         return Math.max(0, grandTotal - paid);
     }, [calculateGrandTotal, paidAmount]);
 
+    // Calculate available advance when customer changes
+    useEffect(() => {
+        if (selectedCustomer) {
+            const advance = parseFloat(selectedCustomer.advance_amount) || 0;
+            const due = parseFloat(selectedCustomer.due_amount) || 0;
+            setAvailableAdvance(advance - due);
+        } else {
+            setAvailableAdvance(0);
+        }
+    }, [selectedCustomer]);
+
+    // Handle customer selection
+    const handleCustomerSelect = (customerId) => {
+        form.setData("customer_id", customerId);
+        const customer = customers.find(c => c.id === parseInt(customerId));
+        setSelectedCustomer(customer || null);
+    };
+
+    // Handle adjust from advance checkbox
+    useEffect(() => {
+        if (adjustFromAdvance && availableAdvance > 0) {
+            const grandTotal = calculateGrandTotal();
+            const maxAdjustable = Math.min(availableAdvance, grandTotal);
+            
+            // Set the paid amount to the adjustable amount
+            setPaidAmount(prev => {
+                const newPaid = Math.min(prev + maxAdjustable, grandTotal);
+                return newPaid;
+            });
+        } else if (!adjustFromAdvance) {
+            // Remove the advance adjustment
+            const grandTotal = calculateGrandTotal();
+            const currentPaid = parseFloat(paidAmount) || 0;
+            const adjustedPaid = Math.max(0, currentPaid - Math.min(availableAdvance, grandTotal));
+            setPaidAmount(adjustedPaid);
+        }
+    }, [adjustFromAdvance, availableAdvance, calculateGrandTotal]);
+
+    // Handle partial payment checkbox
+    useEffect(() => {
+        if (!usePartialPayment) {
+            const grandTotal = calculateGrandTotal();
+            setPaidAmount(grandTotal);
+        }
+    }, [usePartialPayment, calculateGrandTotal]);
+
     const form = useForm({
         customer_id: "",
         sale_date: new Date().toISOString().split('T')[0],
@@ -58,6 +111,9 @@ export default function AddSale({ customers, productstocks }) {
         due_amount: 0,
         sub_amount: 0,
         type: 'inventory',
+        use_partial_payment: false,
+        adjust_from_advance: false,
+        advance_adjustment: 0,
     });
 
     // Update form data when any of the dependencies change
@@ -65,6 +121,14 @@ export default function AddSale({ customers, productstocks }) {
         const subTotal = calculateSubTotal();
         const grandTotal = calculateGrandTotal();
         const dueAmount = calculateDueAmount();
+        
+        // Calculate advance adjustment amount
+        let advanceAdjustment = 0;
+        if (adjustFromAdvance && availableAdvance > 0) {
+            const maxAdjustable = Math.min(availableAdvance, grandTotal);
+            const paidWithAdvance = Math.min(parseFloat(paidAmount) || 0, maxAdjustable);
+            advanceAdjustment = Math.min(paidWithAdvance, maxAdjustable);
+        }
 
         form.setData({
             ...form.data,
@@ -77,8 +141,11 @@ export default function AddSale({ customers, productstocks }) {
             due_amount: dueAmount,
             sub_amount: subTotal,
             type: 'inventory',
+            use_partial_payment: usePartialPayment,
+            adjust_from_advance: adjustFromAdvance,
+            advance_adjustment: advanceAdjustment,
         });
-    }, [selectedItems, vatRate, discountRate, paidAmount, shadowPaidAmount, calculateSubTotal, calculateGrandTotal, calculateDueAmount]);
+    }, [selectedItems, vatRate, discountRate, paidAmount, shadowPaidAmount, usePartialPayment, adjustFromAdvance, availableAdvance, calculateSubTotal, calculateGrandTotal, calculateDueAmount]);
 
     const getVariantDisplayName = (variant) => {
         const parts = [];
@@ -98,7 +165,6 @@ export default function AddSale({ customers, productstocks }) {
 
         return parts.join(', ') || 'Default Variant';
     };
-
 
     // Filter products based on search
     useEffect(() => {
@@ -252,7 +318,7 @@ export default function AddSale({ customers, productstocks }) {
                             <select
                                 className="select select-bordered"
                                 value={form.data.customer_id}
-                                onChange={(e) => form.setData("customer_id", e.target.value)}
+                                onChange={(e) => handleCustomerSelect(e.target.value)}
                                 required
                             >
                                 <option value="">Select Customer</option>
@@ -264,6 +330,87 @@ export default function AddSale({ customers, productstocks }) {
                                 <div className="text-error text-sm mt-1">{form.errors.customer_id}</div>
                             )}
                         </div>
+
+                        {/* Customer Information Display */}
+                        {selectedCustomer && (
+                            <div className="border border-gray-200 rounded-box p-4 bg-gray-50">
+                                <h3 className="font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                                    <User size={16} /> Customer Information
+                                </h3>
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <User size={12} className="text-gray-500" />
+                                        <span className="font-medium">{selectedCustomer.customer_name}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <Phone size={12} className="text-gray-500" />
+                                        <span>{selectedCustomer.phone}</span>
+                                    </div>
+                                    {selectedCustomer.email && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <Mail size={12} className="text-gray-500" />
+                                            <span>{selectedCustomer.email}</span>
+                                        </div>
+                                    )}
+                                    {selectedCustomer.address && (
+                                        <div className="flex items-start gap-2 text-sm">
+                                            <MapPin size={12} className="text-gray-500 mt-0.5 flex-shrink-0" />
+                                            <span className="line-clamp-2">{selectedCustomer.address}</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <DollarSign size={12} className="text-green-500" />
+                                        <span>
+                                            <span className="font-medium">Available Advance:</span> 
+                                            <span className="ml-1 font-bold text-green-600">
+                                                ৳{formatCurrency(availableAdvance)}
+                                            </span>
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                {/* Payment Options */}
+                                <div className="mt-4 pt-3 border-t border-gray-200">
+                                    <h4 className="font-medium text-gray-700 mb-2">Payment Options</h4>
+                                    
+                                    <div className="space-y-2">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={usePartialPayment}
+                                                onChange={(e) => setUsePartialPayment(e.target.checked)}
+                                                className="checkbox checkbox-sm checkbox-primary"
+                                            />
+                                            <span className="text-sm">Allow Partial Payment</span>
+                                        </label>
+                                        
+                                        {availableAdvance > 0 && (
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={adjustFromAdvance}
+                                                    onChange={(e) => setAdjustFromAdvance(e.target.checked)}
+                                                    className="checkbox checkbox-sm checkbox-primary"
+                                                />
+                                                <span className="text-sm">Adjust from Customer Advance</span>
+                                                <span className="text-xs text-gray-500">
+                                                    (Up to ৳{formatCurrency(Math.min(availableAdvance, calculateGrandTotal()))})
+                                                </span>
+                                            </label>
+                                        )}
+                                    </div>
+                                    
+                                    {adjustFromAdvance && availableAdvance > 0 && (
+                                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-box">
+                                            <p className="text-sm text-blue-700">
+                                                <strong>Note:</strong> ৳{formatCurrency(Math.min(availableAdvance, calculateGrandTotal()))} 
+                                                will be deducted from customer's advance balance.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="form-control">
                             <label className="label">
@@ -306,61 +453,40 @@ export default function AddSale({ customers, productstocks }) {
                                 placeholder="Search products by name or SKU..."
                             />
 
-                            {/* Product Search Results */}
-                            {/* {productSearch && filteredProducts.length > 0 && (
-                                <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
-                                    {filteredProducts.map(filteredProduct => (
-                                        <div
-                                            key={filteredProduct.product.id}
-                                            className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
-                                            onClick={() => addItem(filteredProduct, filteredProduct.variant)}
-                                        >
-                                            <div className="flex justify-between items-center">
-                                                <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
-                                                <Plus size={14} className="text-primary" />
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )} */}
-
-
-                            
                             {productSearch && filteredProducts.length > 0 && (
-                                    <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
-                                        {filteredProducts.map(filteredProduct => {
-                                            const attributes = filteredProduct.variant?.attribute_values
-                                                ? Object.entries(filteredProduct.variant.attribute_values)
-                                                    .map(([key, value]) => `${key}: ${value}`)
-                                                    .join(', ')
-                                                : null;
+                                <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                    {filteredProducts.map(filteredProduct => {
+                                        const attributes = filteredProduct.variant?.attribute_values
+                                            ? Object.entries(filteredProduct.variant.attribute_values)
+                                                .map(([key, value]) => `${key}: ${value}`)
+                                                .join(', ')
+                                            : null;
 
-                                            return (
-                                                <div
-                                                    key={filteredProduct.product.id}
-                                                    className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
-                                                    onClick={() => addItem(filteredProduct, filteredProduct.variant)}
-                                                >
-                                                    <div className="flex flex-col">
-                                                        <div className="flex justify-between items-center">
-                                                            <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
-                                                            <Plus size={14} className="text-primary" />
-                                                        </div>
-                                                        {attributes && (
-                                                            <div className="text-sm text-gray-500 mt-1">
-                                                                {attributes}
-                                                            </div>
-                                                        )}
+                                        return (
+                                            <div
+                                                key={filteredProduct.product.id}
+                                                className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                                onClick={() => addItem(filteredProduct, filteredProduct.variant)}
+                                            >
+                                                <div className="flex flex-col">
+                                                    <div className="flex justify-between items-center">
+                                                        <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
+                                                        <Plus size={14} className="text-primary" />
                                                     </div>
+                                                    {attributes && (
+                                                        <div className="text-sm text-gray-500 mt-1">
+                                                            {attributes}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
                         </div>
 
                         {selectedItems.length > 0 ? (
-
                             <div className="space-y-3">
                                 <h3 className="font-semibold">Selected Items ({selectedItems.length})</h3>
                                 {selectedItems.map((item, index) => (
@@ -492,36 +618,53 @@ export default function AddSale({ customers, productstocks }) {
                                         <span>৳{formatCurrency(calculateGrandTotal())}</span>
                                     </div>
 
-                                    {/* Paid Amount */}
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span>Paid Amount:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                max={calculateGrandTotal()}
-                                                className="input input-bordered input-sm w-32"
-                                                value={paidAmount}
-                                                onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                                            />
+                                    {/* Payment Information */}
+                                    <div className="bg-gray-50 p-3 rounded-box border border-gray-200">
+                                        <h4 className="font-medium text-gray-700 mb-2">Payment Details</h4>
+                                        
+                                        {adjustFromAdvance && availableAdvance > 0 && (
+                                            <div className="flex justify-between items-center mb-2">
+                                                <div className="flex items-center gap-2 text-sm">
+                                                    <span>Advance Adjustment:</span>
+                                                </div>
+                                                <span className="font-medium text-blue-600">
+                                                    ৳{formatCurrency(Math.min(availableAdvance, calculateGrandTotal()))}
+                                                </span>
+                                            </div>
+                                        )}
+                                        
+                                        {/* Paid Amount */}
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <span>Paid Amount:</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    max={calculateGrandTotal()}
+                                                    className="input input-bordered input-sm w-32"
+                                                    value={paidAmount}
+                                                    onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
+                                                    disabled={!usePartialPayment && !adjustFromAdvance}
+                                                />
+                                            </div>
+                                            <span>৳{formatCurrency(paidAmount)}</span>
                                         </div>
-                                        <span>৳{formatCurrency(paidAmount)}</span>
-                                    </div>
 
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span>Sh Paid Amount:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                className="input input-bordered input-sm w-32"
-                                                value={shadowPaidAmount}
-                                                onChange={(e) => setShadowPaidAmount(parseFloat(e.target.value) || 0)}
-                                            />
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <span>Sh Paid Amount:</span>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="0.01"
+                                                    className="input input-bordered input-sm w-32"
+                                                    value={shadowPaidAmount}
+                                                    onChange={(e) => setShadowPaidAmount(parseFloat(e.target.value) || 0)}
+                                                />
+                                            </div>
+                                            <span>৳{formatCurrency(shadowPaidAmount)}</span>
                                         </div>
-                                        <span>৳{formatCurrency(shadowPaidAmount)}</span>
                                     </div>
 
                                     {/* Due Amount */}
