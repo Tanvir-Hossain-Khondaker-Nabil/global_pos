@@ -20,5 +20,13 @@ class Supplier extends Model
         'website',
         'advance_amount',
         'due_amount',
+        'is_active',
     ];
+
+
+    //relationship to purchases
+    public function purchases()
+    {
+        return $this->hasMany(Purchase::class, 'supplier_id');
+    }
 }

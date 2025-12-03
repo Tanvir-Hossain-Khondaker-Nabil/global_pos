@@ -18,12 +18,14 @@ class SupplierController extends Controller
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('contact_person', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('company', 'like', "%{$search}%");
+                    ->orWhere('company', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         })
-            ->latest()
-            ->paginate(10)
-            ->withQueryString();
+        ->withCount('purchases')
+        ->latest()
+        ->paginate(10)
+        ->withQueryString();
 
         return Inertia::render('Supplier/Index', [
             'suppliers' => $suppliers,
@@ -43,7 +45,15 @@ class SupplierController extends Controller
             'company' => 'nullable|string|max:255',
             'address' => 'nullable|string',
             'website' => 'nullable|url',
+            'advance_amount' => 'nullable|numeric|min:0',
+            'due_amount' => 'nullable|numeric|min:0',
+            'is_active' => 'boolean',
         ]);
+
+        // Set default values for numeric fields
+        $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
+        $validated['due_amount'] = $validated['due_amount'] ?? 0;
+        $validated['is_active'] = $validated['is_active'] ?? true;
 
         Supplier::create($validated);
 
@@ -63,7 +73,6 @@ class SupplierController extends Controller
     // Update supplier
     public function update(Request $request, $id)
     {
-        // Remove the dd() - it's stopping execution
         $supplier = Supplier::findOrFail($id);
 
         $validated = $request->validate([
@@ -75,7 +84,15 @@ class SupplierController extends Controller
             'company' => 'nullable|string|max:255',
             'address' => 'nullable|string',
             'website' => 'nullable|url',
+            'advance_amount' => 'nullable|numeric|min:0',
+            'due_amount' => 'nullable|numeric|min:0',
+            'is_active' => 'boolean',
         ]);
+
+        // Set default values for numeric fields if not provided
+        $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
+        $validated['due_amount'] = $validated['due_amount'] ?? 0;
+        $validated['is_active'] = $validated['is_active'] ?? true;
 
         $supplier->update($validated);
 
@@ -86,6 +103,11 @@ class SupplierController extends Controller
     public function destroy($id)
     {
         $supplier = Supplier::findOrFail($id);
+        
+        if ($supplier->purchases()->exists()) {
+            return redirect()->back()->with('error', 'Cannot delete supplier with existing purchases!');
+        }
+
         $supplier->delete();
 
         return redirect()->back()->with('success', 'Supplier contact deleted successfully!');
