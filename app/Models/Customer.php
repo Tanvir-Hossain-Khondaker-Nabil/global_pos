@@ -11,7 +11,6 @@ class Customer extends Model
         'customer_name',
         'address',
         'phone',
-        'email',
         'is_active',
         'advance_amount',
         'due_amount',
@@ -28,5 +27,12 @@ class Customer extends Model
                     ->orWhere('phone', 'like', "%{$search}%");
             });
         }
+    }
+
+
+    //relations ship to sales
+    public function sales()
+    {
+        return $this->hasMany(Sale::class, 'customer_id');
     }
 }

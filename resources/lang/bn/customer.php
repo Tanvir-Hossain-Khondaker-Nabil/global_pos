@@ -18,6 +18,8 @@ return [
     'customer_name' => 'গ্রাহকের নাম',
     'customer_phone' => 'ফোন',
     'customer_address' => 'ঠিকানা',
+    'advance_amount' => 'অগ্রিম পরিমাণ',
+    'due_amount' => 'বাকি পরিমাণ',
     
     // Buttons
     'edit' => 'সম্পাদনা',

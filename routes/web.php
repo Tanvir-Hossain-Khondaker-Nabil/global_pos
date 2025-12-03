@@ -50,6 +50,7 @@ Route::middleware('auth')->group(function () {
     // customer manage
     Route::controller(CustomerController::class)->prefix('customer')->group(function () {
         Route::get('/', 'index')->name('customer.index');
+        Route::get('/show/{id}/', 'show')->name('customer.show');
         Route::post('/add', 'store')->name('customer.store');
         Route::get('/delete/{id}', 'del')->name('customer.del');
         Route::get('/edit/{id}', 'edit')->name('customer.edit');

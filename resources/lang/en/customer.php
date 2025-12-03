@@ -18,7 +18,9 @@ return [
     'customer_name' => 'Customer Name',
     'customer_phone' => 'Phone',
     'customer_address' => 'Address',
-    
+    'advance_amount' => 'Advance Amount',
+    'due_amount' => 'Due Amount',
+
     // Buttons
     'edit' => 'Edit',
     'delete' => 'Delete',

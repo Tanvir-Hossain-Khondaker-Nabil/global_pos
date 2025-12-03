@@ -702,118 +702,124 @@ export default function PaymentLedger({ payments, filters, isShadowUser }) {
           </div>
         </div>
 
-        {/* Filters */}
+        {/* Filters - Fixed Design */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
-  
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <Filter className="h-5 w-5" />
-                Filter Transactions
-                </h3>
+          {/* Filter Header */}
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filter Transactions
+            </h3>
+            
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-2 transition-colors"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Reset Filters
+              </button>
+            )}
+          </div>
 
-                {hasActiveFilters && (
-                <button
-                    onClick={clearFilters}
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-2 transition"
-                >
-                    <RefreshCw className="h-4 w-4" />
-                    Reset Filters
-                </button>
-                )}
+          {/* Filter Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+            {/* Search - Takes 5 columns on medium screens and above */}
+            <div className="md:col-span-4">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="search"
+                  value={filterForm.data.search}
+                  onChange={(e) => filterForm.setData("search", e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Search by reference, customer, supplier..."
+                  className="w-full h-12 pl-11 pr-4 border border-gray-300 rounded-xl 
+                            focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                            bg-gray-50 text-gray-700 placeholder-gray-500"
+                />
+              </div>
             </div>
 
-            {/* Filter Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-
-                {/* Search */}
-                <div className="md:col-span-2">
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                    type="search"
-                    value={filterForm.data.search}
-                    onChange={(e) => filterForm.setData("search", e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Search by reference, customer, supplier..."
-                    className="w-full h-12 pl-11 pr-4 border border-gray-300 rounded-xl 
-                                focus:ring-2 focus:ring-blue-500 focus:border-transparent 
-                                bg-gray-50 text-gray-700"
-                    />
-                </div>
-                </div>
-
-                <div>
-                <select
-                    value={filterForm.data.type}
-                    onChange={(e) => filterForm.setData("type", e.target.value)}
-                    className="w-full h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
-                            focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                >
-                    <option value="all">All Transactions</option>
-                    <option value="customer">Customer Payments</option>
-                    <option value="supplier">Supplier Payments</option>
-                </select>
-                </div>
-
-                {/* Date Range */}
-                <br />
-                <div className="flex gap-2">
-                <input
-                    type="date"
-                    value={filterForm.data.start_date}
-                    onChange={(e) => filterForm.setData("start_date", e.target.value)}
-                    className="flex-1 h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
-                            focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                />
-                <input
-                    type="date"
-                    value={filterForm.data.end_date}
-                    onChange={(e) => filterForm.setData("end_date", e.target.value)}
-                    className="flex-1 h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
-                            focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                />
-                </div>
+            {/* Transaction Type - Takes 3 columns */}
+            <div className="md:col-span-3">
+              <select
+                value={filterForm.data.type}
+                onChange={(e) => filterForm.setData("type", e.target.value)}
+                className="w-full h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+              >
+                <option value="all">All Transactions</option>
+                <option value="customer">Customer Payments</option>
+                <option value="supplier">Supplier Payments</option>
+              </select>
             </div>
 
-            {/* Footer Actions */}
-            <div className="mt-6 flex items-center gap-3">
-                <button
-                onClick={handleFilter}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white 
-                            font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 
-                            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                >
-                Apply Filters
-                </button>
+            {/* Date Range - Takes 4 columns */}
+            <div className="md:col-span-4 flex gap-2">
+              <div className="flex-1">
+                <input
+                  type="date"
+                  value={filterForm.data.start_date}
+                  onChange={(e) => filterForm.setData("start_date", e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
+                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                />
+              </div>
+              <div className="flex-1">
+                <input
+                  type="date"
+                  value={filterForm.data.end_date}
+                  onChange={(e) => filterForm.setData("end_date", e.target.value)}
+                  className="w-full h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
+                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                />
+              </div>
+            </div>
+          </div>
 
-                {/* View Mode Buttons */}
-                <div className="flex items-center gap-2 ml-auto">
+          {/* Action Buttons */}
+          <div className="mt-6 flex items-center justify-between">
+            <button
+              onClick={handleFilter}
+              className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white 
+                        font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                        transition-all duration-200"
+            >
+              Apply Filters
+            </button>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700 mr-2">View:</span>
+              <div className="inline-flex rounded-xl border border-gray-200 p-1 bg-gray-50">
                 <button
-                    onClick={() => setViewMode('table')}
-                    className={`px-4 py-2 rounded-xl transition ${
+                  onClick={() => setViewMode('table')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
                     viewMode === 'table'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
+                      ? 'bg-white text-blue-700 shadow-sm border border-gray-300'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
-                    <Layers className="h-4 w-4" />
+                  <Layers className="h-4 w-4" />
+                  <span className="text-sm font-medium">Table</span>
                 </button>
-
                 <button
-                    onClick={() => setViewMode('card')}
-                    className={`px-4 py-2 rounded-xl transition ${
+                  onClick={() => setViewMode('card')}
+                  className={`px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 ${
                     viewMode === 'card'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                    }`}
+                      ? 'bg-white text-blue-700 shadow-sm border border-gray-300'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
                 >
-                    <FileText className="h-4 w-4" />
+                  <FileText className="h-4 w-4" />
+                  <span className="text-sm font-medium">Cards</span>
                 </button>
-                </div>
+              </div>
             </div>
+          </div>
         </div>
-
 
         {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -1068,11 +1074,11 @@ export default function PaymentLedger({ payments, filters, isShadowUser }) {
                             </td>
                             <td className="px-8 py-5">
                               <div className="space-y-2">
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${methodConfig.color}">
+                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${methodConfig.color}`}>
                                   <MethodIcon className="h-3.5 w-3.5" />
                                   {methodConfig.label}
                                 </div>
-                                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${statusConfig.color}">
+                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${statusConfig.color}`}>
                                   <StatusIcon className="h-3.5 w-3.5" />
                                   {statusConfig.label}
                                 </div>
@@ -1087,7 +1093,7 @@ export default function PaymentLedger({ payments, filters, isShadowUser }) {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Link>
-                                {/* {payment.sale && (
+                                {payment.sale && (
                                   <Link
                                     href={route("sales.show", { sale: payment.sale.id })}
                                     className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
@@ -1096,7 +1102,7 @@ export default function PaymentLedger({ payments, filters, isShadowUser }) {
                                     <FileText className="h-4 w-4" />
                                   </Link>
                                 )}
-                                {payment.purchase && (
+                                {/* {payment.purchase && (
                                   <Link
                                     href={route("purchases.show", { purchase: payment.purchase.id })}
                                     className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
@@ -1171,7 +1177,7 @@ export default function PaymentLedger({ payments, filters, isShadowUser }) {
                           </div>
                           
                           <div className="flex items-center justify-between pt-5 border-t border-gray-100">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border ${methodConfig.color}">
+                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border ${methodConfig.color}`}>
                               <MethodIcon className="h-4 w-4" />
                               {methodConfig.label}
                             </div>
