@@ -254,15 +254,11 @@ Route::middleware('auth')->group(function () {
     ]);
 
     //ledger routes
-    Route::resource('ledgers', LedgerController::class)->names([
-        'index' => 'ledgers.index',
-        'create' => 'ledgers.create',
-        'store' => 'ledgers.store',
-        'show' => 'ledgers.show',
-        'edit' => 'ledgers.edit',
-        'update' => 'ledgers.update',
-        'destroy' => 'ledgers.destroy',
-    ]);
+    Route::get('/ledgers', [LedgerController::class, 'index'])->name('ledgers.index');
+    Route::get('/ledgers/customer/{id?}', [LedgerController::class, 'customerLedger'])->name('ledgers.customer');
+    Route::get('/ledgers/supplier/{id?}', [LedgerController::class, 'supplierLedger'])->name('ledgers.supplier');
+    Route::get('/ledgers/customer/{id}', [LedgerController::class, 'individualCustomerLedger'])->name('ledgers.customer.individual');
+    Route::get('/ledgers/supplier/{id}', [LedgerController::class   , 'individualSupplierLedger'])->name('ledgers.supplier.individual');
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');
