@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\UserScope;
+
 
 class Customer extends Model
 {
@@ -14,7 +16,14 @@ class Customer extends Model
         'is_active',
         'advance_amount',
         'due_amount',
+        'created_by',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
+
 
     public function scopeFilter($query, array $filters)
     {
@@ -34,6 +43,12 @@ class Customer extends Model
     public function sales()
     {
         return $this->hasMany(Sale::class, 'customer_id');
+    }
+
+    //user relation
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     //active scrope 

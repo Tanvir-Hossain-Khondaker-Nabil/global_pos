@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Supplier;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -54,6 +55,8 @@ class SupplierController extends Controller
         $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
         $validated['due_amount'] = $validated['due_amount'] ?? 0;
         $validated['is_active'] = $validated['is_active'] ?? true;
+        $validated['created_by'] = Auth::id(); 
+
 
         Supplier::create($validated);
 

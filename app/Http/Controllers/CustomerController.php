@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Customer;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class CustomerController extends Controller
@@ -64,6 +65,7 @@ class CustomerController extends Controller
                 'advance_amount' => $request->advance_amount ?? 0,
                 'due_amount' => $request->due_amount ?? 0,
                 'is_active' => $request->is_active ?? true,
+                'created_by' => Auth::id(),
             ]);
 
             return redirect()->back()->with('success', 'New customer added successfully');

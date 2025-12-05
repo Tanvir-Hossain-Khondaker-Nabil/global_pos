@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
     }

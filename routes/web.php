@@ -22,6 +22,8 @@ use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\LadgerController;
+use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\SubscriptionController;
 
@@ -249,6 +251,17 @@ Route::middleware('auth')->group(function () {
         'edit' => 'subscriptions.edit',
         'update' => 'subscriptions.update',
         'destroy' => 'subscriptions.destroy',
+    ]);
+
+    //ledger routes
+    Route::resource('ledgers', LedgerController::class)->names([
+        'index' => 'ledgers.index',
+        'create' => 'ledgers.create',
+        'store' => 'ledgers.store',
+        'show' => 'ledgers.show',
+        'edit' => 'ledgers.edit',
+        'update' => 'ledgers.update',
+        'destroy' => 'ledgers.destroy',
     ]);
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
