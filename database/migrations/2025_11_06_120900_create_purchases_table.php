@@ -27,7 +27,8 @@ return new class extends Migration {
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
             $table->unsignedBigInteger('created_by')->nullable();
-            $table->enum('user_type', ['shadow', 'ganaral'])->default('ganaral');
+            $table->enum('user_type', ['shadow', 'general'])->default('general');
+            $table->enum('payment_type', ['cash', 'card' ,'mobile_banking','advance_adjustment'])->default('cash');
             $table->timestamps();
 
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');

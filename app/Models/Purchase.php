@@ -26,6 +26,7 @@ class Purchase extends Model
         'status',
         'user_type',
         'created_by',
+        'payment_type',
     ];
 
     protected $casts = [

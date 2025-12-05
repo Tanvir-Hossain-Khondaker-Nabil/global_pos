@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
 use Inertia\Inertia;
 use App\Models\Purchase;
 use App\Models\Supplier;
@@ -14,6 +15,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Carbon\Carbon;
+use Illuminate\Support\Str;
+
 
 
 class PurchaseController extends Controller
@@ -106,21 +110,37 @@ class PurchaseController extends Controller
             'items.*.shadow_total_price' => 'sometimes|numeric'
         ]);
 
+
+        $adjustamount  = $request->adjust_from_advance;
+
+        if($adjustamount == true){
+
+            $supplier = Supplier::find($request->supplier_id);
+            $payment_type = 'advance_adjustment';
+
+            if( $request->paid_amount > $supplier->advance_amount){
+                return back()->withErrors(['error' => 'If you want to adjust from advance, the advance adjustment cannot be greater than available advance amount.']);
+            }
+
+            $supplier->update([
+                'advance_amount' => $supplier->advance_amount - $request->paid_amount ,
+            ]);
+
+
+        }
+
         DB::beginTransaction();
         try {
             // Generate purchase number
             $purchaseCount = Purchase::whereDate('created_at', today())->count();
             $purchaseNo = 'PUR-' . date('Ymd') . '-' . str_pad($purchaseCount + 1, 4, '0', STR_PAD_LEFT);
 
-            // Calculate total amounts based on user type
             if ($isShadowUser) {
-                // For shadow users, use shadow prices for total amount
                 $totalAmount = collect($request->items)->sum(function ($item) {
                     return $item['quantity'] * $item['shadow_unit_price'];
                 });
                 $shadowTotalAmount = $totalAmount;
             } else {
-                // For general users, use real prices for total amount
                 $totalAmount = collect($request->items)->sum(function ($item) {
                     return $item['quantity'] * $item['unit_price'];
                 });
@@ -131,10 +151,10 @@ class PurchaseController extends Controller
 
             // Calculate due amount
             $paidAmount = $request->paid_amount;
+            $shadowPaidAmount = $request->shadow_paid_amount;
             $dueAmount = $totalAmount - $paidAmount;
-            $shadowDueAmount = $shadowTotalAmount - $paidAmount;
+            $shadowDueAmount = $shadowTotalAmount - $shadowPaidAmount;
 
-            // Create purchase
             $purchase = Purchase::create([
                 'purchase_no' => $purchaseNo,
                 'supplier_id' => $request->supplier_id,
@@ -143,19 +163,19 @@ class PurchaseController extends Controller
                 'total_amount' => $totalAmount,
                 'shadow_total_amount' => $shadowTotalAmount,
                 'paid_amount' => $paidAmount,
-                'shadow_paid_amount' => $paidAmount,
+                'shadow_paid_amount' => $shadowPaidAmount,
                 'due_amount' => $dueAmount,
                 'shadow_due_amount' => $shadowDueAmount,
                 'payment_status' => $request->payment_status,
                 'notes' => $request->notes,
                 'status' => 'completed',
                 'created_by' => $user->id,
-                'user_type' => $user->type
+                'user_type' => $user->type,
+                'payment_type' => $payment_type ?? 'cash'
             ]);
 
             // Create purchase items and update stock
             foreach ($request->items as $item) {
-                // Debug: Check what values are coming from frontend
                 Log::info('Item data:', [
                     'product_id' => $item['product_id'],
                     'unit_price' => $item['unit_price'] ?? 'null',
@@ -167,8 +187,6 @@ class PurchaseController extends Controller
                 // Calculate total prices
                 $totalPrice = $item['quantity'] * ($item['unit_price'] ?? 0);
                 $shadowTotalPrice = $item['quantity'] * $item['shadow_unit_price'];
-
-                // FIX: Ensure sale prices are properly set and not null
                 $unitPrice = $isShadowUser ? 0 : (float) ($item['unit_price'] ?? 0);
                 $salePrice = $isShadowUser ? 0 : (float) ($item['sale_price'] ?? 0);
                 $shadowUnitPrice = (float) $item['shadow_unit_price'];
@@ -193,7 +211,9 @@ class PurchaseController extends Controller
                     'shadow_sale_price' => $shadowSalePrice,
                     'total_price' => $totalPrice,
                     'shadow_total_price' => $shadowTotalPrice,
-                    'user_type' => $user->type
+                    'user_type' => $user->type,
+                    'created_by' => $user->id,
+                    'warehouse_id' => $request->warehouse_id
                 ]);
 
                 // Update or create stock
@@ -204,13 +224,10 @@ class PurchaseController extends Controller
 
                 if ($stock) {
                     $stock->increment('quantity', $item['quantity']);
-                    // Update prices based on user type
                     if ($isShadowUser) {
-                        // For shadow users, only update shadow prices
                         $stock->shadow_purchase_price = $shadowUnitPrice;
                         $stock->shadow_sale_price = $shadowSalePrice;
                     } else {
-                        // For general users, update both real and shadow prices
                         $stock->purchase_price = $unitPrice;
                         $stock->sale_price = $salePrice;
                         $stock->shadow_purchase_price = $shadowUnitPrice;
@@ -237,6 +254,23 @@ class PurchaseController extends Controller
                     'sale_price' => $purchaseItem->sale_price,
                     'shadow_sale_price' => $purchaseItem->shadow_sale_price,
                 ]);
+            }
+
+
+                // create payment record if paid_amount > 0
+            if ($paidAmount > 0) {
+                $payment = new Payment();
+                $payment->purchase_id = $purchase->id;
+                $payment->amount = $paidAmount;
+                $payment->shadow_amount = $shadowPaidAmount;
+                $payment->payment_method = $request->payment_method 
+                                ?? ($payment_type ?? 'cash');
+                $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
+                $payment->note = $request->notes ?? null;
+                $payment->supplier_id = $request->supplier_id ?? null;
+                $payment->paid_at = Carbon::now();
+                $payment->created_by = Auth::id();
+                $payment->save();
             }
 
             DB::commit();
