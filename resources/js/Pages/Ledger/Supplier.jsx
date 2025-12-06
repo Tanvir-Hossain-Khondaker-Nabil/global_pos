@@ -37,7 +37,8 @@ import {
   Check,
   X,
   TrendingDown,
-  ShoppingBag
+  ShoppingBag,
+  BanknoteIcon
 } from "lucide-react";
 import Pagination from "../../components/Pagination";
 import {
@@ -84,6 +85,16 @@ export default function SupplierLedger({
   const [monthlyChartData, setMonthlyChartData] = useState(null);
   const [paymentChartData, setPaymentChartData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Due Clearance Modal States
+  const [showDueClearance, setShowDueClearance] = useState(false);
+  const [dueAmount, setDueAmount] = useState(0);
+  const [advanceAmount, setAdvanceAmount] = useState(0);
+  const [paymentForm, setPaymentForm] = useState({
+    paid_amount: "",
+    payment_type: "cash",
+    notes: "",
+  });
 
   // Initialize filter form with query string values
   const filterForm = useForm({
@@ -181,7 +192,7 @@ export default function SupplierLedger({
       queryParams.end_date = filterForm.data.end_date;
     }
 
-    router.get(route("ledgers.index", { id: supplier.id }), queryParams, {
+    router.get(route("ledger.index", { id: supplier.id }), queryParams, {
       preserveScroll: true,
       preserveState: true,
       replace: true,
@@ -198,7 +209,7 @@ export default function SupplierLedger({
       page: 1,
     });
     
-    router.get(route("ledgers.index", { id: supplier.id }), {}, {
+    router.get(route("ledger.index", { id: supplier.id }), {}, {
       preserveScroll: true,
       preserveState: true,
       replace: true,
@@ -217,7 +228,7 @@ export default function SupplierLedger({
       ...(filterForm.data.end_date && { end_date: filterForm.data.end_date }),
     };
 
-    router.get(route("ledgers.index", { id: supplier.id }), queryParams, {
+    router.get(route("ledger.index", { id: supplier.id }), queryParams, {
       preserveScroll: true,
       preserveState: true,
       replace: true,
@@ -225,10 +236,10 @@ export default function SupplierLedger({
   };
 
   const formatCurrency = (amount) => {
-    if (!amount) return '0';
+    if (!amount && amount !== 0) return '0';
     return new Intl.NumberFormat('en-BD', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   };
 
@@ -365,7 +376,7 @@ export default function SupplierLedger({
       const csvData = [
         headers,
         ...purchasesData.map(purchase => [
-          purchase.invoice_number,
+          purchase.purchase_no,
           formatDate(purchase.created_at),
           purchase.grand_total,
           purchase.payment_method,
@@ -381,6 +392,236 @@ export default function SupplierLedger({
       a.download = `${supplier?.name || 'supplier'}_purchases_${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
     }
+  };
+
+  // Due Clearance Functions
+  const handleDueClearanceOpen = () => {
+    const purchasesData = purchases.data || purchases || [];
+    const totalDue = purchasesData.reduce((sum, purchase) => {
+      const purchaseDue = purchase.grand_total - (purchase.paid_amount || 0);
+      return sum + Math.max(0, purchaseDue);
+    }, 0);
+    
+    setDueAmount(totalDue);
+    setAdvanceAmount(supplier?.advance_amount || 0);
+    setPaymentForm({
+      paid_amount: Math.min(totalDue, supplier?.advance_amount > 0 ? supplier.advance_amount : totalDue).toString(),
+      payment_type: "cash",
+      notes: "",
+    });
+    setShowDueClearance(true);
+  };
+
+  const handlePaymentSubmit = (e) => {
+    e.preventDefault();
+    
+    const paidAmount = parseFloat(paymentForm.paid_amount) || 0;
+    if (paidAmount <= 0) {
+      alert("Please enter a valid payment amount");
+      return;
+    }
+    
+    const maxPayable = Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount));
+    if (paidAmount > maxPayable) {
+      alert(`Maximum payable amount is ৳${formatCurrency(maxPayable)}`);
+      return;
+    }
+
+    router.post(route('clearDue.store', supplier.id), {
+      paid_amount: paidAmount,
+      type: 'supplier',
+      payment_type: paymentForm.payment_type,
+      notes: paymentForm.notes,
+    }, {
+      onSuccess: () => {
+        alert(`Payment of ৳${formatCurrency(paidAmount)} processed successfully!`);
+        setPaymentForm({
+          paid_amount: "",
+          payment_type: "cash",
+          notes: "",
+        });
+        setShowDueClearance(false);
+        router.reload();
+      },
+      onError: (errors) => {
+        alert(errors.paid_amount || errors.payment_type || 'An error occurred while processing the payment.');
+      }
+    });
+  };
+
+  const handlePaymentInputChange = (e) => {
+    const { name, value } = e.target;
+    setPaymentForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const calculateRemainingBalance = () => {
+    const paid = parseFloat(paymentForm.paid_amount) || 0;
+    const remainingDue = dueAmount - paid;
+    const newAdvance = advanceAmount - paid;
+    
+    return {
+      remainingDue: Math.max(0, remainingDue),
+      newAdvance: newAdvance
+    };
+  };
+
+  // Due Clearance Modal Component
+  const DueClearanceModal = () => {
+    const { remainingDue, newAdvance } = calculateRemainingBalance();
+    const paidAmount = parseFloat(paymentForm.paid_amount) || 0;
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-orange-100 to-orange-200 flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Clear Due Amount</h3>
+                  <p className="text-sm text-gray-600">Process supplier payment</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDueClearance(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6">
+            {/* Supplier Info */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-10 w-10 rounded-full bg-orange-100 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-orange-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">{supplier?.name}</h4>
+                  <p className="text-sm text-gray-600">{supplier?.phone || 'No phone'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Total Due</p>
+                  <p className="text-xl font-bold text-rose-600">৳{formatCurrency(dueAmount)}</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Current Advance</p>
+                  <p className={`text-xl font-bold ${advanceAmount >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    ৳{formatCurrency(advanceAmount)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Form */}
+            <form onSubmit={handlePaymentSubmit}>
+              {/* Paid Amount */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Paid Amount (৳)
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="number"
+                    name="paid_amount"
+                    value={paymentForm.paid_amount}
+                    onChange={handlePaymentInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
+                             focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                    placeholder="0.00"
+                    min="0"
+                    max={Math.max(0, dueAmount)}
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Maximum: ৳{formatCurrency(Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount)))}
+                </p>
+              </div>
+
+              {/* Payment Type */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Type
+                </label>
+                <select
+                  name="payment_type"
+                  value={paymentForm.payment_type}
+                  onChange={handlePaymentInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                           focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="check">Check</option>
+                  <option value="mobile_banking">Mobile Banking</option>
+                  <option value="advance_adjustment">Advance Adjustment</option>
+                </select>
+              </div>
+
+ 
+
+              {/* Balance Summary */}
+              <div className="mb-6 p-4 bg-orange-50 rounded-lg border border-orange-100">
+                <h4 className="font-semibold text-gray-900 mb-3">Balance Summary</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Payment Amount</span>
+                    <span className="font-medium text-gray-900">৳{formatCurrency(paidAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Remaining Due</span>
+                    <span className={`font-medium ${remainingDue > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      ৳{formatCurrency(remainingDue)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">New Advance Balance</span>
+                    <span className={`font-medium ${newAdvance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      ৳{formatCurrency(newAdvance)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDueClearance(false)}
+                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 
+                           font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-600 to-orange-700 
+                           text-white font-medium rounded-lg hover:from-orange-700 
+                           hover:to-orange-800 transition-all"
+                >
+                  Process Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const hasActiveFilters = filterForm.data.search || filterForm.data.start_date || filterForm.data.end_date;
@@ -409,7 +650,7 @@ export default function SupplierLedger({
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <Link
-                href={route("ledgers.index")} // FIXED: Changed from "ledgers.supplier" to "ledgers.index"
+                href={route("ledgers.index")}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -426,7 +667,7 @@ export default function SupplierLedger({
               <select
                 value={exportFormat}
                 onChange={(e) => setExportFormat(e.target.value)}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="pdf">PDF</option>
                 <option value="csv">CSV</option>
@@ -438,6 +679,14 @@ export default function SupplierLedger({
               >
                 <Download className="h-4 w-4" />
                 Export
+              </button>
+              {/* Due Clearance Button */}
+              <button
+                onClick={handleDueClearanceOpen}
+                className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl hover:from-orange-700 hover:to-orange-800 flex items-center gap-2"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Clear Due
               </button>
               <button
                 onClick={() => window.print()}
@@ -529,7 +778,7 @@ export default function SupplierLedger({
                   onKeyPress={(e) => e.key === 'Enter' && handleFilter()}
                   placeholder="Search invoice number..."
                   className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg 
-                            focus:ring-2 focus:ring-blue-500 focus:border-transparent 
+                            focus:ring-2 focus:ring-orange-500 focus:border-transparent 
                             bg-gray-50 text-gray-700 placeholder-gray-500"
                 />
               </div>
@@ -543,7 +792,7 @@ export default function SupplierLedger({
                   value={filterForm.data.start_date}
                   onChange={(e) => filterForm.setData("start_date", e.target.value)}
                   className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg bg-gray-50
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                           focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-700"
                 />
               </div>
             </div>
@@ -556,7 +805,7 @@ export default function SupplierLedger({
                   value={filterForm.data.end_date}
                   onChange={(e) => filterForm.setData("end_date", e.target.value)}
                   className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg bg-gray-50
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                           focus:ring-2 focus:ring-orange-500 focus:border-transparent text-gray-700"
                 />
               </div>
             </div>
@@ -960,6 +1209,9 @@ export default function SupplierLedger({
           </div>
         </div>
       </div>
+
+      {/* Due Clearance Modal */}
+      {showDueClearance && <DueClearanceModal />}
     </div>
   );
 }

@@ -355,7 +355,7 @@ class LedgerController extends Controller
         // Calculate payment methods distribution
         $paymentMethods = $purchases->groupBy('payment_type')->map->sum('grand_total');
 
-        $balance = $supplier->advance_amount ?? 0; 
+        $balance = $supplier->advance_amount ?? 0;
 
         if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json([
@@ -405,7 +405,7 @@ class LedgerController extends Controller
     }
 
 
-    //clear due store method
+    // Clear Due Store Method
     public function clearDueStore($id, Request $request)
     {
         $request->validate([
@@ -416,11 +416,14 @@ class LedgerController extends Controller
         $paid_amount = $request->paid_amount;
         $paymentMethod = $request->payment_type;
 
+        // ------------------------------------------------------------
+        // CUSTOMER DUE CLEARING
+        // ------------------------------------------------------------
         if ($request->type === 'customer') {
 
             $customer = Customer::findOrFail($id);
 
-            //  Handle Advance Adjustment
+            // 1️⃣ Handle Advance Adjustment (if used)
             if ($paymentMethod === 'advance_adjustment') {
 
                 if ($customer->advance_amount < $paid_amount) {
@@ -429,15 +432,11 @@ class LedgerController extends Controller
                     ]);
                 }
 
-                // Reduce advance balance
                 $customer->advance_amount -= $paid_amount;
                 $customer->save();
             }
 
-
-            // ------------------------------
-            //  Get all due sales
-            // ------------------------------
+            // 2️⃣ Get all due sales
             $sales = $customer->sales()
                 ->where('due_amount', '>', 0)
                 ->orderBy('created_at')
@@ -450,9 +449,7 @@ class LedgerController extends Controller
                 $saleDue = $sale->due_amount;
                 $applied = min($saleDue, $paid_amount);
 
-                // ------------------------------
-                //  Record Payment
-                // ------------------------------
+                // 3️⃣ Record Payment
                 Payment::create([
                     'sale_id'        => $sale->id,
                     'customer_id'    => $customer->id,
@@ -465,9 +462,7 @@ class LedgerController extends Controller
                     'created_by'     => Auth::id(),
                 ]);
 
-                // ------------------------------
-                //  Update Sale
-                // ------------------------------
+                // 4️⃣ Update Sale
                 $sale->paid_amount += $applied;
                 $sale->due_amount -= $applied;
 
@@ -478,29 +473,70 @@ class LedgerController extends Controller
 
                 $sale->save();
 
-                // Reduce remaining paid amount
                 $paid_amount -= $applied;
             }
         }
 
-        // ---------------------------------------
-        // 🟧 SUPPLIER: Simple Payment Creation
-        // ---------------------------------------
+        // ------------------------------------------------------------
+        // SUPPLIER DUE CLEARING
+        // ------------------------------------------------------------
         elseif ($request->type === 'supplier') {
 
             $supplier = Supplier::findOrFail($id);
 
-            $supplier->payments()->create([
-                'amount'         => $paid_amount,
-                'payment_method' => $paymentMethod,
-                'note'           => 'supplier due clearance',
-                'created_by'     => Auth::id(),
-            ]);
+            // 1️⃣ Handle Advance Adjustment
+            if ($paymentMethod === 'advance_adjustment') {
+
+                if ($supplier->advance_amount < $paid_amount) {
+                    return back()->withErrors([
+                        'paid_amount' => 'Paid amount exceeds advance amount.'
+                    ]);
+                }
+
+                $supplier->advance_amount -= $paid_amount;
+                $supplier->save();
+            }
+
+            // 2️⃣ Get all due purchases
+            $purchases = $supplier->purchases()
+                ->where('due_amount', '>', 0)
+                ->orderBy('created_at')
+                ->get();
+
+            foreach ($purchases as $purchase) {
+
+                if ($paid_amount <= 0) break;
+
+                $purchaseDue = $purchase->due_amount;
+                $applied = min($purchaseDue, $paid_amount);
+
+                // 3️⃣ Record Payment
+                Payment::create([
+                    'purchase_id'    => $purchase->id,
+                    'supplier_id'    => $supplier->id,
+                    'amount'         => $applied,
+                    'shadow_amount'  => $applied,
+                    'payment_method' => $paymentMethod ?? 'cash',
+                    'txn_ref'        => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+                    'note'           => $request->notes ?? 'clearing due payment',
+                    'paid_at'        => Carbon::now(),
+                    'created_by'     => Auth::id(),
+                ]);
+
+                // 4️⃣ Update Purchase
+                $purchase->paid_amount += $applied;
+                $purchase->due_amount -= $applied;
+
+                if ($purchase->due_amount <= 0) {
+                    $purchase->due_amount = 0;
+                    $purchase->status = 'completed';
+                }
+
+                $purchase->save();
+                $paid_amount -= $applied;
+            }
         }
 
         return back()->with('success', 'Payment recorded successfully.');
     }
-
-
-
 }
