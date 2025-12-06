@@ -594,9 +594,9 @@ export default function SupplierLedger({
           />
           
           <StatCard
-            title="Average Purchase"
-            value={`৳${formatCurrency(stats?.average_purchase || 0)}`}
-            subtitle="Per transaction average"
+            title="Total Due Amount"
+            value={`৳${formatCurrency(stats?.total_due || 0)}`}
+            subtitle="due amount of purchases"
             icon={TrendingUp}
             color="bg-gradient-to-br from-purple-500/10 to-purple-600/10 text-purple-600"
           />
@@ -764,7 +764,10 @@ export default function SupplierLedger({
                             Status
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                            Amount
+                           Total Amount
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                           Paid Amount
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
                             Actions
@@ -807,6 +810,12 @@ export default function SupplierLedger({
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className="text-sm font-bold text-gray-900">
                                 ৳{formatCurrency(purchase.grand_total)}
+                              </div>
+                            </td>
+
+                            <td className="px-4 py-4 whitespace-nowrap">
+                              <div className="text-sm font-bold text-gray-900">
+                                ৳{formatCurrency(purchase.paid_amount || 0)}
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">

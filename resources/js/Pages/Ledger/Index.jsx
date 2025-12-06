@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
-import { 
+import {
   Search,
   Filter,
   Download,
@@ -129,23 +129,23 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
 
   const handleFilter = () => {
     const queryParams = {};
-    
+
     if (filterForm.data.search.trim()) {
       queryParams.search = filterForm.data.search.trim();
     }
-    
+
     if (filterForm.data.type && filterForm.data.type !== 'all') {
       queryParams.type = filterForm.data.type;
     }
-    
+
     if (filterForm.data.entity_id) {
       queryParams.entity_id = filterForm.data.entity_id;
     }
-    
+
     if (filterForm.data.start_date) {
       queryParams.start_date = filterForm.data.start_date;
     }
-    
+
     if (filterForm.data.end_date) {
       queryParams.end_date = filterForm.data.end_date;
     }
@@ -184,7 +184,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
   const getEntityTypeConfig = (entity) => {
     const isCustomer = 'customer_name' in entity;
     const entityType = isCustomer ? 'customer' : 'supplier';
-    
+
     const configs = {
       customer: {
         label: 'Customer',
@@ -201,7 +201,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
         bg: 'bg-orange-50'
       }
     };
-    
+
     return configs[entityType] || {
       label: 'Unknown',
       icon: Users,
@@ -223,8 +223,8 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
           {percentage !== undefined && (
             <div className="flex items-center gap-2 mt-3">
               <div className="flex-1 bg-gray-200 rounded-full h-2">
-                <div 
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full" 
+                <div
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full"
                   style={{ width: `${Math.min(percentage, 100)}%` }}
                 />
               </div>
@@ -239,14 +239,14 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
     </div>
   );
 
-  const hasActiveFilters = filterForm.data.search || filterForm.data.type !== 'all' || 
-                          filterForm.data.entity_id || filterForm.data.start_date || 
-                          filterForm.data.end_date;
+  const hasActiveFilters = filterForm.data.search || filterForm.data.type !== 'all' ||
+    filterForm.data.entity_id || filterForm.data.start_date ||
+    filterForm.data.end_date;
 
   // Combine all entities for display - handle both array and object with data property
   const allEntities = React.useMemo(() => {
     let entities = [];
-    
+
     if (type === 'customer') {
       entities = Array.isArray(customers) ? customers : (customers?.data || []);
     } else if (type === 'supplier') {
@@ -256,7 +256,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
       const supplierList = Array.isArray(suppliers) ? suppliers : (suppliers?.data || []);
       entities = [...customerList, ...supplierList];
     }
-    
+
     return entities;
   }, [customers, suppliers, type]);
 
@@ -276,7 +276,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Head title="Ledger" />
-      
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -306,7 +306,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
               <Filter className="h-5 w-5" />
               Filter Ledger
             </h3>
-            
+
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
@@ -394,10 +394,10 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
             subtitle="Active accounts"
             icon={type === 'supplier' ? Building2 : type === 'customer' ? Users : UserCheck}
             color={type === 'supplier' ? 'bg-gradient-to-br from-orange-500/10 to-orange-600/10 text-orange-600' :
-                   type === 'customer' ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 text-emerald-600' :
-                   'bg-gradient-to-br from-blue-500/10 to-blue-600/10 text-blue-600'}
+              type === 'customer' ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 text-emerald-600' :
+                'bg-gradient-to-br from-blue-500/10 to-blue-600/10 text-blue-600'}
           />
-          
+
           <StatCard
             title="Total Sales"
             value={`৳${formatCurrency(stats.total_sales_amount)}`}
@@ -406,7 +406,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
             color="bg-gradient-to-br from-emerald-500/10 to-emerald-600/10 text-emerald-600"
             percentage={stats.sales_percentage || 0}
           />
-          
+
           <StatCard
             title="Total Purchases"
             value={`৳${formatCurrency(stats.total_purchases_amount)}`}
@@ -415,7 +415,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
             color="bg-gradient-to-br from-orange-500/10 to-orange-600/10 text-orange-600"
             percentage={stats.purchases_percentage || 0}
           />
-          
+
           <StatCard
             title="Total Transactions"
             value={stats.total_transactions || 0}
@@ -443,7 +443,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                   </div>
                 </div>
                 <div className="h-80">
-                  <Bar 
+                  <Bar
                     data={salesChartData}
                     options={{
                       responsive: true,
@@ -457,7 +457,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                         y: {
                           beginAtZero: true,
                           ticks: {
-                            callback: function(value) {
+                            callback: function (value) {
                               return '৳' + formatCurrency(value);
                             }
                           }
@@ -484,7 +484,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                   </div>
                 </div>
                 <div className="h-80">
-                  <Bar 
+                  <Bar
                     data={purchasesChartData}
                     options={{
                       responsive: true,
@@ -498,7 +498,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                         y: {
                           beginAtZero: true,
                           ticks: {
-                            callback: function(value) {
+                            callback: function (value) {
                               return '৳' + formatCurrency(value);
                             }
                           }
@@ -548,16 +548,29 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {allEntities.map((entity) => {
-                      const isCustomer = 'customer_name' in entity;
+                      const isCustomer = "customer_name" in entity;
                       const entityConfig = getEntityTypeConfig(entity);
                       const transactions = isCustomer ? entity.sales : entity.purchases;
-                      const totalAmount = transactions?.reduce((sum, t) => sum + parseFloat(t.grand_total || 0), 0) || 0;
-                      const totalDueAmount = transactions?.reduce((sum, t) => sum + parseFloat(t.due_amount || 0), 0) || 0;
+
+                      const totalAmount =
+                        transactions?.reduce(
+                          (sum, t) => sum + parseFloat(t.grand_total || 0),
+                          0
+                        ) || 0;
+
+                      const totalDueAmount =
+                        transactions?.reduce(
+                          (sum, t) => sum + parseFloat(t.due_amount || 0),
+                          0
+                        ) || 0;
+
                       const transactionCount = transactions?.length || 0;
                       const EntityIcon = entityConfig.icon;
-                      const advanceAmount = entity?.advance_amount || 0;                      
+                      const advanceAmount = entity?.advance_amount || 0;
+
                       return (
                         <tr key={entity.id} className="hover:bg-gray-50/50 transition-colors">
+                          {/* Name */}
                           <td className="px-8 py-5">
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
@@ -568,17 +581,23 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                                   {isCustomer ? entity.customer_name : entity.name}
                                 </div>
                                 <div className="text-sm text-gray-500">
-                                  {entity.email || 'No email'}
+                                  {entity.email || "No email"}
                                 </div>
                               </div>
                             </div>
                           </td>
+
+                          {/* Type badge */}
                           <td className="px-8 py-5">
-                            <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${entityConfig.color}`}>
+                            <div
+                              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${entityConfig.color}`}
+                            >
                               <EntityIcon className="h-3.5 w-3.5" />
                               {entityConfig.label}
                             </div>
                           </td>
+
+                          {/* Contact */}
                           <td className="px-8 py-5">
                             <div className="space-y-1">
                               {entity.phone && (
@@ -591,52 +610,70 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                               )}
                             </div>
                           </td>
+
+                          {/* Transaction Count */}
                           <td className="px-8 py-5">
                             <div className="text-lg font-bold text-gray-900">
                               {transactionCount}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              transactions
-                            </div>
+                            <div className="text-sm text-gray-500">transactions</div>
                           </td>
+
+                          {/* Total Amount */}
                           <td className="px-8 py-5">
                             <div className="text-lg font-bold text-gray-900">
                               ৳{formatCurrency(totalAmount)}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              total value
-                            </div>
+                            <div className="text-sm text-gray-500">total value</div>
                           </td>
+
+                          {/* Advance */}
                           <td className="px-8 py-5">
-                            <div className={`text-lg font-bold ${(entity.balance || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                              ৳{formatCurrency(advanceAmount || 0)}
+                            <div
+                              className={`text-lg font-bold ${(entity.balance || 0) >= 0
+                                  ? "text-emerald-600"
+                                  : "text-rose-600"
+                                }`}
+                            >
+                              ৳{formatCurrency(advanceAmount)}
                             </div>
                           </td>
-                          <td className="">
+
+                          {/* Due */}
+                          <td className="px-8 py-5">
                             <div className="text-lg font-bold text-gray-900">
-                              ৳{formatCurrency(totalDueAmount || 0)}
+                              ৳{formatCurrency(totalDueAmount)}
                             </div>
-                            <div className="text-sm text-gray-500">
-                              Due Amount
-                            </div>
+                            <div className="text-sm text-gray-500">Due Amount</div>
                           </td>
+
+                          {/* Actions */}
                           <td className="px-8 py-5">
                             <div className="flex items-center gap-2">
+                              {/* Ledger link */}
                               <Link
-                                href={route(isCustomer ? "ledgers.customer" : "ledgers.supplier", { 
-                                  id: entity.id,
-                                  ...(filterForm.data.start_date && { start_date: filterForm.data.start_date }),
-                                  ...(filterForm.data.end_date && { end_date: filterForm.data.end_date })
-                                })}
+                                href={route(
+                                  isCustomer ? "ledgers.customer" : "ledgers.supplier",
+                                  {
+                                    id: entity.id,
+                                    ...(filterForm.data.start_date && {
+                                      start_date: filterForm.data.start_date,
+                                    }),
+                                    ...(filterForm.data.end_date && {
+                                      end_date: filterForm.data.end_date,
+                                    }),
+                                  }
+                                )}
                                 className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                 title="View Ledger"
                               >
                                 <Eye className="h-4 w-4" />
                               </Link>
+
+                              {/* Customer / Supplier Profile */}
                               {isCustomer ? (
                                 <Link
-                                  // href={route("customer.show", { id: entity.id })}
-                                  href = {`/customer/show/${entity.id}`}
+                                  href={`/customer/show/${entity.id}`}
                                   className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                   title="View Customer"
                                 >
@@ -644,19 +681,21 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                                 </Link>
                               ) : (
                                 <Link
-                                  href = {`/supplier/show/${entity.id}`}
+                                  href={`/supplier/show/${entity.id}`}
                                   className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                                   title="View Supplier"
                                 >
                                   <Truck className="h-4 w-4" />
                                 </Link>
                               )}
+
                             </div>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
+
                 </table>
               </div>
 

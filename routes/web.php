@@ -198,7 +198,6 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
     Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
-
     Route::get('/purchase/statistics', [PurchaseController::class, 'getStatistics'])->name('purchase.statistics');
     Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->name('purchase.recent');
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->name('purchase.exportPdf');
@@ -258,6 +257,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/ledgers', [LedgerController::class, 'index'])->name('ledgers.index');
     Route::get('/ledgers/customer/{id?}', [LedgerController::class, 'customerLedger'])->name('ledgers.customer');
     Route::get('/ledgers/supplier/{id?}', [LedgerController::class, 'supplierLedger'])->name('ledgers.supplier');
+    Route::post('/ledgers/clear-due/{id}', [LedgerController::class, 'clearDueStore'])->name('clearDue.store');
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');

@@ -34,7 +34,8 @@ import {
   Shield,
   Clock,
   Check,
-  X
+  X,
+  BanknoteIcon
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -80,6 +81,16 @@ export default function CustomerLedger({
   const [monthlyChartData, setMonthlyChartData] = useState(null);
   const [paymentChartData, setPaymentChartData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Due Clearance Modal States
+  const [showDueClearance, setShowDueClearance] = useState(false);
+  const [dueAmount, setDueAmount] = useState(0);
+  const [advanceAmount, setAdvanceAmount] = useState(0);
+  const [paymentForm, setPaymentForm] = useState({
+    paid_amount: "",
+    payment_type: "cash",
+    notes: "",
+  });
 
   // Initialize filter form
   const filterForm = useForm({
@@ -198,10 +209,10 @@ export default function CustomerLedger({
   };
 
   const formatCurrency = (amount) => {
-    if (!amount) return '0';
+    if (!amount && amount !== 0) return '0';
     return new Intl.NumberFormat('en-BD', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(amount);
   };
 
@@ -354,6 +365,240 @@ export default function CustomerLedger({
     }
   };
 
+    // Due Clearance Functions
+    const handleDueClearanceOpen = () => {
+      const totalDue = sales.reduce((sum, sale) => {
+        const saleDue = sale.grand_total - (sale.paid_amount || 0);
+        return sum + Math.max(0, saleDue);
+      }, 0);
+      
+      setDueAmount(totalDue);
+      setAdvanceAmount(customer?.advance_amount || 0);
+      setPaymentForm({
+        paid_amount: Math.min(totalDue, customer?.advance_amount > 0 ? customer.advance_amount : totalDue).toString(),
+        payment_type: "cash",
+        notes: "",
+      });
+      setShowDueClearance(true);
+    };
+
+
+    const handlePaymentSubmit = (e) => {
+      e.preventDefault();
+      
+      const paidAmount = parseFloat(paymentForm.paid_amount) || 0;
+      if (paidAmount <= 0) {
+        alert("Please enter a valid payment amount");
+        return;
+      }
+      
+      const maxPayable = Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount));
+      if (paidAmount > maxPayable) {
+        alert(`Maximum payable amount is ৳${formatCurrency(maxPayable)}`);
+        return;
+      }
+
+      router.post(route('clearDue.store', customer.id), {
+        paid_amount: paidAmount,
+        type: 'customer',
+        payment_type: paymentForm.payment_type,
+      }, {
+        onSuccess: () => {
+          afterPaymentSuccess(paidAmount);
+          alert(`Payment of ৳${formatCurrency(paidAmount)} processed successfully!`);
+
+        },
+        onError: (errors) => {
+          alert(errors.paid_amount || 'An error occurred while processing the payment.');
+        }
+      });
+  
+      
+      // Reset form and close modal
+      setPaymentForm({
+        paid_amount: "",
+        payment_type: "cash",
+        notes: "",
+      });
+      setShowDueClearance(false);
+      
+      router.reload();
+    };
+
+  const handlePaymentInputChange = (e) => {
+    const { name, value } = e.target;
+    setPaymentForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const calculateRemainingBalance = () => {
+    const paid = parseFloat(paymentForm.paid_amount) || 0;
+    const remainingDue = dueAmount - paid;
+    const newAdvance = advanceAmount - paid;
+    
+    return {
+      remainingDue: Math.max(0, remainingDue),
+      newAdvance: newAdvance
+    };
+  };
+
+  // Due Clearance Modal Component
+  const DueClearanceModal = () => {
+    const { remainingDue, newAdvance } = calculateRemainingBalance();
+    const paidAmount = parseFloat(paymentForm.paid_amount) || 0;
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-200 flex items-center justify-center">
+                  <CheckCircle className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Clear Due Amount</h3>
+                  <p className="text-sm text-gray-600">Process customer payment</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDueClearance(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6">
+            {/* Customer Info */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                  <User className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">{customer?.customer_name}</h4>
+                  <p className="text-sm text-gray-600">{customer?.phone || 'No phone'}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Total Due</p>
+                  <p className="text-xl font-bold text-rose-600">৳{formatCurrency(dueAmount)}</p>
+                </div>
+                <div className="text-center p-3 bg-white rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Current Advance</p>
+                  <p className={`text-xl font-bold ${advanceAmount >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    ৳{formatCurrency(advanceAmount)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payment Form */}
+            <form onSubmit={handlePaymentSubmit}>
+              {/* Paid Amount */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Paid Amount (৳)
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="number"
+                    name="paid_amount"
+                    value={paymentForm.paid_amount}
+                    onChange={handlePaymentInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
+                             focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                    min="0"
+                    max={Math.max(0, dueAmount)}
+                    step="0.01"
+                    required
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Maximum: ৳{formatCurrency(Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount)))}
+                </p>
+              </div>
+
+              {/* Payment Type */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Type
+                </label>
+                <select
+                  name="payment_type"
+                  value={paymentForm.payment_type}
+                  onChange={handlePaymentInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                           focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="check">Check</option>
+                  <option value="mobile_banking">Mobile Banking</option>
+                  <option value="advance_adjustment">Advance Adjustment</option>
+                </select>
+              </div>
+
+
+              {/* Balance Summary */}
+              <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <h4 className="font-semibold text-gray-900 mb-3">Balance Summary</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Payment Amount</span>
+                    <span className="font-medium text-gray-900">৳{formatCurrency(paidAmount)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Remaining Due</span>
+                    <span className={`font-medium ${remainingDue > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      ৳{formatCurrency(remainingDue)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">New Advance Balance</span>
+                    <span className={`font-medium ${newAdvance >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                      ৳{formatCurrency(newAdvance)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowDueClearance(false)}
+                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 
+                           font-medium rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 
+                           text-white font-medium rounded-lg hover:from-emerald-700 
+                           hover:to-emerald-800 transition-all"
+                >
+                  Process Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const hasActiveFilters = filterForm.data.search || filterForm.data.start_date || filterForm.data.end_date;
 
   // Show loading state
@@ -378,7 +623,7 @@ export default function CustomerLedger({
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
               <Link
-                href={route("ledgers.index")} // FIXED: Changed from "ledgers.customer" to "ledgers.index"
+                href={route("ledgers.index")}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ChevronLeft className="h-5 w-5" />
@@ -408,13 +653,14 @@ export default function CustomerLedger({
                 <Download className="h-4 w-4" />
                 Export
               </button>
-              <button
-                onClick={() => window.print()}
-                className="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl border border-gray-300"
-                title="Print"
+              {/* Due Clearance Button */}
+              <a
+                onClick={handleDueClearanceOpen}
+                className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl hover:from-emerald-700 hover:to-emerald-800 flex items-center gap-2"
               >
-                <Printer className="h-4 w-4" />
-              </button>
+                <CheckCircle className="h-4 w-4" />
+                Clear Due
+              </a>
             </div>
           </div>
 
@@ -557,9 +803,9 @@ export default function CustomerLedger({
           />
           
           <StatCard
-            title="Average Sale"
-            value={`৳${formatCurrency(stats?.average_sale || 0)}`}
-            subtitle="Per transaction average"
+            title="Total Due Amount"
+            value={`৳${formatCurrency(stats?.total_due || 0)}`}
+            subtitle="due amount of sales"
             icon={TrendingUp}
             color="bg-gradient-to-br from-purple-500/10 to-purple-600/10 text-purple-600"
           />
@@ -726,7 +972,10 @@ export default function CustomerLedger({
                           Status
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
-                          Amount
+                          Total Amount
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
+                         Paid Amount
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-900 uppercase tracking-wider">
                           Actions
@@ -772,6 +1021,11 @@ export default function CustomerLedger({
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
+                            <div className="text-sm font-bold text-gray-900">
+                              ৳{formatCurrency(sale.paid_amount)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <Link
                                 href={route("sales.show", { sale: sale.id })}
@@ -780,13 +1034,6 @@ export default function CustomerLedger({
                               >
                                 <Eye className="h-4 w-4" />
                               </Link>
-                              {/* <button
-                                onClick={() => setSelectedSale(sale)}
-                                className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                                title="More Options"
-                              >
-                                <MoreVertical className="h-4 w-4" />
-                              </button> */}
                             </div>
                           </td>
                         </tr>
@@ -902,6 +1149,9 @@ export default function CustomerLedger({
           </div>
         </div>
       </div>
+
+      {/* Due Clearance Modal */}
+      {showDueClearance && <DueClearanceModal />}
     </div>
   );
 }
