@@ -23,10 +23,10 @@ class SupplierController extends Controller
                     ->orWhere('phone', 'like', "%{$search}%");
             });
         })
-        ->withCount('purchases')
-        ->latest()
-        ->paginate(10)
-        ->withQueryString();
+            ->withCount('purchases')
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Supplier/Index', [
             'suppliers' => $suppliers,
@@ -55,7 +55,7 @@ class SupplierController extends Controller
         $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
         $validated['due_amount'] = $validated['due_amount'] ?? 0;
         $validated['is_active'] = $validated['is_active'] ?? true;
-        $validated['created_by'] = Auth::id(); 
+        $validated['created_by'] = Auth::id();
 
 
         Supplier::create($validated);
@@ -106,7 +106,7 @@ class SupplierController extends Controller
     public function destroy($id)
     {
         $supplier = Supplier::findOrFail($id);
-        
+
         if ($supplier->purchases()->exists()) {
             return redirect()->back()->with('error', 'Cannot delete supplier with existing purchases!');
         }
@@ -114,5 +114,45 @@ class SupplierController extends Controller
         $supplier->delete();
 
         return redirect()->back()->with('success', 'Supplier contact deleted successfully!');
+    }
+
+
+    public function show($id)
+    {
+        $supplier = Supplier::with([
+            'purchases' => function ($query) {
+                $query->with([
+                    'items.product',
+                    'creator' => function ($q) {
+                        $q->select('id', 'name', 'email');
+                    }
+                ])->latest();
+            },
+            'creator' => function ($query) {
+                $query->select('id', 'name');
+            }
+        ])->findOrFail($id);
+
+        $totalPurchases = $supplier->purchases->count();
+        $totalAmount = $supplier->purchases->sum('grand_total');
+        $totalPaid = $supplier->purchases->sum('paid_amount');
+        $totalDue = $supplier->purchases->sum('due_amount');
+
+        return Inertia::render('Supplier/Show', [
+            'supplier' => $supplier,
+            'stats' => [
+                'total_purchases' => $totalPurchases,
+                'total_amount' => $totalAmount,
+                'total_paid' => $totalPaid,
+                'total_due' => $totalDue,
+                'advance_amount' => $supplier->advance_amount,
+                'current_due' => $supplier->due_amount,
+                'payment_ratio' => $totalAmount > 0 ? ($totalPaid / $totalAmount) * 100 : 0,
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Suppliers', 'link' => route('supplier.view')],
+                ['name' => $supplier->name, 'link' => '#'],
+            ]
+        ]);
     }
 }

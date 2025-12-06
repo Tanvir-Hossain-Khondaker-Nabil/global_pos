@@ -31,11 +31,16 @@ class Supplier extends Model
         static::addGlobalScope(new UserScope);
     }
 
+    //relationship to creator
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 
     //relationship to purchases
     public function purchases()
     {
-        return $this->hasMany(Purchase::class, 'supplier_id');
+        return $this->hasMany(Purchase::class, 'supplier_id')->with('warehouse', 'creator','items');
     }
 
     //active scrope 

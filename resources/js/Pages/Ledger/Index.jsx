@@ -287,7 +287,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                 Overview of customers, suppliers, sales, and purchases
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            {/* <div className="flex items-center gap-3">
               <button
                 onClick={() => window.print()}
                 className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 flex items-center gap-2"
@@ -295,7 +295,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                 <Download className="h-4 w-4" />
                 Export
               </button>
-            </div>
+            </div> */}
           </div>
         </div>
 
@@ -319,7 +319,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            {/* <div className="md:col-span-4">
+            <div className="md:col-span-4">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
@@ -333,7 +333,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                             bg-gray-50 text-gray-700 placeholder-gray-500"
                 />
               </div>
-            </div> */}
+            </div>
 
             <div className="md:col-span-3">
               <select
@@ -348,8 +348,21 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
               </select>
             </div>
 
-            <div className="md:col-span-4 flex gap-2">
-              {/* <div className="flex-1">
+            <div className="md:col-span-1">
+              <button
+                onClick={handleFilter}
+                className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white 
+                          font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 
+                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                          transition-all duration-200"
+              >
+                Apply
+              </button>
+            </div>
+
+
+            {/* <div className="md:col-span-4 flex gap-2">
+              <div className="flex-1">
                 <input
                   type="date"
                   value={filterForm.data.start_date}
@@ -366,21 +379,10 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                   className="w-full h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
                            focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
                 />
-              </div> */}
-            </div>
-            <br /><br />
+              </div>
+            </div> */}
 
-            <div className="md:col-span-1">
-              <button
-                onClick={handleFilter}
-                className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white 
-                          font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 
-                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                          transition-all duration-200"
-              >
-                Apply
-              </button>
-            </div>
+
           </div>
         </div>
 
@@ -633,7 +635,8 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                               </Link>
                               {isCustomer ? (
                                 <Link
-                                  // href={route("customers.show", { customer: entity.id })}
+                                  // href={route("customer.show", { id: entity.id })}
+                                  href = {`/customer/show/${entity.id}`}
                                   className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                   title="View Customer"
                                 >
@@ -641,7 +644,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                                 </Link>
                               ) : (
                                 <Link
-                                  // href={route("suppliers.show", { supplier: entity.id })}
+                                  href = {`/supplier/show/${entity.id}`}
                                   className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                                   title="View Supplier"
                                 >

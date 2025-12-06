@@ -29,9 +29,8 @@ class LedgerController extends Controller
             $customerQuery->where(function ($q) use ($search) {
                 $q->where('customer_name', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
                     ->orWhereHas('sales', function ($query) use ($search) {
-                        $query->where('invoice_number', 'like', "%{$search}%");
+                        $query->where('invoice_no', 'like', "%{$search}%");
                     });
             });
 
@@ -40,7 +39,7 @@ class LedgerController extends Controller
                     ->orWhere('phone', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhereHas('purchases', function ($query) use ($search) {
-                        $query->where('invoice_number', 'like', "%{$search}%");
+                        $query->where('purchase_no', 'like', "%{$search}%");
                     });
             });
         }
@@ -86,7 +85,7 @@ class LedgerController extends Controller
                 ]);
             }
 
-            return Inertia::render('Ledger/Customer', [
+            return Inertia::render('Ledger/Index', [
                 'type' => $type,
                 'customers' => $customers,
                 'filters' => [
@@ -116,7 +115,7 @@ class LedgerController extends Controller
                 ]);
             }
 
-            return Inertia::render('Ledger/Supplier', [
+            return Inertia::render('Ledger/Index', [
                 'type' => $type,
                 'suppliers' => $suppliers,
                 'filters' => [
@@ -240,7 +239,7 @@ class LedgerController extends Controller
             $salesQuery->whereDate('created_at', '<=', $endDate);
         }
         if ($search) {
-            $salesQuery->where('invoice_number', 'like', "%{$search}%");
+            $salesQuery->where('invoice_no', 'like', "%{$search}%");
         }
 
         $sales = $salesQuery->get();
@@ -258,9 +257,9 @@ class LedgerController extends Controller
         });
 
         // Calculate payment methods distribution
-        $paymentMethods = $sales->groupBy('payment_method')->map->sum('grand_total');
+        $paymentMethods = $sales->groupBy('payment_type')->map->sum('grand_total');
 
-        $balance = $customer->balance ?? 0; 
+        $balance = $customer->advance_amount ?? 0;
 
         if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json([
@@ -324,7 +323,7 @@ class LedgerController extends Controller
             $purchasesQuery->whereDate('created_at', '<=', $endDate);
         }
         if ($search) {
-            $purchasesQuery->where('invoice_number', 'like', "%{$search}%");
+            $purchasesQuery->where('purchase_no', 'like', "%{$search}%");
         }
 
         $purchases = $purchasesQuery->get();
@@ -342,7 +341,7 @@ class LedgerController extends Controller
         });
 
         // Calculate payment methods distribution
-        $paymentMethods = $purchases->groupBy('payment_method')->map->sum('grand_total');
+        $paymentMethods = $purchases->groupBy('payment_type')->map->sum('grand_total');
 
         $balance = $supplier->balance ?? 0; 
 

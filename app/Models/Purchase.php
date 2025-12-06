@@ -80,8 +80,15 @@ class Purchase extends Model
     // Purchase model
     public function items()
     {
-        return $this->hasMany(PurchaseItem::class);
+        return $this->hasMany(PurchaseItem::class)->with('product', 'variant');
     }
+
+    //stock
+    public function stock()
+    {
+        return $this->hasMany(Stock::class);
+    }
+
     public function product()
     {
         return $this->belongsTo(Product::class);

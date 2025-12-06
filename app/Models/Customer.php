@@ -42,7 +42,7 @@ class Customer extends Model
     //relations ship to sales
     public function sales()
     {
-        return $this->hasMany(Sale::class, 'customer_id');
+        return $this->hasMany(Sale::class, 'customer_id')->with(['creator','items','payments']);
     }
 
     //user relation

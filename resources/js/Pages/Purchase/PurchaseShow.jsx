@@ -45,7 +45,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
     const getPurchaseAmount = (field) => {
         if (isShadowUser) {
             switch (field) {
-                case 'total_amount': return purchase.shadow_total_amount;
+                case 'grand_total': return purchase.shadow_total_amount;
                 case 'paid_amount': return purchase.shadow_paid_amount;
                 case 'due_amount': return purchase.shadow_due_amount;
                 default: return purchase[field];
@@ -268,7 +268,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                 <div className="flex justify-between items-center">
                                     <span>{t('purchase.total_amount', 'Total Amount')}:</span>
                                     <span className={`font-bold text-lg ${isShadowUser ? 'text-warning' : 'text-primary'}`}>
-                                        {formatCurrency(getPurchaseAmount('total_amount'))}
+                                        {formatCurrency(getPurchaseAmount('grand_total'))}
                                     </span>
                                 </div>
                                 
@@ -374,7 +374,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                     <th className="text-right bg-opacity-20"></th>
                                     <th className="text-right bg-opacity-20"></th>
                                     <th className="text-right bg-opacity-20 font-bold">
-                                        {formatCurrency(getPurchaseAmount('total_amount'))}
+                                        {formatCurrency(getPurchaseAmount('grand_total'))}
                                     </th>
                                 </tr>
                             </tfoot>

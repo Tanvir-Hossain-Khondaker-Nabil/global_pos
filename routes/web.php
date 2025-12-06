@@ -73,6 +73,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/supplier/update/{id}', [SupplierController::class, 'update'])->name('supplier.update');
     Route::get('/supplier/edit/{id}', [SupplierController::class, 'edit'])->name('supplier.edit');
     Route::delete('/supplier/del/{id}', [SupplierController::class, 'destroy'])->name('supplier.del'); // Changed to DELETE
+    Route::get('/supplier/show/{id}', [SupplierController::class, 'show'])->name('supplier.show');
 
     // products
     Route::controller(ProductController::class)->prefix('/product')->group(function () {
@@ -257,8 +258,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/ledgers', [LedgerController::class, 'index'])->name('ledgers.index');
     Route::get('/ledgers/customer/{id?}', [LedgerController::class, 'customerLedger'])->name('ledgers.customer');
     Route::get('/ledgers/supplier/{id?}', [LedgerController::class, 'supplierLedger'])->name('ledgers.supplier');
-    Route::get('/ledgers/customer/{id}', [LedgerController::class, 'individualCustomerLedger'])->name('ledgers.customer.individual');
-    Route::get('/ledgers/supplier/{id}', [LedgerController::class   , 'individualSupplierLedger'])->name('ledgers.supplier.individual');
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');

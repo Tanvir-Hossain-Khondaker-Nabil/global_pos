@@ -13,17 +13,17 @@ class CustomerController extends Controller
     public function index(Request $request)
     {
         $query = Customer::query()
-            ->with(['sales' => function($query) {
+            ->with(['sales' => function ($query) {
                 $query->select('id', 'customer_id', 'due_amount');
             }])
             ->latest();
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('customer_name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
             });
         }
 
@@ -74,19 +74,19 @@ class CustomerController extends Controller
         }
     }
 
- 
+
 
     // delete customer
     public function del($id)
     {
         try {
             $customer = Customer::findOrFail($id);
-            
+
             // Check if customer has any sales before deleting
             if ($customer->sales()->exists()) {
                 return redirect()->back()->with('error', 'Cannot delete customer with existing sales records.');
             }
-            
+
             $customer->delete();
             return redirect()->back()->with('success', "Customer deleted successfully");
         } catch (\Exception $th) {
@@ -99,7 +99,7 @@ class CustomerController extends Controller
     {
         try {
             $customer = Customer::findOrFail($id);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -135,7 +135,7 @@ class CustomerController extends Controller
 
         try {
             $customer = Customer::findOrFail($id);
-            
+
             $customer->update([
                 'customer_name' => $request->customer_name,
                 'phone' => $request->phone,
@@ -155,7 +155,41 @@ class CustomerController extends Controller
     // show
     public function show($id)
     {
-        // You can implement a detailed view if needed
-        return redirect()->route('customer.index');
+        $customer = Customer::with([
+            'sales' => function ($query) {
+                $query->with([
+                    'items.product',
+                    'payments',
+                    'creator' => function ($q) {
+                        $q->select('id', 'name', 'email');
+                    }
+                ])->latest();
+            },
+            'creator' => function ($query) {
+                $query->select('id', 'name');
+            }
+        ])->findOrFail($id);
+
+        // Calculate summary statistics
+        $totalSales = $customer->sales->count();
+        $totalAmount = $customer->sales->sum('grand_total');
+        $totalPaid = $customer->sales->sum('paid_amount');
+        $totalDue = $customer->sales->sum('due_amount');
+
+        return Inertia::render('Customer/Show', [
+            'customer' => $customer,
+            'stats' => [
+                'total_sales' => $totalSales,
+                'total_amount' => $totalAmount,
+                'total_paid' => $totalPaid,
+                'total_due' => $totalDue,
+                'advance_amount' => $customer->advance_amount,
+                'current_due' => $customer->due_amount,
+            ],
+            'breadcrumbs' => [
+                ['name' => 'Customers', 'link' => route('customer.index')],
+                ['name' => $customer->customer_name, 'link' => '#'],
+            ]
+        ]);
     }
 }

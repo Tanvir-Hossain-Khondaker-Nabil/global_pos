@@ -256,8 +256,8 @@ export default function SupplierLedger({
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      'paid': {
-        label: 'Paid',
+      'completed': {
+        label: 'Completed',
         color: 'bg-emerald-100 text-emerald-800 border-emerald-200',
         icon: CheckCircle
       },
@@ -266,26 +266,11 @@ export default function SupplierLedger({
         color: 'bg-amber-100 text-amber-800 border-amber-200',
         icon: Clock
       },
-      'overdue': {
-        label: 'Overdue',
-        color: 'bg-rose-100 text-rose-800 border-rose-200',
-        icon: AlertCircle
-      },
       'cancelled': {
         label: 'Cancelled',
         color: 'bg-gray-100 text-gray-800 border-gray-200',
         icon: XCircle
       },
-      'received': {
-        label: 'Received',
-        color: 'bg-blue-100 text-blue-800 border-blue-200',
-        icon: CheckCircle
-      },
-      'partial': {
-        label: 'Partial',
-        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        icon: AlertCircle
-      }
     };
 
     const config = statusConfig[status?.toLowerCase()] || statusConfig.pending;
@@ -791,7 +776,7 @@ export default function SupplierLedger({
                           <tr key={purchase.id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">
-                                {purchase.invoice_number || 'N/A'}
+                                {purchase.purchase_no || purchase.id}
                               </div>
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
@@ -814,7 +799,7 @@ export default function SupplierLedger({
                               )}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
-                              {getPaymentMethodBadge(purchase.payment_method)}
+                              {getPaymentMethodBadge(purchase.payment_type)}
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
                               {getStatusBadge(purchase.status)}
@@ -826,20 +811,13 @@ export default function SupplierLedger({
                             </td>
                             <td className="px-4 py-4 whitespace-nowrap">
                               <div className="flex items-center gap-2">
-                                {/* <Link
-                                  href={route("purchases.show", { purchase: purchase.id })}
+                                <Link
+                                  href={`/purchase/${purchase.id}`}
                                   className="p-1.5 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-md transition-colors"
                                   title="View Details"
                                 >
                                   <Eye className="h-4 w-4" />
-                                </Link> */}
-                                <button
-                                  onClick={() => setSelectedPurchase(purchase)}
-                                  className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
-                                  title="More Options"
-                                >
-                                  <MoreVertical className="h-4 w-4" />
-                                </button>
+                                </Link>
                               </div>
                             </td>
                           </tr>

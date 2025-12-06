@@ -309,7 +309,7 @@ class PurchaseController extends Controller
     private function transformToShadowData($purchase)
     {
         // Replace real amounts with shadow amounts for main purchase
-        $purchase->total_amount = $purchase->shadow_total_amount;
+        $purchase->grand_total = $purchase->shadow_total_amount;
         $purchase->paid_amount = $purchase->shadow_paid_amount;
         $purchase->due_amount = $purchase->shadow_due_amount;
 

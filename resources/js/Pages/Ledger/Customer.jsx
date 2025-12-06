@@ -738,7 +738,7 @@ export default function CustomerLedger({
                         <tr key={sale.id} className="hover:bg-gray-50/50 transition-colors">
                           <td className="px-4 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {sale.invoice_number || 'N/A'}
+                              {sale.invoice_no || sale.id}
                             </div>
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
@@ -755,13 +755,13 @@ export default function CustomerLedger({
                             </div>
                             {sale.items?.[0] && (
                               <div className="text-xs text-gray-500 truncate max-w-xs">
-                                {sale.items[0].product_name}
+                                {sale.items[0].product?.name } ({sale.items[0].variant?.sku})
                                 {sale.items?.length > 1 && ` +${sale.items.length - 1} more`}
                               </div>
                             )}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
-                            {getPaymentMethodBadge(sale.payment_method)}
+                            {getPaymentMethodBadge(sale.payment_type)}
                           </td>
                           <td className="px-4 py-4 whitespace-nowrap">
                             {getStatusBadge(sale.status)}
@@ -780,13 +780,13 @@ export default function CustomerLedger({
                               >
                                 <Eye className="h-4 w-4" />
                               </Link>
-                              <button
+                              {/* <button
                                 onClick={() => setSelectedSale(sale)}
                                 className="p-1.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
                                 title="More Options"
                               >
                                 <MoreVertical className="h-4 w-4" />
-                              </button>
+                              </button> */}
                             </div>
                           </td>
                         </tr>
