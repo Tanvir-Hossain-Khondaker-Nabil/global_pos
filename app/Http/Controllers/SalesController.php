@@ -95,7 +95,7 @@ class SalesController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $customers = Customer::all();
+        $customers = Customer::active()->get();
         $stock = Stock::with(['warehouse','product','variant'])->get();
 
         $isShadowUser? $render = 'sales/CreateShadow' : $render = 'sales/Create';
@@ -134,6 +134,7 @@ class SalesController extends Controller
      */
     public function store(Request $request)
     {
+
         $type = $request->input('type', 'pos');
 
         if ($type == 'inventory') {
@@ -143,7 +144,7 @@ class SalesController extends Controller
         } else {
             $rules = [
                 'customer_name'  => 'nullable|string|max:255',
-                'customer_phone' => 'nullable|string|max:20',
+                'phone' => 'nullable|string|max:20',
             ];
         }
 
@@ -157,6 +158,30 @@ class SalesController extends Controller
 
 
         DB::beginTransaction();
+
+        $adjust_amount =  $request->adjust_from_advance ;
+        $advance_adjustment = $request->advance_adjustment ;
+        $paid_amount = $request->paid_amount ?? 0;
+
+        if($adjust_amount == true){
+            
+            if($paid_amount > $advance_adjustment){
+                return back()->withErrors(['error' => 'If you want to adjust from advance, the advance adjustment cannot be greater than available advance amount.']);
+            }
+
+            $payment_type = 'advance_adjustment';
+            $customer = Customer::find($request->customer_id);
+
+            $customer->update([
+                'advance_amount' => $customer->advance_amount - $paid_amount,
+            ]);
+
+            // if($customer->advance_amount < $advance_adjustment){
+            //     return back()->withErrors(['error' => 'Customer does not have enough advance amount for this adjustment.']);
+            // }
+        }
+
+
         $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
 
 
@@ -164,7 +189,7 @@ class SalesController extends Controller
             $customerId = $request->customer_id;
             $status = 'pending' ;
         } else {
-            $existingCustomer = Customer::where('phone', $request->customer_phone)
+            $existingCustomer = Customer::where('phone', $request->phone)
                                         ->orWhere('customer_name', $request->customer_name)
                                         ->first();
             $status = 'paid' ;
@@ -174,7 +199,10 @@ class SalesController extends Controller
             } else {
             $customerId = Customer::create([
                 'customer_name' => $request->customer_name ?? 'Walk-in Customer',
-                'phone'         => $request->customer_phone ?? null,
+                'phone'         => $request->phone ?? null,
+                'advance_amount' => 0,
+                'due_amount' => 0,
+                'is_active' => 1,
             ])->id;
             }
         }
@@ -196,7 +224,7 @@ class SalesController extends Controller
                 'shadow_grand_total' => 0,
                 'shadow_paid_amount' =>  0,
                 'shadow_due_amount'  => 0,
-                'payment_type'=> 'cash',
+                'payment_type'=> $payment_type ?? 'cash',
                 'status'      => $status ?? 'pending',
                 'type'        => $type ?? 'pos',
                 'created_by' => Auth::id(),
@@ -264,11 +292,13 @@ class SalesController extends Controller
                 $payment->sale_id = $sale->id;
                 $payment->amount = $paidAmount;
                 $payment->shadow_amount = $shadowPaidAmount;
-                $payment->payment_method = $request->payment_method ?? 'cash';
+                $payment->payment_method = $request->payment_method 
+                                ?? ($payment_type ?? 'cash');
                 $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
                 $payment->note = $request->notes ?? null;
                 $payment->customer_id =  $customerId ?? null;
                 $payment->paid_at = Carbon::now();
+                $payment->created_by = Auth::id();
                 $payment->save();
             }
 

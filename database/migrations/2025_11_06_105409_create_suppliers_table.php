@@ -22,6 +22,8 @@ return new class extends Migration {
             $table->string('company')->nullable();
             $table->text('address')->nullable();
             $table->string('website')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
     }

@@ -32,7 +32,7 @@ return new class extends Migration
             $table->decimal('shadow_due_amount', 10,2)->default(0);
             $table->string('shadow_type')->default('general');
 
-            $table->enum('payment_type', ['cash','card','bkash','bank'])->default('cash');
+            $table->enum('payment_type', ['cash','card','bikash','bank','advance_adjustment'])->default('cash');
             $table->enum('type', ['pos','inventory'])->default('pos')->nullable();
             $table->enum('status', ['pending','paid','partial','cancelled'])->default('pending');
 

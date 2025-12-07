@@ -22,6 +22,8 @@ use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\LadgerController;
+use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\SubscriptionController;
 
@@ -50,9 +52,11 @@ Route::middleware('auth')->group(function () {
     // customer manage
     Route::controller(CustomerController::class)->prefix('customer')->group(function () {
         Route::get('/', 'index')->name('customer.index');
+        Route::get('/show/{id}/', 'show')->name('customer.show');
         Route::post('/add', 'store')->name('customer.store');
         Route::get('/delete/{id}', 'del')->name('customer.del');
         Route::get('/edit/{id}', 'edit')->name('customer.edit');
+        Route::put('/update/{id}', 'update')->name('customer.update');
     });
 
     // sector
@@ -69,6 +73,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/supplier/update/{id}', [SupplierController::class, 'update'])->name('supplier.update');
     Route::get('/supplier/edit/{id}', [SupplierController::class, 'edit'])->name('supplier.edit');
     Route::delete('/supplier/del/{id}', [SupplierController::class, 'destroy'])->name('supplier.del'); // Changed to DELETE
+    Route::get('/supplier/show/{id}', [SupplierController::class, 'show'])->name('supplier.show');
 
     // products
     Route::controller(ProductController::class)->prefix('/product')->group(function () {
@@ -193,7 +198,6 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->name('purchase.updatePayment');
     Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->name('purchase.approve');
-
     Route::get('/purchase/statistics', [PurchaseController::class, 'getStatistics'])->name('purchase.statistics');
     Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->name('purchase.recent');
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->name('purchase.exportPdf');
@@ -248,6 +252,14 @@ Route::middleware('auth')->group(function () {
         'update' => 'subscriptions.update',
         'destroy' => 'subscriptions.destroy',
     ]);
+
+    //ledger routes
+    Route::get('/ledgers', [LedgerController::class, 'index'])->name('ledgers.index');
+    Route::get('/ledgers/customer/{id?}', [LedgerController::class, 'customerLedger'])->name('ledgers.customer');
+    Route::get('/ledgers/supplier/{id?}', [LedgerController::class, 'supplierLedger'])->name('ledgers.supplier');
+    Route::post('/ledgers/clear-due/{id}', [LedgerController::class, 'clearDueStore'])->name('clearDue.store');
+    Route::post('/ledgers/advance-payment/{id}', [LedgerController::class, 'advancePaymentStore'])->name('advancePayment.store');
+
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');

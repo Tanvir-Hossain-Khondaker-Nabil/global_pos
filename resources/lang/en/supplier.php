@@ -22,7 +22,16 @@ return [
     
     // Form Fields
     'supply_name' => 'Supply Name',
+    'financial_info' => 'Financial Information',
+    'status' => 'Status',
+    'purchases' => 'Total Purchase',
+    'active' => 'Active',
+    'inactive' => 'Inactive',
     'supply_name_placeholder' => 'Enter supplier name',
+    'advance_amount' => 'Advance Amount',
+    'advance_amount_placeholder' => '0.00',
+    'due_amount' => 'Due Amount',
+    'due_amount_placeholder' => '0.00',
     'contact_person' => 'Contact Person',
     'contact_person_placeholder' => 'Enter contact person name',
     'email' => 'Email',

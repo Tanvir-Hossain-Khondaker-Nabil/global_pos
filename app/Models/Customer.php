@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\UserScope;
+
 
 class Customer extends Model
 {
@@ -11,11 +13,17 @@ class Customer extends Model
         'customer_name',
         'address',
         'phone',
-        'email',
         'is_active',
         'advance_amount',
         'due_amount',
+        'created_by',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
+
 
     public function scopeFilter($query, array $filters)
     {
@@ -28,5 +36,24 @@ class Customer extends Model
                     ->orWhere('phone', 'like', "%{$search}%");
             });
         }
+    }
+
+
+    //relations ship to sales
+    public function sales()
+    {
+        return $this->hasMany(Sale::class, 'customer_id')->with(['creator','items','payments']);
+    }
+
+    //user relation
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    //active scrope 
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', 1);
     }
 }

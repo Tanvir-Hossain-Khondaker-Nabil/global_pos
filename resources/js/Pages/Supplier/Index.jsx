@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, Globe } from "lucide-react";
+import { Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, Globe, DollarSign, CheckCircle, XCircle } from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -48,6 +48,9 @@ export default function Index({ suppliers, filters }) {
         company: "",
         address: "",
         website: "",
+        advance_amount: 0,
+        due_amount: 0,
+        is_active: true,
     });
 
     const handleSupplyCreateForm = (e) => {
@@ -87,6 +90,9 @@ export default function Index({ suppliers, filters }) {
                 company: data.company || "",
                 address: data.address || "",
                 website: data.website || "",
+                advance_amount: parseFloat(data.advance_amount) || 0,
+                due_amount: parseFloat(data.due_amount) || 0,
+                is_active: Boolean(data.is_active),
             });
             setModel(true);
         }).finally(() => {
@@ -100,9 +106,29 @@ export default function Index({ suppliers, filters }) {
             router.delete(route("supplier.del", { id }), {
                 preserveScroll: true,
                 onSuccess: () => {
-                    // Success message will come from backend
+                    // Optionally show a success message or perform additional actions
+                    alert(t('supplier.deleted_successfully', 'Supplier contact deleted successfully!'));
                 },
             });
+        }
+    };
+
+    // Format currency based on locale
+    const formatCurrency = (amount) => {
+        if (locale === 'bn') {
+            // Bengali locale formatting
+            return new Intl.NumberFormat('bn-BD', {
+                style: 'currency',
+                currency: 'BDT',
+                minimumFractionDigits: 2
+            }).format(amount);
+        } else {
+            // English locale formatting
+            return new Intl.NumberFormat('en-BD', {
+                style: 'currency',
+                currency: 'BDT',
+                minimumFractionDigits: 2
+            }).format(amount);
         }
     };
 
@@ -115,10 +141,8 @@ export default function Index({ suppliers, filters }) {
         };
         
         if (locale === 'bn') {
-            // Bengali locale formatting
             return new Date(dateString).toLocaleDateString('bn-BD', options);
         } else {
-            // English locale formatting
             return new Date(dateString).toLocaleDateString('en-US', options);
         }
     };
@@ -156,14 +180,15 @@ export default function Index({ suppliers, filters }) {
                                 <th className="w-12">#</th>
                                 <th>{t('supplier.contact_info', 'Contact Info')}</th>
                                 <th>{t('supplier.company', 'Company')}</th>
-                                <th>{t('supplier.description', 'Description')}</th>
+                                <th>{t('supplier.financial_info', 'Financial Info')}</th>
+                                <th>{t('supplier.status', 'Status')}</th>
                                 <th>{t('supplier.added_on', 'Added On')}</th>
                                 <th className="w-32">{t('supplier.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
                             {suppliers.data.map((supplier, index) => (
-                                <tr key={supplier.id}>
+                                <tr key={supplier.id} className={!supplier.is_active ? 'opacity-70' : ''}>
                                     <th>{index + 1}</th>
                                     <td>
                                         <div className="space-y-1">
@@ -205,16 +230,43 @@ export default function Index({ suppliers, filters }) {
                                             )}
                                         </div>
                                     </td>
-                                    <td className="max-w-xs">
-                                        {supplier.description ? (
-                                            <div className="text-sm text-gray-600 line-clamp-3">
-                                                {supplier.description}
+                                    <td>
+                                        <div className="space-y-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm">
+                                                    {t('supplier.advance_amount', 'Advance')}: 
+                                                    <span className="font-semibold ml-1 text-green-600">
+                                                        {formatCurrency(supplier.advance_amount)}
+                                                    </span>
+                                                </span>
                                             </div>
-                                        ) : (
-                                            <span className="text-gray-400 text-sm">
-                                                {t('supplier.no_description', 'No description')}
-                                            </span>
-                                        )}
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm">
+                                                    {t('supplier.due_amount', 'Due')}: 
+                                                    <span className="font-semibold ml-1 text-red-600">
+                                                        {formatCurrency(supplier.due_amount)}
+                                                    </span>
+                                                </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-2">
+                                                {supplier.purchases_count || 0} {t('supplier.purchases', 'purchases')}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs ${supplier.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                            {supplier.is_active ? (
+                                                <>
+                                                    <CheckCircle size={10} />
+                                                    <span>{t('supplier.active', 'Active')}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <XCircle size={10} />
+                                                    <span>{t('supplier.inactive', 'Inactive')}</span>
+                                                </>
+                                            )}
+                                        </div>
                                     </td>
                                     <td>
                                         <div className="text-sm text-gray-600">
@@ -285,11 +337,11 @@ export default function Index({ suppliers, filters }) {
 
             {/* Add/Edit Modal */}
             <dialog className={`modal ${model ? 'modal-open' : ''}`}>
-                <div className="modal-box max-w-2xl">
+                <div className="modal-box max-w-3xl">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
                         <h1 className="text-lg font-semibold text-gray-900">
                             {supplyForm.data.id 
-                                ? t('supplier.edit_contact', 'Edit Supply Contact')
+                                ? t('supplier.edit_contact', 'Edit Supplier Contact')
                                 : t('supplier.add_new_contact', 'Add New Contact')
                             }
                         </h1>
@@ -306,10 +358,8 @@ export default function Index({ suppliers, filters }) {
                             {/* Supply Name */}
                             <fieldset className="fieldset">
                                 <legend className="fieldset-legend">
-                                    {t('supplier.supply_name', 'Supply Name')}
-                                    <span className="text-red-500 ml-1">
-                                        {t('supplier.required_field', '*')}
-                                    </span>
+                                    {t('supplier.supply_name', 'Supplier Name')}
+                                    <span className="text-red-500 ml-1">*</span>
                                 </legend>
                                 <input
                                     type="text"
@@ -330,9 +380,7 @@ export default function Index({ suppliers, filters }) {
                             <fieldset className="fieldset">
                                 <legend className="fieldset-legend">
                                     {t('supplier.contact_person', 'Contact Person')}
-                                    <span className="text-red-500 ml-1">
-                                        {t('supplier.required_field', '*')}
-                                    </span>
+                                    <span className="text-red-500 ml-1">*</span>
                                 </legend>
                                 <input
                                     type="text"
@@ -353,9 +401,7 @@ export default function Index({ suppliers, filters }) {
                             <fieldset className="fieldset">
                                 <legend className="fieldset-legend">
                                     {t('supplier.email', 'Email')}
-                                    <span className="text-red-500 ml-1">
-                                        {t('supplier.required_field', '*')}
-                                    </span>
+                                    <span className="text-red-500 ml-1">*</span>
                                 </legend>
                                 <input
                                     type="email"
@@ -376,9 +422,7 @@ export default function Index({ suppliers, filters }) {
                             <fieldset className="fieldset">
                                 <legend className="fieldset-legend">
                                     {t('supplier.phone', 'Phone')}
-                                    <span className="text-red-500 ml-1">
-                                        {t('supplier.required_field', '*')}
-                                    </span>
+                                    <span className="text-red-500 ml-1">*</span>
                                 </legend>
                                 <input
                                     type="tel"
@@ -426,6 +470,69 @@ export default function Index({ suppliers, filters }) {
                                         {supplyForm.errors.website}
                                     </div>
                                 )}
+                            </fieldset>
+
+                            {/* Advance Amount */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">
+                                    {t('supplier.advance_amount', 'Advance Amount')}
+                                </legend>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={supplyForm.data.advance_amount}
+                                    onChange={(e) => supplyForm.setData("advance_amount", parseFloat(e.target.value) || 0)}
+                                    className="input input-bordered w-full"
+                                    placeholder={t('supplier.advance_amount_placeholder', 'Enter advance amount')}
+                                />
+                                {supplyForm.errors.advance_amount && (
+                                    <div className="text-red-500 text-sm mt-1">
+                                        {supplyForm.errors.advance_amount}
+                                    </div>
+                                )}
+                            </fieldset>
+
+                            {/* Due Amount */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">
+                                    {t('supplier.due_amount', 'Due Amount')}
+                                </legend>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={supplyForm.data.due_amount}
+                                    onChange={(e) => supplyForm.setData("due_amount", parseFloat(e.target.value) || 0)}
+                                    className="input input-bordered w-full"
+                                    placeholder={t('supplier.due_amount_placeholder', 'Enter due amount')}
+                                />
+                                {supplyForm.errors.due_amount && (
+                                    <div className="text-red-500 text-sm mt-1">
+                                        {supplyForm.errors.due_amount}
+                                    </div>
+                                )}
+                            </fieldset>
+
+                            {/* Status */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">
+                                    {t('supplier.status_field', 'Status')}
+                                </legend>
+                                <label className="label cursor-pointer justify-start gap-3">
+                                    <input
+                                        type="checkbox"
+                                        checked={supplyForm.data.is_active}
+                                        onChange={(e) => supplyForm.setData("is_active", e.target.checked)}
+                                        className="toggle toggle-primary"
+                                    />
+                                    <span className="label-text">
+                                        {supplyForm.data.is_active 
+                                            ? t('supplier.active_status', 'Active')
+                                            : t('supplier.inactive_status', 'Inactive')
+                                        }
+                                    </span>
+                                </label>
                             </fieldset>
                         </div>
 

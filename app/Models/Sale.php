@@ -53,7 +53,9 @@ class Sale extends Model
         return $this->hasMany(Payment::class, 'sale_id');
     }
 
-    
-
-
+    //user relation
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

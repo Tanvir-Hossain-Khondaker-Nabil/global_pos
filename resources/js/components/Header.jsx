@@ -46,7 +46,6 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
 
     return (
         <div className="h-[80px] flex items-center justify-between gap-4 px-6 print:hidden">
-            {/* Left side - Menu and Toggle */}
             <div className="flex items-center gap-3">
                 <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -55,15 +54,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                     <Menu size={14} />
                 </button>
                 
-                {/* Shadow Mode Toggle */}
-                <button
-                    onClick={handleToggleUserType}
-                    className={`btn btn-sm ${isShadowUser ? 'btn-primary' : 'btn-warning'} gap-2`}
-                    title={`Switch to ${isShadowUser ? 'Shadow' : 'General'} mode`}
-                >
-                    <Shield size={16} />
-                    {isShadowUser ? 'General Mode' : 'Shadow Mode'}
-                </button>
+           
 
                 {/* Language Switcher */}
                 <div className="flex items-center">
@@ -132,6 +123,16 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                 <LogOut size={14} />
                                 <span>Logout</span>
                             </Link>
+                        </li>
+                        <li>
+                            <button
+                                onClick={handleToggleUserType}
+                                className={`btn btn-sm ${isShadowUser ? 'btn-primary' : 'btn-warning'} gap-2`}
+                                title={`Switch to ${isShadowUser ? 'Shadow' : 'General'} mode`}
+                            >
+                                <Shield size={16} />
+                                {isShadowUser ? 'General Mode' : 'Shadow Mode'}
+                            </button>
                         </li>
                     </ul>
                 </div>
