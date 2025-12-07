@@ -258,6 +258,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/ledgers/customer/{id?}', [LedgerController::class, 'customerLedger'])->name('ledgers.customer');
     Route::get('/ledgers/supplier/{id?}', [LedgerController::class, 'supplierLedger'])->name('ledgers.supplier');
     Route::post('/ledgers/clear-due/{id}', [LedgerController::class, 'clearDueStore'])->name('clearDue.store');
+    Route::post('/ledgers/advance-payment/{id}', [LedgerController::class, 'advancePaymentStore'])->name('advancePayment.store');
+
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');

@@ -243,7 +243,6 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
     filterForm.data.entity_id || filterForm.data.start_date ||
     filterForm.data.end_date;
 
-  // Combine all entities for display - handle both array and object with data property
   const allEntities = React.useMemo(() => {
     let entities = [];
 
@@ -536,6 +535,9 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                         Total Amount
                       </th>
                       <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
+                         Paid Amount
+                      </th>
+                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
                         Balance
                       </th>
                       <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
@@ -548,29 +550,31 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {allEntities.map((entity) => {
+                      console.log(entity);
                       const isCustomer = "customer_name" in entity;
                       const entityConfig = getEntityTypeConfig(entity);
                       const transactions = isCustomer ? entity.sales : entity.purchases;
 
                       const totalAmount =
-                        transactions?.reduce(
-                          (sum, t) => sum + parseFloat(t.grand_total || 0),
+                        (transactions?.reduce(
+                          (sum, t) => sum + (parseFloat(t?.grand_total) || 0),
                           0
-                        ) || 0;
+                        )) || 0;
 
-                      const totalDueAmount =
-                        transactions?.reduce(
-                          (sum, t) => sum + parseFloat(t.due_amount || 0),
+                        const totalPaidAmount =
+                        (transactions?.reduce(
+                          (sum, t) => sum + (parseFloat(t?.paid_amount) || 0),
                           0
-                        ) || 0;
+                        )) || 0;
 
+
+                      const totalDueAmount = totalAmount - totalPaidAmount;
                       const transactionCount = transactions?.length || 0;
                       const EntityIcon = entityConfig.icon;
                       const advanceAmount = entity?.advance_amount || 0;
 
                       return (
                         <tr key={entity.id} className="hover:bg-gray-50/50 transition-colors">
-                          {/* Name */}
                           <td className="px-8 py-5">
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
@@ -623,6 +627,13 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                           <td className="px-8 py-5">
                             <div className="text-lg font-bold text-gray-900">
                               ৳{formatCurrency(totalAmount)}
+                            </div>
+                            <div className="text-sm text-gray-500">total value</div>
+                          </td>
+
+                          <td className="px-8 py-5">
+                            <div className="text-lg font-bold text-gray-900">
+                              ৳{formatCurrency(totalPaidAmount)}
                             </div>
                             <div className="text-sm text-gray-500">total value</div>
                           </td>

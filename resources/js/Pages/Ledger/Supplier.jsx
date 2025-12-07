@@ -93,6 +93,14 @@ export default function SupplierLedger({
   const [paymentForm, setPaymentForm] = useState({
     paid_amount: "",
     payment_type: "cash",
+  });
+
+  // Advance Payment Modal States
+  const [showAdvancePayment, setShowAdvancePayment] = useState(false);
+  const [advancePaymentForm, setAdvancePaymentForm] = useState({
+    amount: "", // Changed from paid_amount to amount for consistency
+    payment_type: "cash",
+    transaction_id: "",
     notes: "",
   });
 
@@ -177,7 +185,7 @@ export default function SupplierLedger({
     if (!supplier) return;
     
     const queryParams = {
-      page: 1, // Reset to first page when filtering
+      page: 1, 
     };
     
     if (filterForm.data.search.trim()) {
@@ -407,14 +415,13 @@ export default function SupplierLedger({
     setPaymentForm({
       paid_amount: Math.min(totalDue, supplier?.advance_amount > 0 ? supplier.advance_amount : totalDue).toString(),
       payment_type: "cash",
-      notes: "",
     });
     setShowDueClearance(true);
   };
 
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
-    
+
     const paidAmount = parseFloat(paymentForm.paid_amount) || 0;
     if (paidAmount <= 0) {
       alert("Please enter a valid payment amount");
@@ -431,20 +438,18 @@ export default function SupplierLedger({
       paid_amount: paidAmount,
       type: 'supplier',
       payment_type: paymentForm.payment_type,
-      notes: paymentForm.notes,
     }, {
       onSuccess: () => {
         alert(`Payment of ৳${formatCurrency(paidAmount)} processed successfully!`);
         setPaymentForm({
           paid_amount: "",
           payment_type: "cash",
-          notes: "",
         });
         setShowDueClearance(false);
         router.reload();
       },
       onError: (errors) => {
-        alert(errors.paid_amount || errors.payment_type || 'An error occurred while processing the payment.');
+        alert(errors.paid_amount || 'An error occurred while processing the payment.');
       }
     });
   };
@@ -466,6 +471,57 @@ export default function SupplierLedger({
       remainingDue: Math.max(0, remainingDue),
       newAdvance: newAdvance
     };
+  };
+
+  // Advance Payment Functions
+  const handleAdvancePaymentOpen = () => {
+    setAdvancePaymentForm({
+      amount: "",
+      payment_type: "cash",
+      transaction_id: "",
+      notes: "",
+    });
+    setShowAdvancePayment(true);
+  };
+
+  const handleAdvancePaymentSubmit = (e) => {
+    e.preventDefault();
+
+    const paidAmount = parseFloat(advancePaymentForm.amount) || 0;
+    if (paidAmount <= 0) {
+      alert("Please enter a valid advance amount");
+      return;
+    }
+
+    router.post(route('supplier.advance-payment.store', supplier.id), {
+      amount: paidAmount,
+      payment_type: advancePaymentForm.payment_type,
+      transaction_id: advancePaymentForm.transaction_id,
+      notes: advancePaymentForm.notes,
+    }, {
+      onSuccess: () => {
+        alert(`Advance payment of ৳${formatCurrency(paidAmount)} added successfully!`);
+        setAdvancePaymentForm({
+          amount: "",
+          payment_type: "cash",
+          transaction_id: "",
+          notes: "",
+        });
+        setShowAdvancePayment(false);
+        router.reload();
+      },
+      onError: (errors) => {
+        alert(errors.amount || errors.payment_type || 'An error occurred while processing the advance payment.');
+      }
+    });
+  };
+
+  const handleAdvancePaymentInputChange = (e) => {
+    const { name, value } = e.target;
+    setAdvancePaymentForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   // Due Clearance Modal Component
@@ -573,8 +629,6 @@ export default function SupplierLedger({
                 </select>
               </div>
 
- 
-
               {/* Balance Summary */}
               <div className="mb-6 p-4 bg-orange-50 rounded-lg border border-orange-100">
                 <h4 className="font-semibold text-gray-900 mb-3">Balance Summary</h4>
@@ -615,6 +669,187 @@ export default function SupplierLedger({
                            hover:to-orange-800 transition-all"
                 >
                   Process Payment
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Advance Payment Modal Component - FIXED VERSION
+  const AdvancePaymentModal = () => {
+    const paidAmount = parseFloat(advancePaymentForm.amount) || 0;
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+                  <Wallet className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Add Advance Payment</h3>
+                  <p className="text-sm text-gray-600">Add advance payment to supplier account</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAdvancePayment(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="p-6">
+            {/* Supplier Info */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <Building2 className="h-5 w-5 text-green-600" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900">{supplier?.name}</h4>
+                  <p className="text-sm text-gray-600">{supplier?.phone || 'No phone'}</p>
+                </div>
+              </div>
+              <div className="text-center p-3 bg-white rounded-lg">
+                <p className="text-sm text-gray-600 mb-1">Current Advance Balance</p>
+                <p className={`text-2xl font-bold ${(supplier?.advance_amount || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  ৳{formatCurrency(supplier?.advance_amount || 0)}
+                </p>
+              </div>
+            </div>
+
+            {/* Advance Payment Form - FIXED INPUT FIELD */}
+            <form onSubmit={handleAdvancePaymentSubmit}>
+              {/* Amount Input */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Advance Amount (৳)
+                </label>
+                <div className="relative">
+                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type="number"
+                    name="amount" // Fixed: Changed from 'paid_amount' to 'amount'
+                    value={advancePaymentForm.amount} // Fixed: Changed from 'paid_amount' to 'amount'
+                    onChange={handleAdvancePaymentInputChange}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
+                             focus:ring-2 focus:ring-green-500 focus:border-transparent
+                             transition-all duration-200 ease-in-out"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Transaction ID */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Transaction ID (Optional)
+                </label>
+                <input
+                  type="text"
+                  name="transaction_id"
+                  value={advancePaymentForm.transaction_id}
+                  onChange={handleAdvancePaymentInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                           focus:ring-2 focus:ring-green-500 focus:border-transparent
+                           transition-all duration-200 ease-in-out"
+                  placeholder="Enter transaction ID"
+                />
+              </div>
+
+              {/* Payment Type */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Payment Type
+                </label>
+                <select
+                  name="payment_type"
+                  value={advancePaymentForm.payment_type}
+                  onChange={handleAdvancePaymentInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                           focus:ring-2 focus:ring-green-500 focus:border-transparent
+                           transition-all duration-200 ease-in-out"
+                  required
+                >
+                  <option value="cash">Cash</option>
+                  <option value="card">Card</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="check">Check</option>
+                  <option value="mobile_banking">Mobile Banking</option>
+                </select>
+              </div>
+
+              {/* Notes */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  name="notes"
+                  value={advancePaymentForm.notes}
+                  onChange={handleAdvancePaymentInputChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg 
+                           focus:ring-2 focus:ring-green-500 focus:border-transparent
+                           transition-all duration-200 ease-in-out"
+                  placeholder="Add any notes about this advance payment"
+                  rows="3"
+                />
+              </div>
+
+              {/* New Balance Preview */}
+              <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-100">
+                <h4 className="font-semibold text-gray-900 mb-3">New Balance Preview</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Current Advance</span>
+                    <span className="font-medium text-gray-900">
+                      ৳{formatCurrency(supplier?.advance_amount || 0)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">New Payment</span>
+                    <span className="font-medium text-green-600">
+                      + ৳{formatCurrency(paidAmount)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t border-green-200">
+                    <span className="text-sm font-medium text-gray-900">New Advance Balance</span>
+                    <span className="text-lg font-bold text-emerald-600">
+                      ৳{formatCurrency((supplier?.advance_amount || 0) + paidAmount)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancePayment(false)}
+                  className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 
+                           font-medium rounded-lg transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 
+                           text-white font-medium rounded-lg hover:from-green-700 
+                           hover:to-green-800 transition-all duration-200"
+                >
+                  Add Advance Payment
                 </button>
               </div>
             </form>
@@ -680,7 +915,6 @@ export default function SupplierLedger({
                 <Download className="h-4 w-4" />
                 Export
               </button>
-              {/* Due Clearance Button */}
               <button
                 onClick={handleDueClearanceOpen}
                 className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-orange-600 to-orange-700 rounded-xl hover:from-orange-700 hover:to-orange-800 flex items-center gap-2"
@@ -689,11 +923,11 @@ export default function SupplierLedger({
                 Clear Due
               </button>
               <button
-                onClick={() => window.print()}
-                className="p-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl border border-gray-300"
-                title="Print"
+                onClick={handleAdvancePaymentOpen}
+                className="px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 transition-all rounded-xl flex items-center gap-2"
               >
-                <Printer className="h-4 w-4" />
+                <Wallet className="h-4 w-4 text-white" />
+                Add Advance Payment
               </button>
             </div>
           </div>
@@ -1212,6 +1446,9 @@ export default function SupplierLedger({
 
       {/* Due Clearance Modal */}
       {showDueClearance && <DueClearanceModal />}
+
+      {/* Advance Payment Modal */}
+      {showAdvancePayment && <AdvancePaymentModal />}
     </div>
   );
 }

@@ -29,13 +29,15 @@ class Purchase extends Model
         'payment_type',
     ];
 
-    protected $casts = [
-        'purchase_date' => 'date',
-        'total_amount' => 'decimal:2',
-        'shadow_total_amount' => 'decimal:2', 
-        'shadow_paid_amount' => 'decimal:2',  
-        'paid_amount' => 'decimal:2'
-    ];
+    // protected $casts = [
+    //     'purchase_date' => 'date',
+    //     'total_amount' => 'decimal:2',
+    //     'shadow_total_amount' => 'decimal:2', 
+    //     'shadow_paid_amount' => 'decimal:2',  
+    //     'paid_amount' => 'decimal:2',
+    //     'due_amount' => 'decimal:2',
+    //     'shadow_due_amount' => 'decimal:2',
+    // ];
 
     protected static function booted()
     {
