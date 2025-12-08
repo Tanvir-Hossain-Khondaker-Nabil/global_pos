@@ -87,6 +87,8 @@ class PurchaseController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
+        // dd($user);
+
         $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'warehouse_id' => 'required|exists:warehouses,id',

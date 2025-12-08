@@ -38,7 +38,7 @@ export default function Sidebar({ status, setStatus }) {
 
     return (
         <div
-            className={`min-w-[280px] bg-white h-screen z-20 shadow-md lg:shadow-0 print:hidden fixed lg:static overflow-scroll ${
+            className={`min-w-[280px] bg-white h-screen z-20 shadow-md lg:shadow-0 print:hidden fixed lg:static overflow-auto ${
                 status ? "left-0" : "-left-full"
             } duration-300 top-0 ${locale === 'bn' ? 'bangla-font' : ''}`}
         >
