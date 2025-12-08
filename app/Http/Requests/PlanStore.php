@@ -21,15 +21,17 @@ class PlanStore extends FormRequest
      */
     public function rules(): array
     {
+    
         return [
-            'name' => 'required|string|max:255',
-            'price' => 'required|numeric|min:0',
-            'plan_type' => 'required',
-            'validity' => 'required|integer|min:1',
-            'description' => 'nullable|string',
-            'features' => 'nullable|array',
-            'features.*' => 'string|max:255',
-            'status' => 'required',
+            'name' => ['required', 'string', 'max:255'],
+            'price' => ['required', 'numeric', 'min:0'],
+            'plan_type' => ['required', 'string'],
+            'validity' => ['required', 'integer', 'min:1'],
+            'description' => ['nullable', 'string'],
+            'modules' => ['required', 'array', 'min:1'],
+            'modules.*' => ['exists:modules,id'],
+            'product_range' => ['nullable', 'integer', 'min:0'],
         ];
+
     }
 }

@@ -139,7 +139,7 @@ export default function Create({ plans, users }) {
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                                     <Clock size={16} className="text-orange-600" />
-                                    {t('subscription.user_email', 'User Email')}
+                                    {t('subscription.user_email', 'User Email (manual)')}
                                 </label>
                                 <input
                                     type="email"

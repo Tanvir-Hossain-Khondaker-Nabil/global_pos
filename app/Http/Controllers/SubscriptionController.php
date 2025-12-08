@@ -65,7 +65,8 @@ class SubscriptionController extends Controller
         }
 
         $validated['validity'] = $validity;
-        $validated['status'] = 1; //active
+        $validated['status'] = 1; 
+        $validated['product_range'] = $request->product_range ?? 20;
 
        $subscriptions = Subscription::create($validated);
 

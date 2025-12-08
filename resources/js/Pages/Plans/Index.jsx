@@ -11,7 +11,8 @@ import {
     Tag,
     DollarSign,
     Calendar,
-    Star
+    Star,
+    Grid
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -156,8 +157,9 @@ export default function Index({ plans }) {
                                 <th>{t('plan.plan_name', 'Plan Name')}</th>
                                 <th>{t('plan.type', 'Type')}</th>
                                 <th>{t('plan.price', 'Price')}</th>
+                                <th>{t('plan.product_range', 'Product Range')}</th>
                                 <th>{t('plan.validity', 'Validity')}</th>
-                                <th>{t('plan.features', 'Features')}</th>
+                                <th>{t('plan.modules', 'Modules')}</th>
                                 <th>{t('plan.total_sales', 'Total Sales')}</th>
                                 <th>{t('plan.status', 'Status')}</th>
                                 <th className="text-center">{t('plan.actions', 'Actions')}</th>
@@ -189,10 +191,15 @@ export default function Index({ plans }) {
                                     </td>
                                     <td>
                                         <div className="flex items-center gap-1">
-                                            <DollarSign size={14} className="text-green-600" />
                                             <span className="font-semibold">
                                                 {formatCurrency(plan.price)}
                                             </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="flex items-center gap-1">
+                                            <Grid size={14} className="text-blue-600" />
+                                            <span className="font-medium">{plan.product_range || 0}</span>
                                         </div>
                                     </td>
                                     <td>
@@ -203,27 +210,28 @@ export default function Index({ plans }) {
                                     </td>
                                     <td>
                                         <div className="max-w-xs">
-                                            {plan.features && plan.features.length > 0 ? (
-                                                <div className="text-sm">
-                                                    <span className="badge badge-outline badge-sm">
-                                                        {plan.features.length} {t('plan.total_features', 'features')}
+                                            {plan.modules && plan.modules.length > 0 ? (
+                                                <div className="text-sm p-2 border border-gray-200 rounded-lg">
+                                                    <span className="badge badge-outline badge-sm p-4">
+                                                        {plan.modules.length} {t('plan.total_modules', 'modules')}
                                                     </span>
                                                     <div className="mt-1 text-xs text-gray-500">
-                                                        {plan.features.slice(0, 2).map((feature, i) => (
-                                                            <div key={i} className="truncate">
-                                                                • {feature}
+                                                        {plan.modules.slice(0, 2).map((module, i) => (
+                                                            <div key={i} className="truncate flex items-center gap-1">
+                                                                <Grid size={10} className="text-green-600" />
+                                                                {module.name}
                                                             </div>
                                                         ))}
-                                                        {plan.features.length > 2 && (
+                                                        {plan.modules.length > 2 && (
                                                             <div className="text-primary">
-                                                                +{plan.features.length - 2} {t('plan.more', 'more')}
+                                                                +{plan.modules.length - 2} {t('plan.more', 'more')}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             ) : (
                                                 <span className="text-gray-400 text-sm">
-                                                    {t('plan.no_features', 'No features')}
+                                                    {t('plan.no_modules', 'No modules')}
                                                 </span>
                                             )}
                                         </div>
@@ -391,17 +399,13 @@ export default function Index({ plans }) {
                         
                         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
                             <div className="flex items-center gap-3">
-                                <Filter className="text-orange-600" size={20} />
+                                <Grid className="text-orange-600" size={20} />
                                 <div>
                                     <p className="text-sm font-medium text-orange-800">
-                                        {t('plan.premium_plans', 'Premium Plans')}
+                                        {t('plan.total_modules', 'Total Modules')}
                                     </p>
                                     <p className="text-xl font-bold text-orange-900">
-                                        {plans.data.filter(plan => 
-                                            plan.plan_type === '2' || 
-                                            plan.plan_type === 'premium' || 
-                                            plan.plan_type === 'enterprise'
-                                        ).length}
+                                        {plans.data.reduce((sum, plan) => sum + (plan.modules?.length || 0), 0)}
                                     </p>
                                 </div>
                             </div>

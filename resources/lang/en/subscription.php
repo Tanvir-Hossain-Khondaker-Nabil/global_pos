@@ -24,7 +24,7 @@ return [
     
     // Form Labels
     'select_company' => 'Select Company',
-    'user_email' => 'User Email',
+    'user_email' => 'User Email (manual)',
     'select_plan' => 'Select Plan',
     'start_date' => 'Start Date',
     'end_date' => 'End Date',
@@ -64,6 +64,7 @@ return [
     'active_subscriptions' => 'Active Subscriptions',
     'total_revenue' => 'Total Revenue',
     'active_users' => 'Active Users',
+    'select_payment_method' => 'Select Payment Method',
     
     // Messages
     'no_subscriptions_found' => 'No subscriptions found!',

@@ -34,6 +34,12 @@ class Plan extends Model
         return $this->hasMany(Subscription::class);
     }
 
+    //modules relation
+    public function modules() 
+    { 
+        return $this->belongsToMany(Module::class, 'plan_module'); 
+    }
+
 
     // Scope for active plans
     public function scopeActive($query)
@@ -54,7 +60,9 @@ class Plan extends Model
     {
         return $query->where('name', 'like', "%{$term}%")
                      ->orWhere('description', 'like', "%{$term}%")
-                     ->orWhereJsonContains('features', $term);
+                     ->orWhereHas('modules', function ($q) use ($term) {
+                         $q->where('name', 'like', "%{$term}%");
+                     });
     }
                      
 }

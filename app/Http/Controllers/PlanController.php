@@ -16,6 +16,7 @@ class PlanController extends Controller
     public function index()
     {
         $plans = Plan::active()
+        ->with('modules')
         ->when(request('plan_type'), function ($query) {$query->ofType(request('plan_type')); })
         ->when(request('search'), function ($query) {$query->search(request('search')); })
         ->orderBy('created_at', 'desc')
@@ -32,16 +33,23 @@ class PlanController extends Controller
      */
     public function create()
     {
-        return Inertia::render('Plans/Create');
+        $modules = \App\Models\Module::all();
+        return Inertia::render('Plans/Create', [
+            'modules' => $modules,
+        ]);
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Store a newly created resource in storage.   
      */
     public function store(PlanStore $request)
     {
         $validated = $request->validated();
-        Plan::create($validated);
+        $validated['status'] = Plan::STATUS_ACTIVE;
+        $plan = Plan::create($validated);
+
+        $plan->modules()->sync($request->modules);
+
         return to_route('plans.index')->with('success', 'Plan created successfully.');
     }
 
@@ -50,7 +58,7 @@ class PlanController extends Controller
      */
     public function show(string $id)
     {
-        $plans = Plan::findOrFail($id);
+        $plans = Plan::with('modules')->findOrFail($id);
         return Inertia::render('Plans/Show', [
             'plans' => $plans,
         ]);
@@ -61,9 +69,11 @@ class PlanController extends Controller
      */
     public function edit(string $id)
     {
-        $plans = Plan::findOrFail($id);
+        $plans = Plan::with('modules')->findOrFail($id);
+        $modules = \App\Models\Module::all();
         return Inertia::render('Plans/Edit', [
             'plans' => $plans,
+            'modules' => $modules,
         ]);
     }
 
@@ -74,6 +84,11 @@ class PlanController extends Controller
     {
         $plan = Plan::findOrFail($id);
         $plan->update($request->validated());
+
+        if (isset($validated['modules'])) {
+            $plan->modules()->sync($validated['modules']);
+        }
+
         return to_route('plans.index')->with('success', 'Plan updated successfully!');
     }
 
@@ -85,6 +100,13 @@ class PlanController extends Controller
     public function destroy(string $id)
     {
         $plan = Plan::findOrFail($id);
+
+        // if subscriptions exist for the plan, prevent deletion
+        if ($plan->subscriptions()->exists()) {
+            return to_route('plans.index')->withErrors(['error' => 'Cannot delete plan with active subscriptions.']);
+        }
+        
+        $plan->modules()->detach();
         $plan->delete();
         return to_route('plans.index')->with('success', 'Plan deleted successfully.');
     }
