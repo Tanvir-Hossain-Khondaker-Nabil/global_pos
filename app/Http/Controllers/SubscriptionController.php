@@ -145,8 +145,12 @@ class SubscriptionController extends Controller
         $subscription = Subscription::with(['plan', 'user', 'payments'])
         ->withCount('payments')
         ->findOrFail($id);
+
+        $paymentTotal = $subscription->payments()->sum('amount');
+
         return inertia('Subscriptions/Show', [
-            'subscription' => $subscription
+            'subscription' => $subscription,
+            'paymentTotal' => $paymentTotal
         ]);
     }
 
