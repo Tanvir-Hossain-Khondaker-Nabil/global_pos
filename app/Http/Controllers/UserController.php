@@ -142,8 +142,8 @@ class UserController extends Controller
             'user_email' => $user->email
         ]);
 
-        // Toggle between shadow and ganaral
-        $newType = $user->type === 'shadow' ? 'ganaral' : 'shadow';
+        // Toggle between shadow and general
+        $newType = $user->type === 'shadow' ? 'general' : 'shadow';
 
         \Log::info('Attempting to update', [
             'user_id' => $user->id,
