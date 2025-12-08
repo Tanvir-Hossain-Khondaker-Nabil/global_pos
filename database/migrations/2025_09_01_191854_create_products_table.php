@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -17,6 +16,13 @@ return new class extends Migration
             $table->string('product_no');
             $table->unsignedBigInteger('category_id');
             $table->text('description')->nullable();
+
+            $table->enum('product_type', ['regular', 'in_house'])->default('regular');
+            $table->decimal('in_house_cost', 10, 2)->nullable();
+            $table->decimal('in_house_shadow_cost', 10, 2)->nullable();
+            $table->decimal('in_house_sale_price', 10, 2)->nullable();
+            $table->decimal('in_house_shadow_sale_price', 10, 2)->nullable();
+            $table->integer('in_house_initial_stock')->default(0);
             $table->timestamps();
         });
     }

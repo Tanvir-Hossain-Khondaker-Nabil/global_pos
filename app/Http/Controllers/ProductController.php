@@ -3,10 +3,12 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\Stock;
 use App\Models\Product;
 use App\Models\Variant;
 use App\Models\Category;
 use App\Models\Attribute;
+use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -77,6 +79,12 @@ class ProductController extends Controller
             'category_id' => 'required|exists:categories,id',
             'product_no' => 'required|string|max:100|unique:products,product_no,' . $request->id,
             'description' => 'nullable|string',
+            'product_type' => 'required|in:regular,in_house',
+            'in_house_cost' => 'required_if:product_type,in_house|numeric|min:0',
+            'in_house_shadow_cost' => 'required_if:product_type,in_house|numeric|min:0',
+            'in_house_sale_price' => 'required_if:product_type,in_house|numeric|min:0',
+            'in_house_shadow_sale_price' => 'required_if:product_type,in_house|numeric|min:0',
+            'in_house_initial_stock' => 'required_if:product_type,in_house|integer|min:0',
             'variants' => ['required', 'array', 'min:1'],
             'variants.*.attribute_values' => ['required', 'array', 'min:1'],
             'variants.*.sku' => ['nullable', 'string', 'max:100', 'unique:variants,sku,' . ($request->variants[0]['id'] ?? 'NULL')],
@@ -94,9 +102,24 @@ class ProductController extends Controller
             $product->product_no = $request->product_no;
             $product->category_id = $request->category_id;
             $product->description = $request->description;
-            $product->save();
+            $product->product_type = $request->product_type;
 
-            \Log::info('Product saved:', ['id' => $product->id, 'name' => $product->name]);
+            // In-house সেটিংস
+            if ($request->product_type === 'in_house') {
+                $product->in_house_cost = $request->in_house_cost;
+                $product->in_house_shadow_cost = $request->in_house_shadow_cost;
+                $product->in_house_sale_price = $request->in_house_sale_price;
+                $product->in_house_shadow_sale_price = $request->in_house_shadow_sale_price;
+                $product->in_house_initial_stock = $request->in_house_initial_stock;
+            } else {
+                $product->in_house_cost = null;
+                $product->in_house_shadow_cost = null;
+                $product->in_house_sale_price = null;
+                $product->in_house_shadow_sale_price = null;
+                $product->in_house_initial_stock = 0;
+            }
+
+            $product->save();
 
             // Handle variants
             $existingVariantIds = $product->variants()->pluck('id')->toArray();
@@ -131,6 +154,11 @@ class ProductController extends Controller
                         'sku' => $sku,
                     ]);
                     $newVariantIds[] = $variant->id;
+
+                    // In-house প্রোডাক্ট হলে স্টক তৈরি করুন
+                    if ($product->product_type === 'in_house') {
+                        $this->createInHouseStock($product, $variant);
+                    }
                 }
             }
 
@@ -149,6 +177,34 @@ class ProductController extends Controller
             \Log::error('Product update error: ' . $th->getMessage());
             return redirect()->back()->with('error', "Server error: " . $th->getMessage());
         }
+    }
+
+    private function createInHouseStock(Product $product, Variant $variant)
+    {
+        // ইন-হাউস ওয়্যারহাউস খুঁজুন
+        $inHouseWarehouse = Warehouse::where('code', 'IN-HOUSE')->first();
+
+        if (!$inHouseWarehouse) {
+            // যদি না থাকে, তৈরি করুন
+            $inHouseWarehouse = Warehouse::create([
+                'name' => 'In-House Production',
+                'code' => 'IN-HOUSE',
+                'address' => 'Internal Production Department',
+                'is_active' => true,
+            ]);
+        }
+
+        // স্টক তৈরি করুন
+        Stock::create([
+            'warehouse_id' => $inHouseWarehouse->id,
+            'product_id' => $product->id,
+            'variant_id' => $variant->id,
+            'quantity' => $product->in_house_initial_stock,
+            'purchase_price' => $product->in_house_cost,
+            'sale_price' => $product->in_house_sale_price,
+            'shadow_purchase_price' => $product->in_house_shadow_cost,
+            'shadow_sale_price' => $product->in_house_shadow_sale_price,
+        ]);
     }
 
     private function generateSku(Product $product, array $attributeValues): string

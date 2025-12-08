@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
-import { Trash, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash, X, Plus, ChevronDown, ChevronUp, Factory, Package } from "lucide-react";
 import { toast } from "react-toastify";
 import { useTranslation } from "../../hooks/useTranslation";
-
 
 export default function AddProduct({ category, update, attributes }) {
     const { t, locale } = useTranslation();
@@ -14,6 +13,7 @@ export default function AddProduct({ category, update, attributes }) {
     const [availableAttributes, setAvailableAttributes] = useState([]);
     const [selectedAttributes, setSelectedAttributes] = useState({});
     const [showAttributeSelector, setShowAttributeSelector] = useState(false);
+    const [productType, setProductType] = useState('regular');
 
     const productForm = useForm({
         id: update ? update.id : "",
@@ -21,6 +21,12 @@ export default function AddProduct({ category, update, attributes }) {
         category_id: update ? update.category_id : "",
         product_no: update ? update.product_no : "",
         description: update ? update.description : "",
+        product_type: update ? update.product_type : 'regular',
+        in_house_cost: update ? update.in_house_cost || 0 : 0,
+        in_house_shadow_cost: update ? update.in_house_shadow_cost || 0 : 0,
+        in_house_sale_price: update ? update.in_house_sale_price || 0 : 0,
+        in_house_shadow_sale_price: update ? update.in_house_shadow_sale_price || 0 : 0,
+        in_house_initial_stock: update ? update.in_house_initial_stock || 0 : 0,
         variants: [],
     });
 
@@ -46,7 +52,12 @@ export default function AddProduct({ category, update, attributes }) {
         if (attributes && Array.isArray(attributes)) {
             setAvailableAttributes(attributes);
         }
-    }, [category, attributes]);
+        
+        // Set product type if editing
+        if (update && update.product_type) {
+            setProductType(update.product_type);
+        }
+    }, [category, attributes, update]);
 
     // Generate variants based on selected attribute combinations
     const generateVariants = () => {
@@ -114,6 +125,23 @@ export default function AddProduct({ category, update, attributes }) {
         setShowAttributeSelector(false);
     };
 
+    // Product type change handler
+    const handleProductTypeChange = (type) => {
+        setProductType(type);
+        productForm.setData("product_type", type);
+        
+        // Reset in-house fields if switching to regular
+        if (type === 'regular') {
+            productForm.setData({
+                in_house_cost: 0,
+                in_house_shadow_cost: 0,
+                in_house_sale_price: 0,
+                in_house_shadow_sale_price: 0,
+                in_house_initial_stock: 0,
+            });
+        }
+    };
+
     // Update variant field
     const handleVariantChange = (index, field, value) => {
         const updated = [...variants];
@@ -161,6 +189,34 @@ export default function AddProduct({ category, update, attributes }) {
             newErrors.product_no = t('product.product_code_required', 'Product code is required');
         }
 
+        // Validate product type specific fields
+        if (productType === 'in_house') {
+            if (!productForm.data.in_house_cost || productForm.data.in_house_cost <= 0) {
+                hasError = true;
+                newErrors.in_house_cost = t('product.production_cost_required', 'Production cost is required');
+            }
+            
+            if (!productForm.data.in_house_shadow_cost || productForm.data.in_house_shadow_cost <= 0) {
+                hasError = true;
+                newErrors.in_house_shadow_cost = t('product.shadow_cost_required', 'Shadow production cost is required');
+            }
+            
+            if (!productForm.data.in_house_sale_price || productForm.data.in_house_sale_price <= 0) {
+                hasError = true;
+                newErrors.in_house_sale_price = t('product.sale_price_required', 'Sale price is required');
+            }
+            
+            if (!productForm.data.in_house_shadow_sale_price || productForm.data.in_house_shadow_sale_price <= 0) {
+                hasError = true;
+                newErrors.in_house_shadow_sale_price = t('product.shadow_sale_price_required', 'Shadow sale price is required');
+            }
+            
+            if (productForm.data.in_house_initial_stock < 0) {
+                hasError = true;
+                newErrors.in_house_initial_stock = t('product.initial_stock_invalid', 'Initial stock cannot be negative');
+            }
+        }
+
         // Validate variants - check if at least one variant has attributes
         const hasValidVariants = variants.some(variant => 
             variant.attribute_values && Object.keys(variant.attribute_values).length > 0
@@ -198,11 +254,21 @@ export default function AddProduct({ category, update, attributes }) {
             category_id: productForm.data.category_id,
             product_no: productForm.data.product_no,
             description: productForm.data.description,
+            product_type: productType,
             variants: variants.map(variant => ({
                 id: variant.id,
                 attribute_values: variant.attribute_values,
             }))
         };
+
+        // Add in-house specific data
+        if (productType === 'in_house') {
+            submitData.in_house_cost = productForm.data.in_house_cost;
+            submitData.in_house_shadow_cost = productForm.data.in_house_shadow_cost;
+            submitData.in_house_sale_price = productForm.data.in_house_sale_price;
+            submitData.in_house_shadow_sale_price = productForm.data.in_house_shadow_sale_price;
+            submitData.in_house_initial_stock = productForm.data.in_house_initial_stock;
+        }
 
         console.log('Submitting data:', submitData);
 
@@ -220,6 +286,7 @@ export default function AddProduct({ category, update, attributes }) {
                     productForm.reset();
                     setVariants([{ attribute_values: {}}]);
                     setSelectedAttributes({});
+                    setProductType('regular');
                 }
             },
             onError: (errors) => {
@@ -245,6 +312,12 @@ export default function AddProduct({ category, update, attributes }) {
                 category_id: update.category_id || "",
                 product_no: update.product_no || "",
                 description: update.description || "",
+                product_type: update.product_type || 'regular',
+                in_house_cost: update.in_house_cost || 0,
+                in_house_shadow_cost: update.in_house_shadow_cost || 0,
+                in_house_sale_price: update.in_house_sale_price || 0,
+                in_house_shadow_sale_price: update.in_house_shadow_sale_price || 0,
+                in_house_initial_stock: update.in_house_initial_stock || 0,
             });
 
             if (update.variants && update.variants.length > 0) {
@@ -296,6 +369,62 @@ export default function AddProduct({ category, update, attributes }) {
             />
 
             <form onSubmit={formSubmit}>
+                {/* Product Type Selection */}
+                <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">
+                        {t('product.product_type', 'Product Type')} *
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <label className={`card cursor-pointer border-2 ${productType === 'regular' ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary/50'}`}>
+                            <div className="card-body p-4">
+                                <div className="flex items-start">
+                                    <input
+                                        type="radio"
+                                        name="product_type"
+                                        value="regular"
+                                        checked={productType === 'regular'}
+                                        onChange={(e) => handleProductTypeChange(e.target.value)}
+                                        className="radio radio-primary mt-1"
+                                    />
+                                    <div className="ml-3 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <Package size={20} className="text-primary" />
+                                            <h4 className="font-semibold">{t('product.regular_product', 'Regular Product')}</h4>
+                                        </div>
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            {t('product.regular_desc', 'Purchase from supplier, needs stock management through purchase orders')}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label className={`card cursor-pointer border-2 ${productType === 'in_house' ? 'border-warning bg-warning/5' : 'border-base-300 hover:border-warning/50'}`}>
+                            <div className="card-body p-4">
+                                <div className="flex items-start">
+                                    <input
+                                        type="radio"
+                                        name="product_type"
+                                        value="in_house"
+                                        checked={productType === 'in_house'}
+                                        onChange={(e) => handleProductTypeChange(e.target.value)}
+                                        className="radio radio-warning mt-1"
+                                    />
+                                    <div className="ml-3 flex-1">
+                                        <div className="flex items-center gap-2">
+                                            <Factory size={20} className="text-warning" />
+                                            <h4 className="font-semibold text-warning">{t('product.in_house_product', 'In-House Production')}</h4>
+                                        </div>
+                                        <p className="text-sm text-gray-500 mt-2">
+                                            {t('product.in_house_desc', 'Internally produced, auto-stock management in In-House warehouse')}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 {/* Product Basic Information */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                     <fieldset className="fieldset col-span-2">
@@ -304,7 +433,7 @@ export default function AddProduct({ category, update, attributes }) {
                         </legend>
                         <input
                             type="text"
-                            className="input"
+                            className={`input ${errors.product_name ? 'input-error' : ''}`}
                             value={productForm.data.product_name}
                             onChange={(e) =>
                                 productForm.setData("product_name", e.target.value)
@@ -312,7 +441,7 @@ export default function AddProduct({ category, update, attributes }) {
                             placeholder={t('product.enter_product_name', 'Enter product name')}
                         />
                         {errors.product_name && (
-                            <p className="text-sm text-error">{errors.product_name}</p>
+                            <p className="text-sm text-error mt-1">{errors.product_name}</p>
                         )}
                     </fieldset>
 
@@ -322,7 +451,7 @@ export default function AddProduct({ category, update, attributes }) {
                         </legend>
                         <select
                             value={productForm.data.category_id}
-                            className="select"
+                            className={`select ${errors.category_id ? 'select-error' : ''}`}
                             onChange={(e) =>
                                 productForm.setData("category_id", e.target.value)
                             }
@@ -337,7 +466,7 @@ export default function AddProduct({ category, update, attributes }) {
                             ))}
                         </select>
                         {errors.category_id && (
-                            <p className="text-sm text-error">{errors.category_id}</p>
+                            <p className="text-sm text-error mt-1">{errors.category_id}</p>
                         )}
                     </fieldset>
 
@@ -347,7 +476,7 @@ export default function AddProduct({ category, update, attributes }) {
                         </legend>
                         <input
                             type="text"
-                            className="input"
+                            className={`input ${errors.product_no ? 'input-error' : ''}`}
                             value={productForm.data.product_no}
                             onChange={(e) =>
                                 productForm.setData("product_no", e.target.value)
@@ -355,7 +484,7 @@ export default function AddProduct({ category, update, attributes }) {
                             placeholder={t('product.enter_product_code', 'Enter product code')}
                         />
                         {errors.product_no && (
-                            <p className="text-sm text-error">{errors.product_no}</p>
+                            <p className="text-sm text-error mt-1">{errors.product_no}</p>
                         )}
                     </fieldset>
 
@@ -374,6 +503,118 @@ export default function AddProduct({ category, update, attributes }) {
                         />
                     </fieldset>
                 </div>
+
+                {/* In-House Product Settings */}
+                {productType === 'in_house' && (
+                    <div className="border border-warning rounded-box p-4 mb-6 bg-warning/5">
+                        <h3 className="text-lg font-semibold text-warning mb-4 flex items-center gap-2">
+                            <Factory size={20} />
+                            {t('product.in_house_settings', 'In-House Production Settings')}
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">{t('product.production_cost', 'Production Cost')} *</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className={`input input-bordered ${errors.in_house_cost ? 'input-error' : ''}`}
+                                    value={productForm.data.in_house_cost}
+                                    onChange={(e) => productForm.setData("in_house_cost", parseFloat(e.target.value) || 0)}
+                                    required
+                                />
+                                {errors.in_house_cost && (
+                                    <p className="text-sm text-error mt-1">{errors.in_house_cost}</p>
+                                )}
+                            </div>
+                            
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">{t('product.shadow_production_cost', 'Shadow Production Cost')} *</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className={`input input-bordered ${errors.in_house_shadow_cost ? 'input-error' : ''}`}
+                                    value={productForm.data.in_house_shadow_cost}
+                                    onChange={(e) => productForm.setData("in_house_shadow_cost", parseFloat(e.target.value) || 0)}
+                                    required
+                                />
+                                {errors.in_house_shadow_cost && (
+                                    <p className="text-sm text-error mt-1">{errors.in_house_shadow_cost}</p>
+                                )}
+                            </div>
+                            
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">{t('product.sale_price', 'Sale Price')} *</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className={`input input-bordered ${errors.in_house_sale_price ? 'input-error' : ''}`}
+                                    value={productForm.data.in_house_sale_price}
+                                    onChange={(e) => productForm.setData("in_house_sale_price", parseFloat(e.target.value) || 0)}
+                                    required
+                                />
+                                {errors.in_house_sale_price && (
+                                    <p className="text-sm text-error mt-1">{errors.in_house_sale_price}</p>
+                                )}
+                            </div>
+                            
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">{t('product.shadow_sale_price', 'Shadow Sale Price')} *</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    className={`input input-bordered ${errors.in_house_shadow_sale_price ? 'input-error' : ''}`}
+                                    value={productForm.data.in_house_shadow_sale_price}
+                                    onChange={(e) => productForm.setData("in_house_shadow_sale_price", parseFloat(e.target.value) || 0)}
+                                    required
+                                />
+                                {errors.in_house_shadow_sale_price && (
+                                    <p className="text-sm text-error mt-1">{errors.in_house_shadow_sale_price}</p>
+                                )}
+                            </div>
+                            
+                            <div className="form-control md:col-span-2 lg:col-span-1">
+                                <label className="label">
+                                    <span className="label-text">{t('product.initial_stock', 'Initial Stock Quantity')} *</span>
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    className={`input input-bordered ${errors.in_house_initial_stock ? 'input-error' : ''}`}
+                                    value={productForm.data.in_house_initial_stock}
+                                    onChange={(e) => productForm.setData("in_house_initial_stock", parseInt(e.target.value) || 0)}
+                                    required
+                                />
+                                {errors.in_house_initial_stock && (
+                                    <p className="text-sm text-error mt-1">{errors.in_house_initial_stock}</p>
+                                )}
+                            </div>
+                        </div>
+                        
+                        <div className="mt-4 p-3 bg-warning/10 rounded-box">
+                            <p className="text-sm text-warning flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                                <span>
+                                    {t('product.in_house_note', 'Note: This product will be automatically added to "In-House Production" warehouse with the specified initial stock quantity. No purchase order needed. Stock will be managed internally.')}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Attribute Selection */}
                 <div className="border-t pt-6 mb-6">
@@ -405,7 +646,7 @@ export default function AddProduct({ category, update, attributes }) {
                                         <h5 className="font-medium mb-2">{attribute.name}</h5>
                                         <div className="space-y-1 max-h-32 overflow-y-auto">
                                             {attribute.active_values?.map((value) => (
-                                                <label key={value.id} className="flex items-center space-x-2">
+                                                <label key={value.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
                                                     <input
                                                         type="checkbox"
                                                         checked={selectedAttributes[attribute.code]?.some(
@@ -418,7 +659,7 @@ export default function AddProduct({ category, update, attributes }) {
                                                                 e.target.checked
                                                             )
                                                         }
-                                                        className="checkbox checkbox-sm"
+                                                        className="checkbox checkbox-sm checkbox-primary"
                                                     />
                                                     <span className="text-sm">{value.value}</span>
                                                 </label>
@@ -427,7 +668,10 @@ export default function AddProduct({ category, update, attributes }) {
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex justify-end mt-4">
+                            <div className="flex justify-between items-center mt-4">
+                                <div className="text-sm text-gray-500">
+                                    {t('product.selected_count', 'Selected')}: {Object.keys(selectedAttributes).length} {t('product.attributes', 'attributes')}
+                                </div>
                                 <button
                                     type="button"
                                     className="btn btn-primary btn-sm"
@@ -447,8 +691,9 @@ export default function AddProduct({ category, update, attributes }) {
                             </h4>
                             <div className="flex flex-wrap gap-2">
                                 {Object.entries(selectedAttributes).map(([attributeCode, values]) => (
-                                    <div key={attributeCode} className="badge badge-primary">
-                                        {attributeCode}: {values.map(v => v.value).join(', ')}
+                                    <div key={attributeCode} className="badge badge-primary gap-1">
+                                        <span className="font-medium">{attributeCode}:</span>
+                                        <span>{values.map(v => v.value).join(', ')}</span>
                                     </div>
                                 ))}
                             </div>
@@ -460,70 +705,160 @@ export default function AddProduct({ category, update, attributes }) {
                 <div className="border-t pt-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">
-                            {t('product.product_variants', 'Product Variants')} ({variants.length})
+                            {t('product.product_variants', 'Product Variants')} 
+                            <span className="badge badge-primary badge-sm ml-2">{variants.length}</span>
                         </h3>
+                        <button
+                            type="button"
+                            className="btn btn-sm btn-outline"
+                            onClick={handleAddVariant}
+                        >
+                            <Plus size={14} />
+                            {t('product.add_variant', 'Add Variant')}
+                        </button>
                     </div>
 
                     {errors.variants && (
-                        <p className="text-red-500 text-sm mb-4">{errors.variants}</p>
+                        <div className="alert alert-error mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span>{errors.variants}</span>
+                        </div>
                     )}
 
                     <div className="grid grid-cols-1 gap-4">
                         {variants.map((variant, index) => (
                             <div
                                 key={index}
-                                className="border border-gray-300 p-4 rounded-box bg-gray-50"
+                                className="border border-gray-300 p-4 rounded-box bg-gray-50 hover:bg-gray-100 transition-colors"
                             >
                                 <div className="flex justify-between items-center mb-3">
-                                    <h4 className="font-medium text-gray-700">
-                                        {t('product.variant', 'Variant')} #{index + 1}
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-medium text-gray-700">
+                                            {t('product.variant', 'Variant')} #{index + 1}
+                                        </h4>
                                         {variant.id && (
-                                            <span className="text-xs text-gray-500 ml-2">
-                                                (ID: {variant.id})
+                                            <span className="badge badge-sm badge-outline">
+                                                ID: {variant.id}
                                             </span>
                                         )}
-                                    </h4>
+                                    </div>
+                                    {variants.length > 1 && (
+                                        <button
+                                            type="button"
+                                            className="btn btn-xs btn-error btn-outline"
+                                            onClick={() => handleDeleteVariant(index)}
+                                            title={t('product.delete_variant', 'Delete variant')}
+                                        >
+                                            <Trash size={12} />
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Display selected attributes for this variant */}
                                 <div className="mb-3">
+                                    <label className="label py-1">
+                                        <span className="label-text font-medium">
+                                            {t('product.variant_attributes', 'Variant Attributes')}
+                                        </span>
+                                    </label>
                                     <div className="flex flex-wrap gap-2">
                                         {variant.attribute_values && Object.entries(variant.attribute_values).map(([attribute, value]) => (
-                                            <span key={attribute} className="badge badge-outline">
-                                                {attribute}: {value}
+                                            <span key={attribute} className="badge badge-outline badge-primary">
+                                                <span className="font-medium">{attribute}:</span> {value}
                                             </span>
                                         ))}
                                         {(!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) && (
-                                            <span className="text-sm text-gray-500">
+                                            <div className="text-sm text-gray-500 italic">
                                                 {t('product.no_attributes_selected', 'No attributes selected')}
-                                            </span>
+                                            </div>
                                         )}
                                     </div>
                                 </div>
 
                                 {errors[`variant-${index}`] && (
-                                    <p className="text-red-500 text-sm mt-2">
-                                        {errors[`variant-${index}`]}
-                                    </p>
+                                    <div className="alert alert-warning mt-2">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                                        </svg>
+                                        <span>{errors[`variant-${index}`]}</span>
+                                    </div>
+                                )}
+
+                                {/* Cost and Price information for in-house variants */}
+                                {productType === 'in_house' && (
+                                    <div className="mt-3 pt-3 border-t border-gray-300">
+                                        <label className="label py-1">
+                                            <span className="label-text font-medium text-warning">
+                                                {t('product.variant_pricing', 'Variant Pricing')}
+                                            </span>
+                                        </label>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="text-sm">
+                                                <div className="flex justify-between mb-1">
+                                                    <span>{t('product.production_cost', 'Production Cost')}:</span>
+                                                    <span className="font-semibold">৳{parseFloat(productForm.data.in_house_cost || 0).toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between mb-1">
+                                                    <span>{t('product.shadow_cost', 'Shadow Cost')}:</span>
+                                                    <span className="font-semibold text-warning">৳{parseFloat(productForm.data.in_house_shadow_cost || 0).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="text-sm">
+                                                <div className="flex justify-between mb-1">
+                                                    <span>{t('product.sale_price', 'Sale Price')}:</span>
+                                                    <span className="font-semibold">৳{parseFloat(productForm.data.in_house_sale_price || 0).toFixed(2)}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>{t('product.shadow_sale_price', 'Shadow Sale Price')}:</span>
+                                                    <span className="font-semibold text-warning">৳{parseFloat(productForm.data.in_house_shadow_sale_price || 0).toFixed(2)}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         ))}
                     </div>
                 </div>
 
-                <button 
-                    className="btn btn-primary mt-6" 
-                    type="submit"
-                    disabled={productForm.processing}
-                >
-                    {productForm.processing 
-                        ? t('product.saving', 'Saving...')
-                        : (update 
-                            ? t('product.update_product', 'Update Product') 
-                            : t('product.save_product', 'Save Product')
-                          )
-                    }
-                </button>
+                {/* Summary and Submit Button */}
+                <div className="border-t pt-6 mt-6">
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <h4 className="font-semibold">{t('product.summary', 'Summary')}</h4>
+                            <p className="text-sm text-gray-500">
+                                {variants.length} {t('product.variant_count', variants.length === 1 ? 'variant' : 'variants')}
+                                {productType === 'in_house' && (
+                                    <span className="ml-2 text-warning font-medium">
+                                        • {t('product.in_house_product', 'In-House Product')}
+                                    </span>
+                                )}
+                            </p>
+                        </div>
+                        
+                        <button 
+                            className={`btn ${productType === 'in_house' ? 'btn-warning' : 'btn-primary'}`}
+                            type="submit"
+                            disabled={productForm.processing}
+                        >
+                            {productForm.processing ? (
+                                <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    {t('product.saving', 'Saving...')}
+                                </>
+                            ) : (
+                                <>
+                                    {update 
+                                        ? t('product.update_product', 'Update Product') 
+                                        : t('product.save_product', 'Save Product')
+                                    }
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
             </form>
         </div>
     );
