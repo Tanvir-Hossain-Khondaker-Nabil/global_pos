@@ -5,6 +5,7 @@ import { Trash, X, Plus, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "react-toastify";
 import { useTranslation } from "../../hooks/useTranslation";
 
+
 export default function AddProduct({ category, update, attributes }) {
     const { t, locale } = useTranslation();
     const [variants, setVariants] = useState([]);

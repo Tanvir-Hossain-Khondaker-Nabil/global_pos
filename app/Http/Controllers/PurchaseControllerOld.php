@@ -19,17 +19,17 @@ use Illuminate\Support\Facades\Log as FacadesLog;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Log;
 
-class PurchaseController extends Controller
+class PurchaseControllerOld extends Controller
 {
 
 
     /**
      * Display a listing of the resource.
-    */
+     */
     public function index(Request $request)
     {
         $purchases = Purchase::with(['supplier', 'warehouse', 'items.product', 'items.variant', 'creator'])
-            ->filter($request->all()) 
+            ->filter($request->all())
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -44,7 +44,7 @@ class PurchaseController extends Controller
 
     public function allPurchasesItems(Request $request)
     {
-        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant','warehouse'])
+        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse'])
             ->when($request->filled('product_id'), function ($query) use ($request) {
                 $query->where('product_id', $request->product_id);
             })
@@ -74,9 +74,9 @@ class PurchaseController extends Controller
     public function create()
     {
         return Inertia::render('Purchase/AddPurchase', [
-            'suppliers' => Supplier::all(), 
-            'warehouses' => Warehouse::all(), 
-            'products' => Product::with(['variants'])->get(), 
+            'suppliers' => Supplier::all(),
+            'warehouses' => Warehouse::all(),
+            'products' => Product::with(['variants'])->get(),
             'isShadowUser' => Auth::user()->user_type === 'shadow',
         ]);
     }

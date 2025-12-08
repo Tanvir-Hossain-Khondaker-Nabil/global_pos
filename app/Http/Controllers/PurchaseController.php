@@ -95,7 +95,9 @@ class PurchaseController extends Controller
             'purchase_date' => 'required|date',
             'notes' => 'nullable|string',
             'paid_amount' => 'required|numeric|min:0',
+            'shadow_paid_amount' => 'required|numeric|min:0', // Add this line
             'payment_status' => 'required|in:unpaid,partial,paid',
+            'shadow_payment_status' => 'required|in:unpaid,partial,paid', // Add this line
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.variant_id' => 'required|exists:variants,id',
@@ -109,26 +111,26 @@ class PurchaseController extends Controller
             'items.*.product_name' => 'sometimes|string',
             'items.*.variant_name' => 'sometimes|string',
             'items.*.total_price' => 'sometimes|numeric',
-            'items.*.shadow_total_price' => 'sometimes|numeric'
+            'items.*.shadow_total_price' => 'sometimes|numeric',
+            'adjust_from_advance' => 'nullable|boolean', // Add this
+            'manual_payment_override' => 'nullable|boolean', // Add this
+            'use_partial_payment' => 'nullable|boolean', // Add this
         ]);
 
+        $adjustamount = $request->adjust_from_advance ?? false;
+        $payment_type = 'cash'; // Default
 
-        $adjustamount  = $request->adjust_from_advance;
-
-        if($adjustamount == true){
-
+        if ($adjustamount == true) {
             $supplier = Supplier::find($request->supplier_id);
             $payment_type = 'advance_adjustment';
 
-            if( $request->paid_amount > $supplier->advance_amount){
+            if ($request->paid_amount > $supplier->advance_amount) {
                 return back()->withErrors(['error' => 'If you want to adjust from advance, the advance adjustment cannot be greater than available advance amount.']);
             }
 
             $supplier->update([
-                'advance_amount' => $supplier->advance_amount - $request->paid_amount ,
+                'advance_amount' => $supplier->advance_amount - $request->paid_amount,
             ]);
-
-
         }
 
         DB::beginTransaction();
@@ -169,11 +171,12 @@ class PurchaseController extends Controller
                 'due_amount' => $dueAmount,
                 'shadow_due_amount' => $shadowDueAmount,
                 'payment_status' => $request->payment_status,
+                'shadow_payment_status' => $request->shadow_payment_status,
                 'notes' => $request->notes,
                 'status' => 'completed',
                 'created_by' => $user->id,
                 'user_type' => $user->type,
-                'payment_type' => $payment_type ?? 'cash'
+                'payment_type' => $payment_type
             ]);
 
             // Create purchase items and update stock
@@ -258,15 +261,14 @@ class PurchaseController extends Controller
                 ]);
             }
 
-
-                // create payment record if paid_amount > 0
+            // create payment record if paid_amount > 0
             if ($paidAmount > 0) {
                 $payment = new Payment();
                 $payment->purchase_id = $purchase->id;
                 $payment->amount = $paidAmount;
                 $payment->shadow_amount = $shadowPaidAmount;
-                $payment->payment_method = $request->payment_method 
-                                ?? ($payment_type ?? 'cash');
+                $payment->payment_method = $request->payment_method
+                    ?? ($payment_type ?? 'cash');
                 $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
                 $payment->note = $request->notes ?? null;
                 $payment->supplier_id = $request->supplier_id ?? null;

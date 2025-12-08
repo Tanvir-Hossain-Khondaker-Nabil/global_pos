@@ -4,9 +4,13 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\PlanController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\SalesController;
+use App\Http\Controllers\LadgerController;
+use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
@@ -19,13 +23,10 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
-use App\Http\Controllers\BarcodePrintController;
-use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DealershipController;
-use App\Http\Controllers\LadgerController;
-use App\Http\Controllers\LedgerController;
-use App\Http\Controllers\PlanController;
+use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\PurchaseReturnController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -203,6 +204,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->name('purchase.exportPdf');
 
 
+    Route::get('/purchase-returns', [PurchaseReturnController::class, 'index'])->name('purchase-return.list');
+    Route::get('/purchase-returns/create', [PurchaseReturnController::class, 'create'])->name('purchase-return.create');
+    Route::post('/purchase-returns', [PurchaseReturnController::class, 'store'])->name('purchase-return.store');
+    Route::get('/purchase-returns/{id}', [PurchaseReturnController::class, 'show'])->name('purchase-return.show');
+    Route::post('/purchase-returns/{id}/approve', [PurchaseReturnController::class, 'approve'])->name('purchase-return.approve');
+    Route::post('/purchase-returns/{id}/complete', [PurchaseReturnController::class, 'complete'])->name('purchase-return.complete');
+    Route::delete('/purchase-returns/{id}', [PurchaseReturnController::class, 'destroy'])->name('purchase-return.destroy');
 
     Route::post('/switch-locale', [Controller::class, 'switchLocale'])->name('locale.switch');
 
