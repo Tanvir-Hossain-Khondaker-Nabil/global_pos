@@ -51,6 +51,7 @@ return [
     'included_modules' => 'Included Modules',
     'plan_last_updated' => 'Plan last updated on ',
     'plan_id' => 'Plan ID: ',
+    'days' => ' days',
 
     // Form Fields
     'plan_name' => 'Plan Name',

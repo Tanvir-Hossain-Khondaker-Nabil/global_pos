@@ -26,7 +26,7 @@ class Subscription extends Model
     //relations with plan
     public function plan()
     {
-        return $this->belongsTo(Plan::class);
+        return $this->belongsTo(Plan::class)->with('modules');
     }
 
 
@@ -40,7 +40,7 @@ class Subscription extends Model
     // Relation with SubscriptionPayment
     public function payments()
     {
-        return $this->hasMany(SubscriptionPayment::class);
+        return $this->hasMany(SubscriptionPayment::class ,'subscription_id', 'id');
     }
 
     // Scope for searching subscriptions

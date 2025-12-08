@@ -610,9 +610,7 @@ class SalesController extends Controller
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
-
         $saleItem = SaleItem::with(['sale.customer','product','variant', 'warehouse',])->findOrFail($id);
-
 
          if ($isShadowUser) {
              $saleItem = self::transformToShadowItemData($saleItem);
