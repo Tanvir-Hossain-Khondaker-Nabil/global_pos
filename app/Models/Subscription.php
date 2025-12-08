@@ -14,6 +14,7 @@ class Subscription extends Model
         'end_date',
         'status',
         'notes',
+        'product_range',
     ];
 
     const STATUS_ACTIVE = 1;

@@ -18,11 +18,12 @@ return new class extends Migration
             $table->integer('plan_type')->nullable()->comment("1= FREE, 2=PAID");
             $table->integer('validity')->default(0);
             $table->text('description')->nullable();
-            $table->json('features')->nullable(); // Store features as JSON
+            $table->json('features')->nullable(); 
             $table->enum('status', [1, 2])
             ->default(1)
             ->comment('1=active, 2=inactive');
             $table->integer('total_sell')->nullable()->default(0);
+            $table->integer('product_range')->nullable()->default(20);
             $table->timestamps();
         });
     }

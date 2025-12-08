@@ -24,7 +24,7 @@ return [
     
     // Form Labels
     'select_company' => 'Select Company',
-    'user_email' => 'User Email',
+    'user_email' => 'User Email (manual)',
     'select_plan' => 'Select Plan',
     'start_date' => 'Start Date',
     'end_date' => 'End Date',
@@ -34,6 +34,7 @@ return [
     'notes' => 'Notes',
     'auto_renew' => 'Auto Renew',
     'renewal_notes' => 'Renewal Notes',
+    'payment_count' => 'Payment Count',
     
     // Payment Methods
     'cash' => 'Cash',
@@ -41,7 +42,12 @@ return [
     'bank' => 'Bank Transfer',
     'mobile' => 'Mobile Banking',
     'online' => 'Online Payment',
-    
+    'view' => 'View',
+    'renew' => 'Renew',
+    'delete' => 'Delete',
+    'all_status' => 'All Statuses',
+    'selected_plan' => 'Selected Plan',
+
     // Status Messages
     'creating_subscription' => 'Creating Subscription...',
     'renewing_subscription' => 'Renewing Subscription...',
@@ -49,7 +55,23 @@ return [
     'subscription_created' => 'Subscription Created',
     'subscription_updated' => 'Subscription Updated',
     'subscription_renewed' => 'Subscription Renewed',
-    
+    'showing_entries' => 'Showing entries',
+    'to' => 'to',
+    'of' => 'of',
+    'entries' => 'entries',
+    'subscriptions_summary' => 'Subscriptions Summary',
+    'plan_name' => 'Plan Name',
+    'description' => 'Description',
+    'validity' => 'Validity',
+    'price' => 'Price',
+    'days' => 'days',
+    'product_range' => 'Product Range',
+    'auto_renewal' => 'Auto Renewal',
+    'yes' => 'Yes',
+    'included_modules' => 'Included Modules',
+    'subscription_summary' => 'Subscription Summary',
+    'search_subscriptions' => 'Search Subscriptions' ,
+
     // Table Headers
     'sl' => 'SL',
     'user' => 'User',
@@ -64,6 +86,10 @@ return [
     'active_subscriptions' => 'Active Subscriptions',
     'total_revenue' => 'Total Revenue',
     'active_users' => 'Active Users',
+    'select_payment_method' => 'Select Payment Method',
+    'no_plan_selected' => 'No Plan Selected',
+    'select_plan_prompt' => 'Please select a plan to see details',
+    'assign_subscription_plan' => 'Assign Subscription Plan to User',
     
     // Messages
     'no_subscriptions_found' => 'No subscriptions found!',
@@ -80,7 +106,10 @@ return [
     'plan_details' => 'Plan Details',
     'price_difference' => 'Price Difference',
     'enable_auto_renewal' => 'Enable Auto-Renewal',
-    
+    'validity_period' => 'Validity Period',
+    'plan_price' => 'Plan Price',
+    'total_amount' => 'Total Amount',
+
     // Sections
     'user_plan_selection' => 'User & Plan Selection',
     'subscription_details' => 'Subscription Details',

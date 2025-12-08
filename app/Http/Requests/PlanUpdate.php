@@ -27,9 +27,9 @@ class PlanUpdate extends FormRequest
             'plan_type' => 'required',
             'validity' => 'required|integer|min:1',
             'description' => 'nullable|string',
-            'features' => 'nullable|array',
-            'status' => 'required',
-            'total_sell' => 'nullable|integer|min:0'
+            'product_range' => 'nullable|integer|min:0',
+            'modules' => 'required|array|min:1',
+            'modules.*' => 'exists:modules,id',
         ];
     }
 }
