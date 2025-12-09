@@ -705,7 +705,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser }) {
                                 <div className="print-flex print-justify-between">
                                     <span className="print-text-xs print-text-gray-600">Subtotal:</span>
                                     <span className="print-text-xs print-font-medium">
-                                        {(purchaseItem.unit_cost * purchaseItem.quantity).toFixed(2)} Tk
+                                        {(purchaseItem.unit_price * purchaseItem.quantity).toFixed(2)} Tk
                                     </span>
                                 </div>
                                 <div className="print-flex print-justify-between">
