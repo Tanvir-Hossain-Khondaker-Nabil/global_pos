@@ -74,6 +74,20 @@ const baseMenu = [
         active: "purchase.create",
         role: "admin",
     },
+        {
+        title: "Purchase Return",
+        icon: <Receipt size={16} />,
+        route: route("purchase-return.list"),
+        active: "purchase-return.list",
+        role: "all",
+    },
+    {
+        title: "Add Purchase Return",
+        icon: <ArrowRightLeft size={16} />,
+        route: route("purchase-return.create"),
+        active: "purchase-return.create",
+        role: "admin",
+    },
     {
         title: "Warehouse",
         icon: <Warehouse size={16} />,

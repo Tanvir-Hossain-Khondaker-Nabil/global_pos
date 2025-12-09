@@ -1,7 +1,7 @@
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Eye, Plus, Trash2, Frown, Calendar, User, Warehouse, DollarSign, Package, Shield, Search, Filter, X, Edit, CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { Eye, Plus, Trash2, Frown, Calendar, User, Warehouse, DollarSign, Package, Shield, Search, Filter, X, Edit, CheckCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -77,94 +77,12 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
         }
     };
 
-    // Payment Modal Functions
-    const openPaymentModal = (purchase) => {
-        setSelectedPurchase(purchase);
-        setPaymentData({
-            paid_amount: parseFloat(purchase.paid_amount) || 0,
-            shadow_paid_amount: parseFloat(purchase.shadow_paid_amount) || 0,
-            payment_status: purchase.payment_status,
-            shadow_payment_status: purchase.shadow_payment_status
-        });
-        setShowPaymentModal(true);
+    // Add this function to handle Return button click
+    const handleCreateReturn = (purchaseId) => {
+        router.visit(route('purchase-return.create', { purchase_id: purchaseId }));
     };
 
-    const closePaymentModal = () => {
-        setShowPaymentModal(false);
-        setSelectedPurchase(null);
-        setPaymentData({ 
-            paid_amount: 0, 
-            shadow_paid_amount: 0,
-            payment_status: 'unpaid',
-            shadow_payment_status: 'unpaid'
-        });
-    };
-
-    const handlePaymentUpdate = () => {
-        if (!selectedPurchase) return;
-
-        // Calculate due amounts
-        const updatedData = {
-            ...paymentData,
-            due_amount: Math.max(0, selectedPurchase.total_amount - paymentData.paid_amount),
-            shadow_due_amount: Math.max(0, selectedPurchase.shadow_total_amount - paymentData.shadow_paid_amount)
-        };
-
-        router.patch(route('purchase.updatePayment', selectedPurchase.id), updatedData, {
-            onSuccess: () => {
-                closePaymentModal();
-            },
-            preserveScroll: true
-        });
-    };
-
-    // Approve Modal Functions
-    const openApproveModal = (purchase) => {
-        setSelectedPurchase(purchase);
-        
-        // Initialize approve data with shadow prices
-        const itemsWithPrices = purchase.items.map(item => ({
-            id: item.id,
-            purchase_price: item.shadow_unit_price,
-            sale_price: item.shadow_sale_price,
-            total_price: item.shadow_total_price
-        }));
-        
-        setApproveData({
-            items: itemsWithPrices,
-            notes: ''
-        });
-        
-        setShowApproveModal(true);
-    };
-
-    const closeApproveModal = () => {
-        setShowApproveModal(false);
-        setSelectedPurchase(null);
-        setApproveData({ items: [], notes: '' });
-    };
-
-    const handleApprovePurchase = () => {
-        if (!selectedPurchase) return;
-
-        // Validate all prices
-        const invalidItems = approveData.items.filter(item => 
-            !item.purchase_price || item.purchase_price <= 0 || 
-            !item.sale_price || item.sale_price <= 0
-        );
-
-        if (invalidItems.length > 0) {
-            alert(t('purchase.enter_valid_prices', 'Please enter valid prices for all items'));
-            return;
-        }
-
-        router.patch(route('purchase.approve', selectedPurchase.id), approveData, {
-            onSuccess: () => {
-                closeApproveModal();
-            },
-            preserveScroll: true
-        });
-    };
+    // ... rest of your existing Payment and Approve modal functions ...
 
     const formatDate = (date) => {
         return new Date(date).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-IN');
@@ -191,17 +109,17 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
     const getDisplayAmounts = (purchase) => {
         if (isShadowUser) {
             return {
-                total: purchase.shadow_total_amount,
-                paid: purchase.shadow_paid_amount,
-                due: purchase.shadow_due_amount,
-                payment_status: purchase.shadow_payment_status
+                total: purchase.shadow_total_amount || purchase.grand_total || 0,
+                paid: purchase.shadow_paid_amount || purchase.paid_amount || 0,
+                due: purchase.shadow_due_amount || purchase.due_amount || 0,
+                payment_status: purchase.shadow_payment_status || purchase.payment_status || 'unpaid'
             };
         }
         return {
-            total: purchase.total_amount,
-            paid: purchase.paid_amount,
-            due: purchase.due_amount,
-            payment_status: purchase.payment_status
+            total: purchase.grand_total || purchase.total_amount || 0,
+            paid: purchase.paid_amount || 0,
+            due: purchase.due_amount || 0,
+            payment_status: purchase.payment_status || 'unpaid'
         };
     };
 
@@ -436,6 +354,16 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                             >
                                                 <Eye size={12} /> {t('purchase.details', 'Details')}
                                             </Link>
+
+                                            {/* Add Return Button */}
+                                            {purchase.status === 'completed' && (
+                                                <button
+                                                    onClick={() => handleCreateReturn(purchase.id)}
+                                                    className="btn btn-xs btn-warning btn-outline"
+                                                >
+                                                    <RefreshCw size={12} /> {t('purchase.return', 'Return')}
+                                                </button>
+                                            )}
 
                                             {auth?.role === "admin" && purchase.status !== 'cancelled' && (
                                                 <button

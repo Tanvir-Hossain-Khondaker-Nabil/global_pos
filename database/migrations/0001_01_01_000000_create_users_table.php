@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->string('email')->unique();
-            $table->enum('type', ['shadow', 'general'])->default('ganaral');
+            $table->enum('type', ['shadow', 'general'])->default('general');
             $table->string('phone')->nullable();
             $table->string('address')->nullable();
             $table->string('profile')->nullable();
