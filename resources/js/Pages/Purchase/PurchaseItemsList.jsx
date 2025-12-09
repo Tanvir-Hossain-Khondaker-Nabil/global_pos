@@ -268,13 +268,14 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-1">
-                                                {/* <Link
-                                                    href={route('purchases.show', { id: item.purchase_id })}
+                                          
+                                                <Link
+                                                    href={route('purchaseItems.show', { id: item.id })}
                                                     className="btn btn-ghost btn-xs"
-                                                    title="View Purchase"
+                                                    title="View Purchase Item"
                                                 >
-                                                    <Eye size={12} />
-                                                </Link> */}
+                                                    <Package size={12} />
+                                                </Link>
                                                 {/* {item.product && (
                                                     <Link
                                                         href={route('products.show', { id: item.product_id })}
