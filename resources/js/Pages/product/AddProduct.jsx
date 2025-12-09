@@ -52,7 +52,7 @@ export default function AddProduct({ category, update, attributes }) {
         if (attributes && Array.isArray(attributes)) {
             setAvailableAttributes(attributes);
         }
-        
+
         // Set product type if editing
         if (update && update.product_type) {
             setProductType(update.product_type);
@@ -62,12 +62,12 @@ export default function AddProduct({ category, update, attributes }) {
     // Generate variants based on selected attribute combinations
     const generateVariants = () => {
         const selectedValues = Object.values(selectedAttributes).filter(arr => arr.length > 0);
-        
+
         if (selectedValues.length === 0) {
             // If no attributes selected, create one default variant
-            setVariants([{ 
-                id: null, 
-                attribute_values: {} 
+            setVariants([{
+                id: null,
+                attribute_values: {}
             }]);
             return;
         }
@@ -75,7 +75,7 @@ export default function AddProduct({ category, update, attributes }) {
         // Generate all combinations of selected attribute values
         const combinations = selectedValues.reduce((acc, curr) => {
             if (acc.length === 0) return curr.map(val => [val]);
-            return acc.flatMap(comb => 
+            return acc.flatMap(comb =>
                 curr.map(val => [...comb, val])
             );
         }, []);
@@ -99,7 +99,7 @@ export default function AddProduct({ category, update, attributes }) {
     const handleAttributeSelect = (attributeCode, value, checked) => {
         setSelectedAttributes(prev => {
             const newSelection = { ...prev };
-            
+
             if (checked) {
                 if (!newSelection[attributeCode]) {
                     newSelection[attributeCode] = [];
@@ -109,12 +109,12 @@ export default function AddProduct({ category, update, attributes }) {
                 newSelection[attributeCode] = newSelection[attributeCode]?.filter(
                     item => item.value !== value.value
                 ) || [];
-                
+
                 if (newSelection[attributeCode].length === 0) {
                     delete newSelection[attributeCode];
                 }
             }
-            
+
             return newSelection;
         });
     };
@@ -129,15 +129,27 @@ export default function AddProduct({ category, update, attributes }) {
     const handleProductTypeChange = (type) => {
         setProductType(type);
         productForm.setData("product_type", type);
-        
+
         // Reset in-house fields if switching to regular
         if (type === 'regular') {
-            productForm.setData({
+            const resetData = {
                 in_house_cost: 0,
                 in_house_shadow_cost: 0,
                 in_house_sale_price: 0,
                 in_house_shadow_sale_price: 0,
                 in_house_initial_stock: 0,
+            };
+            productForm.setData(resetData);
+
+            // Also clear any related errors
+            setErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.in_house_cost;
+                delete newErrors.in_house_shadow_cost;
+                delete newErrors.in_house_sale_price;
+                delete newErrors.in_house_shadow_sale_price;
+                delete newErrors.in_house_initial_stock;
+                return newErrors;
             });
         }
     };
@@ -195,22 +207,22 @@ export default function AddProduct({ category, update, attributes }) {
                 hasError = true;
                 newErrors.in_house_cost = t('product.production_cost_required', 'Production cost is required');
             }
-            
+
             if (!productForm.data.in_house_shadow_cost || productForm.data.in_house_shadow_cost <= 0) {
                 hasError = true;
                 newErrors.in_house_shadow_cost = t('product.shadow_cost_required', 'Shadow production cost is required');
             }
-            
+
             if (!productForm.data.in_house_sale_price || productForm.data.in_house_sale_price <= 0) {
                 hasError = true;
                 newErrors.in_house_sale_price = t('product.sale_price_required', 'Sale price is required');
             }
-            
+
             if (!productForm.data.in_house_shadow_sale_price || productForm.data.in_house_shadow_sale_price <= 0) {
                 hasError = true;
                 newErrors.in_house_shadow_sale_price = t('product.shadow_sale_price_required', 'Shadow sale price is required');
             }
-            
+
             if (productForm.data.in_house_initial_stock < 0) {
                 hasError = true;
                 newErrors.in_house_initial_stock = t('product.initial_stock_invalid', 'Initial stock cannot be negative');
@@ -218,7 +230,7 @@ export default function AddProduct({ category, update, attributes }) {
         }
 
         // Validate variants - check if at least one variant has attributes
-        const hasValidVariants = variants.some(variant => 
+        const hasValidVariants = variants.some(variant =>
             variant.attribute_values && Object.keys(variant.attribute_values).length > 0
         );
 
@@ -273,18 +285,18 @@ export default function AddProduct({ category, update, attributes }) {
         console.log('Submitting data:', submitData);
 
         const url = update ? route("product.add.post") : route("product.add.post");
-        
+
         productForm.post(url, {
             data: submitData,
             preserveScroll: true,
             onSuccess: () => {
-                toast.success(update 
+                toast.success(update
                     ? t('product.product_updated_success', 'Product updated successfully!')
                     : t('product.product_added_success', 'Product added successfully!')
                 );
                 if (!update) {
                     productForm.reset();
-                    setVariants([{ attribute_values: {}}]);
+                    setVariants([{ attribute_values: {} }]);
                     setSelectedAttributes({});
                     setProductType('regular');
                 }
@@ -305,7 +317,7 @@ export default function AddProduct({ category, update, attributes }) {
     useEffect(() => {
         if (update) {
             console.log('Update data received:', update);
-            
+
             productForm.setData({
                 id: update.id || "",
                 product_name: update.name || "",
@@ -326,7 +338,7 @@ export default function AddProduct({ category, update, attributes }) {
                     attribute_values: variant.attribute_values || {},
                 }));
                 setVariants(mappedVariants);
-                
+
                 // Pre-select attributes for editing
                 const selectedAttrs = {};
                 mappedVariants.forEach(variant => {
@@ -361,8 +373,8 @@ export default function AddProduct({ category, update, attributes }) {
     return (
         <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title={update 
-                    ? t('product.update_title', 'Update Product') 
+                title={update
+                    ? t('product.update_title', 'Update Product')
                     : t('product.from_title', 'Add New Product')
                 }
                 subtitle={t('product.subtitle', 'Add or update product with variants')}
@@ -398,7 +410,7 @@ export default function AddProduct({ category, update, attributes }) {
                                 </div>
                             </div>
                         </label>
-                        
+
                         <label className={`card cursor-pointer border-2 ${productType === 'in_house' ? 'border-warning bg-warning/5' : 'border-base-300 hover:border-warning/50'}`}>
                             <div className="card-body p-4">
                                 <div className="flex items-start">
@@ -511,7 +523,7 @@ export default function AddProduct({ category, update, attributes }) {
                             <Factory size={20} />
                             {t('product.in_house_settings', 'In-House Production Settings')}
                         </h3>
-                        
+
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                             <div className="form-control">
                                 <label className="label">
@@ -530,7 +542,7 @@ export default function AddProduct({ category, update, attributes }) {
                                     <p className="text-sm text-error mt-1">{errors.in_house_cost}</p>
                                 )}
                             </div>
-                            
+
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">{t('product.shadow_production_cost', 'Shadow Production Cost')} *</span>
@@ -548,7 +560,7 @@ export default function AddProduct({ category, update, attributes }) {
                                     <p className="text-sm text-error mt-1">{errors.in_house_shadow_cost}</p>
                                 )}
                             </div>
-                            
+
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">{t('product.sale_price', 'Sale Price')} *</span>
@@ -566,7 +578,7 @@ export default function AddProduct({ category, update, attributes }) {
                                     <p className="text-sm text-error mt-1">{errors.in_house_sale_price}</p>
                                 )}
                             </div>
-                            
+
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">{t('product.shadow_sale_price', 'Shadow Sale Price')} *</span>
@@ -584,7 +596,7 @@ export default function AddProduct({ category, update, attributes }) {
                                     <p className="text-sm text-error mt-1">{errors.in_house_shadow_sale_price}</p>
                                 )}
                             </div>
-                            
+
                             <div className="form-control md:col-span-2 lg:col-span-1">
                                 <label className="label">
                                     <span className="label-text">{t('product.initial_stock', 'Initial Stock Quantity')} *</span>
@@ -602,7 +614,7 @@ export default function AddProduct({ category, update, attributes }) {
                                 )}
                             </div>
                         </div>
-                        
+
                         <div className="mt-4 p-3 bg-warning/10 rounded-box">
                             <p className="text-sm text-warning flex items-start gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
@@ -628,8 +640,8 @@ export default function AddProduct({ category, update, attributes }) {
                             onClick={() => setShowAttributeSelector(!showAttributeSelector)}
                         >
                             {showAttributeSelector ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                            {showAttributeSelector 
-                                ? t('product.hide_attributes', 'Hide Attributes') 
+                            {showAttributeSelector
+                                ? t('product.hide_attributes', 'Hide Attributes')
                                 : t('product.select_attributes', 'Select Attributes')
                             }
                         </button>
@@ -652,9 +664,9 @@ export default function AddProduct({ category, update, attributes }) {
                                                         checked={selectedAttributes[attribute.code]?.some(
                                                             item => item.value === value.value
                                                         ) || false}
-                                                        onChange={(e) => 
+                                                        onChange={(e) =>
                                                             handleAttributeSelect(
-                                                                attribute.code, 
+                                                                attribute.code,
                                                                 { value: value.value, attribute_code: attribute.code },
                                                                 e.target.checked
                                                             )
@@ -705,7 +717,7 @@ export default function AddProduct({ category, update, attributes }) {
                 <div className="border-t pt-6">
                     <div className="flex justify-between items-center mb-4">
                         <h3 className="text-lg font-semibold">
-                            {t('product.product_variants', 'Product Variants')} 
+                            {t('product.product_variants', 'Product Variants')}
                             <span className="badge badge-primary badge-sm ml-2">{variants.length}</span>
                         </h3>
                         <button
@@ -837,8 +849,8 @@ export default function AddProduct({ category, update, attributes }) {
                                 )}
                             </p>
                         </div>
-                        
-                        <button 
+
+                        <button
                             className={`btn ${productType === 'in_house' ? 'btn-warning' : 'btn-primary'}`}
                             type="submit"
                             disabled={productForm.processing}
@@ -850,8 +862,8 @@ export default function AddProduct({ category, update, attributes }) {
                                 </>
                             ) : (
                                 <>
-                                    {update 
-                                        ? t('product.update_product', 'Update Product') 
+                                    {update
+                                        ? t('product.update_product', 'Update Product')
                                         : t('product.save_product', 'Save Product')
                                     }
                                 </>
