@@ -206,6 +206,16 @@ const baseMenu = [
         active: "customer.index",
         role: "all",
     },
+
+    
+    {
+        title: "Companies",
+        icon: <UserPlus size={16} />,
+        route: route("companies.index"),
+        active: "companies.index",
+        role: "all",
+    },
+
     {
         title: "Users",
         icon: <User size={16} />,
