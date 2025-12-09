@@ -1,11 +1,11 @@
 import PageHeader from "../../components/PageHeader";
 import { router, usePage } from "@inertiajs/react";
-import { 
-    Search, 
-    Filter, 
-    Calendar, 
-    Eye, 
-    Trash2, 
+import {
+    Search,
+    Filter,
+    Calendar,
+    Eye,
+    Trash2,
     RefreshCw,
     DollarSign,
     Package,
@@ -23,10 +23,10 @@ import {
 import { useState, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
-export default function PurchaseReturnList({ 
-    filters, 
-    returns, 
-    isShadowUser 
+export default function PurchaseReturnList({
+    filters,
+    returns,
+    isShadowUser
 }) {
     const { t, locale } = useTranslation();
     const [search, setSearch] = useState(filters.search || '');
@@ -109,7 +109,7 @@ export default function PurchaseReturnList({
         if (statusFilter) params.status = statusFilter;
         if (typeFilter) params.return_type = typeFilter;
         if (dateFilter) params.date = dateFilter;
-        
+
         router.get(route('purchase-return.list'), params, {
             preserveState: true,
             replace: true
@@ -130,8 +130,8 @@ export default function PurchaseReturnList({
 
     // Handle row expand/collapse
     const toggleRowExpand = (id) => {
-        setExpandedRows(prev => 
-            prev.includes(id) 
+        setExpandedRows(prev =>
+            prev.includes(id)
                 ? prev.filter(rowId => rowId !== id)
                 : [...prev, id]
         );
@@ -145,7 +145,7 @@ export default function PurchaseReturnList({
 
     const confirmDelete = () => {
         if (!selectedReturn) return;
-        
+
         router.delete(route('purchase-return.destroy', selectedReturn.id), {
             onSuccess: () => {
                 setShowDeleteModal(false);
@@ -162,7 +162,7 @@ export default function PurchaseReturnList({
         if (!confirm(t('purchase_return.confirm_approve', 'Are you sure you want to approve this return?'))) {
             return;
         }
-        
+
         router.post(route('purchase-return.approve', id), {}, {
             onSuccess: () => {
                 router.reload({ only: ['returns'] });
@@ -174,11 +174,19 @@ export default function PurchaseReturnList({
     };
 
     // Handle complete
+    // Handle complete
     const handleComplete = (id) => {
-        if (!confirm(t('purchase_return.confirm_complete', 'Are you sure you want to complete this return?'))) {
+        const returnItem = returns.data.find(r => r.id === id);
+        if (!returnItem) return;
+
+        const message = returnItem.return_type === 'money_back'
+            ? t('purchase_return.confirm_complete_refund', 'Are you sure you want to complete this refund? This will process the payment.')
+            : t('purchase_return.confirm_complete_replacement', 'Are you sure you want to complete this product replacement? This will finalize the replacement process.');
+
+        if (!confirm(message)) {
             return;
         }
-        
+
         router.post(route('purchase-return.complete', id), {}, {
             onSuccess: () => {
                 router.reload({ only: ['returns'] });
@@ -205,13 +213,13 @@ export default function PurchaseReturnList({
             const dateB = new Date(b[sortConfig.key]);
             return sortConfig.direction === 'asc' ? dateA - dateB : dateB - dateA;
         }
-        
+
         if (sortConfig.key === 'total_return_amount') {
             const amountA = parseFloat(a[sortConfig.key]);
             const amountB = parseFloat(b[sortConfig.key]);
             return sortConfig.direction === 'asc' ? amountA - amountB : amountB - amountA;
         }
-        
+
         if (a[sortConfig.key] < b[sortConfig.key]) {
             return sortConfig.direction === 'asc' ? -1 : 1;
         }
@@ -304,7 +312,16 @@ export default function PurchaseReturnList({
                     >
                         {expandedRows.includes(row.id) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </button>
-                    
+
+                    {/* View Button */}
+                    <button
+                        onClick={() => router.visit(route('purchase-return.show', row.id))}
+                        className="btn btn-xs btn-outline btn-info"
+                        title="View Details"
+                    >
+                        <Eye size={12} />
+                    </button>
+
                     {/* Approve Button - Always visible for pending returns */}
                     {row.status === 'pending' && (
                         <button
@@ -315,18 +332,22 @@ export default function PurchaseReturnList({
                             <CheckCircle size={12} />
                         </button>
                     )}
-                    
-                    {/* Complete Button - Always visible for approved money_back returns */}
-                    {row.status === 'approved' && row.return_type === 'money_back' && (
+
+                    {/* Complete Button - Visible for APPROVED returns (both money_back AND product_replacement) */}
+                    {row.status === 'approved' && (
                         <button
                             onClick={() => handleComplete(row.id)}
-                            className="btn btn-xs btn-outline btn-primary"
-                            title="Complete Return"
+                            className={`btn btn-xs btn-outline ${row.return_type === 'money_back' ? 'btn-primary' : 'btn-warning'}`}
+                            title={`Complete ${row.return_type === 'money_back' ? 'Refund' : 'Replacement'}`}
                         >
-                            <DollarSign size={12} />
+                            {row.return_type === 'money_back' ? (
+                                <DollarSign size={12} />
+                            ) : (
+                                <Package size={12} />
+                            )}
                         </button>
                     )}
-                    
+
                     {/* Delete Button - Always visible for pending returns */}
                     {row.status === 'pending' && (
                         <button
@@ -337,7 +358,7 @@ export default function PurchaseReturnList({
                             <Trash2 size={12} />
                         </button>
                     )}
-                    
+
                     <div className="dropdown dropdown-left">
                         <label tabIndex={0} className="btn btn-xs btn-ghost">
                             <MoreVertical size={14} />
@@ -349,7 +370,7 @@ export default function PurchaseReturnList({
                                 </a>
                             </li>
                             <li>
-                                <a onClick={() => {/* Export functionality */}}>
+                                <a onClick={() => {/* Export functionality */ }}>
                                     <Download size={12} /> {t('purchase_return.export', 'Export')}
                                 </a>
                             </li>
@@ -382,7 +403,7 @@ export default function PurchaseReturnList({
                             </div>
                         </div>
                     </div>
-                    
+
                     <div>
                         <h4 className="font-semibold text-sm mb-2">{t('purchase_return.amount_details', 'Amount Details')}</h4>
                         <div className="space-y-1 text-sm">
@@ -408,7 +429,7 @@ export default function PurchaseReturnList({
                             )}
                         </div>
                     </div>
-                    
+
                     <div>
                         <h4 className="font-semibold text-sm mb-2">{t('purchase_return.reason_notes', 'Reason & Notes')}</h4>
                         <div className="text-sm">
@@ -419,9 +440,15 @@ export default function PurchaseReturnList({
                         </div>
                     </div>
                 </div>
-                
-                {/* Action buttons for expanded view */}
+
                 <div className="mt-4 pt-4 border-t border-base-300 flex gap-2">
+                    <button
+                        onClick={() => router.visit(route('purchase-return.show', row.id))}
+                        className="btn btn-sm btn-outline btn-info"
+                    >
+                        <Eye size={14} className="mr-1" />
+                        {t('purchase_return.view_full_details', 'View Full Details')}
+                    </button>
 
                     {/* Approve button in expanded view */}
                     {row.status === 'pending' && (
@@ -433,18 +460,27 @@ export default function PurchaseReturnList({
                             {t('purchase_return.approve_return', 'Approve Return')}
                         </button>
                     )}
-                    
-                    {/* Complete button in expanded view */}
-                    {row.status === 'approved' && row.return_type === 'money_back' && (
+
+                    {/* Complete button in expanded view - for BOTH return types */}
+                    {row.status === 'approved' && (
                         <button
                             onClick={() => handleComplete(row.id)}
-                            className="btn btn-sm btn-primary"
+                            className={`btn btn-sm ${row.return_type === 'money_back' ? 'btn-primary' : 'btn-warning'}`}
                         >
-                            <DollarSign size={14} className="mr-1" />
-                            {t('purchase_return.complete_refund', 'Complete Refund')}
+                            {row.return_type === 'money_back' ? (
+                                <>
+                                    <DollarSign size={14} className="mr-1" />
+                                    {t('purchase_return.complete_refund', 'Complete Refund')}
+                                </>
+                            ) : (
+                                <>
+                                    <Package size={14} className="mr-1" />
+                                    {t('purchase_return.complete_replacement', 'Complete Replacement')}
+                                </>
+                            )}
                         </button>
                     )}
-                    
+
                     {/* Delete button in expanded view */}
                     {row.status === 'pending' && (
                         <button
@@ -463,7 +499,7 @@ export default function PurchaseReturnList({
     // Modal Component
     const Modal = ({ isOpen, onClose, title, children }) => {
         if (!isOpen) return null;
-        
+
         return (
             <div className="modal modal-open">
                 <div className="modal-box">
@@ -482,7 +518,7 @@ export default function PurchaseReturnList({
         const timer = setTimeout(() => {
             applyFilters();
         }, 500);
-        
+
         return () => clearTimeout(timer);
     }, [search]);
 
@@ -717,7 +753,7 @@ export default function PurchaseReturnList({
                                             <tr key={row.id} className="hover">
                                                 {columns.map((column) => (
                                                     <td key={`${row.id}-${column.key}`}>
-                                                        {column.render 
+                                                        {column.render
                                                             ? column.render(row)
                                                             : row[column.key]
                                                         }

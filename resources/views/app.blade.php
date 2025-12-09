@@ -10,6 +10,12 @@
     @inertiaHead
 </head>
 
+<style>
+    ::-webkit-scrollbar-thumb{
+        width: 0px
+    }
+</style>
+
 <body>
     @inertia
 </body>

@@ -11,6 +11,7 @@ use App\Models\Attribute;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -74,21 +75,47 @@ class ProductController extends Controller
 
     public function update(Request $request)
     {
-        $request->validate([
+        // Custom validation logic
+        $validator = Validator::make($request->all(), [
             'product_name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
             'product_no' => 'required|string|max:100|unique:products,product_no,' . $request->id,
             'description' => 'nullable|string',
             'product_type' => 'required|in:regular,in_house',
-            'in_house_cost' => 'required_if:product_type,in_house|numeric|min:0',
-            'in_house_shadow_cost' => 'required_if:product_type,in_house|numeric|min:0',
-            'in_house_sale_price' => 'required_if:product_type,in_house|numeric|min:0',
-            'in_house_shadow_sale_price' => 'required_if:product_type,in_house|numeric|min:0',
-            'in_house_initial_stock' => 'required_if:product_type,in_house|integer|min:0',
             'variants' => ['required', 'array', 'min:1'],
             'variants.*.attribute_values' => ['required', 'array', 'min:1'],
             'variants.*.sku' => ['nullable', 'string', 'max:100', 'unique:variants,sku,' . ($request->variants[0]['id'] ?? 'NULL')],
         ]);
+
+        // Add conditional validation for in_house fields
+        $validator->sometimes('in_house_cost', 'required|numeric|min:0', function ($input) {
+            return $input->product_type === 'in_house';
+        });
+
+        $validator->sometimes('in_house_shadow_cost', 'required|numeric|min:0', function ($input) {
+            return $input->product_type === 'in_house';
+        });
+
+        $validator->sometimes('in_house_sale_price', 'required|numeric|min:0', function ($input) {
+            return $input->product_type === 'in_house';
+        });
+
+        $validator->sometimes('in_house_shadow_sale_price', 'required|numeric|min:0', function ($input) {
+            return $input->product_type === 'in_house';
+        });
+
+        $validator->sometimes('in_house_initial_stock', 'required|integer|min:0', function ($input) {
+            return $input->product_type === 'in_house';
+        });
+
+        // Validate
+        if ($validator->fails()) {
+            DB::rollBack();
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('error', 'Please fix the validation errors');
+        }
 
         DB::beginTransaction();
         try {

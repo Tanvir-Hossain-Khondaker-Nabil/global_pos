@@ -11,7 +11,7 @@ return [
     'edit' => 'সম্পাদনা',
     'delete' => 'মুছুন',
     'delete_confirmation' => 'আপনি কি নিশ্চিত যে আপনি এই পণ্যটি মুছতে চান? এই কাজটি পূর্বাবস্থায় ফেরানো যাবে না।',
-    
+
     // Table headers
     'product_code' => 'পণ্য কোড',
     'product_name' => 'পণ্যের নাম',
@@ -20,7 +20,7 @@ return [
     'total_stock' => 'মোট স্টক',
     'variants' => 'ভেরিয়েন্ট',
     'actions' => 'কার্যক্রম',
-    
+
     // Product details
     'default_variant' => 'ডিফল্ট ভেরিয়েন্ট',
     'units' => 'ইউনিট',
@@ -30,7 +30,7 @@ return [
     'price' => 'দাম',
     'description' => 'বিবরণ',
     'not_available' => 'প্রযোজ্য নয়',
-    
+
     // Status messages
     'product_added' => 'পণ্য সফলভাবে যোগ করা হয়েছে!',
     'product_updated' => 'পণ্য সফলভাবে আপডেট করা হয়েছে!',
@@ -38,7 +38,7 @@ return [
     'from_title' => 'নতুন পণ্য যোগ করুন',
     'update_title' => 'পণ্য আপডেট করুন',
     'from_subtitle' => 'ভেরিয়েন্ট সহ পণ্য যোগ বা আপডেট করুন',
-    
+
     // Form fields
     'from_product_name' => 'পণ্যের নাম',
     'from_category' => 'বিভাগ',
@@ -48,7 +48,7 @@ return [
     'enter_product_name' => 'পণ্যের নাম লিখুন',
     'enter_product_code' => 'পণ্য কোড লিখুন',
     'enter_description' => 'পণ্যের বিবরণ লিখুন',
-    
+
     // Attributes section
     'product_attributes' => 'পণ্যের বৈশিষ্ট্য',
     'select_attributes' => 'বৈশিষ্ট্য নির্বাচন করুন',
@@ -56,17 +56,24 @@ return [
     'select_attribute_values' => 'বৈশিষ্ট্যের মান নির্বাচন করুন',
     'selected_attributes' => 'নির্বাচিত বৈশিষ্ট্য',
     'apply_attributes' => 'বৈশিষ্ট্য প্রয়োগ করুন',
-    
+    'selected_count' => 'নির্বাচিত',
+    'attributes' => 'বৈশিষ্ট্য',
+
     // Variants section
     'product_variants' => 'পণ্যের ভেরিয়েন্ট',
     'variant' => 'ভেরিয়েন্ট',
     'no_attributes_selected' => 'কোনো বৈশিষ্ট্য নির্বাচন করা হয়নি',
-    
+    'variant_attributes' => 'ভেরিয়েন্ট বৈশিষ্ট্য',
+    'delete_variant' => 'ভেরিয়েন্ট মুছুন',
+    'variant_pricing' => 'ভেরিয়েন্ট মূল্য নির্ধারণ',
+    'add_variant' => 'ভেরিয়েন্ট যোগ করুন',
+    'variant_count' => 'ভেরিয়েন্ট সংখ্যা',
+
     // Buttons
     'save_product' => 'পণ্য সংরক্ষণ করুন',
     'update_product' => 'পণ্য আপডেট করুন',
     'saving' => 'সংরক্ষণ করা হচ্ছে...',
-    
+
     // Validation messages
     'product_name_required' => 'পণ্যের নাম প্রয়োজন',
     'category_required' => 'বিভাগ প্রয়োজন',
@@ -75,8 +82,36 @@ return [
     'variant_attributes_required' => 'এই ভেরিয়েন্টের জন্য বৈশিষ্ট্য নির্বাচন করুন',
     'fix_validation_errors' => 'দয়া করে বৈধতা ত্রুটিগুলি ঠিক করুন',
     'something_went_wrong' => 'কিছু ভুল হয়েছে। দয়া করে আবার চেষ্টা করুন!',
-    
+
     // Success messages
     'product_added_success' => 'পণ্য সফলভাবে যোগ করা হয়েছে!',
     'product_updated_success' => 'পণ্য সফলভাবে আপডেট করা হয়েছে!',
+
+    // Product Type
+    'product_type' => 'পণ্যের ধরন',
+    'regular_product' => 'নিয়মিত পণ্য',
+    'in_house_product' => 'ইন-হাউস উৎপাদন',
+    'regular_desc' => 'সরবরাহকারীর কাছ থেকে ক্রয় করুন, ক্রয় অর্ডারের মাধ্যমে স্টক ব্যবস্থাপনা প্রয়োজন',
+    'in_house_desc' => 'অভ্যন্তরীণভাবে উৎপাদিত, ইন-হাউস গুদামে স্বয়ংক্রিয় স্টক ব্যবস্থাপনা',
+
+    // In-House Product Settings
+    'in_house_settings' => 'ইন-হাউস উৎপাদন সেটিংস',
+    'production_cost' => 'উৎপাদন খরচ',
+    'shadow_production_cost' => 'শ্যাডো উৎপাদন খরচ',
+    'sale_price' => 'বিক্রয় মূল্য',
+    'shadow_sale_price' => 'শ্যাডো বিক্রয় মূল্য',
+    'initial_stock' => 'প্রারম্ভিক স্টক পরিমাণ',
+    'in_house_note' => 'দ্রষ্টব্য: এই পণ্যটি স্বয়ংক্রিয়ভাবে "ইন-হাউস উৎপাদন" গুদামে নির্ধারিত প্রারম্ভিক স্টক পরিমাণের সাথে যোগ করা হবে। কোনো ক্রয় অর্ডারের প্রয়োজন নেই। স্টক অভ্যন্তরীণভাবে পরিচালনা করা হবে।',
+    'shadow_cost' => 'শ্যাডো খরচ',
+
+    // Summary
+    'summary' => 'সারসংক্ষেপ',
+    'in_house_product_short' => 'ইন-হাউস পণ্য',
+
+    // Additional validation
+    'production_cost_required' => 'উৎপাদন খরচ প্রয়োজন',
+    'shadow_cost_required' => 'শ্যাডো উৎপাদন খরচ প্রয়োজন',
+    'sale_price_required' => 'বিক্রয় মূল্য প্রয়োজন',
+    'shadow_sale_price_required' => 'শ্যাডো বিক্রয় মূল্য প্রয়োজন',
+    'initial_stock_invalid' => 'প্রারম্ভিক স্টক নেতিবাচক হতে পারে না',
 ];
