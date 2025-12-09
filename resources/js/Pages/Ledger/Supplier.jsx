@@ -90,19 +90,36 @@ export default function SupplierLedger({
   const [showDueClearance, setShowDueClearance] = useState(false);
   const [dueAmount, setDueAmount] = useState(0);
   const [advanceAmount, setAdvanceAmount] = useState(0);
-  const [paymentForm, setPaymentForm] = useState({
-    paid_amount: "",
-    payment_type: "cash",
-  });
-
-  // Advance Payment Modal States
   const [showAdvancePayment, setShowAdvancePayment] = useState(false);
-  const [advancePaymentForm, setAdvancePaymentForm] = useState({
-    amount: "", // Changed from paid_amount to amount for consistency
+
+  // Advance Payment Form
+  const { data: advanceData, setData: setAdvanceData, post: postAdvance, processing: advanceProcessing, errors: advanceErrors } = useForm({
+    amount: "",
     payment_type: "cash",
     transaction_id: "",
     notes: "",
   });
+
+  const handleAdvancePaymentSubmit = (e) => {
+    e.preventDefault();
+
+    const paidAmount = parseFloat(advanceData.amount) || 0;
+    if (paidAmount <= 0) {
+      alert("Please enter a valid advance amount");
+      return;
+    }
+
+    postAdvance(route('advancePayment.store', supplier.id), {
+      onSuccess: () => {
+        alert(`Advance payment of ৳${formatCurrency(paidAmount)} added successfully!`);
+        setShowAdvancePayment(false);
+        router.reload();
+      },
+      onError: (errors) => {
+        alert(errors.amount || errors.payment_type || 'An error occurred while processing the advance payment.');
+      }
+    });
+  };
 
   // Initialize filter form with query string values
   const filterForm = useForm({
@@ -412,58 +429,11 @@ export default function SupplierLedger({
     
     setDueAmount(totalDue);
     setAdvanceAmount(supplier?.advance_amount || 0);
-    setPaymentForm({
-      paid_amount: Math.min(totalDue, supplier?.advance_amount > 0 ? supplier.advance_amount : totalDue).toString(),
-      payment_type: "cash",
-    });
     setShowDueClearance(true);
   };
 
-  const handlePaymentSubmit = (e) => {
-    e.preventDefault();
-
-    const paidAmount = parseFloat(paymentForm.paid_amount) || 0;
-    if (paidAmount <= 0) {
-      alert("Please enter a valid payment amount");
-      return;
-    }
-    
-    const maxPayable = Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount));
-    if (paidAmount > maxPayable) {
-      alert(`Maximum payable amount is ৳${formatCurrency(maxPayable)}`);
-      return;
-    }
-
-    router.post(route('clearDue.store', supplier.id), {
-      paid_amount: paidAmount,
-      type: 'supplier',
-      payment_type: paymentForm.payment_type,
-    }, {
-      onSuccess: () => {
-        alert(`Payment of ৳${formatCurrency(paidAmount)} processed successfully!`);
-        setPaymentForm({
-          paid_amount: "",
-          payment_type: "cash",
-        });
-        setShowDueClearance(false);
-        router.reload();
-      },
-      onError: (errors) => {
-        alert(errors.paid_amount || 'An error occurred while processing the payment.');
-      }
-    });
-  };
-
-  const handlePaymentInputChange = (e) => {
-    const { name, value } = e.target;
-    setPaymentForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const calculateRemainingBalance = () => {
-    const paid = parseFloat(paymentForm.paid_amount) || 0;
+  const calculateRemainingBalance = (paidAmount) => {
+    const paid = parseFloat(paidAmount) || 0;
     const remainingDue = dueAmount - paid;
     const newAdvance = advanceAmount - paid;
     
@@ -475,59 +445,59 @@ export default function SupplierLedger({
 
   // Advance Payment Functions
   const handleAdvancePaymentOpen = () => {
-    setAdvancePaymentForm({
+    // Reset form when opening modal
+    setAdvanceData({
       amount: "",
       payment_type: "cash",
       transaction_id: "",
       notes: "",
+      type: "supplier",
     });
     setShowAdvancePayment(true);
   };
 
-  const handleAdvancePaymentSubmit = (e) => {
-    e.preventDefault();
-
-    const paidAmount = parseFloat(advancePaymentForm.amount) || 0;
-    if (paidAmount <= 0) {
-      alert("Please enter a valid advance amount");
-      return;
-    }
-
-    router.post(route('supplier.advance-payment.store', supplier.id), {
-      amount: paidAmount,
-      payment_type: advancePaymentForm.payment_type,
-      transaction_id: advancePaymentForm.transaction_id,
-      notes: advancePaymentForm.notes,
-    }, {
-      onSuccess: () => {
-        alert(`Advance payment of ৳${formatCurrency(paidAmount)} added successfully!`);
-        setAdvancePaymentForm({
-          amount: "",
-          payment_type: "cash",
-          transaction_id: "",
-          notes: "",
-        });
-        setShowAdvancePayment(false);
-        router.reload();
-      },
-      onError: (errors) => {
-        alert(errors.amount || errors.payment_type || 'An error occurred while processing the advance payment.');
-      }
-    });
-  };
-
-  const handleAdvancePaymentInputChange = (e) => {
-    const { name, value } = e.target;
-    setAdvancePaymentForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const hasActiveFilters = filterForm.data.search || filterForm.data.start_date || filterForm.data.end_date;
+  const purchasesData = purchases?.data || purchases || [];
+  const totalItems = purchases?.total || purchasesData.length;
 
   // Due Clearance Modal Component
   const DueClearanceModal = () => {
-    const { remainingDue, newAdvance } = calculateRemainingBalance();
-    const paidAmount = parseFloat(paymentForm.paid_amount) || 0;
+    // Use Inertia's useForm for payment form
+    const paymentForm = useForm({
+      paid_amount: Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount)).toString(),
+      payment_type: "cash",
+    });
+
+    const handlePaymentSubmit = (e) => {
+      e.preventDefault();
+
+      const paidAmount = parseFloat(paymentForm.data.paid_amount) || 0;
+      if (paidAmount <= 0) {
+        alert("Please enter a valid payment amount");
+        return;
+      }
+      
+      const maxPayable = Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount));
+      if (paidAmount > maxPayable) {
+        alert(`Maximum payable amount is ৳${formatCurrency(maxPayable)}`);
+        return;
+      }
+
+      paymentForm.post(route('clearDue.store', supplier.id), {
+        type: 'supplier',
+        onSuccess: () => {
+          alert(`Payment of ৳${formatCurrency(paidAmount)} processed successfully!`);
+          setShowDueClearance(false);
+          router.reload();
+        },
+        onError: (errors) => {
+          alert(errors.paid_amount || 'An error occurred while processing the payment.');
+        }
+      });
+    };
+
+    const { remainingDue, newAdvance } = calculateRemainingBalance(paymentForm.data.paid_amount);
+    const paidAmount = parseFloat(paymentForm.data.paid_amount) || 0;
     
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -592,17 +562,22 @@ export default function SupplierLedger({
                   <input
                     type="number"
                     name="paid_amount"
-                    value={paymentForm.paid_amount}
-                    onChange={handlePaymentInputChange}
+                    value={paymentForm.data.paid_amount}
+                    onChange={(e) => paymentForm.setData('paid_amount', e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
-                             focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                             focus:ring-2 focus:ring-orange-500 focus:border-transparent
+                             transition-all duration-200 ease-in-out"
                     placeholder="0.00"
                     min="0"
                     max={Math.max(0, dueAmount)}
                     step="0.01"
                     required
+                    disabled={paymentForm.processing}
                   />
                 </div>
+                {paymentForm.errors.paid_amount && (
+                  <p className="mt-1 text-sm text-red-600">{paymentForm.errors.paid_amount}</p>
+                )}
                 <p className="text-xs text-gray-500 mt-1">
                   Maximum: ৳{formatCurrency(Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount)))}
                 </p>
@@ -615,10 +590,12 @@ export default function SupplierLedger({
                 </label>
                 <select
                   name="payment_type"
-                  value={paymentForm.payment_type}
-                  onChange={handlePaymentInputChange}
+                  value={paymentForm.data.payment_type}
+                  onChange={(e) => paymentForm.setData('payment_type', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
-                           focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                           focus:ring-2 focus:ring-orange-500 focus:border-transparent
+                           transition-all duration-200 ease-in-out"
+                  disabled={paymentForm.processing}
                 >
                   <option value="cash">Cash</option>
                   <option value="card">Card</option>
@@ -658,7 +635,9 @@ export default function SupplierLedger({
                   type="button"
                   onClick={() => setShowDueClearance(false)}
                   className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 
-                           font-medium rounded-lg transition-colors"
+                           font-medium rounded-lg transition-colors duration-200
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={paymentForm.processing}
                 >
                   Cancel
                 </button>
@@ -666,9 +645,18 @@ export default function SupplierLedger({
                   type="submit"
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-600 to-orange-700 
                            text-white font-medium rounded-lg hover:from-orange-700 
-                           hover:to-orange-800 transition-all"
+                           hover:to-orange-800 transition-all duration-200
+                           disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={paymentForm.processing}
                 >
-                  Process Payment
+                  {paymentForm.processing ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    "Process Payment"
+                  )}
                 </button>
               </div>
             </form>
@@ -678,9 +666,9 @@ export default function SupplierLedger({
     );
   };
 
-  // Advance Payment Modal Component - FIXED VERSION
+  // Advance Payment Modal Component
   const AdvancePaymentModal = () => {
-    const paidAmount = parseFloat(advancePaymentForm.amount) || 0;
+    const paidAmount = parseFloat(advanceData.amount) || 0;
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -727,7 +715,7 @@ export default function SupplierLedger({
               </div>
             </div>
 
-            {/* Advance Payment Form - FIXED INPUT FIELD */}
+            {/* Advance Payment Form */}
             <form onSubmit={handleAdvancePaymentSubmit}>
               {/* Amount Input */}
               <div className="mb-4">
@@ -738,9 +726,9 @@ export default function SupplierLedger({
                   <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <input
                     type="number"
-                    name="amount" // Fixed: Changed from 'paid_amount' to 'amount'
-                    value={advancePaymentForm.amount} // Fixed: Changed from 'paid_amount' to 'amount'
-                    onChange={handleAdvancePaymentInputChange}
+                    name="amount"
+                    value={advanceData.amount}
+                    onChange={(e) => setAdvanceData('amount', e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg 
                              focus:ring-2 focus:ring-green-500 focus:border-transparent
                              transition-all duration-200 ease-in-out"
@@ -748,8 +736,12 @@ export default function SupplierLedger({
                     min="0"
                     step="0.01"
                     required
+                    disabled={advanceProcessing}
                   />
                 </div>
+                {advanceErrors.amount && (
+                  <p className="mt-1 text-sm text-red-600">{advanceErrors.amount}</p>
+                )}
               </div>
 
               {/* Transaction ID */}
@@ -760,12 +752,13 @@ export default function SupplierLedger({
                 <input
                   type="text"
                   name="transaction_id"
-                  value={advancePaymentForm.transaction_id}
-                  onChange={handleAdvancePaymentInputChange}
+                  value={advanceData.transaction_id}
+                  onChange={(e) => setAdvanceData('transaction_id', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
                            focus:ring-2 focus:ring-green-500 focus:border-transparent
                            transition-all duration-200 ease-in-out"
                   placeholder="Enter transaction ID"
+                  disabled={advanceProcessing}
                 />
               </div>
 
@@ -776,12 +769,13 @@ export default function SupplierLedger({
                 </label>
                 <select
                   name="payment_type"
-                  value={advancePaymentForm.payment_type}
-                  onChange={handleAdvancePaymentInputChange}
+                  value={advanceData.payment_type}
+                  onChange={(e) => setAdvanceData('payment_type', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
                            focus:ring-2 focus:ring-green-500 focus:border-transparent
                            transition-all duration-200 ease-in-out"
                   required
+                  disabled={advanceProcessing}
                 >
                   <option value="cash">Cash</option>
                   <option value="card">Card</option>
@@ -789,6 +783,9 @@ export default function SupplierLedger({
                   <option value="check">Check</option>
                   <option value="mobile_banking">Mobile Banking</option>
                 </select>
+                {advanceErrors.payment_type && (
+                  <p className="mt-1 text-sm text-red-600">{advanceErrors.payment_type}</p>
+                )}
               </div>
 
               {/* Notes */}
@@ -798,13 +795,14 @@ export default function SupplierLedger({
                 </label>
                 <textarea
                   name="notes"
-                  value={advancePaymentForm.notes}
-                  onChange={handleAdvancePaymentInputChange}
+                  value={advanceData.notes}
+                  onChange={(e) => setAdvanceData('notes', e.target.value)}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg 
                            focus:ring-2 focus:ring-green-500 focus:border-transparent
                            transition-all duration-200 ease-in-out"
                   placeholder="Add any notes about this advance payment"
                   rows="3"
+                  disabled={advanceProcessing}
                 />
               </div>
 
@@ -839,17 +837,28 @@ export default function SupplierLedger({
                   type="button"
                   onClick={() => setShowAdvancePayment(false)}
                   className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 hover:bg-gray-200 
-                           font-medium rounded-lg transition-colors duration-200"
+                         font-medium rounded-lg transition-colors duration-200
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={advanceProcessing}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   className="flex-1 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 
-                           text-white font-medium rounded-lg hover:from-green-700 
-                           hover:to-green-800 transition-all duration-200"
+                         text-white font-medium rounded-lg hover:from-green-700 
+                         hover:to-green-800 transition-all duration-200
+                         disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={advanceProcessing}
                 >
-                  Add Advance Payment
+                  {advanceProcessing ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Processing...
+                    </div>
+                  ) : (
+                    "Add Advance Payment"
+                  )}
                 </button>
               </div>
             </form>
@@ -858,10 +867,6 @@ export default function SupplierLedger({
       </div>
     );
   };
-
-  const hasActiveFilters = filterForm.data.search || filterForm.data.start_date || filterForm.data.end_date;
-  const purchasesData = purchases?.data || purchases || [];
-  const totalItems = purchases?.total || purchasesData.length;
 
   // Show loading state
   if (isLoading || !supplier) {
