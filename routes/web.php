@@ -24,6 +24,7 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\LadgerController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\SubscriptionController;
 
@@ -116,7 +117,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/sales/{sale}/payments', [SalesController::class, 'storePayment'])->name('sales.payments.store');
 
 
+//modules route
 
+    Route::resource('modules', ModuleController::class)->names([
+        'index' => 'modules.index',
+        'create' => 'modules.create',
+        'store' => 'modules.store',
+        'show' => 'modules.show',
+        'edit' => 'modules.edit',
+        'update' => 'modules.update',
+        'destroy' => 'modules.destroy',
+    ]);
 
     // sales list
     Route::controller(SalesListController::class)->group(function () {
