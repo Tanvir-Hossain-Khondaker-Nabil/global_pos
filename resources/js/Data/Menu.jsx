@@ -145,12 +145,36 @@ const baseMenu = [
         role: "all",
     },
     {
-        title: "Barcode",
+        title: "Plan",
         icon: <Barcode size={16} />,
-        route: route("barcode.print"),
-        active: "barcode.print",
+        route: route("plans.index"),
+        active: "plans.index",
         role: "admin",
     },
+    {
+        title: "Plan Modules",
+        icon: <Barcode size={16} />,
+        route: route("modules.index"),
+        active: "modules.index",
+        role: "admin",
+    },
+
+    {
+        title: "Subscriptions",
+        icon: <Barcode size={16} />,
+        route: route("subscriptions.index"),
+        active: "subscriptions.index",
+        role: "admin",
+    },
+
+    {
+        title: "Subscriptions Payments",
+        icon: <Barcode size={16} />,
+        route: route("subscriptions.payments"),
+        active: "subscriptions.payments",
+        role: "admin",
+    },
+
     {
         title: "Transactions",
         icon: <DollarSign size={16} />,
@@ -158,6 +182,23 @@ const baseMenu = [
         active: "payments.index",
         role: "admin",
     },
+
+     {
+        title: "Ledgers",
+        icon: <DollarSign size={16} />,
+        route: route("ledgers.index"),
+        active: "ledgers.index",
+        role: "admin",
+    },
+
+    {
+        title: "Dealerships",
+        icon: <DollarSign size={16} />,
+        route: route("dealerships.index"),
+        active: "dealerships.index",
+        role: "admin",
+    },
+
     {
         title: "Customer",
         icon: <UserPlus size={16} />,
