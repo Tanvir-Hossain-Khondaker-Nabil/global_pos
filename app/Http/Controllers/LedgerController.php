@@ -543,20 +543,37 @@ class LedgerController extends Controller
         $request->validate([
             'paid_amount' => 'required|numeric|min:0.01',
             'payment_type' => 'required|string',
+            'transaction_id' => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
         $paid_amount = $request->input('paid_amount');
-        $paymentMethod = $request->input('payment_type');
 
-        $supplier = Supplier::findOrFail($id);
 
-        if ($paymentMethod === 'advance_adjustment') {
-            if ($supplier->advance_amount < $paid_amount) {
-                return redirect()->back()->withErrors(['paid_amount' => 'Paid amount exceeds advance amount']);
-            }
-            $supplier->advance_amount -= $paid_amount;
+        if($request->type == 'supplier'){
+            $supplier = Supplier::findOrFail($id);
+            $supplier->advance_amount += $paid_amount;
             $supplier->save();
+        }else {
+            $customer = Customer::findOrFail($id);
+            $customer->advance_amount += $paid_amount;
+            $customer->save();
         }
+
+
+      
+        // Record Payment
+        Payment::create([
+            'supplier_id'    => $supplier->id ?? null,
+            'customer_id'    => $customer->id ?? null,
+            'amount'         => $paid_amount,
+            'shadow_amount'  => 0,
+            'payment_method' => $request->input('payment_type'),
+            'txn_ref'        => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
+            'note'           => $request->input('notes') ?? 'advance payment',
+            'paid_at'        => Carbon::now(),
+            'created_by'     => Auth::id(),
+        ]);
 
         return back()->with('success', 'Advance payment recorded successfully.');
     }

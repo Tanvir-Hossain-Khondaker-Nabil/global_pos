@@ -24,6 +24,7 @@ use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\PurchaseReturnController;
@@ -117,7 +118,17 @@ Route::middleware('auth')->group(function () {
     Route::post('/sales/{sale}/payments', [SalesController::class, 'storePayment'])->name('sales.payments.store');
 
 
+//modules route
 
+    Route::resource('modules', ModuleController::class)->names([
+        'index' => 'modules.index',
+        'create' => 'modules.create',
+        'store' => 'modules.store',
+        'show' => 'modules.show',
+        'edit' => 'modules.edit',
+        'update' => 'modules.update',
+        'destroy' => 'modules.destroy',
+    ]);
 
     // sales list
     Route::controller(SalesListController::class)->group(function () {
