@@ -21,6 +21,9 @@ return [
     // Status
     'active' => 'Active',
     'inactive' => 'Inactive',
+    'pending' => 'Pending',
+    'edit' => 'Edit',
+    'delete' => 'Delete',
 
     // Modal
     'edit_company' => 'Edit Company',

@@ -19,7 +19,7 @@ class ProductController extends Controller
     {
         $product = Product::with([
             'category',
-            'variants.stock' // Load stock with variants
+            'variants.stock' 
         ])->findOrFail($id);
 
         return Inertia::render('product/ViewProduct', [
@@ -43,6 +43,8 @@ class ProductController extends Controller
 
     public function add_index(Request $request)
     {
+        dd($request->all());
+
         $querystring = $request->only('id');
         $update = null;
 

@@ -21,6 +21,8 @@ return [
     // Status
     'active' => 'সক্রিয়',
     'inactive' => 'নিষ্ক্রিয়',
+    'edit' => 'সম্পাদনা করুন',
+    'delete' => 'মুছুন',
 
     // Modal
     'edit_company' => 'কোম্পানি সম্পাদনা করুন',
