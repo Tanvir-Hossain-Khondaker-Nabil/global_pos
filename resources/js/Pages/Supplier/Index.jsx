@@ -22,13 +22,13 @@ export default function Index({ suppliers, filters }) {
     const searchForm = useForm({
         search: filters.search || "",
     });
-    
+
     const handleSearch = (e) => {
         const value = e.target.value;
         searchForm.setData("search", value);
 
-        router.get(route("supplier.view"), 
-            { search: value }, 
+        router.get(route("supplier.view"),
+            { search: value },
             {
                 preserveScroll: true,
                 preserveState: true,
@@ -139,7 +139,7 @@ export default function Index({ suppliers, filters }) {
             month: 'short',
             day: 'numeric'
         };
-        
+
         if (locale === 'bn') {
             return new Date(dateString).toLocaleDateString('bn-BD', options);
         } else {
@@ -218,9 +218,9 @@ export default function Index({ suppliers, filters }) {
                                             {supplier.website && (
                                                 <div className="flex items-center gap-1 text-sm text-blue-600">
                                                     <Globe size={12} />
-                                                    <a 
-                                                        href={supplier.website} 
-                                                        target="_blank" 
+                                                    <a
+                                                        href={supplier.website}
+                                                        target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="hover:underline"
                                                     >
@@ -234,7 +234,7 @@ export default function Index({ suppliers, filters }) {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm">
-                                                    {t('supplier.advance_amount', 'Advance')}: 
+                                                    {t('supplier.advance_amount', 'Advance')}:
                                                     <span className="font-semibold ml-1 text-green-600">
                                                         {formatCurrency(supplier.advance_amount)}
                                                     </span>
@@ -242,9 +242,16 @@ export default function Index({ suppliers, filters }) {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm">
-                                                    {t('supplier.due_amount', 'Due')}: 
+                                                    {t('supplier.due_amount', 'Due')}:
                                                     <span className="font-semibold ml-1 text-red-600">
-                                                        {formatCurrency(supplier.due_amount)}
+                                                        {formatCurrency(
+                                                            supplier?.purchases?.reduce(
+                                                                (sum, p) => sum + (parseFloat(p?.grand_total - p?.paid_amount) || 0),
+                                                                0
+                                                            )
+                                                        )}
+
+
                                                     </span>
                                                 </span>
                                             </div>
@@ -308,7 +315,7 @@ export default function Index({ suppliers, filters }) {
                                 {t('supplier.no_contacts_found', 'No supplier contacts found')}
                             </h3>
                             <p className="text-gray-400 text-sm">
-                                {searchForm.data.search 
+                                {searchForm.data.search
                                     ? t('supplier.no_matching_contacts', 'No contacts matching ":search"', {
                                         search: searchForm.data.search
                                     })
@@ -340,7 +347,7 @@ export default function Index({ suppliers, filters }) {
                 <div className="modal-box max-w-3xl">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
                         <h1 className="text-lg font-semibold text-gray-900">
-                            {supplyForm.data.id 
+                            {supplyForm.data.id
                                 ? t('supplier.edit_contact', 'Edit Supplier Contact')
                                 : t('supplier.add_new_contact', 'Add New Contact')
                             }
@@ -493,26 +500,7 @@ export default function Index({ suppliers, filters }) {
                                 )}
                             </fieldset>
 
-                            {/* Due Amount */}
-                            <fieldset className="fieldset">
-                                <legend className="fieldset-legend">
-                                    {t('supplier.due_amount', 'Due Amount')}
-                                </legend>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={supplyForm.data.due_amount}
-                                    onChange={(e) => supplyForm.setData("due_amount", parseFloat(e.target.value) || 0)}
-                                    className="input input-bordered w-full"
-                                    placeholder={t('supplier.due_amount_placeholder', 'Enter due amount')}
-                                />
-                                {supplyForm.errors.due_amount && (
-                                    <div className="text-red-500 text-sm mt-1">
-                                        {supplyForm.errors.due_amount}
-                                    </div>
-                                )}
-                            </fieldset>
+
 
                             {/* Status */}
                             <fieldset className="fieldset">
@@ -527,7 +515,7 @@ export default function Index({ suppliers, filters }) {
                                         className="toggle toggle-primary"
                                     />
                                     <span className="label-text">
-                                        {supplyForm.data.is_active 
+                                        {supplyForm.data.is_active
                                             ? t('supplier.active_status', 'Active')
                                             : t('supplier.inactive_status', 'Inactive')
                                         }
@@ -570,9 +558,9 @@ export default function Index({ suppliers, filters }) {
                                 disabled={supplyForm.processing}
                                 className="btn btn-primary flex-1"
                             >
-                                {supplyForm.processing 
+                                {supplyForm.processing
                                     ? t('supplier.processing', 'Processing...')
-                                    : supplyForm.data.id 
+                                    : supplyForm.data.id
                                         ? t('supplier.update_contact', 'Update Contact')
                                         : t('supplier.add_contact', 'Add Contact')
                                 }

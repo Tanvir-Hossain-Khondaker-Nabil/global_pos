@@ -17,6 +17,8 @@ return [
     
     // Form Fields
     'customer_name' => 'Customer Name',
+    'edit_customer' => 'Edit Customer',
+    'add_new_customer' => 'Add New Customer',
     'customer_phone' => 'Phone',
     'customer_address' => 'Address',
     'advance_amount' => 'Advance Amount',
@@ -25,6 +27,8 @@ return [
     'status' => 'Status',
     'active' => 'Active',
     'inactive' => 'Inactive',
+    'inactive_status' => 'Set customer as inactive',
+    'status_field' => 'Status',
     'advance' => 'Advance',
     'due' => 'Due',
     'active_customers' => 'Active Customers',

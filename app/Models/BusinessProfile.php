@@ -19,10 +19,9 @@ class BusinessProfile extends Model
         'logo'
     ];
 
-
-    //user relationship
-    public function  user()
+    // Reverse relationship: Business belongs to one user
+    public function user()
     {
-        $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'user_id', 'id');
     }
 }

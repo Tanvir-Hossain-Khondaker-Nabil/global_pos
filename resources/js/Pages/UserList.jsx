@@ -13,6 +13,8 @@ export default function UserList({ users, filters }) {
     const [model, setModel] = useState(false);
     const [editProccesing, setEditProccesing] = useState(false);
 
+    console.log("users", users);
+
     // model close handle
     const modelClose = () => {
         userForm.reset();

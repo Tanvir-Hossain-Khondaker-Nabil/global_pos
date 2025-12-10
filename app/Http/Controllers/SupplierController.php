@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Payment;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class SupplierController extends Controller
 {
@@ -14,7 +17,7 @@ class SupplierController extends Controller
     {
         $filters = $request->only('search');
 
-        $suppliers = Supplier::when($filters['search'] ?? null, function ($query, $search) {
+        $suppliers = Supplier::with('purchases')->when($filters['search'] ?? null, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('contact_person', 'like', "%{$search}%")
@@ -58,7 +61,21 @@ class SupplierController extends Controller
         $validated['created_by'] = Auth::id();
 
 
-        Supplier::create($validated);
+        $supplier =  Supplier::create($validated);
+
+        // if advance amount is given, create a payment record
+        if ($request->advance_amount && $request->advance_amount > 0) {
+            Payment::create([
+                'supplier_id'    => $supplier->id ?? null,
+                'amount'         => $request->advance_amount ?? 0,
+                'shadow_amount'  => 0,
+                'payment_method' => 'Cash',
+                'txn_ref'        => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
+                'note'           =>'Initial advance amount payment of supplier',
+                'paid_at'        => Carbon::now(),
+                'created_by'     => Auth::id(),
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Supplier contact added successfully!');
     }
