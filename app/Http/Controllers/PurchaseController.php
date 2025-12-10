@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BusinessProfile;
 use App\Models\Payment;
 use Inertia\Inertia;
 use App\Models\Purchase;
@@ -73,6 +74,9 @@ class PurchaseController extends Controller
 
     public function allPurchasesItems(Request $request)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse'])
             ->when($request->filled('product_id'), function ($query) use ($request) {
                 $query->where('product_id', $request->product_id);
@@ -86,11 +90,17 @@ class PurchaseController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        if($isShadowUser){
+            $purchaseItems->getCollection()->transform(function ($purchaseItem) {
+               return $this->transformToShadowItemData($purchaseItem);
+            });
+        }
+
 
         return Inertia::render('Purchase/PurchaseItemsList', [
             'purchaseItems' => $purchaseItems,
             'filters' => $request->only(['product_id', 'date_from', 'date_to']),
-            'isShadowUser' => Auth::user()->user_type === 'shadow',
+            'isShadowUser' =>  $isShadowUser,
         ]);
     }
 
@@ -98,15 +108,28 @@ class PurchaseController extends Controller
     // show purchase item details
     public function showPurchasesItem($id)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+
         $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse'])
             ->findOrFail($id);
-            
+
+        if($isShadowUser){
+            $purchaseItem = $this->transformToShadowItemData($purchaseItem);
+        }
+
+        $business = BusinessProfile::where('user_id', $user->id)->first();
+
         return Inertia::render('Purchase/PurchaseItemShow', [
             'purchaseItem' => $purchaseItem,
-            'isShadowUser' => Auth::user()->user_type === 'shadow',
+            'isShadowUser' => $isShadowUser,
+            'business' => $business,
         ]);
     }
 
+
+    // Show create purchase form
     public function create()
     {
         $user = Auth::user();
@@ -120,6 +143,8 @@ class PurchaseController extends Controller
         ]);
     }
 
+
+    // Store a new purchase
     public function store(Request $request)
     {
         $user = Auth::user();
@@ -349,10 +374,11 @@ class PurchaseController extends Controller
         ]);
     }
 
+
+    // Transform purchase data for shadow users
     private function transformToShadowData($purchase)
     {
-        // Replace real amounts with shadow amounts for main purchase
-        $purchase->grand_total = $purchase->shadow_total_amount;
+        $purchase->grand_total = $purchase->shadow_grand_total;
         $purchase->paid_amount = $purchase->shadow_paid_amount;
         $purchase->due_amount = $purchase->shadow_due_amount;
 
@@ -369,6 +395,19 @@ class PurchaseController extends Controller
         return $purchase;
     }
 
+
+    // Transform purchase item data for shadow users
+    private function transformToShadowItemData($purchase)
+    {
+        $purchase->unit_price = $purchase->shadow_unit_price;
+        $purchase->sale_price = $purchase->shadow_sale_price;
+        $purchase->total_price = $purchase->shadow_total_price;
+
+        return $purchase;
+    }
+
+
+    // Delete a purchase
     public function destroy($id)
     {
         $user = Auth::user();
@@ -406,6 +445,8 @@ class PurchaseController extends Controller
         }
     }
 
+
+    // Update payment status of a purchase
     public function updatePayment(Request $request, $id)
     {
         $purchase = Purchase::findOrFail($id);
@@ -429,6 +470,8 @@ class PurchaseController extends Controller
         return redirect()->back()->with('success', 'Payment status updated successfully');
     }
 
+
+    // Approve shadow purchase
     public function approve(Request $request, $id)
     {
         $purchase = Purchase::with('items')->findOrFail($id);
@@ -495,4 +538,6 @@ class PurchaseController extends Controller
             return redirect()->back()->with('error', 'Error approving purchase: ' . $e->getMessage());
         }
     }
+
+
 }

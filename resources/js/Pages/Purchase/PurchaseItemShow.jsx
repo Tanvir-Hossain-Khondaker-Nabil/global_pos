@@ -21,8 +21,10 @@ import {
 import { toast } from "react-toastify";
 import { useRef } from "react";
 
-export default function PurchaseItemShow({ purchaseItem, isShadowUser }) {
+export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }) {
     const printRef = useRef();
+
+    console.log('Business Info:', business);
 
     const handleDelete = () => {
         if (confirm('Are you sure you want to delete this purchase item? This action cannot be undone.')) {
@@ -49,7 +51,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser }) {
     };
 
     const calculateTaxAmount = () => {
-        const cost = parseFloat(purchaseItem.unit_cost) || 0;
+        const cost = parseFloat(purchaseItem.unit_price) || 0;
         const quantity = parseFloat(purchaseItem.quantity) || 0;
         const tax = parseFloat(purchaseItem.tax_rate) || 0;
         
@@ -580,10 +582,12 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser }) {
                         <div className="info-card accent-border">
                             <h3 className="print-text-sm print-font-semibold print-mb-2 print-text-gray-800">TO</h3>
                             <div className="print-space-y-1">
-                                <p className="print-text-base print-font-bold print-text-gray-900">Iduvisul</p>
-                                <p className="print-text-xs print-text-gray-700">123 Business Street</p>
-                                <p className="print-text-xs print-text-gray-700">City, Country 12345</p>
-                                <p className="print-text-xs print-text-gray-700">info@iduvisul.com</p>
+                                <p className="print-text-base print-font-bold print-text-gray-900">{business?.name || 'Business Name'}</p>
+                                <p className="print-text-xs print-text-gray-700">{business?.address || '123 Business Street'}</p>
+                                <p className="print-text-xs print-text-gray-700">{business?.email || 'info@iduvisul.com'} ( {business?.phone || 'N/A'} )</p>
+                                <p className="print-text-xs print-text-gray-700">{business?.website || 'N/A'}</p>
+
+
                                 <div className="print-mt-2">
                                     <span className="badge badge-success">Purchase Item</span>
                                     <span className={`badge ${getPaymentStatusBadge(purchaseItem.purchase?.payment_status)} print-ml-2`}>
@@ -731,7 +735,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser }) {
                     <div className="print-grid print-grid-cols-4 print-gap-2 print-mb-4">
                         <div className="print-p-2 print-bg-green-50 print-rounded print-text-center">
                             <div className="print-text-xs print-font-medium print-text-green-700 print-mb-1">UNIT COST</div>
-                            <div className="print-text-sm print-font-bold print-text-gray-900">{parseFloat(purchaseItem.unit_cost).toFixed(2)} Tk</div>
+                            <div className="print-text-sm print-font-bold print-text-gray-900">{parseFloat(purchaseItem.unit_price).toFixed(2)} Tk</div>
                         </div>
                         <div className="print-p-2 print-bg-green-50 print-rounded print-text-center">
                             <div className="print-text-xs print-font-medium print-text-green-700 print-mb-1">QUANTITY</div>
@@ -762,13 +766,10 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser }) {
                     
                     <div className="print-text-center">
                         <p className="print-text-xs print-font-medium print-text-gray-700 print-mb-2">
-                            Inventory Management Receipt • Thank you for your partnership!
-                        </p>
-                        <p className="print-text-xs print-text-gray-500">
-                            Computer-generated receipt • No signature required
+                            Inventory Management Auto Receipt • Thank you for your partnership!
                         </p>
                         <div className="print-mt-3 print-text-xs print-text-gray-400">
-                            <p>Iduvisul Business Solutions • Email: info@iduvisul.com</p>
+                            <p>{business?.name || 'Iduvisul Business Solutions'} • Email: {business?.email || 'info@iduvisul.com'}</p>
                             <p className="print-mt-1">Generated: {formatDate(new Date().toISOString())}</p>
                         </div>
                     </div>
