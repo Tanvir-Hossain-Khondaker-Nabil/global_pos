@@ -14,6 +14,19 @@ import {
     Warehouse,
     Receipt,
     DollarSign,
+    Calendar,
+    Users,
+    Trophy,
+    Award,
+    Shield,
+    TrendingUp,
+    FileText,
+    CreditCard,
+    Gift,
+    Star,
+    BadgeDollarSign,
+    Clock,
+    Plane
 } from "lucide-react";
 
 // Common menu - Keep original English titles
@@ -74,7 +87,7 @@ const baseMenu = [
         active: "purchase.create",
         role: "admin",
     },
-        {
+    {
         title: "Purchase Return",
         icon: <Receipt size={16} />,
         route: route("purchase-return.list"),
@@ -124,7 +137,7 @@ const baseMenu = [
         role: "admin",
     },
     {
-        title: "Categories", // Fixed typo from "Categorys"
+        title: "Categories",
         icon: <Box size={16} />,
         route: route("category.view"),
         active: "category.view",
@@ -158,7 +171,6 @@ const baseMenu = [
         active: "modules.index",
         role: "admin",
     },
-
     {
         title: "Subscriptions",
         icon: <Barcode size={16} />,
@@ -166,7 +178,6 @@ const baseMenu = [
         active: "subscriptions.index",
         role: "admin",
     },
-
     {
         title: "Subscriptions Payments",
         icon: <Barcode size={16} />,
@@ -174,7 +185,6 @@ const baseMenu = [
         active: "subscriptions.payments",
         role: "admin",
     },
-
     {
         title: "Transactions",
         icon: <DollarSign size={16} />,
@@ -182,15 +192,13 @@ const baseMenu = [
         active: "payments.index",
         role: "admin",
     },
-
-     {
+    {
         title: "Ledgers",
         icon: <DollarSign size={16} />,
         route: route("ledgers.index"),
         active: "ledgers.index",
         role: "admin",
     },
-
     {
         title: "Dealerships",
         icon: <DollarSign size={16} />,
@@ -198,7 +206,6 @@ const baseMenu = [
         active: "dealerships.index",
         role: "admin",
     },
-
     {
         title: "Customer",
         icon: <UserPlus size={16} />,
@@ -206,8 +213,6 @@ const baseMenu = [
         active: "customer.index",
         role: "all",
     },
-
-    
     {
         title: "Companies",
         icon: <UserPlus size={16} />,
@@ -215,7 +220,6 @@ const baseMenu = [
         active: "companies.index",
         role: "all",
     },
-
     {
         title: "Users",
         icon: <User size={16} />,
@@ -223,6 +227,109 @@ const baseMenu = [
         active: "userlist.view",
         role: "admin",
     },
+    // ============ HR/EMPLOYEE MANAGEMENT MENU ITEMS ============
+    {
+        title: "Employees",
+        icon: <Users size={16} />,
+        route: route("employees.index"),
+        active: "employees.index",
+        role: "admin",
+    },
+    {
+        title: "Attendance",
+        icon: <Calendar size={16} />,
+        route: route("attendance.index"),
+        active: "attendance.index",
+        role: "admin",
+        children: [
+            {
+                title: "Monthly Report",
+                route: route("attendance.monthly-report"),
+                active: "attendance.monthly-report",
+            },
+            {
+                title: "Top Performers",
+                route: route("attendance.top-performers"),
+                active: "attendance.top-performers",
+            },
+            {
+                title: "Manual Entry",
+                route: route("attendance.manual-form"),
+                active: "attendance.manual-form",
+            }
+        ]
+    },
+    {
+        title: "Salary",
+        icon: <CreditCard size={16} />,
+        route: route("salary.index"),
+        active: "salary.index",
+        role: "admin",
+        children: [
+            {
+                title: "Salary Report",
+                route: route("salary.report"),
+                active: "salary.report",
+            },
+            {
+                title: "Test Salary",
+                route: route("salary.test-form"),
+                active: "salary.test-form",
+            },
+            {
+                title: "Process Awards",
+                route: route("salary.process-award-payments"),
+                active: "salary.process-award-payments",
+            }
+        ]
+    },
+    {
+        title: "Provident Fund",
+        icon: <Shield size={16} />,
+        route: route("provident-fund.index"),
+        active: "provident-fund.index",
+        role: "admin",
+        children: [
+            {
+                title: "Overall Summary",
+                route: route("provident-fund.summary"),
+                active: "provident-fund.summary",
+            }
+        ]
+    },
+    {
+        title: "Allowances",
+        icon: <TrendingUp size={16} />,
+        route: route("allowances.index"),
+        active: "allowances.index",
+        role: "admin",
+    },
+    {
+        title: "Ranks",
+        icon: <Star size={16} />,
+        route: route("ranks.index"),
+        active: "ranks.index",
+        role: "admin",
+    },
+    {
+        title: "Bonus",
+        icon: <Gift size={16} />,
+        route: route("bonus.index"),
+        active: "bonus.index",
+        role: "admin",
+        children: [
+            {
+                title: "Apply Eid Bonus",
+                route: route("bonus.apply-eid"),
+                active: "bonus.apply-eid",
+            },
+            {
+                title: "Apply Festival Bonus",
+                route: route("bonus.apply-festival"),
+                active: "bonus.apply-festival",
+            }
+        ]
+    }
 ];
 
 export { baseMenu };

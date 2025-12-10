@@ -5,28 +5,37 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PlanController;
+use App\Http\Controllers\RankController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\AwardController;
+use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\LadgerController;
 use App\Http\Controllers\LedgerController;
+use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExchangeController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\AllowanceController;
 use App\Http\Controllers\AttributeController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExtraCashController;
 use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DealershipController;
-use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\BarcodePrintController;
+use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
 
 // Guest routes
@@ -41,7 +50,7 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 
 // auth routes
 Route::middleware('auth')->group(function () {
-    
+
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->name('home');
 
     // users managment
@@ -119,7 +128,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/sales/{sale}/payments', [SalesController::class, 'storePayment'])->name('sales.payments.store');
 
 
-//modules route
+    //modules route
 
     Route::resource('modules', ModuleController::class)->names([
         'index' => 'modules.index',
@@ -286,6 +295,112 @@ Route::middleware('auth')->group(function () {
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->name('subscriptions.payments');
     Route::get('/subscriptions_payments/view/{id}', [SubscriptionController::class, 'paymentView'])->name('subscriptions.payments.view');
 
+
+    // Attendance routes
+    Route::prefix('attendance')->group(function () {
+        Route::get('/', [AttendanceController::class, 'index'])->name('attendance.index');
+        Route::post('/check-in', [AttendanceController::class, 'checkIn'])->name('attendance.checkin');
+        Route::post('/check-out', [AttendanceController::class, 'checkOut'])->name('attendance.checkout');
+        Route::post('/manual-entry', [AttendanceController::class, 'manualEntry'])->name('attendance.manual-entry');
+        Route::get('/monthly-report', [AttendanceController::class, 'monthlyReport'])->name('attendance.monthly-report');
+        Route::get('/top-performers', [AttendanceController::class, 'topPerformers'])->name('attendance.top-performers');
+        Route::post('/early-out', [AttendanceController::class, 'earlyOut'])->name('attendance.early-out');
+        Route::get('/manual-entry', [AttendanceController::class, 'manualEntryForm'])->name('attendance.manual-form');
+        Route::post('/manual-entry', [AttendanceController::class, 'manualEntry'])->name('attendance.manual-entry');
+
+    });
+
+
+
+    // Test Salary routes (নতুন যোগ করুন)
+    Route::prefix('salary')->group(function () {
+        Route::get('/test-create', [SalaryController::class, 'testCreateForm'])->name('salary.test-form');
+        Route::post('/test-create', [SalaryController::class, 'calculateTestSalary'])->name('salary.test-create');
+    });
+
+    // Salary Routes
+    Route::prefix('salary')->name('salary.')->group(function () {
+        Route::get('/', [SalaryController::class, 'index'])->name('index');
+        Route::post('/calculate', [SalaryController::class, 'calculateSalary'])->name('calculate');
+        Route::post('/{salary}/pay', [SalaryController::class, 'paySalary'])->name('pay');
+        Route::get('/{salary}/payslip', [SalaryController::class, 'payslip'])->name('payslip');
+        Route::get('/report', [SalaryController::class, 'report'])->name('report');
+        Route::delete('/{salary}', [SalaryController::class, 'destroy'])->name('destroy');
+        Route::post('/bulk-action', [SalaryController::class, 'bulkAction'])->name('bulk-action');
+    });
+
+    // Leave Routes
+    Route::prefix('leave')->name('leave.')->group(function () {
+        Route::get('/', [LeaveController::class, 'index'])->name('index');
+        Route::get('/create', [LeaveController::class, 'create'])->name('create');
+        Route::post('/', [LeaveController::class, 'store'])->name('store');
+        Route::get('/{leave}', [LeaveController::class, 'show'])->name('show');
+        Route::post('/{leave}/approve', [LeaveController::class, 'approve'])->name('approve');
+        Route::post('/{leave}/reject', [LeaveController::class, 'reject'])->name('reject');
+        Route::post('/{leave}/cancel', [LeaveController::class, 'cancel'])->name('cancel');
+        Route::delete('/{leave}', [LeaveController::class, 'destroy'])->name('destroy');
+        Route::get('/balance/{employee}', [LeaveController::class, 'balance'])->name('balance');
+        Route::get('/dashboard', [LeaveController::class, 'dashboard'])->name('dashboard');
+    });
+
+    // Provident Fund Routes
+    Route::prefix('provident-fund')->group(function () {
+        Route::get('/', [ProvidentFundController::class, 'index'])->name('provident-fund.index');
+        Route::get('/summary', [ProvidentFundController::class, 'overallSummary'])->name('provident-fund.summary');
+        Route::get('/{user}/statement', [ProvidentFundController::class, 'employeeStatement'])->name('provident-fund.statement');
+        Route::post('/{user}/update-percentage', [ProvidentFundController::class, 'updatePfPercentage'])->name('provident-fund.update-percentage');
+    });
+
+    // Allowance Routes
+    Route::prefix('allowances')->group(function () {
+        Route::get('/', [AllowanceController::class, 'index'])->name('allowances.index');
+        Route::post('/', [AllowanceController::class, 'store'])->name('allowances.store');
+        Route::put('/{allowanceSetting}', [AllowanceController::class, 'update'])->name('allowances.update');
+        Route::post('/apply-settings', [AllowanceController::class, 'applyAllowanceSettings'])->name('allowances.apply-settings');
+        Route::post('/{user}/update', [AllowanceController::class, 'updateUserAllowances'])->name('allowances.update-user');
+    });
+
+    // Rank Routes
+    Route::prefix('ranks')->group(function () {
+        Route::get('/', [RankController::class, 'index'])->name('ranks.index');
+        Route::post('/', [RankController::class, 'store'])->name('ranks.store');
+        Route::put('/{rank}', [RankController::class, 'update'])->name('ranks.update');
+        Route::delete('/{rank}', [RankController::class, 'destroy'])->name('ranks.destroy');
+        Route::get('/{rank}/users', [RankController::class, 'getRankUsers'])->name('ranks.users');
+        Route::post('/{user}/promote', [RankController::class, 'promoteUser'])->name('ranks.promote-user');
+    });
+
+    // Award Routes
+    Route::resource('awards', AwardController::class);
+    Route::post('/awards/assign-monthly', [AwardController::class, 'assignMonthlyAwards'])->name('awards.assign-monthly');
+    Route::post('/awards/assign-to-employee', [AwardController::class, 'assignAwardToEmployee'])->name('awards.assign-to-employee');
+    Route::get('/awards/employee-awards', [AwardController::class, 'employeeAwards'])->name('awards.employee-awards');
+
+    Route::post('/awards/{employeeAward}/mark-paid', [AwardController::class, 'markAsPaid'])->name('awards.mark-paid');
+    Route::post('/awards/{employeeAward}/mark-unpaid', [AwardController::class, 'markAsUnpaid'])->name('awards.mark-unpaid');
+    Route::delete('/awards/employee-awards/{employeeAward}', [AwardController::class, 'destroyEmployeeAward'])->name('awards.destroy-employee-award');
+    Route::get('/awards/statistics', [AwardController::class, 'awardStatistics'])->name('awards.statistics');
+    Route::post('/salary/process-award-payments', [SalaryController::class, 'processAwardPayments'])->name('salary.process-award-payments');
+
+
+
+    // User Management
+    Route::prefix('employees')->group(function () {
+        Route::get('/', [EmployeeController::class, 'index'])->name('employees.index');
+        Route::post('/', [EmployeeController::class, 'store'])->name('employees.store');
+        Route::get('/{user}/edit', [EmployeeController::class, 'edit'])->name('employees.edit');
+        Route::put('/{user}', [EmployeeController::class, 'update'])->name('employees.update');
+        Route::delete('/{user}', [EmployeeController::class, 'destroy'])->name('employees.destroy');
+        Route::post('/{user}/password', [EmployeeController::class, 'updatePassword'])->name('employees.update-password');
+        Route::post('/{user}/salary', [EmployeeController::class, 'updateSalary'])->name('employees.update-salary');
+    });
+
+
+    Route::resource('bonus', BonusSettingController::class);
+    Route::get('/bonus/{bonus}/apply', [BonusSettingController::class, 'showApplyForm'])->name('bonus.apply-form');
+    Route::post('/bonus/{bonus}/apply', [BonusSettingController::class, 'applyBonus'])->name('bonus.apply');
+    Route::post('/bonus/apply-eid', [BonusSettingController::class, 'applyEidBonus'])->name('bonus.apply-eid');
+    Route::post('/bonus/apply-festival', [BonusSettingController::class, 'applyFestivalBonus'])->name('bonus.apply-festival');
 
 });
 
