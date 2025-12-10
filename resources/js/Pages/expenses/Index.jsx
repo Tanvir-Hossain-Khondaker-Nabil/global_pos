@@ -22,8 +22,10 @@ export default function Index({
     extracashTotal,
     amount,
     query,
+    isShadowUser
 }) {
     const { t, locale } = useTranslation();
+
     
     // model
     const [model, setModel] = useState(false);
@@ -69,9 +71,11 @@ export default function Index({
     return (
         <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <PageHeader
-                title={t('expenses.title', 'Expense list')}
-                subtitle={t('expenses.subtitle', 'Manage your all expenses from here.')}
+                title={isShadowUser ? t('expenses.shadow_title', 'Expense list') : t('expenses.title', 'Sales History (Inventory)')}
+                subtitle={isShadowUser ? t('expenses.subtitle', 'Manage your all expenses from here.') : t('expenses.subtitle', 'Manage your product sales')}
             >
+
+
                 <div className="flex items-center gap-2">
                     <input
                         type="date"
@@ -107,14 +111,14 @@ export default function Index({
             <div className="overflow-x-auto">
                 {todaysExpense.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                         <thead className={`${isShadowUser ? 'bg-warning' : 'bg-primary'} text-white`}>
                             <tr>
                                 <th></th>
                                 <th>{t('expenses.created_by', 'Created by')}</th>
                                 <th>{t('expenses.details', 'Details')}</th>
                                 <th>{t('expenses.amount', 'Amount')}</th>
                                 <th>{t('expenses.date', 'Date')}</th>
-                                <th>{t('common.actions', 'Actions')}</th>
+                                <th>{t('expenses.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -124,11 +128,11 @@ export default function Index({
                                     <td>
                                         <p>
                                             <strong>{t('expenses.name', 'Name')}: </strong>{" "}
-                                            {user?.createdby?.name}
+                                            {user?.creator?.name}
                                         </p>
                                         <p>
                                             <strong>{t('expenses.email', 'Email')}: </strong>{" "}
-                                            {user?.createdby?.email}
+                                            {user?.creator?.email}
                                         </p>
                                     </td>
                                     <td>{user?.details}</td>
@@ -372,7 +376,7 @@ export default function Index({
                             className="btn btn-sm btn-primary"
                             type="submit"
                         >
-                            {processing ? t('common.processing', 'Processing...') : t('expenses.add_now', 'Add now')}
+                            {processing ? t('expenses.processing', 'Processing...') : t('expenses.add_now', 'Add now')}
                         </button>
                     </form>
                 </div>

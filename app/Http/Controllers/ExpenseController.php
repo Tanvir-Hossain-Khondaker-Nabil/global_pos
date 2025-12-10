@@ -21,6 +21,9 @@ class ExpenseController extends Controller
 
     public function index(Request $request)
     {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
         $startdate = $request->query('startdate') ?? null;
         $date = $request->query('date') ?? now('Asia/Dhaka')->toDateString();
 
@@ -96,7 +99,13 @@ class ExpenseController extends Controller
             'grandTotal' => $grandTotal
         ];
 
-        $todaysExpense = Expense::with(['createdby'])
+        
+        
+     
+
+
+
+        $todaysExpense = Expense::with(['creator'])
             ->when($startdate && $date, function ($query) use ($startdate, $date) {
                 $query->whereBetween('date', [
                     Carbon::parse($startdate)->startOfDay(),
@@ -110,12 +119,13 @@ class ExpenseController extends Controller
                 $query->where('created_by', Auth::id());
             })
             ->paginate(10);
-        $todaysExpenseTotal = Expense::when($startdate && $date, function ($query) use ($startdate, $date) {
-            $query->whereBetween('date', [
-                Carbon::parse($startdate)->startOfDay(),
-                Carbon::parse($date)->endOfDay(),
-            ]);
-        })
+
+            $todaysExpenseTotal = Expense::when($startdate && $date, function ($query) use ($startdate, $date) {
+                $query->whereBetween('date', [
+                    Carbon::parse($startdate)->startOfDay(),
+                    Carbon::parse($date)->endOfDay(),
+                ]);
+            })
             ->when(!$startdate && $date, function ($query) use ($date) {
                 $query->whereDate('date', $date);
             })
@@ -131,20 +141,31 @@ class ExpenseController extends Controller
                 Carbon::parse($date)->endOfDay(),
             ]);
         })
-            ->when(!$startdate && $date, function ($query) use ($date) {
-                $query->whereDate('date', $date);
-            })
-            ->when(Auth::user()->role !== 'admin', function ($query) {
-                $query->where('created_by', Auth::id());
-            })
-            ->sum('amount');
+        ->when(!$startdate && $date, function ($query) use ($date) {
+            $query->whereDate('date', $date);
+        })
+        ->when(Auth::user()->role !== 'admin', function ($query) {
+            $query->where('created_by', Auth::id());
+        })
+        ->sum('amount');
+
+
+        if ($isShadowUser) {
+            
+            $todaysExpense->getCollection()->transform(function ($expense) {
+                return $this->transformToShadowData($expense);
+            });
+
+           $todaysExpenseTotal = $todaysExpense->sum('sh_amount');
+        }
 
         return Inertia::render('expenses/Index', [
             'todaysExpenseTotal' => $todaysExpenseTotal,
             'todaysExpense' => $todaysExpense,
             'extracashTotal' => $extracashTotal,
             'amount' => $totalAmount,
-            'query' => $request->only('date', 'startdate')
+            'query' => $request->only('date', 'startdate'),
+            'isShadowUser' => $isShadowUser,
         ]);
     }
 
@@ -186,23 +207,28 @@ class ExpenseController extends Controller
     {
         $request->validate([
             'date' => 'required|date',
-            'details' => 'nullable|min:2',
-            'amount' => 'required|numeric'
+            'details' => 'nullable|string',
+            'amount' => 'required|numeric',
+            'sh_amount' => 'nullable|numeric',
+            'category_id' => 'nullable|integer',
         ]);
 
         try {
             Expense::create([
-                'date' => $request->date,
-                'details' => $request->details,
-                'amount' => $request->amount,
-                'created_by' => Auth::id(),
+                'date'        => Carbon::parse($request->date)->toDateString(),
+                'details'     => $request->details,
+                'amount'      => $request->amount,
+                'sh_amount'   => $request->sh_amount ?? $request->amount,
+                'created_by'  => Auth::id(),
+                'category_id' => $request->category_id ?? 0, 
             ]);
 
-            return redirect()->back()->with('success', "Expense added success.");
-        } catch (\Exception $th) {
-            return redirect()->back()->with('error', "server error try again.");
+            return redirect()->back()->with('success', "Expense added successfully.");
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', "Server error, please try again.");
         }
     }
+
 
     // delete
     public function distroy($id)
@@ -215,4 +241,13 @@ class ExpenseController extends Controller
             return redirect()->back()->with('error', "server error try again.");
         }
     }
+
+
+    private function transformToShadowData($expense)
+    {
+        $expense->amount = $expense->sh_amount;
+
+        return $expense;
+    }
+
 }
