@@ -3,7 +3,8 @@ import { useForm, router } from "@inertiajs/react";
 import { 
     ArrowLeft, Plus, Trash2, Search, Shield, DollarSign, User, 
     Building, Phone, Mail, MapPin, Info, Edit, X, RefreshCw,
-    Package, AlertCircle, CheckCircle, Clock, ShoppingBag
+    Package, AlertCircle, CheckCircle, Clock, ShoppingBag,
+    Calculator, AlertTriangle
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -28,6 +29,7 @@ export default function AddPurchaseReturn({
     const [shadowRefundedAmount, setShadowRefundedAmount] = useState(0);
     const [paymentType, setPaymentType] = useState('cash');
     const [selectedPurchaseId, setSelectedPurchaseId] = useState(purchase?.id || '');
+    const [validationErrors, setValidationErrors] = useState({});
     
     const searchRef = useRef(null);
     const dropdownRef = useRef(null);
@@ -45,28 +47,52 @@ export default function AddPurchaseReturn({
         replacement_products: []
     });
 
-    // Calculate totals
+    // Calculate total return amount
     const calculateTotalReturn = useCallback(() => {
         return selectedItems.reduce((total, item) => {
-            const itemTotal = item.return_quantity * (item.unit_price || item.shadow_unit_price || 0);
-            return total + (itemTotal || 0);
+            if (item.return_quantity > 0) {
+                const itemTotal = item.return_quantity * (item.unit_price || 0);
+                return total + itemTotal;
+            }
+            return total;
         }, 0);
     }, [selectedItems]);
 
+    // Calculate shadow total return amount
     const calculateShadowTotalReturn = useCallback(() => {
         return selectedItems.reduce((total, item) => {
-            const itemTotal = item.return_quantity * (item.shadow_unit_price || item.unit_price || 0);
-            return total + (itemTotal || 0);
+            if (item.return_quantity > 0) {
+                const itemTotal = item.return_quantity * (item.shadow_unit_price || item.unit_price || 0);
+                return total + itemTotal;
+            }
+            return total;
         }, 0);
     }, [selectedItems]);
 
+    // Calculate total replacement value
     const calculateReplacementTotal = useCallback(() => {
-        return replacementProducts.reduce((total, product) => total + (product.total_price || 0), 0);
+        return replacementProducts.reduce((total, product) => {
+            const quantity = parseFloat(product.quantity) || 1;
+            const unitPrice = parseFloat(product.unit_price) || 0;
+            return total + (quantity * unitPrice);
+        }, 0);
     }, [replacementProducts]);
 
+    // Calculate shadow replacement value
     const calculateShadowReplacementTotal = useCallback(() => {
-        return replacementProducts.reduce((total, product) => total + (product.shadow_total_price || 0), 0);
+        return replacementProducts.reduce((total, product) => {
+            const quantity = parseFloat(product.quantity) || 1;
+            const unitPrice = parseFloat(product.shadow_unit_price) || 0;
+            return total + (quantity * unitPrice);
+        }, 0);
     }, [replacementProducts]);
+
+    // Calculate net difference
+    const calculateNetDifference = useCallback(() => {
+        const totalReturn = calculateTotalReturn();
+        const replacementTotal = calculateReplacementTotal();
+        return replacementTotal - totalReturn; // Positive = we pay, Negative = we receive
+    }, [calculateTotalReturn, calculateReplacementTotal]);
 
     const formatCurrency = (value) => {
         const numValue = Number(value) || 0;
@@ -96,22 +122,42 @@ export default function AddPurchaseReturn({
 
     // Sync form data
     useEffect(() => {
+        const totalReturn = calculateTotalReturn();
+        const shadowTotalReturn = calculateShadowTotalReturn();
+        
+        // For money back returns, auto-set refund amount to total return
+        if (returnType === 'money_back') {
+            setRefundedAmount(totalReturn);
+            setShadowRefundedAmount(shadowTotalReturn);
+        } else {
+            setRefundedAmount(0);
+            setShadowRefundedAmount(0);
+        }
+
         const formData = {
             ...form.data,
             return_type: returnType,
             payment_type: returnType === 'money_back' ? paymentType : null,
-            refunded_amount: refundedAmount,
-            shadow_refunded_amount: shadowRefundedAmount,
+            refunded_amount: returnType === 'money_back' ? totalReturn : 0,
+            shadow_refunded_amount: returnType === 'money_back' ? shadowTotalReturn : 0,
             items: selectedItems.filter(item => item.return_quantity > 0).map(item => ({
                 purchase_item_id: item.purchase_item_id || item.id,
                 return_quantity: item.return_quantity,
                 reason: item.reason || 'Return requested'
             })),
-            replacement_products: returnType === 'product_replacement' ? replacementProducts : []
+            replacement_products: returnType === 'product_replacement' ? replacementProducts.map(product => ({
+                product_id: product.product_id,
+                variant_id: product.variant_id,
+                quantity: parseFloat(product.quantity) || 1,
+                unit_price: parseFloat(product.unit_price) || 0,
+                shadow_unit_price: parseFloat(product.shadow_unit_price) || 0,
+                sale_price: parseFloat(product.sale_price) || 0,
+                shadow_sale_price: parseFloat(product.shadow_sale_price) || 0
+            })) : []
         };
 
         form.setData(formData);
-    }, [returnType, paymentType, refundedAmount, shadowRefundedAmount, selectedItems, replacementProducts]);
+    }, [returnType, paymentType, selectedItems, replacementProducts]);
 
     // Initialize selected items from purchase items
     useEffect(() => {
@@ -157,24 +203,28 @@ export default function AddPurchaseReturn({
             const maxQuantity = updated[index].max_quantity;
             
             if (quantity > maxQuantity) {
-                alert(`Cannot return more than ${maxQuantity} items (available stock)`);
+                setValidationErrors(prev => ({
+                    ...prev,
+                    quantity: `Cannot return more than ${maxQuantity} items (available stock)`
+                }));
                 return;
             }
             
             updated[index].return_quantity = quantity;
+            
+            // Clear quantity error if fixed
+            if (validationErrors.quantity) {
+                setValidationErrors(prev => {
+                    const newErrors = { ...prev };
+                    delete newErrors.quantity;
+                    return newErrors;
+                });
+            }
         } else {
             updated[index][field] = value;
         }
         
         setSelectedItems(updated);
-        
-        // Auto-set refund amount for money back returns
-        if (returnType === 'money_back' && field === 'return_quantity') {
-            const total = calculateTotalReturn();
-            const shadowTotal = calculateShadowTotalReturn();
-            setRefundedAmount(total);
-            setShadowRefundedAmount(shadowTotal);
-        }
     };
 
     // Add replacement product
@@ -182,6 +232,12 @@ export default function AddPurchaseReturn({
         const existingProduct = replacementProducts.find(
             item => item.product_id === product.id && item.variant_id === variant.id
         );
+
+        // Default prices
+        const defaultUnitPrice = parseFloat(variant.unit_cost || variant.purchase_price || 0);
+        const defaultShadowUnitPrice = parseFloat(variant.shadow_unit_cost || variant.shadow_purchase_price || 0);
+        const defaultSalePrice = parseFloat(variant.selling_price || variant.sale_price || defaultUnitPrice * 1.2);
+        const defaultShadowSalePrice = parseFloat(variant.shadow_selling_price || variant.shadow_sale_price || defaultShadowUnitPrice * 1.2);
 
         if (existingProduct) {
             setReplacementProducts(replacementProducts.map(item =>
@@ -195,11 +251,6 @@ export default function AddPurchaseReturn({
                     : item
             ));
         } else {
-            const defaultUnitPrice = variant.unit_cost || variant.purchase_price || 1;
-            const defaultShadowUnitPrice = variant.shadow_unit_cost || variant.shadow_purchase_price || 1;
-            const defaultSalePrice = variant.selling_price || variant.sale_price || 1;
-            const defaultShadowSalePrice = variant.shadow_selling_price || variant.shadow_sale_price || 1;
-
             setReplacementProducts([
                 ...replacementProducts,
                 {
@@ -212,8 +263,8 @@ export default function AddPurchaseReturn({
                     shadow_unit_price: defaultShadowUnitPrice,
                     sale_price: defaultSalePrice,
                     shadow_sale_price: defaultShadowSalePrice,
-                    total_price: defaultUnitPrice * 1,
-                    shadow_total_price: defaultShadowUnitPrice * 1
+                    total_price: defaultUnitPrice,
+                    shadow_total_price: defaultShadowUnitPrice
                 }
             ]);
         }
@@ -224,13 +275,18 @@ export default function AddPurchaseReturn({
 
     const updateReplacementProduct = (index, field, value) => {
         const updated = [...replacementProducts];
-        const numericValue = field === 'quantity' ? parseInt(value) || 1 : parseFloat(value) || 0;
+        const numericValue = parseFloat(value) || 0;
         
         updated[index][field] = numericValue;
         
+        // Recalculate totals
         if (field === 'quantity' || field === 'unit_price' || field === 'shadow_unit_price') {
-            updated[index].total_price = updated[index].quantity * updated[index].unit_price;
-            updated[index].shadow_total_price = updated[index].quantity * updated[index].shadow_unit_price;
+            const quantity = parseFloat(updated[index].quantity) || 1;
+            const unitPrice = parseFloat(updated[index].unit_price) || 0;
+            const shadowUnitPrice = parseFloat(updated[index].shadow_unit_price) || 0;
+            
+            updated[index].total_price = quantity * unitPrice;
+            updated[index].shadow_total_price = quantity * shadowUnitPrice;
         }
         
         setReplacementProducts(updated);
@@ -247,13 +303,10 @@ export default function AddPurchaseReturn({
         setReturnType(type);
         if (type === 'money_back') {
             setReplacementProducts([]);
-            // Set refund amounts
-            setRefundedAmount(calculateTotalReturn());
-            setShadowRefundedAmount(calculateShadowTotalReturn());
+            setPaymentType('cash');
         } else {
             setRefundedAmount(0);
             setShadowRefundedAmount(0);
-            setPaymentType('cash');
         }
     };
 
@@ -271,20 +324,19 @@ export default function AddPurchaseReturn({
 
     // Validate form
     const validateForm = () => {
+        const errors = {};
+        
         if (!form.data.purchase_id) {
-            alert('Please select a purchase');
-            return false;
+            errors.purchase = 'Please select a purchase';
         }
 
         if (!form.data.reason.trim()) {
-            alert('Please provide a reason for the return');
-            return false;
+            errors.reason = 'Please provide a reason for the return';
         }
 
         const hasReturnItems = selectedItems.some(item => item.return_quantity > 0);
         if (!hasReturnItems) {
-            alert('Please select at least one item to return');
-            return false;
+            errors.items = 'Please select at least one item to return';
         }
 
         // Check if any item exceeds available quantity
@@ -293,27 +345,27 @@ export default function AddPurchaseReturn({
         );
         
         if (invalidItems.length > 0) {
-            alert(`Cannot return more than available stock for some items`);
-            return false;
+            errors.quantity = 'Cannot return more than available stock for some items';
         }
 
-        if (returnType === 'money_back') {
-            if (!paymentType) {
-                alert('Please select payment type for refund');
-                return false;
-            }
-            if (refundedAmount < 0) {
-                alert('Refund amount cannot be negative');
-                return false;
-            }
-        } else if (returnType === 'product_replacement') {
+        if (returnType === 'product_replacement') {
             if (replacementProducts.length === 0) {
-                alert('Please add replacement products');
-                return false;
+                errors.replacement = 'Please add replacement products';
             }
+            
+            // Validate replacement product prices
+            replacementProducts.forEach((product, index) => {
+                if (parseFloat(product.unit_price) <= 0) {
+                    errors[`replacement_price_${index}`] = 'Unit price must be greater than 0';
+                }
+                if (parseFloat(product.quantity) <= 0) {
+                    errors[`replacement_quantity_${index}`] = 'Quantity must be greater than 0';
+                }
+            });
         }
 
-        return true;
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
     // Submit form
@@ -321,8 +373,15 @@ export default function AddPurchaseReturn({
         e.preventDefault();
         
         if (!validateForm()) {
+            console.log('Validation errors:', validationErrors);
             return;
         }
+
+        // Calculate final amounts
+        const totalReturn = calculateTotalReturn();
+        const shadowTotalReturn = calculateShadowTotalReturn();
+        const replacementTotal = calculateReplacementTotal();
+        const shadowReplacementTotal = calculateShadowReplacementTotal();
 
         // Prepare items for submission
         const itemsToSubmit = selectedItems
@@ -338,11 +397,13 @@ export default function AddPurchaseReturn({
             replacementProducts.map(product => ({
                 product_id: product.product_id,
                 variant_id: product.variant_id,
-                quantity: product.quantity,
-                unit_price: product.unit_price,
-                shadow_unit_price: product.shadow_unit_price,
-                sale_price: product.sale_price,
-                shadow_sale_price: product.shadow_sale_price
+                quantity: parseFloat(product.quantity) || 1,
+                unit_price: parseFloat(product.unit_price) || 0,
+                shadow_unit_price: parseFloat(product.shadow_unit_price) || 0,
+                sale_price: parseFloat(product.sale_price) || 0,
+                shadow_sale_price: parseFloat(product.shadow_sale_price) || 0,
+                total_price: parseFloat(product.total_price) || 0,
+                shadow_total_price: parseFloat(product.shadow_total_price) || 0
             })) : [];
 
         const submitData = {
@@ -352,16 +413,20 @@ export default function AddPurchaseReturn({
             reason: form.data.reason,
             notes: form.data.notes,
             payment_type: returnType === 'money_back' ? paymentType : null,
-            refunded_amount: refundedAmount,
-            shadow_refunded_amount: shadowRefundedAmount,
+            refunded_amount: returnType === 'money_back' ? totalReturn : 0,
+            shadow_refunded_amount: returnType === 'money_back' ? shadowTotalReturn : 0,
             items: itemsToSubmit,
-            replacement_products: replacementToSubmit
+            replacement_products: replacementToSubmit,
+            replacement_total: replacementTotal,
+            shadow_replacement_total: shadowReplacementTotal
         };
 
-        console.log('Submitting data:', submitData);
+        console.log('Submitting purchase return data:', submitData);
+        console.log('Replacement products details:', replacementToSubmit);
 
         form.post(route("purchase-return.store"), {
             preserveScroll: true,
+            data: submitData,
             onSuccess: () => {
                 router.visit(route("purchase-return.list"));
             },
@@ -370,32 +435,32 @@ export default function AddPurchaseReturn({
                 
                 let errorMessage = "There was an error creating the purchase return.";
                 
-                // Show specific error messages
-                if (errors.payment_type) {
-                    errorMessage = `Payment Type Error: ${errors.payment_type}`;
-                } else if (errors.refunded_amount) {
-                    errorMessage = `Refund Amount Error: ${errors.refunded_amount}`;
-                } else if (errors.shadow_refunded_amount) {
-                    errorMessage = `Shadow Refund Amount Error: ${errors.shadow_refunded_amount}`;
+                if (errors.purchase_id) {
+                    errorMessage = `Purchase Error: ${errors.purchase_id}`;
+                } else if (errors.return_type) {
+                    errorMessage = `Return Type Error: ${errors.return_type}`;
                 } else if (errors.items) {
                     errorMessage = `Items Error: ${errors.items}`;
                 } else if (errors.replacement_products) {
                     errorMessage = `Replacement Products Error: ${errors.replacement_products}`;
                 } else if (errors.reason) {
                     errorMessage = `Reason Error: ${errors.reason}`;
-                } else if (errors.error) {
-                    errorMessage = errors.error;
+                } else if (errors.message) {
+                    errorMessage = errors.message;
                 }
                 
                 alert(errorMessage);
+                setValidationErrors(errors);
             }
         });
     };
 
+    // Calculate all totals
     const totalReturn = calculateTotalReturn();
     const shadowTotalReturn = calculateShadowTotalReturn();
     const replacementTotal = calculateReplacementTotal();
     const shadowReplacementTotal = calculateShadowReplacementTotal();
+    const netDifference = calculateNetDifference();
 
     return (
         <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
@@ -412,6 +477,21 @@ export default function AddPurchaseReturn({
                     </button>
                 </div>
             </PageHeader>
+
+            {/* Validation Errors */}
+            {Object.keys(validationErrors).length > 0 && (
+                <div className="alert alert-error mb-6">
+                    <AlertTriangle size={20} />
+                    <div>
+                        <h3 className="font-bold">Please fix the following errors:</h3>
+                        <ul className="list-disc pl-5 mt-1">
+                            {Object.values(validationErrors).map((error, index) => (
+                                <li key={index}>{error}</li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            )}
 
             {/* Purchase Selection */}
             {!purchase && (
@@ -505,6 +585,7 @@ export default function AddPurchaseReturn({
                                                 onChange={() => handleReturnTypeChange('money_back')}
                                             />
                                             <div className="flex items-center gap-2">
+                                                <DollarSign size={16} />
                                                 <span className="font-medium">Money Back</span>
                                             </div>
                                             <p className="text-xs text-gray-500">
@@ -550,86 +631,21 @@ export default function AddPurchaseReturn({
                             </div>
 
                             {returnType === 'money_back' && (
-                                <>
-                                    <div className="form-control">
-                                        <label className="label">
-                                            <span className="label-text">{t('purchase_return.payment_type', 'Payment Type')} *</span>
-                                        </label>
-                                        <select
-                                            className="select select-bordered w-full"
-                                            value={paymentType}
-                                            onChange={(e) => setPaymentType(e.target.value)}
-                                        >
-                                            <option value="cash">Cash</option>
-                                            <option value="card">Card</option>
-                                            <option value="mobile_banking">Mobile Banking</option>
-                                            <option value="adjust_to_advance">Adjust to Supplier Advance</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="form-control">
-                                        <label className="label">
-                                            <span className="label-text">
-                                                {t('purchase_return.refund_amount', 'Refund Amount')}
-                                            </span>
-                                        </label>
-                                        <input
-                                            type="number"
-                                            min="0"
-                                            max={totalReturn}
-                                            step="0.01"
-                                            className="input input-bordered w-full"
-                                            value={refundedAmount}
-                                            onChange={(e) => setRefundedAmount(parseFloat(e.target.value) || 0)}
-                                        />
-                                        <div className="flex justify-between mt-1">
-                                            <span className="text-xs text-gray-500">
-                                                {t('purchase_return.total_returnable', 'Total Returnable')}: 
-                                                <span className="font-semibold ml-1">৳{formatCurrency(totalReturn)}</span>
-                                            </span>
-                                            <button
-                                                type="button"
-                                                className="btn btn-xs btn-outline btn-primary"
-                                                onClick={() => setRefundedAmount(totalReturn)}
-                                            >
-                                                {t('purchase_return.set_full_amount', 'Set Full Amount')}
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {!isShadowUser && (
-                                        <div className="form-control">
-                                            <label className="label">
-                                                <span className="label-text flex items-center gap-1">
-                                                    <Shield size={14} />
-                                                    {t('purchase_return.shadow_refund_amount', 'Shadow Refund Amount')}
-                                                </span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max={shadowTotalReturn}
-                                                step="0.01"
-                                                className="input input-bordered w-full border-warning"
-                                                value={shadowRefundedAmount}
-                                                onChange={(e) => setShadowRefundedAmount(parseFloat(e.target.value) || 0)}
-                                            />
-                                            <div className="flex justify-between mt-1">
-                                                <span className="text-xs text-gray-500">
-                                                    {t('purchase_return.shadow_total', 'Shadow Total')}: 
-                                                    <span className="font-semibold ml-1">৳{formatCurrency(shadowTotalReturn)}</span>
-                                                </span>
-                                                <button
-                                                    type="button"
-                                                    className="btn btn-xs btn-outline btn-warning"
-                                                    onClick={() => setShadowRefundedAmount(shadowTotalReturn)}
-                                                >
-                                                    {t('purchase_return.set_full_amount', 'Set Full Amount')}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </>
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">{t('purchase_return.payment_type', 'Payment Type')} *</span>
+                                    </label>
+                                    <select
+                                        className="select select-bordered w-full"
+                                        value={paymentType}
+                                        onChange={(e) => setPaymentType(e.target.value)}
+                                    >
+                                        <option value="cash">Cash</option>
+                                        <option value="card">Card</option>
+                                        <option value="mobile_banking">Mobile Banking</option>
+                                        <option value="adjust_to_advance">Adjust to Supplier Advance</option>
+                                    </select>
+                                </div>
                             )}
 
                             <div className="form-control">
@@ -644,6 +660,9 @@ export default function AddPurchaseReturn({
                                     placeholder={t('purchase_return.reason_placeholder', 'Explain why you are returning these items...')}
                                     required
                                 />
+                                {validationErrors.reason && (
+                                    <span className="text-error text-xs mt-1">{validationErrors.reason}</span>
+                                )}
                             </div>
 
                             <div className="form-control">
@@ -716,11 +735,11 @@ export default function AddPurchaseReturn({
 
                                                         <div className="form-control">
                                                             <label className="label py-1">
-                                                                <span className="label-text text-xs">{t('purchase_return.total', 'Total')}</span>
+                                                                <span className="label-text text-xs">{t('purchase_return.item_total', 'Item Total')}</span>
                                                             </label>
                                                             <input
                                                                 type="text"
-                                                                className="input input-bordered input-sm w-full bg-base-200"
+                                                                className="input input-bordered input-sm w-full bg-base-200 font-semibold"
                                                                 value={`৳${formatCurrency(item.return_quantity * item.unit_price)}`}
                                                                 readOnly
                                                             />
@@ -751,9 +770,20 @@ export default function AddPurchaseReturn({
                                     </div>
                                 )}
 
+                                {validationErrors.items && (
+                                    <div className="alert alert-error mt-2">
+                                        <span>{validationErrors.items}</span>
+                                    </div>
+                                )}
+
                                 <div className="mt-4 p-3 bg-base-100 border border-base-300 rounded-box">
                                     <div className="flex justify-between items-center">
-                                        <span className="font-medium">{t('purchase_return.total_return_value', 'Total Return Value')}:</span>
+                                        <div>
+                                            <span className="font-medium">{t('purchase_return.total_return_value', 'Total Return Value')}:</span>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Total Items: {selectedItems.filter(item => item.return_quantity > 0).length}
+                                            </p>
+                                        </div>
                                         <div className="text-right">
                                             <div className="font-semibold text-lg">৳{formatCurrency(totalReturn)}</div>
                                             {!isShadowUser && (
@@ -788,6 +818,12 @@ export default function AddPurchaseReturn({
                                         </button>
                                     </div>
 
+                                    {validationErrors.replacement && (
+                                        <div className="alert alert-warning mb-4">
+                                            <span>{validationErrors.replacement}</span>
+                                        </div>
+                                    )}
+
                                     {/* Replacement Product Search */}
                                     {showReplacementSearch && (
                                         <div className="mb-4 relative" ref={searchRef}>
@@ -798,6 +834,7 @@ export default function AddPurchaseReturn({
                                                     value={productSearch}
                                                     onChange={(e) => setProductSearch(e.target.value)}
                                                     placeholder={t('purchase_return.search_products', 'Search replacement products...')}
+                                                    autoFocus
                                                 />
                                                 <Search size={16} className="absolute right-3 top-3 text-gray-400" />
                                             </div>
@@ -828,9 +865,13 @@ export default function AddPurchaseReturn({
                                                                             <div className="font-medium">
                                                                                 {getVariantDisplayName(variant)}
                                                                             </div>
-                                                                            <div className="text-xs text-gray-500">
-                                                                                Cost: ৳{variant.unit_cost || '0.00'} | 
-                                                                                Shadow: ৳{variant.shadow_unit_cost || '0.00'}
+                                                                            <div className="text-xs text-gray-500 mt-1">
+                                                                                Cost: ৳{formatCurrency(variant.unit_cost || variant.purchase_price || 0)} | 
+                                                                                {!isShadowUser && (
+                                                                                    <>
+                                                                                        {' '}Shadow: ৳{formatCurrency(variant.shadow_unit_cost || variant.shadow_purchase_price || 0)}
+                                                                                    </>
+                                                                                )}
                                                                             </div>
                                                                         </div>
                                                                         <Plus size={16} className="text-warning" />
@@ -872,33 +913,38 @@ export default function AddPurchaseReturn({
                                                                 <input
                                                                     type="number"
                                                                     min="1"
+                                                                    step="1"
                                                                     className="input input-bordered input-sm w-full border-warning"
                                                                     value={product.quantity}
                                                                     onChange={(e) => updateReplacementProduct(index, 'quantity', e.target.value)}
                                                                 />
+                                                                {validationErrors[`replacement_quantity_${index}`] && (
+                                                                    <span className="text-error text-xs">{validationErrors[`replacement_quantity_${index}`]}</span>
+                                                                )}
                                                             </div>
 
-                                                            {!isShadowUser && (
-                                                                <div className="form-control">
-                                                                    <label className="label py-1">
-                                                                        <span className="label-text text-xs">{t('purchase_return.unit_price', 'Unit Price')}</span>
-                                                                    </label>
-                                                                    <input
-                                                                        type="number"
-                                                                        min="0.01"
-                                                                        step="0.01"
-                                                                        className="input input-bordered input-sm w-full"
-                                                                        value={product.unit_price}
-                                                                        onChange={(e) => updateReplacementProduct(index, 'unit_price', e.target.value)}
-                                                                    />
-                                                                </div>
-                                                            )}
+                                                            <div className="form-control">
+                                                                <label className="label py-1">
+                                                                    <span className="label-text text-xs">{t('purchase_return.unit_price', 'Unit Price')}</span>
+                                                                </label>
+                                                                <input
+                                                                    type="number"
+                                                                    min="0.01"
+                                                                    step="0.01"
+                                                                    className="input input-bordered input-sm w-full border-warning"
+                                                                    value={product.unit_price}
+                                                                    onChange={(e) => updateReplacementProduct(index, 'unit_price', e.target.value)}
+                                                                />
+                                                                {validationErrors[`replacement_price_${index}`] && (
+                                                                    <span className="text-error text-xs">{validationErrors[`replacement_price_${index}`]}</span>
+                                                                )}
+                                                            </div>
 
                                                             <div className="form-control">
                                                                 <label className="label py-1">
                                                                     <span className="label-text text-xs flex items-center gap-1">
-                                                                        {isShadowUser ? t('purchase.return.unit_price', 'Unit Price') : t('purchase.return.shadow_unit_price', 'Shadow Unit Price')}
-                                                                        {isShadowUser && <Shield size={12} className="text-warning" />}
+                                                                        <Shield size={12} className="text-warning" />
+                                                                        {t('purchase_return.shadow_unit_price', 'Shadow Unit Price')}
                                                                     </span>
                                                                 </label>
                                                                 <input
@@ -914,15 +960,21 @@ export default function AddPurchaseReturn({
                                                             <div className="form-control">
                                                                 <label className="label py-1">
                                                                     <span className="label-text text-xs">
-                                                                        {t('purchase_return.total', 'Total')}
+                                                                        {t('purchase_return.item_total', 'Item Total')}
                                                                     </span>
                                                                 </label>
-                                                                <input
-                                                                    type="text"
-                                                                    className="input input-bordered input-sm w-full bg-warning/10"
-                                                                    value={`৳${formatCurrency(product.total_price)}`}
-                                                                    readOnly
-                                                                />
+                                                                <div className="space-y-1">
+                                                                    <input
+                                                                        type="text"
+                                                                        className="input input-bordered input-sm w-full bg-warning/10 font-semibold"
+                                                                        value={`৳${formatCurrency(product.total_price)}`}
+                                                                        readOnly
+                                                                    />
+                                                                    <div className="text-xs text-warning flex items-center gap-1">
+                                                                        <Shield size={10} />
+                                                                        ৳{formatCurrency(product.shadow_total_price)}
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -943,7 +995,12 @@ export default function AddPurchaseReturn({
 
                                     <div className="mt-4 p-3 bg-warning/5 border border-warning/20 rounded-box">
                                         <div className="flex justify-between items-center">
-                                            <span className="font-medium">{t('purchase_return.total_replacement_value', 'Total Replacement Value')}:</span>
+                                            <div>
+                                                <span className="font-medium">{t('purchase_return.total_replacement_value', 'Total Replacement Value')}:</span>
+                                                <p className="text-sm text-gray-500 mt-1">
+                                                    Items: {replacementProducts.length}
+                                                </p>
+                                            </div>
                                             <div className="text-right">
                                                 <div className="font-semibold text-lg text-warning">৳{formatCurrency(replacementTotal)}</div>
                                                 {!isShadowUser && (
@@ -966,11 +1023,12 @@ export default function AddPurchaseReturn({
                             <div className="card card-compact bg-base-100 border border-base-300">
                                 <div className="card-body">
                                     <h4 className="card-title text-sm font-semibold">
+                                        <Calculator size={16} className="inline mr-2" />
                                         {t('purchase_return.return_summary', 'Return Summary')}
                                     </h4>
-                                    <div className="space-y-2 text-sm">
+                                    <div className="space-y-2 text-sm mt-2">
                                         <div className="flex justify-between">
-                                            <span>{t('purchase_return.total_items', 'Total Items to Return')}:</span>
+                                            <span>{t('purchase_return.total_items_return', 'Total Items to Return')}:</span>
                                             <span className="font-medium">
                                                 {selectedItems.filter(item => item.return_quantity > 0).length}
                                             </span>
@@ -982,14 +1040,20 @@ export default function AddPurchaseReturn({
                                         {returnType === 'money_back' && (
                                             <div className="flex justify-between pt-2 border-t border-base-300">
                                                 <span>{t('purchase_return.refund_amount', 'Refund Amount')}:</span>
-                                                <span className="font-semibold text-primary">৳{formatCurrency(refundedAmount)}</span>
+                                                <span className="font-semibold text-primary">৳{formatCurrency(totalReturn)}</span>
                                             </div>
                                         )}
                                         {returnType === 'product_replacement' && (
-                                            <div className="flex justify-between pt-2 border-t border-base-300">
-                                                <span>{t('purchase_return.replacement_value', 'Replacement Value')}:</span>
-                                                <span className="font-semibold text-warning">৳{formatCurrency(replacementTotal)}</span>
-                                            </div>
+                                            <>
+                                                <div className="flex justify-between">
+                                                    <span>{t('purchase_return.replacement_items', 'Replacement Items')}:</span>
+                                                    <span className="font-medium">{replacementProducts.length}</span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span>{t('purchase_return.replacement_value', 'Replacement Value')}:</span>
+                                                    <span className="font-semibold text-warning">৳{formatCurrency(replacementTotal)}</span>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 </div>
@@ -998,10 +1062,11 @@ export default function AddPurchaseReturn({
                             <div className="card card-compact bg-base-100 border border-base-300">
                                 <div className="card-body">
                                     <h4 className="card-title text-sm font-semibold">
-                                        {t('purchase_return.difference', 'Value Difference')}
+                                        <RefreshCw size={16} className="inline mr-2" />
+                                        {t('purchase_return.value_difference', 'Value Difference')}
                                     </h4>
                                     {returnType === 'product_replacement' && (
-                                        <div className="space-y-2 text-sm">
+                                        <div className="space-y-2 text-sm mt-2">
                                             <div className="flex justify-between">
                                                 <span>{t('purchase_return.return_value', 'Return Value')}:</span>
                                                 <span className="text-gray-600">৳{formatCurrency(totalReturn)}</span>
@@ -1012,10 +1077,19 @@ export default function AddPurchaseReturn({
                                             </div>
                                             <div className="flex justify-between pt-2 border-t border-base-300 font-semibold">
                                                 <span>{t('purchase_return.net_difference', 'Net Difference')}:</span>
-                                                <span className={`${replacementTotal > totalReturn ? 'text-error' : 'text-success'}`}>
-                                                    ৳{formatCurrency(replacementTotal - totalReturn)}
-                                                    {replacementTotal > totalReturn ? ' (Pay)' : ' (Receive)'}
+                                                <span className={`${netDifference > 0 ? 'text-error' : 'text-success'}`}>
+                                                    ৳{formatCurrency(Math.abs(netDifference))}
+                                                    {netDifference > 0 ? ' (Pay to Supplier)' : ' (Receive from Supplier)'}
                                                 </span>
+                                            </div>
+                                            <div className="text-xs text-gray-500 mt-1">
+                                                {netDifference > 0 ? (
+                                                    <span>Replacement value exceeds return value by ৳{formatCurrency(netDifference)}</span>
+                                                ) : netDifference < 0 ? (
+                                                    <span>Return value exceeds replacement value by ৳{formatCurrency(Math.abs(netDifference))}</span>
+                                                ) : (
+                                                    <span>Values are equal - no payment adjustment needed</span>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -1025,6 +1099,7 @@ export default function AddPurchaseReturn({
                                             <p className="text-gray-600">
                                                 {t('purchase_return.full_refund', 'Full refund of return value')}
                                             </p>
+                                            <p className="text-sm font-semibold mt-2">৳{formatCurrency(totalReturn)}</p>
                                         </div>
                                     )}
                                 </div>
@@ -1034,7 +1109,7 @@ export default function AddPurchaseReturn({
                         <div className="flex gap-3">
                             <button
                                 type="submit"
-                                className={`btn ${returnType === 'product_replacement' ? 'btn-warning' : 'btn-primary'}`}
+                                className={`btn btn-lg ${returnType === 'product_replacement' ? 'btn-warning' : 'btn-primary'}`}
                                 disabled={form.processing}
                             >
                                 {form.processing ? (
@@ -1044,7 +1119,7 @@ export default function AddPurchaseReturn({
                                     </span>
                                 ) : (
                                     <>
-                                        <RefreshCw size={16} />
+                                        <RefreshCw size={18} className="mr-2" />
                                         {t('purchase_return.create_return', 'Create Purchase Return')}
                                     </>
                                 )}
@@ -1052,7 +1127,7 @@ export default function AddPurchaseReturn({
                             <button
                                 type="button"
                                 onClick={() => router.visit(route("purchase-return.list"))}
-                                className="btn btn-ghost"
+                                className="btn btn-lg btn-ghost"
                             >
                                 {t('purchase_return.cancel', 'Cancel')}
                             </button>

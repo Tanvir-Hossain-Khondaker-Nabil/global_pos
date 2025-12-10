@@ -34,6 +34,9 @@ return new class extends Migration {
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('restrict');
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('restrict');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+
+            $table->decimal('replacement_total', 15, 2)->default(0);
+            $table->decimal('shadow_replacement_total', 15, 2)->default(0);
         });
     }
 

@@ -251,7 +251,7 @@ export default function AddProduct({ category, update, attributes }) {
         return hasError;
     };
 
-    // Form submission
+    // Form submission - FIXED VERSION
     const formSubmit = (e) => {
         e.preventDefault();
 
@@ -260,7 +260,8 @@ export default function AddProduct({ category, update, attributes }) {
             return;
         }
 
-        const submitData = {
+        // Prepare form data
+        const formData = {
             id: productForm.data.id,
             product_name: productForm.data.product_name,
             category_id: productForm.data.category_id,
@@ -275,19 +276,20 @@ export default function AddProduct({ category, update, attributes }) {
 
         // Add in-house specific data
         if (productType === 'in_house') {
-            submitData.in_house_cost = productForm.data.in_house_cost;
-            submitData.in_house_shadow_cost = productForm.data.in_house_shadow_cost;
-            submitData.in_house_sale_price = productForm.data.in_house_sale_price;
-            submitData.in_house_shadow_sale_price = productForm.data.in_house_shadow_sale_price;
-            submitData.in_house_initial_stock = productForm.data.in_house_initial_stock;
+            formData.in_house_cost = productForm.data.in_house_cost;
+            formData.in_house_shadow_cost = productForm.data.in_house_shadow_cost;
+            formData.in_house_sale_price = productForm.data.in_house_sale_price;
+            formData.in_house_shadow_sale_price = productForm.data.in_house_shadow_sale_price;
+            formData.in_house_initial_stock = productForm.data.in_house_initial_stock;
         }
 
-        console.log('Submitting data:', submitData);
+        console.log('Submitting data:', formData);
 
-        const url = update ? route("product.add.post") : route("product.add.post");
+        const url = update ? route("product.update.post") : route("product.add.post");
 
+        // FIXED: Send data directly, not wrapped in "data" key
         productForm.post(url, {
-            data: submitData,
+            ...formData,
             preserveScroll: true,
             onSuccess: () => {
                 toast.success(update
