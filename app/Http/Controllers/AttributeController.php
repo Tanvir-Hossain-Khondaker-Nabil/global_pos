@@ -6,6 +6,7 @@ use Inertia\Inertia;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class AttributeController extends Controller
@@ -37,6 +38,7 @@ class AttributeController extends Controller
             $attribute = Attribute::create([
                 'name' => $request->name,
                 'code' => $request->code,
+                'created_by' => Auth::id(),
             ]);
 
             // Create attribute values

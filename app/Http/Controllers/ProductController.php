@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -136,12 +137,14 @@ class ProductController extends Controller
                 $product->in_house_sale_price = $request->in_house_sale_price;
                 $product->in_house_shadow_sale_price = $request->in_house_shadow_sale_price;
                 $product->in_house_initial_stock = $request->in_house_initial_stock;
+                $product->created_by = Auth::id();
             } else {
                 $product->in_house_cost = null;
                 $product->in_house_shadow_cost = null;
                 $product->in_house_sale_price = null;
                 $product->in_house_shadow_sale_price = null;
                 $product->in_house_initial_stock = 0;
+                $product->created_by = Auth::id();
             }
 
             $product->save();
