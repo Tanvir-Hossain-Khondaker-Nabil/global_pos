@@ -24,7 +24,7 @@ return new class extends Migration {
             $table->decimal('total_price', 10, 2);
             $table->decimal('shadow_total_price', 10, 2);
             $table->text('reason')->nullable();
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->enum('status', ['pending', 'approved', 'completed', 'cancelled'])->default('pending');
             $table->timestamps();
 
             $table->foreign('purchase_return_id')->references('id')->on('purchase_returns')->onDelete('cascade');

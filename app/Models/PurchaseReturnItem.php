@@ -32,7 +32,18 @@ class PurchaseReturnItem extends Model
         'shadow_sale_price' => 'decimal:2',
         'total_price' => 'decimal:2',
         'shadow_total_price' => 'decimal:2',
+        'return_quantity' => 'integer',
     ];
+
+    // Add this method to ensure proper status handling
+    public function setStatusAttribute($value)
+    {
+        $allowed = ['pending', 'approved', 'completed', 'cancelled'];
+        if (!in_array($value, $allowed)) {
+            throw new \InvalidArgumentException("Invalid status value: $value");
+        }
+        $this->attributes['status'] = $value;
+    }
 
     public function purchaseReturn()
     {
@@ -52,5 +63,11 @@ class PurchaseReturnItem extends Model
     public function variant()
     {
         return $this->belongsTo(Variant::class);
+    }
+
+    public function stock()
+    {
+        return $this->hasOne(Stock::class, 'product_id', 'product_id')
+            ->where('variant_id', $this->variant_id);
     }
 }

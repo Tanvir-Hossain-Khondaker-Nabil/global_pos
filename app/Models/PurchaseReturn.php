@@ -25,7 +25,9 @@ class PurchaseReturn extends Model
         'status',
         'created_by',
         'user_type',
-        'payment_type'
+        'payment_type',
+        'replacement_total',  // Make sure this is here
+        'shadow_replacement_total',  // Make sure this is here
     ];
 
     protected $casts = [

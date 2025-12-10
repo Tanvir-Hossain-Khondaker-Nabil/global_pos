@@ -75,16 +75,13 @@ class ProductController extends Controller
 
     public function update(Request $request)
     {
-        // Custom validation logic
+        // Use the request data directly (no data wrapper)
         $validator = Validator::make($request->all(), [
-            'product_name' => 'required|string|max:255',
-            'category_id' => 'required|exists:categories,id',
-            'product_no' => 'required|string|max:100|unique:products,product_no,' . $request->id,
+            'product_name' => 'required',
+            'category_id' => 'required',
+            'product_no' => 'required',
             'description' => 'nullable|string',
-            'product_type' => 'required|in:regular,in_house',
-            'variants' => ['required', 'array', 'min:1'],
-            'variants.*.attribute_values' => ['required', 'array', 'min:1'],
-            'variants.*.sku' => ['nullable', 'string', 'max:100', 'unique:variants,sku,' . ($request->variants[0]['id'] ?? 'NULL')],
+            'product_type' => 'required',
         ]);
 
         // Add conditional validation for in_house fields
@@ -131,7 +128,7 @@ class ProductController extends Controller
             $product->description = $request->description;
             $product->product_type = $request->product_type;
 
-            // In-house সেটিংস
+            // In-house settings
             if ($request->product_type === 'in_house') {
                 $product->in_house_cost = $request->in_house_cost;
                 $product->in_house_shadow_cost = $request->in_house_shadow_cost;
@@ -182,7 +179,7 @@ class ProductController extends Controller
                     ]);
                     $newVariantIds[] = $variant->id;
 
-                    // In-house প্রোডাক্ট হলে স্টক তৈরি করুন
+                    // Create stock for in-house products
                     if ($product->product_type === 'in_house') {
                         $this->createInHouseStock($product, $variant);
                     }
