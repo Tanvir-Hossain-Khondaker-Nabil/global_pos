@@ -41,6 +41,7 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 
 // auth routes
 Route::middleware('auth')->group(function () {
+    
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->name('home');
 
     // users managment
