@@ -41,6 +41,7 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 
 // auth routes
 Route::middleware('auth')->group(function () {
+    
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->name('home');
 
     // users managment
@@ -198,6 +199,7 @@ Route::middleware('auth')->group(function () {
     // Purchase Routes
     Route::get('/purchases', [PurchaseController::class, 'index'])->name('purchase.list');
     Route::get('/purchases_items', [PurchaseController::class, 'allPurchasesItems'])->name('purchase.items');
+    Route::get('/purchases_items/{id}', [PurchaseController::class, 'showPurchasesItem'])->name('purchaseItems.show');
 
     Route::get('/purchase/create', [PurchaseController::class, 'create'])->name('purchase.create');
     Route::post('/purchase/store', [PurchaseController::class, 'store'])->name('purchase.store');

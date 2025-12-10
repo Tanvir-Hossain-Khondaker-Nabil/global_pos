@@ -439,26 +439,7 @@ export default function Customers({ customers, filters }) {
                                 )}
                             </fieldset>
 
-                            {/* Due Amount */}
-                            <fieldset className="fieldset">
-                                <legend className="fieldset-legend">
-                                    {t('customer.due_amount', 'Due Amount')}
-                                </legend>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={customerForm.data.due_amount}
-                                    onChange={(e) => customerForm.setData("due_amount", parseFloat(e.target.value) || 0)}
-                                    className="input input-bordered w-full"
-                                    placeholder={t('customer.due_amount_placeholder', 'Enter due amount')}
-                                />
-                                {customerForm.errors.due_amount && (
-                                    <div className="text-red-500 text-sm mt-1">
-                                        {customerForm.errors.due_amount}
-                                    </div>
-                                )}
-                            </fieldset>
+                     
 
                             {/* Status */}
                             <fieldset className="fieldset">

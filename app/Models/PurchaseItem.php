@@ -33,7 +33,7 @@ class PurchaseItem extends Model
 
     public function purchase()
     {
-        return $this->belongsTo(Purchase::class)->with(['warehouse','creator']);
+        return $this->belongsTo(Purchase::class)->with(['warehouse','creator','supplier']);
     }
 
     public function product()

@@ -26,6 +26,7 @@ class User extends Authenticatable
         'phone',
         'address',
         'status',
+        'parent_id'
     ];
 
     /**
@@ -42,6 +43,7 @@ class User extends Authenticatable
     const ADMIN_ROLE = 1;
     const COMPANY_ROLE = 2;
     const USER_ROLE = 3;
+    
 
     
 
@@ -56,6 +58,13 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+
+    // relationship with businesses
+    public function business()
+    {
+        return $this->hasMany(BusinessProfile::class, 'user_id', 'id');
     }
 
     public function scopeFilter($query, array $filters)

@@ -268,13 +268,14 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-1">
-                                                {/* <Link
-                                                    href={route('purchases.show', { id: item.purchase_id })}
+                                          
+                                                <Link
+                                                    href={route('purchaseItems.show', { id: item.id })}
                                                     className="btn btn-ghost btn-xs"
-                                                    title="View Purchase"
+                                                    title="View Purchase Item"
                                                 >
-                                                    <Eye size={12} />
-                                                </Link> */}
+                                                    <Package size={12} />
+                                                </Link>
                                                 {/* {item.product && (
                                                     <Link
                                                         href={route('products.show', { id: item.product_id })}
@@ -316,7 +317,6 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                         <strong style={{ fontSize: '16px' }}>Purchase Details</strong>
                                                         <div className="mt-2 space-y-1">
                                                             <div><strong>Purchase ID:</strong> {item.purchase_id}</div>
-                                                            <div><strong>Reference:</strong> {item.purchase?.reference_no || 'N/A'}</div>
                                                             <div><strong>Status:</strong> {item.purchase?.status || 'N/A'}</div>
                                                             <div><strong>Supplier:</strong> {item.purchase?.supplier?.name || 'N/A'}</div>
                                                             <div><strong>Payment Status:</strong> {item.purchase?.payment_status || 'N/A'}</div>

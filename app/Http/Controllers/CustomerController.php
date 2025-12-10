@@ -3,9 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Customer;
+use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Support\Str;
+use Carbon\Carbon;
 
 class CustomerController extends Controller
 {
@@ -58,7 +61,7 @@ class CustomerController extends Controller
         ]);
 
         try {
-            Customer::create([
+           $customer =   Customer::create([
                 'customer_name' => $request->customer_name,
                 'phone' => $request->phone,
                 'address' => $request->address,
@@ -68,7 +71,22 @@ class CustomerController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
+            // if advance amount is given, create a payment record
+            if ($request->advance_amount && $request->advance_amount > 0) {
+               Payment::create([
+                    'customer_id'    => $customer->id ?? null,
+                    'amount'         => $request->advance_amount ?? 0,
+                    'shadow_amount'  => 0,
+                    'payment_method' => 'Cash',
+                    'txn_ref'        => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
+                    'note'           =>'Initial advance amount payment of customer',
+                    'paid_at'        => Carbon::now(),
+                    'created_by'     => Auth::id(),
+                ]);
+            }
+
             return redirect()->back()->with('success', 'New customer added successfully');
+
         } catch (\Exception $th) {
             return redirect()->back()->with('error', 'Server error: ' . $th->getMessage());
         }

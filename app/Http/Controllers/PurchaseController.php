@@ -69,6 +69,44 @@ class PurchaseController extends Controller
         ]);
     }
 
+    //purchase items
+
+    public function allPurchasesItems(Request $request)
+    {
+        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse'])
+            ->when($request->filled('product_id'), function ($query) use ($request) {
+                $query->where('product_id', $request->product_id);
+            })
+            ->when($request->filled('date_from') && $request->filled('date_to'), function ($query) use ($request) {
+                $query->whereHas('purchase', function ($q) use ($request) {
+                    $q->whereBetween('purchase_date', [$request->date_from, $request->date_to]);
+                });
+            })
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+
+        return Inertia::render('Purchase/PurchaseItemsList', [
+            'purchaseItems' => $purchaseItems,
+            'filters' => $request->only(['product_id', 'date_from', 'date_to']),
+            'isShadowUser' => Auth::user()->user_type === 'shadow',
+        ]);
+    }
+
+
+    // show purchase item details
+    public function showPurchasesItem($id)
+    {
+        $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse'])
+            ->findOrFail($id);
+            
+        return Inertia::render('Purchase/PurchaseItemShow', [
+            'purchaseItem' => $purchaseItem,
+            'isShadowUser' => Auth::user()->user_type === 'shadow',
+        ]);
+    }
+
     public function create()
     {
         $user = Auth::user();

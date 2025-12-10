@@ -17,6 +17,7 @@ class UserController extends Controller
         return Inertia::render("UserList", [
             'filters' => $request->only('search'),
             'users' => User::orderBy('role')
+                ->with('business')
                 ->filter($request->only('search'))
                 ->paginate(10)
                 ->withQueryString()
@@ -28,7 +29,7 @@ class UserController extends Controller
                     'avatar' => $user->profile,
                     'role' => $user->role,
                     'address' => $user->address,
-                    'join_at' => $user->created_at->format('D M, Y'),
+                    'join_at' => $user->created_at,
                 ]),
         ]);
     }

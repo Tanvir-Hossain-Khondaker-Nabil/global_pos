@@ -23,6 +23,9 @@ return [
     // Form Fields
     'supply_name' => 'Supply Name',
     'financial_info' => 'Financial Information',
+    'active_status' => 'Set contact as active',
+    'inactive_status' => 'Set contact as inactive',
+    'status_field' => 'Status',
     'status' => 'Status',
     'purchases' => 'Total Purchase',
     'active' => 'Active',
