@@ -16,7 +16,7 @@ class Purchase extends Model
         'warehouse_id',
         'purchase_date',
         'grand_total',
-        'shadow_total_amount', 
+        'shadow_grand_total', 
         'shadow_paid_amount',  
         'due_amount',
         'shadow_due_amount',

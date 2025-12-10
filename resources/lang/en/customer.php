@@ -17,6 +17,8 @@ return [
     
     // Form Fields
     'customer_name' => 'Customer Name',
+    'no_customers_found' => 'No customers found',
+    'no_matching_customers' => 'No matching customers',
     'edit_customer' => 'Edit Customer',
     'add_new_customer' => 'Add New Customer',
     'customer_phone' => 'Phone',

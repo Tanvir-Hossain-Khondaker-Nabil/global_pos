@@ -26,6 +26,16 @@ export default function SaleShow({ sale }) {
         });
     };
 
+    // Format date only (for print title)
+    const formatDateOnly = (dateString) => {
+        return new Date(dateString).toLocaleDateString("en-GB", {
+            timeZone: "Asia/Dhaka",
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+        });
+    };
+
     // Calculate totals
     const totalItems = sale.items?.reduce((sum, item) => sum + item.quantity, 0) || 0;
 
@@ -45,27 +55,29 @@ export default function SaleShow({ sale }) {
 
     return (
         <div className="bg-white rounded-box">
+       
+
             {/* Header */}
-            <div className="p-5 border-b border-gray-200">
+            <div className="p-5 border-b border-gray-200 print:p-2 print:border-b-2 print:hidden">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
+                    <div className="print:w-full">
+                        <div className="flex items-center gap-2 mb-2 print:mb-1">
                             <Link 
                                 href={route('sales.index')}
-                                className="btn btn-ghost btn-sm btn-circle"
+                                className="btn btn-ghost btn-sm btn-circle print:hidden"
                             >
                                 <ArrowLeft size={16} />
                             </Link>
-                            <h1 className="text-2xl font-bold text-gray-900">
+                            <h1 className="text-2xl font-bold text-gray-900 print:text-xl">
                                 Sale Invoice ({sale.type === 'inventory' ? 'Inventory' : 'POS'})
                             </h1>
                         </div>
-                        <p className="text-gray-600">
+                        <p className="text-gray-600 print:text-sm">
                             Invoice #: <span className="font-mono font-semibold">{sale.invoice_no}</span>
                         </p>
                     </div>
                     
-                    <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap print:hidden">
                         <button
                             onClick={handlePrint}
                             className="btn btn-primary btn-sm"
@@ -89,55 +101,69 @@ export default function SaleShow({ sale }) {
                         </button>
                         {auth.role === 'admin' && (
                             <>
-                          
-                                {/* <Link
-                                    href={route('sales.destroy', { sale: sale.id })}
-                                    method="delete"
-                                    as="button"
-                                    onClick={(e) => {
-                                        if (!confirm("Are you sure you want to delete this sale? This action cannot be undone.")) {
-                                            e.preventDefault();
-                                        }
-                                    }}
-                                    className="btn btn-error btn-sm"
+                                <Link
+                                    href={route('sales.edit', { sale: sale.id })}
+                                    className="btn btn-warning btn-sm"
                                 >
-                                    <Trash2 size={16} />
-                                    Delete
-                                </Link> */}
+                                    <Edit size={16} />
+                                    Edit
+                                </Link>
                             </>
                         )}
                     </div>
                 </div>
             </div>
 
-            <div className="p-5">
+            <div className="p-5 print:p-3">
+                {/* Print Title Banner - Only in print view */}
+                <div className="hidden print:flex print:justify-between print:items-center print:mb-6 print:p-4 print:bg-gray-50 print:border print:border-gray-300">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            {sale.type === 'inventory' ? 'INVENTORY SALES INVOICE' : 'POS SALES INVOICE'}
+                        </h1>
+                        <p className="text-gray-600 mt-1">
+                            <strong>Invoice No:</strong> {sale.invoice_no}
+                        </p>
+                    </div>
+                    <div className="text-right">
+                        <div className="bg-primary text-white px-4 py-2 rounded">
+                            <h2 className="text-lg font-bold">SALES REPORT</h2>
+                            <p className="text-sm opacity-90">
+                                Date: {formatDateOnly(sale.created_at)}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 {/* Invoice Header */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8 print:mb-4 print:grid-cols-2 print:gap-4">
                     {/* Company Info */}
-                    <div className="lg:col-span-2">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Company Information</h2>
-                        <div className="bg-gray-50 p-4 rounded-box">
-                            <p className="font-bold text-lg">Your Company Name</p>
-                            <p className="text-gray-600">Company Address Line 1</p>
-                            <p className="text-gray-600">Company Address Line 2</p>
-                            <p className="text-gray-600">Phone: +880 XXXX-XXXXXX</p>
-                            <p className="text-gray-600">Email: company@example.com</p>
+                    <div className="lg:col-span-2 print:col-span-1">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2 print:text-base print:mb-1">Company Information</h2>
+                        <div className="bg-gray-50 p-4 rounded-box print:p-3 print:bg-transparent print:border print:border-gray-300">
+                            <p className="font-bold text-lg print:text-base">{sale?.creator?.business?.name}</p>
+                            <p className="text-gray-600 print:text-sm">{sale?.creator?.business?.address}</p>
+                            <p className="text-gray-600 print:text-sm">Phone: {sale?.creator?.business?.phone}</p>
+                            <p className="text-gray-600 print:text-sm">Email: {sale?.creator?.business?.email}</p>
+                            {sale?.creator?.business?.website && (
+                                <p className="text-gray-600 print:text-sm">Website: {sale?.creator?.business?.website}</p>
+                            )}
                         </div>
                     </div>
 
                     {/* Invoice Details */}
-                    <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Invoice Details</h2>
-                        <div className="bg-gray-50 p-4 rounded-box space-y-2">
-                            <div className="flex justify-between">
+                    <div className="print:col-span-1">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2 print:text-base print:mb-1">Invoice Details</h2>
+                        <div className="bg-gray-50 p-4 rounded-box space-y-2 print:p-3 print:bg-transparent print:border print:border-gray-300">
+                            <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Invoice No:</span>
                                 <span className="font-semibold">{sale.invoice_no}</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Date:</span>
                                 <span>{formatDate(sale.created_at)}</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Status:</span>
                                 <span className={`badge capitalize ${
                                     sale.status === 'completed' 
@@ -145,11 +171,11 @@ export default function SaleShow({ sale }) {
                                         : sale.status === 'cancelled'
                                         ? 'badge-error'
                                         : 'badge-warning'
-                                }`}>
+                                } print:border print:border-gray-800 print:bg-transparent print:text-gray-800 print:font-normal`}>
                                     {sale.status}
                                 </span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Payment Type:</span>
                                 <span className="capitalize">{sale.payment_type}</span>
                             </div>
@@ -158,46 +184,46 @@ export default function SaleShow({ sale }) {
                 </div>
 
                 {/* Customer and Shipping Info */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 print:mb-4 print:gap-4">
                     {/* Customer Information */}
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Customer Information</h2>
-                        <div className="bg-gray-50 p-4 rounded-box">
-                            <p className="font-semibold text-gray-900">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2 print:text-base print:mb-1">Customer Information</h2>
+                        <div className="bg-gray-50 p-4 rounded-box print:p-3 print:bg-transparent print:border print:border-gray-300">
+                            <p className="font-semibold text-gray-900 print:text-base">
                                 {sale.customer?.customer_name || 'Walk-in Customer'}
                             </p>
                             {sale.customer?.phone && (
-                                <p className="text-gray-600">Phone: {sale.customer.phone}</p>
+                                <p className="text-gray-600 print:text-sm">Phone: {sale.customer.phone}</p>
                             )}
                             {sale.customer?.email && (
-                                <p className="text-gray-600">Email: {sale.customer.email}</p>
+                                <p className="text-gray-600 print:text-sm">Email: {sale.customer.email}</p>
                             )}
                             {sale.customer?.address && (
-                                <p className="text-gray-600">Address: {sale.customer.address}</p>
+                                <p className="text-gray-600 print:text-sm">Address: {sale.customer.address}</p>
                             )}
                         </div>
                     </div>
 
                     {/* Summary */}
                     <div>
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Order Summary</h2>
-                        <div className="bg-gray-50 p-4 rounded-box space-y-2">
-                            <div className="flex justify-between">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2 print:text-base print:mb-1">Order Summary</h2>
+                        <div className="bg-gray-50 p-4 rounded-box space-y-2 print:p-3 print:bg-transparent print:border print:border-gray-300">
+                            <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Total Items:</span>
                                 <span className="font-semibold">{totalItems}</span>
                             </div>
-                            <div className="flex justify-between">
+                            <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Payment Status:</span>
                                 <span className={`font-semibold ${
                                     sale.due_amount > 0 ? 'text-error' : 'text-success'
-                                }`}>
+                                } print:font-normal`}>
                                     {sale.due_amount > 0 ? 'Partial Payment' : 'Fully Paid'}
                                 </span>
                             </div>
                             {sale.due_amount > 0 && (
-                                <div className="flex justify-between text-error">
+                                <div className="flex justify-between text-error print:text-sm">
                                     <span>Due Amount:</span>
-                                    <span className="font-semibold">{formatCurrency(sale.due_amount)} Tk</span>
+                                    <span className="font-semibold print:font-normal">{formatCurrency(sale.due_amount)} Tk</span>
                                 </div>
                             )}
                         </div>
@@ -205,31 +231,36 @@ export default function SaleShow({ sale }) {
                 </div>
 
                 {/* Items Table */}
-                <div className="mb-8">
-                    <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Items</h2>
+                <div className="mb-8 print:mb-4">
+                    <div className="flex justify-between items-center mb-4">
+                        <h2 className="text-lg font-semibold text-gray-900 print:text-base">Order Items</h2>
+                        <div className="print:block hidden print:text-sm print:text-gray-600">
+                            Total Items: {totalItems}
+                        </div>
+                    </div>
                     <div className="overflow-x-auto">
-                        <table className="table table-auto w-full">
-                            <thead className="bg-primary text-white">
+                        <table className="table table-auto w-full print:text-sm">
+                            <thead className="bg-primary text-white print:bg-gray-800">
                                 <tr>
-                                    <th className="text-left">Product</th>
-                                    <th className="text-center">Variant</th>
-                                    <th className="text-center">Warehouse</th>
-                                    <th className="text-center">Quantity</th>
-                                    <th className="text-right">Unit Price</th>
-                                    <th className="text-right">Total Price</th>
+                                    <th className="text-left p-2 print:p-1">Product</th>
+                                    <th className="text-center p-2 print:p-1">Variant</th>
+                                    <th className="text-center p-2 print:p-1">Warehouse</th>
+                                    <th className="text-center p-2 print:p-1">Quantity</th>
+                                    <th className="text-right p-2 print:p-1">Unit Price</th>
+                                    <th className="text-right p-2 print:p-1">Total Price</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {sale.items?.map((item, index) => (
-                                    <tr key={item.id} className="hover:bg-gray-50">
-                                        <td>
+                                    <tr key={item.id} className="hover:bg-gray-50 print:border-b print:border-gray-300">
+                                        <td className="p-2 print:p-1">
                                             <div>
-                                                <p className="font-semibold">{item.product?.name}</p>
-                                                <p className="text-sm text-gray-500">SKU: {item.product?.product_no || 'N/A'}</p>
+                                                <p className="font-semibold print:font-normal">{item.product?.name}</p>
+                                                <p className="text-sm text-gray-500 print:text-xs">SKU: {item.product?.product_no || 'N/A'}</p>
                                             </div>
                                         </td>
                                         
-                                        <td className="text-center">
+                                        <td className="text-center p-2 print:p-1">
                                             {item.variant && (
                                                 <>
                                                 {(() => {
@@ -249,23 +280,23 @@ export default function SaleShow({ sale }) {
                                                     return <>{attrsText || 'N/A'}</>;
                                                 })()}
                                                 <br />
-                                                <span className="text-sm text-gray-500">
+                                                <span className="text-sm text-gray-500 print:text-xs">
                                                     {item.variant?.sku || 'No SKU'}
                                                 </span>
                                                 </>
                                             )}
                                         </td>
 
-                                        <td className="text-center">
+                                        <td className="text-center p-2 print:p-1">
                                             {item.warehouse?.name || 'N/A'}
                                         </td>
-                                        <td className="text-center">
+                                        <td className="text-center p-2 print:p-1">
                                             {item.quantity}
                                         </td>
-                                        <td className="text-right font-semibold">
+                                        <td className="text-right font-semibold p-2 print:p-1 print:font-normal">
                                             {formatCurrency(item.unit_price)} Tk
                                         </td>
-                                        <td className="text-right font-semibold text-primary">
+                                        <td className="text-right font-semibold text-primary p-2 print:p-1 print:font-normal">
                                             {formatCurrency(item.total_price)} Tk
                                         </td>
                                     </tr>
@@ -276,44 +307,44 @@ export default function SaleShow({ sale }) {
                 </div>
 
                 {/* Totals */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 print:grid-cols-1">
                     <div className="lg:col-start-3">
-                        <div className="bg-gray-50 p-6 rounded-box space-y-3">
-                            <div className="flex justify-between text-lg">
+                        <div className="bg-gray-50 p-6 rounded-box space-y-3 print:p-4 print:bg-transparent print:border print:border-gray-300">
+                            <div className="flex justify-between text-lg print:text-base">
                                 <span className="text-gray-600">Sub Total:</span>
-                                <span className="font-semibold">{formatCurrency(sale.sub_total)} Tk</span>
+                                <span className="font-semibold print:font-normal">{formatCurrency(sale.sub_total)} Tk</span>
                             </div>
                             
                             {sale.discount > 0 && (
-                                <div className="flex justify-between text-lg">
+                                <div className="flex justify-between text-lg print:text-base">
                                     <span className="text-gray-600">Discount:</span>
-                                    <span className="font-semibold text-error">{formatCurrency(sale.discount)} %</span>
+                                    <span className="font-semibold text-error print:font-normal">{formatCurrency(sale.discount)} %</span>
                                 </div>
                             )}
                             
                             {sale.vat_tax > 0 && (
-                                <div className="flex justify-between text-lg">
+                                <div className="flex justify-between text-lg print:text-base">
                                     <span className="text-gray-600">Vat/Tax:</span>
-                                    <span className="font-semibold text-warning">{formatCurrency(sale.vat_tax)} %</span>
+                                    <span className="font-semibold text-warning print:font-normal">{formatCurrency(sale.vat_tax)} %</span>
                                 </div>
                             )}
                             
-                            <div className="border-t border-gray-300 pt-3">
-                                <div className="flex justify-between text-xl font-bold">
+                            <div className="border-t border-gray-300 pt-3 print:pt-2">
+                                <div className="flex justify-between text-xl font-bold print:text-lg">
                                     <span>Grand Total:</span>
                                     <span className="text-primary">{formatCurrency(sale.grand_total)} Tk</span>
                                 </div>
                             </div>
                             
-                            <div className="border-t border-gray-300 pt-3">
-                                <div className="flex justify-between text-lg">
+                            <div className="border-t border-gray-300 pt-3 print:pt-2">
+                                <div className="flex justify-between text-lg print:text-base">
                                     <span className="text-gray-600">Paid Amount:</span>
-                                    <span className="font-semibold text-success">{formatCurrency(sale.paid_amount)} Tk</span>
+                                    <span className="font-semibold text-success print:font-normal">{formatCurrency(sale.paid_amount)} Tk</span>
                                 </div>
                                 {sale.due_amount > 0 && (
-                                    <div className="flex justify-between text-lg">
+                                    <div className="flex justify-between text-lg print:text-base">
                                         <span className="text-gray-600">Due Amount:</span>
-                                        <span className="font-semibold text-error">{formatCurrency(sale.due_amount)} Tk</span>
+                                        <span className="font-semibold text-error print:font-normal">{formatCurrency(sale.due_amount)} Tk</span>
                                     </div>
                                 )}
                             </div>
@@ -323,36 +354,113 @@ export default function SaleShow({ sale }) {
 
                 {/* Notes */}
                 {sale.notes && (
-                    <div className="mt-8">
-                        <h2 className="text-lg font-semibold text-gray-900 mb-2">Additional Notes</h2>
-                        <div className="bg-gray-50 p-4 rounded-box">
-                            <p className="text-gray-700">{sale.notes}</p>
+                    <div className="mt-8 print:mt-4">
+                        <h2 className="text-lg font-semibold text-gray-900 mb-2 print:text-base print:mb-1">Additional Notes</h2>
+                        <div className="bg-gray-50 p-4 rounded-box print:p-3 print:bg-transparent print:border print:border-gray-300">
+                            <p className="text-gray-700 print:text-sm">{sale.notes}</p>
                         </div>
                     </div>
                 )}
 
                 {/* Footer */}
-                <div className="mt-12 pt-6 border-t border-gray-200 text-center text-gray-500 text-sm">
+                <div className="mt-12 pt-6 border-t border-gray-200 text-center text-gray-500 text-sm print:mt-8 print:pt-4 print:text-xs">
                     <p>Thank you for your business!</p>
-                    <p className="mt-1">If you have any questions about this invoice, please contact us.</p>
+                    <p className="mt-1 print:mt-0">If you have any questions about this invoice, please contact us.</p>
                 </div>
             </div>
 
             {/* Print Styles */}
             <style>{`
                 @media print {
-                    .btn, .flex.lg\\:flex-row {
-                        display: none !important;
+                    @page {
+                        size: A4 portrait;
+                        margin: 0.8cm;
                     }
+                    
                     body {
                         background: white !important;
+                        font-size: 12px !important;
+                        line-height: 1.2 !important;
+                        color: #000 !important;
                     }
+                    
+                    .btn, .flex.lg\\:flex-row, .print\\:hidden {
+                        display: none !important;
+                    }
+                    
                     .rounded-box {
                         border-radius: 0 !important;
                         box-shadow: none !important;
+                        border: 1px solid #ddd !important;
                     }
+                    
                     .bg-gray-50 {
                         background-color: #f9fafb !important;
+                    }
+                    
+                    table {
+                        width: 100% !important;
+                        border-collapse: collapse !important;
+                    }
+                    
+                    th, td {
+                        padding: 4px 6px !important;
+                        border: 1px solid #ddd !important;
+                    }
+                    
+                    th {
+                        background-color: #333 !important;
+                        color: #fff !important;
+                        font-weight: bold !important;
+                    }
+                    
+                    .badge {
+                        padding: 2px 6px !important;
+                        border: 1px solid #000 !important;
+                        background: none !important;
+                        color: #000 !important;
+                        font-size: 10px !important;
+                    }
+                    
+                    /* Print title banner styling */
+                    .print\\:bg-gray-50 {
+                        background-color: #f0f0f0 !important;
+                    }
+                    
+                    /* Ensure the entire invoice fits on one page */
+                    div {
+                        page-break-inside: avoid !important;
+                    }
+                    
+                    h1, h2, h3 {
+                        page-break-after: avoid !important;
+                    }
+                    
+                    table {
+                        page-break-inside: auto !important;
+                    }
+                    
+                    tr {
+                        page-break-inside: avoid !important;
+                        page-break-after: auto !important;
+                    }
+                    
+                    /* Sales Report Title Styling */
+                    .bg-primary {
+                        background-color: #4a5568 !important; /* Dark gray for better print visibility */
+                        color: white !important;
+                        padding: 8px 12px !important;
+                        border-radius: 4px !important;
+                    }
+                    
+                    /* Make sure all text is black for better readability */
+                    .text-gray-900, .text-gray-800, .text-gray-700, .text-gray-600 {
+                        color: #000 !important;
+                    }
+                    
+                    /* Lighten borders for better print */
+                    .border-gray-300 {
+                        border-color: #ccc !important;
                     }
                 }
             `}</style>

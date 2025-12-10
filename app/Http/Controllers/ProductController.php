@@ -43,7 +43,6 @@ class ProductController extends Controller
 
     public function add_index(Request $request)
     {
-        dd($request->all());
 
         $querystring = $request->only('id');
         $update = null;

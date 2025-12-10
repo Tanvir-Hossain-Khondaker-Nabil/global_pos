@@ -323,24 +323,27 @@ class SalesController extends Controller
     {
         $customerId = $sale->customer_id;
 
+
+
+        Payment::create([
+            'sale_id' => $sale->id,
+            'customer_id' => $customerId,
+            'amount' => $request->amount,
+            'shadow_amount' => $request->shadow_paid_amount,
+            'payment_method' => $request->payment_method,
+            'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+            'note' => $request->notes ?? 'sales due payment clearance',
+            'paid_at' => Carbon::now(),
+            'created_by' => Auth::id(),
+            'status' => 'completed',
+        ]);
+
         $sale->update([
             'paid_amount' => $sale->paid_amount + $request->amount,
             'shadow_paid_amount' => $sale->shadow_paid_amount + $request->shadow_paid_amount,
             'due_amount' => 0,
             'shadow_due_amount' => 0,
             'status' => 'paid',
-        ]);
-
-        Payment::create([
-            'sale_id' => $sale->id,
-            'amount' => $request->amount,
-            'shadow_amount' => $request->shadow_paid_amount,
-            'payment_method' => $request->payment_method,
-            'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
-            'note' => $request->note ?? null,
-            'customer_id' =>  $customerId ?? null,
-            'paid_at' => Carbon::now(),
-            'status' => 'completed',
         ]);
 
     }
@@ -496,8 +499,7 @@ class SalesController extends Controller
     { 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
-
-        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse'])->findOrFail($sale->id);
+        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse','creator'])->findOrFail($sale->id);
 
         if ($isShadowUser) {
             $sale = $this->transformToShadowData($sale);
@@ -507,6 +509,7 @@ class SalesController extends Controller
 
         return Inertia::render($render, [
             'sale' => $sale,
+            'business_name' => $sale->creator->business->name,
         ]);
     }
 

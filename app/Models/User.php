@@ -64,7 +64,7 @@ class User extends Authenticatable
     // relationship with businesses
     public function business()
     {
-        return $this->hasMany(BusinessProfile::class, 'user_id', 'id');
+        return $this->hasOne(BusinessProfile::class, 'user_id', 'id');
     }
 
     public function scopeFilter($query, array $filters)

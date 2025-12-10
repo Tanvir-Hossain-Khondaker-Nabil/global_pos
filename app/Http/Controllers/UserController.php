@@ -49,7 +49,6 @@ class UserController extends Controller
         try {
 
             if ($request->id && $request->role !== 'admin') {
-                // prevent deleting the only admin
                 if (User::where('role', 'admin')->count() <= 1) {
                     return redirect()->back()->with('error', 'Action blocked: You cannot change role the last remaining administrator.');
                 }

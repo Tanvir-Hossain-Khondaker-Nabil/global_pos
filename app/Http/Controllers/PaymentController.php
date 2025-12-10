@@ -9,29 +9,29 @@ use Inertia\Inertia;
 
 class PaymentController extends Controller
 {
-    
+
+    //index function
     public function index(Request $request)
     {
         $isShadowUser = Auth::user()->type === 'shadow';
         $search = $request->input('search');
 
         $payments = Payment::with([
-                'sale',
-                'purchase',
-                'customer',
-                'creator',
-                'supplier'
-            ])
+            'sale',
+            'purchase',
+            'customer',
+            'creator',
+            'supplier'
+        ])
             ->where('status', '!=', 'cancelled')
             ->search($search)
             ->latest()
             ->paginate(20)
             ->withQueryString();
-        
 
         if ($isShadowUser) {
             $payments->getCollection()->transform(
-                fn ($payment) => $this->transformToShadowData($payment)
+                fn($payment) => $this->transformToShadowData($payment)
             );
         }
 
@@ -41,6 +41,7 @@ class PaymentController extends Controller
             'isShadowUser' => $isShadowUser,
         ]);
     }
+
 
 
 
@@ -54,12 +55,12 @@ class PaymentController extends Controller
         $endDate = $request->input('end_date');
 
         $payments = Payment::with([
-                'sale',
-                'purchase',
-                'customer',
-                'creator',
-                'supplier'
-            ])
+            'sale',
+            'purchase',
+            'customer',
+            'creator',
+            'supplier'
+        ])
             ->where('status', '!=', 'cancelled')
             ->search($search)
             ->when($type == 'customer', function ($query) {
@@ -77,11 +78,11 @@ class PaymentController extends Controller
             ->latest()
             ->paginate(10)
             ->withQueryString();
-        
+
 
         if ($isShadowUser) {
             $payments->getCollection()->transform(
-                fn ($payment) => $this->transformToShadowData($payment)
+                fn($payment) => $this->transformToShadowData($payment)
             );
         }
 
@@ -100,7 +101,7 @@ class PaymentController extends Controller
 
     public function show(Payment $payment)
     {
-       
+
         $payment = Payment::with(['customer', 'sale.items'])->findOrFail($payment->id);
 
         $user = Auth::user();
@@ -118,20 +119,34 @@ class PaymentController extends Controller
 
     private function transformToShadowData(Payment $payment)
     {
-        $payment->amount =  $payment->shadow_amount;
-        $payment->sale->grand_total = $payment->sale->shadow_grand_total;
+        $payment->amount = $payment->shadow_amount;
 
-        if ($payment->sale->items) {
+        if ($payment->sale) {
+            $payment->sale->grand_total = $payment->sale->shadow_grand_total;
+        }
+
+        if ($payment->purchase) {
+            $payment->purchase->grand_total = $payment->purchase->shadow_grand_total;
+        }
+
+        if (!empty($payment->sale?->items)) {
             $payment->sale->items->transform(function ($item) {
-                $item->unit_price = $item->shadow_unit_price;
-                $item->sale_price = $item->shadow_sale_price;
+                $item->unit_price  = $item->shadow_unit_price;
+                $item->sale_price  = $item->shadow_sale_price;
                 $item->total_price = $item->shadow_total_price;
                 return $item;
             });
         }
 
+        if (!empty($payment->purchase?->items)) {
+            $payment->purchase->items->transform(function ($item) {
+                $item->unit_price  = $item->shadow_unit_price;
+                $item->sale_price  = $item->shadow_sale_price;
+                $item->total_price = $item->shadow_total_price;
+                return $item;
+            });
+        }
 
         return $payment;
     }
-
 }

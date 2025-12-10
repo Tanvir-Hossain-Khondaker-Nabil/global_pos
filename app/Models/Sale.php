@@ -56,6 +56,6 @@ class Sale extends Model
     //user relation
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by')->with('business');
     }
 }
