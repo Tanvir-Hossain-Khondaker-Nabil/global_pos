@@ -4,6 +4,7 @@ use App\Models\Warehouse;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
+use Illuminate\Support\Facades\Auth;
 
 return new class extends Migration {
     /**
@@ -19,13 +20,17 @@ return new class extends Migration {
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
         });
+
+
         Warehouse::create([
             'name' => 'In-House Production',
             'code' => 'IN-HOUSE',
             'address' => 'Internal Production Department',
             'is_active' => true,
+            'created_by' => Auth::id(),
         ]);
     }
 

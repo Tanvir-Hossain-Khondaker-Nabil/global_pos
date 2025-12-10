@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('variant_id')->nullable();
             $table->enum('type', ['in','out']);
             $table->integer('qty');
+            $table->string('created_by')->nullable();
             $table->nullableMorphs('reference'); 
             $table->softDeletes();
 

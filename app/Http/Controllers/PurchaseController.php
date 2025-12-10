@@ -287,7 +287,8 @@ class PurchaseController extends Controller
                         'sale_price' => $isShadowUser ? 0 : $salePrice,
                         'shadow_purchase_price' => $shadowUnitPrice,
                         'shadow_sale_price' => $shadowSalePrice,
-                        'user_type' => $user->type
+                        'user_type' => $user->type,
+                        'created_by' => $user->id,
                     ]);
                 }
 

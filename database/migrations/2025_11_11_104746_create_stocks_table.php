@@ -21,6 +21,7 @@ return new class extends Migration
             $table->decimal('sale_price', 10, 2)->default(0);
             $table->decimal('shadow_purchase_price', 10, 2)->default(0);
             $table->decimal('shadow_sale_price', 10, 2)->default(0);
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->timestamps();
 
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('cascade');

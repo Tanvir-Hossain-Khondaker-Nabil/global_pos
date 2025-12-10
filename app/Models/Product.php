@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\UserScope;
 
 class Product extends Model
 {
@@ -13,8 +14,14 @@ class Product extends Model
         'name',
         'product_no',
         'category_id',
-        'description'
+        'description',
+        'created_by',
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
 
     public function category()
     {

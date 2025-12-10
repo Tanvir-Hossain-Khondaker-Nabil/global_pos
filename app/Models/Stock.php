@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\UserScope;
+
 
 class Stock extends Model
 {
@@ -18,6 +20,7 @@ class Stock extends Model
         'sale_price',
         'shadow_purchase_price', // Add this
         'shadow_sale_price',     // Add this
+        'created_by',
     ];
 
     protected $casts = [
@@ -26,6 +29,12 @@ class Stock extends Model
         'shadow_purchase_price' => 'decimal:2', // Add this
         'shadow_sale_price' => 'decimal:2',     // Add this
     ];
+
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
 
     public function warehouse()
     {

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use App\Scopes\UserScope;
 
 class Warehouse extends Model
 {
@@ -15,12 +16,18 @@ class Warehouse extends Model
         'address',
         'phone',
         'email',
-        'is_active'
+        'is_active',
+        'created_by',
     ];
 
     protected $casts = [
         'is_active' => 'boolean'
     ];
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
 
     public function purchases()
     {

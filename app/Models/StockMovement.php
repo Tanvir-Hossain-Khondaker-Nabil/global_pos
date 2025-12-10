@@ -14,6 +14,7 @@ class StockMovement extends Model
         'qty',
         'reference_type',
         'reference_id',
+        'created_by',
     ];
 
 

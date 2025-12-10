@@ -323,8 +323,6 @@ class SalesController extends Controller
     {
         $customerId = $sale->customer_id;
 
-
-
         Payment::create([
             'sale_id' => $sale->id,
             'customer_id' => $customerId,
@@ -562,6 +560,7 @@ class SalesController extends Controller
                     'reference_type' => Sale::class,
                     'reference_id' => $sale->id,
                     'notes' => 'Stock restored from deleted sale',
+                    'created_by' => Auth::id(),
                 ]);
             }
             
@@ -781,6 +780,7 @@ class SalesController extends Controller
                 'qty'            => $take,
                 'reference_type' => Sale::class,
                 'reference_id'   => $saleId,
+                'created_by'     => Auth::id(),
             ]);
 
             $qtyNeeded -= $take;
