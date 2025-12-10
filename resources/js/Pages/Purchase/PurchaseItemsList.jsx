@@ -317,7 +317,6 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                         <strong style={{ fontSize: '16px' }}>Purchase Details</strong>
                                                         <div className="mt-2 space-y-1">
                                                             <div><strong>Purchase ID:</strong> {item.purchase_id}</div>
-                                                            <div><strong>Reference:</strong> {item.purchase?.reference_no || 'N/A'}</div>
                                                             <div><strong>Status:</strong> {item.purchase?.status || 'N/A'}</div>
                                                             <div><strong>Supplier:</strong> {item.purchase?.supplier?.name || 'N/A'}</div>
                                                             <div><strong>Payment Status:</strong> {item.purchase?.payment_status || 'N/A'}</div>

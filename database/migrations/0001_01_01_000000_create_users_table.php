@@ -19,8 +19,9 @@ return new class extends Migration {
             $table->string('address')->nullable();
             $table->string('profile')->nullable();
             $table->string('password');
-            $table->enum('role', ['admin', 'seller','user'])->default('user');
+            $table->enum('role', ['admin', 'seller','buyer','user'])->default('user');
             $table->timestamp('email_verified_at')->nullable();
+            $table->unsignedBigInteger('parent_id')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
