@@ -10,6 +10,7 @@ class ExpenseCategory extends Model
         'name',
         'slug',
         'description',
+        'created_by',
     ];
 
 

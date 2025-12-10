@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class SectorController extends Controller
@@ -49,6 +50,7 @@ class SectorController extends Controller
         try {
             $q = $request->id ? Category::find($request->id) : new Category();
             $q->name = $request->name;
+            $q->created_by = Auth::id();
             $q->save();
 
             return redirect()->back()->with('success', $request->id ? 'Category updated success' : 'New category added success');
