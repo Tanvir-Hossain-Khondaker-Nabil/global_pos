@@ -16,6 +16,7 @@ class Product extends Model
         'category_id',
         'description',
         'created_by',
+        'brand_id',
     ];
 
     protected static function booted()
@@ -32,6 +33,12 @@ class Product extends Model
     {
         return $this->hasMany(Variant::class);
     }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
+    }
+
 
     // Calculate total stock
     public function getTotalStockAttribute()

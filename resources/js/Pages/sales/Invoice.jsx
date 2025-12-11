@@ -146,11 +146,10 @@ export default function Invoice({ sale }) {
     const generateReceiptHTML = () => {
         return `
             <div class="header">
-                <div class="company-name">YOUR STORE NAME</div>
-                <div>Store Address Line 1</div>
-                <div>Store Address Line 2, Dhaka</div>
-                <div>Phone: +880 XXXX-XXXXXX</div>
-                <div>VAT: XXXXXXXX</div>
+                <div class="company-name">${sale?.creator?.business?.name}</div>
+                <div>${sale?.creator?.business?.address}</div>
+                <div>Phone: ${sale?.creator?.business?.phone}</div>
+                <div>VAT: ${sale?.creator?.business?.email}</div>
             </div>
             
             <div class="receipt-info">
@@ -256,10 +255,6 @@ export default function Invoice({ sale }) {
                         <Download size={16} />
                         Download PDF
                     </button>
-                    <button className="btn btn-outline btn-sm">
-                        <Mail size={16} />
-                        Email Invoice
-                    </button>
                 </div>
             </div>
 
@@ -267,11 +262,10 @@ export default function Invoice({ sale }) {
             <div className="p-6 print-p-2 print-max-w-80mm print-mx-auto thermal-receipt">
                 {/* Company Header - Compact */}
                 <div className="text-center print-mb-2 border-b-2 border-black print-border-b-2 print-border-black pb-4 print-pb-2">
-                    <h1 className="text-xl font-bold print-text-lg">YOUR STORE NAME</h1>
-                    <p className="text-sm text-gray-600 print-text-xs">Store Address Line 1</p>
-                    <p className="text-sm text-gray-600 print-text-xs">Store Address Line 2, Dhaka</p>
-                    <p className="text-sm text-gray-600 print-text-xs">Phone: +880 XXXX-XXXXXX</p>
-                    <p className="text-sm text-gray-600 print-text-xs">VAT: XXXXXXXX</p>
+                    <h1 className="text-xl font-bold print-text-lg">{sale?.creator?.business?.name}</h1>
+                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.address}</p>
+                    <p className="text-sm text-gray-600 print-text-xs">Phone: {sale?.creator?.business?.phone}</p>
+                    <p className="text-sm text-gray-600 print-text-xs">Email: {sale?.creator?.business?.email}</p>
                 </div>
 
                 {/* Receipt Info */}

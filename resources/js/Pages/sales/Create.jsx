@@ -11,7 +11,7 @@ export default function AddSale({ customers, productstocks }) {
     const [discountRate, setDiscountRate] = useState(0);
     const [paidAmount, setPaidAmount] = useState(0);
     const [shadowPaidAmount, setShadowPaidAmount] = useState(0);
-    
+
     // New state variables for customer info and payment options
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [usePartialPayment, setUsePartialPayment] = useState(false);
@@ -76,7 +76,7 @@ export default function AddSale({ customers, productstocks }) {
         if (adjustFromAdvance && availableAdvance > 0) {
             const grandTotal = calculateGrandTotal();
             const maxAdjustable = Math.min(availableAdvance, grandTotal);
-            
+
             // Set the paid amount to the adjustable amount
             setPaidAmount(prev => {
                 const newPaid = Math.min(prev + maxAdjustable, grandTotal);
@@ -121,7 +121,7 @@ export default function AddSale({ customers, productstocks }) {
         const subTotal = calculateSubTotal();
         const grandTotal = calculateGrandTotal();
         const dueAmount = calculateDueAmount();
-        
+
         // Calculate advance adjustment amount
         let advanceAdjustment = 0;
         if (adjustFromAdvance && availableAdvance > 0) {
@@ -202,6 +202,7 @@ export default function AddSale({ customers, productstocks }) {
                     product_id: productstock.product.id,
                     variant_id: variantId,
                     product_name: productstock.product.name,
+                    brand_name: productstock.product?.brand?.name || '',
                     product_code: productstock.product.product_no || '',
                     variant_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
                     quantity: 1,
@@ -226,7 +227,7 @@ export default function AddSale({ customers, productstocks }) {
     const updateItem = (index, field, value) => {
         const updated = [...selectedItems];
         const numValue = field === 'quantity' ? parseInt(value) || 0 : parseFloat(value) || 0;
-        
+
         updated[index][field] = numValue;
 
         if (field === 'quantity' || field === 'unit_price') {
@@ -249,14 +250,14 @@ export default function AddSale({ customers, productstocks }) {
 
     const submit = (e) => {
         e.preventDefault();
-        
+
         if (selectedItems.length === 0) {
             alert("Please add at least one product to the sale");
             return;
         }
 
         // Validate that all items have quantity and unit price
-        const invalidItems = selectedItems.filter(item => 
+        const invalidItems = selectedItems.filter(item =>
             !item.quantity || item.quantity <= 0 || !item.unit_price || item.unit_price <= 0
         );
 
@@ -266,7 +267,7 @@ export default function AddSale({ customers, productstocks }) {
         }
 
         // Check for stock availability
-        const outOfStockItems = selectedItems.filter(item => 
+        const outOfStockItems = selectedItems.filter(item =>
             item.quantity > item.stockQuantity
         );
 
@@ -361,18 +362,18 @@ export default function AddSale({ customers, productstocks }) {
                                     <div className="flex items-center gap-2 text-sm">
                                         <DollarSign size={12} className="text-green-500" />
                                         <span>
-                                            <span className="font-medium">Available Advance:</span> 
+                                            <span className="font-medium">Available Advance:</span>
                                             <span className="ml-1 font-bold text-green-600">
                                                 ৳{formatCurrency(availableAdvance)}
                                             </span>
                                         </span>
                                     </div>
                                 </div>
-                                
+
                                 {/* Payment Options */}
                                 <div className="mt-4 pt-3 border-t border-gray-200">
                                     <h4 className="font-medium text-gray-700 mb-2">Payment Options</h4>
-                                    
+
                                     <div className="space-y-2">
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -383,7 +384,7 @@ export default function AddSale({ customers, productstocks }) {
                                             />
                                             <span className="text-sm">Allow Partial Payment</span>
                                         </label>
-                                        
+
                                         {availableAdvance > 0 && (
                                             <label className="flex items-center gap-2 cursor-pointer">
                                                 <input
@@ -399,11 +400,11 @@ export default function AddSale({ customers, productstocks }) {
                                             </label>
                                         )}
                                     </div>
-                                    
+
                                     {adjustFromAdvance && availableAdvance > 0 && (
                                         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-box">
                                             <p className="text-sm text-blue-700">
-                                                <strong>Note:</strong> ৳{formatCurrency(Math.min(availableAdvance, calculateGrandTotal()))} 
+                                                <strong>Note:</strong> ৳{formatCurrency(Math.min(availableAdvance, calculateGrandTotal()))}
                                                 will be deducted from customer's advance balance.
                                             </p>
                                         </div>
@@ -475,7 +476,8 @@ export default function AddSale({ customers, productstocks }) {
                                                     </div>
                                                     {attributes && (
                                                         <div className="text-sm text-gray-500 mt-1">
-                                                            {attributes}
+                                                            <span>BrandName : {filteredProduct.product?.brand?.name} || </span>
+                                                            { attributes}
                                                         </div>
                                                     )}
                                                 </div>
@@ -494,9 +496,10 @@ export default function AddSale({ customers, productstocks }) {
                                         <div className="flex justify-between items-start mb-3">
                                             <div className="flex-1">
                                                 <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
+                                                <p className="text-sm text-gray-600"><strong>BrandName: </strong> {item.brand_name}</p>
                                                 <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
-                                                <p className="text-sm text-gray-600"> <strong>Available Stock: </strong> {item.stockQuantity} | 
-                                                <strong> Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
+                                                <p className="text-sm text-gray-600"> <strong>Available Stock: </strong> {item.stockQuantity} |
+                                                    <strong> Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
                                             </div>
                                             <button
                                                 type="button"
@@ -574,7 +577,7 @@ export default function AddSale({ customers, productstocks }) {
                                         <span>Sub Total:</span>
                                         <span>৳{formatCurrency(calculateSubTotal())}</span>
                                     </div>
-                                    
+
                                     {/* VAT Field */}
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
@@ -621,7 +624,7 @@ export default function AddSale({ customers, productstocks }) {
                                     {/* Payment Information */}
                                     <div className="bg-gray-50 p-3 rounded-box border border-gray-200">
                                         <h4 className="font-medium text-gray-700 mb-2">Payment Details</h4>
-                                        
+
                                         {adjustFromAdvance && availableAdvance > 0 && (
                                             <div className="flex justify-between items-center mb-2">
                                                 <div className="flex items-center gap-2 text-sm">
@@ -632,7 +635,7 @@ export default function AddSale({ customers, productstocks }) {
                                                 </span>
                                             </div>
                                         )}
-                                        
+
                                         {/* Paid Amount */}
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-2">

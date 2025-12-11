@@ -130,6 +130,7 @@ export default function Product({ product, filters }) {
                                 <th>{t('product.product_code', 'Product Code')}</th>
                                 <th>{t('product.product_name', 'Product Name')}</th>
                                 <th>{t('product.category', 'Category')}</th>
+                                <th>{t('product.brand', 'Brand')}</th>
                                 <th>{t('product.attributes', 'Attributes')}</th>
                                 <th>{t('product.total_stock', 'Total Stock')}</th>
                                 <th>{t('product.variants', 'Variants')}</th>
@@ -162,6 +163,11 @@ export default function Product({ product, filters }) {
                                         <td>
                                             <span className="badge badge-outline">
                                                 {productItem.category?.name || t('product.not_available', 'N/A')}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span className="badge badge-outline p-6">
+                                                {productItem.brand?.name || t('product.not_available', 'N/A')}
                                             </span>
                                         </td>
                                         <td>

@@ -235,6 +235,7 @@ export default function AddSale({ customers, productstocks }) {
                     product_name: productstock.product.name,
                     product_code: productstock.product.product_no || '',
                     variant_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
+                    brand_name: productstock.product?.brand?.name || 'N/A',
                     quantity: 1,
                     stockQuantity: Number(productstock.quantity) || 0,
                     unit_price: salePrice,
@@ -552,7 +553,8 @@ export default function AddSale({ customers, productstocks }) {
                                                     </div>
                                                     {attributes && (
                                                         <div className="text-sm text-gray-500 mt-1">
-                                                            {attributes}
+                                                            <span>BrandName: {filteredProduct.product?.brand?.name} || </span>
+                                                            { attributes}
                                                         </div>
                                                     )}
                                                 </div>
@@ -572,6 +574,7 @@ export default function AddSale({ customers, productstocks }) {
                                             <div className="flex-1">
                                                 <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
                                                 <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
+                                                <p className="text-sm text-gray-600"><strong>BrandName: </strong> {item.brand_name}</p>
                                                 <p className="text-sm text-gray-600"> <strong>Available Stock:</strong> {item.stockQuantity} | <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
                                             </div>
                                             <button

@@ -14,45 +14,57 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset cached roles and permissions
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // Create ALL permissions (same as before)
+        // Create ALL permissions including Brands and Roles
         $permissions = [
-            // ... ALL YOUR PERMISSIONS HERE (keep them the same) ...
-            // Dashboard
+            // ========== DASHBOARD ==========
             'dashboard.view',
-
-            // User Management
+            
+            // ========== USER MANAGEMENT ==========
             'users.view',
-            'users.create',
+            'users.create', 
             'users.edit',
             'users.delete',
-
-            // Customer Management
+            
+            // ========== CUSTOMER MANAGEMENT ==========
             'customer.view',
             'customer.create',
             'customer.edit',
             'customer.delete',
             'customer.show',
-
-
+            
             // ========== CATEGORY/SECTOR MANAGEMENT ==========
             'category.view',
             'category.create',
             'category.edit',
             'category.delete',
-
+            
             // ========== SUPPLIER MANAGEMENT ==========
             'supplier.view',
             'supplier.create',
             'supplier.edit',
             'supplier.delete',
             'supplier.show',
-
+            
             // ========== PRODUCT MANAGEMENT ==========
             'product.view',
             'product.create',
             'product.edit',
             'product.delete',
-
+            
+            // ========== BRANDS MANAGEMENT ========== ✅ ADDED
+            'brands.view',
+            'brands.create',
+            'brands.edit',
+            'brands.delete',
+            'brands.show',
+            
+            // ========== ROLES MANAGEMENT ========== ✅ ADDED
+            'roles.view',
+            'roles.create',
+            'roles.edit',
+            'roles.delete',
+            'roles.show',
+            
             // ========== SALES MANAGEMENT ==========
             'sales.view',
             'sales.create',
@@ -65,34 +77,34 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales.payments.create',
             'sales.update',
             'sales.rejected',
-
+            
             // ========== SALES LIST/REPORTS ==========
             'sales_list.view',
             'sales_list.delete',
             'sales_list.status_update',
             'sales_list.due_collect',
-
+            
             // ========== EXPENSE MANAGEMENT ==========
             'expense.view',
             'expense.create',
             'expense.delete',
             'expense.category_view',
             'expense.category_create',
-
+            
             // ========== EXTRA CASH ==========
             'extra_cash.view',
             'extra_cash.create',
             'extra_cash.delete',
-
+            
             // ========== PROFILE MANAGEMENT ==========
             'profile.view',
             'profile.update',
             'security.view',
             'security.update',
-
+            
             // ========== BARCODE ==========
             'barcode.print',
-
+            
             // ========== ATTRIBUTES ==========
             'attributes.view',
             'attributes.create',
@@ -100,7 +112,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'attributes.delete',
             'attributes.values.create',
             'attributes.values.delete',
-
+            
             // ========== PAYMENTS & LEDGER ==========
             'payments.view',
             'payments.ledger_view',
@@ -110,7 +122,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'ledger.supplier_view',
             'ledger.clear_due',
             'ledger.advance_payment',
-
+            
             // ========== WAREHOUSE MANAGEMENT ==========
             'warehouse.view',
             'warehouse.create',
@@ -118,7 +130,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'warehouse.edit',
             'warehouse.update',
             'warehouse.delete',
-
+            
             // ========== PURCHASE MANAGEMENT ==========
             'purchase.view',
             'purchase.create',
@@ -132,7 +144,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'purchase.statistics_view',
             'purchase.recent_view',
             'purchase.export_pdf',
-
+            
             // ========== PURCHASE RETURNS ==========
             'purchase_return.view',
             'purchase_return.create',
@@ -142,7 +154,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'purchase_return.delete',
             'purchase_return.approve',
             'purchase_return.complete',
-
+            
             // ========== COMPANY MANAGEMENT ==========
             'companies.view',
             'companies.create',
@@ -150,7 +162,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'companies.edit',
             'companies.update',
             'companies.delete',
-
+            
             // ========== DEALERSHIP MANAGEMENT ==========
             'dealerships.view',
             'dealerships.create',
@@ -159,7 +171,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'dealerships.update',
             'dealerships.delete',
             'dealerships.approve',
-
+            
             // ========== PLAN MANAGEMENT ==========
             'plans.view',
             'plans.create',
@@ -167,7 +179,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'plans.edit',
             'plans.update',
             'plans.delete',
-
+            
             // ========== SUBSCRIPTION MANAGEMENT ==========
             'subscriptions.view',
             'subscriptions.create',
@@ -177,7 +189,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'subscriptions.delete',
             'subscriptions.renew',
             'subscriptions.payments_view',
-
+            
             // ========== ATTENDANCE MANAGEMENT ==========
             'attendance.view',
             'attendance.create',
@@ -189,7 +201,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'attendance.monthly_report',
             'attendance.top_performers',
             'attendance.early_out',
-
+            
             // ========== SALARY MANAGEMENT ==========
             'salary.view',
             'salary.create',
@@ -203,7 +215,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'salary.test_form',
             'salary.test_create',
             'salary.process_award_payments',
-
+            
             // ========== LEAVE MANAGEMENT ==========
             'leave.view',
             'leave.create',
@@ -216,7 +228,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'leave.cancel',
             'leave.balance_view',
             'leave.dashboard_view',
-
+            
             // ========== PROVIDENT FUND ==========
             'provident_fund.view',
             'provident_fund.create',
@@ -225,7 +237,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'provident_fund.summary_view',
             'provident_fund.statement_view',
             'provident_fund.update_percentage',
-
+            
             // ========== ALLOWANCE MANAGEMENT ==========
             'allowances.view',
             'allowances.create',
@@ -234,7 +246,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'allowances.update',
             'allowances.apply_settings',
             'allowances.update_user',
-
+            
             // ========== RANK MANAGEMENT ==========
             'ranks.view',
             'ranks.create',
@@ -243,7 +255,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'ranks.update',
             'ranks.users_view',
             'ranks.promote_user',
-
+            
             // ========== AWARD MANAGEMENT ==========
             'awards.view',
             'awards.create',
@@ -258,7 +270,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'awards.mark_unpaid',
             'awards.destroy_employee_award',
             'awards.statistics_view',
-
+            
             // ========== EMPLOYEE MANAGEMENT ==========
             'employees.view',
             'employees.create',
@@ -267,7 +279,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'employees.update',
             'employees.update_password',
             'employees.update_salary',
-
+            
             // ========== BONUS MANAGEMENT ==========
             'bonus.view',
             'bonus.create',
@@ -279,7 +291,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'bonus.apply',
             'bonus.apply_eid',
             'bonus.apply_festival',
-
+            
             // ========== MODULES MANAGEMENT ==========
             'modules.view',
             'modules.create',
@@ -287,19 +299,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'modules.delete',
             'modules.update',
             'modules.show',
-
-            // ========== SYSTEM SETTINGS ==========
-            'locale.switch',
-            'lang.switch',
-            'lang.current',
-            'user.toggle_type',
-
+            
+            
             // ========== EXCHANGE ==========
             'exchange.view',
             'exchange.create',
             'exchange.edit',
             'exchange.delete',
-
+            
             // ========== PDF GENERATION ==========
             'pdf.download',
             'pdf.view',
@@ -310,7 +317,7 @@ class RolesAndPermissionsSeeder extends Seeder
         }
 
         // ========== CREATE ROLES ==========
-
+        
         // Super Admin role with ALL permissions
         $superAdmin = Role::updateOrCreate(['name' => 'Super Admin']);
         $superAdmin->givePermissionTo(Permission::all());
@@ -319,66 +326,79 @@ class RolesAndPermissionsSeeder extends Seeder
         $admin = Role::updateOrCreate(['name' => 'Admin']);
         $admin->givePermissionTo(Permission::all());
 
-        // Manager role with operational permissions
+        // Manager role with operational permissions (including brands and roles view)
         $manager = Role::updateOrCreate(['name' => 'Manager']);
         $manager->givePermissionTo([
             'dashboard.view',
-            'customer.view',
-            'customer.create',
-            'customer.edit',
-            'customer.show',
-            'category.view',
-            'category.create',
-            'category.edit',
-            'supplier.view',
-            'supplier.create',
-            'supplier.edit',
-            'supplier.show',
-            'product.view',
-            'product.create',
-            'product.edit',
-            'sales.view',
-            'sales.create',
-            'sales.edit',
-            'sales.print',
-            'sales_list.view',
-            'sales_list.due_collect',
-            'expense.view',
-            'expense.create',
-            'expense.category_view',
-            'extra_cash.view',
-            'extra_cash.create',
-            'profile.view',
-            'profile.update',
-            'security.view',
-            'security.update',
+            
+            // Customer
+            'customer.view', 'customer.create', 'customer.edit', 'customer.show',
+            
+            // Category
+            'category.view', 'category.create', 'category.edit',
+            
+            // Supplier
+            'supplier.view', 'supplier.create', 'supplier.edit', 'supplier.show',
+            
+            // Product
+            'product.view', 'product.create', 'product.edit',
+            
+            // Brands - ✅ ADDED
+            'brands.view', 'brands.show',
+            
+            // Roles - ✅ ADDED (only view, not create/edit/delete)
+            'roles.view',
+            
+            // Sales
+            'sales.view', 'sales.create', 'sales.edit', 'sales.print',
+            'sales_list.view', 'sales_list.due_collect',
+            
+            // Expense
+            'expense.view', 'expense.create', 'expense.category_view',
+            
+            // Extra Cash
+            'extra_cash.view', 'extra_cash.create',
+            
+            // Profile
+            'profile.view', 'profile.update', 'security.view', 'security.update',
+            
+            // Barcode
             'barcode.print',
-            'payments.view',
-            'payments.ledger_view',
-            'warehouse.view',
-            'warehouse.show',
-            'purchase.view',
-            'purchase.create',
-            'purchase.show',
-            'companies.view',
-            'companies.show',
-            'dealerships.view',
-            'dealerships.show',
-            'plans.view',
-            'plans.show',
-            'subscriptions.view',
-            'subscriptions.show',
-            'attendance.view',
-            'attendance.checkin',
-            'attendance.checkout',
-            'salary.view',
-            'salary.payslip',
-            'salary.report',
-            'leave.view',
-            'leave.create',
-            'leave.show',
-            'awards.view',
-            'awards.employee_awards_view',
+            
+            // Payments
+            'payments.view', 'payments.ledger_view',
+            
+            // Warehouse
+            'warehouse.view', 'warehouse.show',
+            
+            // Purchase
+            'purchase.view', 'purchase.create', 'purchase.show',
+            
+            // Companies
+            'companies.view', 'companies.show',
+            
+            // Dealerships
+            'dealerships.view', 'dealerships.show',
+            
+            // Plans
+            'plans.view', 'plans.show',
+            
+            // Subscriptions
+            'subscriptions.view', 'subscriptions.show',
+            
+            // Attendance
+            'attendance.view', 'attendance.checkin', 'attendance.checkout',
+            
+            // Salary
+            'salary.view', 'salary.payslip', 'salary.report',
+            
+            // Leave
+            'leave.view', 'leave.create', 'leave.show',
+            
+            // Awards
+            'awards.view', 'awards.employee_awards_view',
+            
+            // Employees
             'employees.view',
         ]);
 
@@ -386,91 +406,57 @@ class RolesAndPermissionsSeeder extends Seeder
         $salesExecutive = Role::updateOrCreate(['name' => 'Sales Executive']);
         $salesExecutive->givePermissionTo([
             'dashboard.view',
-            'customer.view',
-            'customer.create',
+            'customer.view', 'customer.create',
             'product.view',
-            'sales.view',
-            'sales.create',
-            'sales.print',
+            'brands.view', // ✅ ADDED
+            'sales.view', 'sales.create', 'sales.print',
             'sales_list.view',
-            'profile.view',
-            'profile.update',
+            'profile.view', 'profile.update',
             'payments.view',
-            'attendance.view',
-            'attendance.checkin',
-            'attendance.checkout',
+            'attendance.view', 'attendance.checkin', 'attendance.checkout',
         ]);
 
         // Accountant role
         $accountant = Role::updateOrCreate(['name' => 'Accountant']);
         $accountant->givePermissionTo([
             'dashboard.view',
-            'customer.view',
-            'customer.edit',
-            'sales_list.view',
-            'sales_list.due_collect',
-            'expense.view',
-            'expense.create',
-            'extra_cash.view',
-            'extra_cash.create',
-            'payments.view',
-            'payments.ledger_view',
-            'ledger.view',
-            'ledger.customer_view',
-            'ledger.supplier_view',
-            'ledger.clear_due',
-            'ledger.advance_payment',
-            'salary.view',
-            'salary.calculate',
-            'salary.pay',
-            'salary.payslip',
-            'salary.report',
-            'profile.view',
-            'profile.update',
+            'customer.view', 'customer.edit',
+            'sales_list.view', 'sales_list.due_collect',
+            'expense.view', 'expense.create',
+            'extra_cash.view', 'extra_cash.create',
+            'payments.view', 'payments.ledger_view',
+            'ledger.view', 'ledger.customer_view', 'ledger.supplier_view',
+            'ledger.clear_due', 'ledger.advance_payment',
+            'salary.view', 'salary.calculate', 'salary.pay', 'salary.payslip', 'salary.report',
+            'profile.view', 'profile.update',
         ]);
 
         // Stock Manager role
         $stockManager = Role::updateOrCreate(['name' => 'Stock Manager']);
         $stockManager->givePermissionTo([
             'dashboard.view',
-            'product.view',
-            'product.create',
-            'product.edit',
-            'warehouse.view',
-            'warehouse.show',
-            'warehouse.create',
-            'purchase.view',
-            'purchase.create',
-            'purchase.show',
-            'purchase_return.view',
-            'purchase_return.create',
-            'profile.view',
-            'profile.update',
+            'product.view', 'product.create', 'product.edit',
+            'brands.view', 'brands.create', 'brands.edit', // ✅ ADDED
+            'warehouse.view', 'warehouse.show', 'warehouse.create',
+            'purchase.view', 'purchase.create', 'purchase.show',
+            'purchase_return.view', 'purchase_return.create',
+            'profile.view', 'profile.update',
         ]);
 
         // Regular User/Employee role
         $employee = Role::updateOrCreate(['name' => 'Employee']);
         $employee->givePermissionTo([
             'dashboard.view',
-            'profile.view',
-            'profile.update',
-            'attendance.view',
-            'attendance.checkin',
-            'attendance.checkout',
-            'leave.view',
-            'leave.create',
-            'salary.view',
-            'salary.payslip',
+            'profile.view', 'profile.update',
+            'attendance.view', 'attendance.checkin', 'attendance.checkout',
+            'leave.view', 'leave.create',
+            'salary.view', 'salary.payslip',
             'awards.employee_awards_view',
         ]);
 
         // ========== CREATE USERS ==========
-
-        // Check if type column exists and use appropriate values
-        $userSchema = \Schema::getColumnListing('users');
-        $hasTypeColumn = in_array('type', $userSchema);
-
-        // Create Super Admin User - WITHOUT type field
+        
+        // Create Super Admin User
         $superAdminUser = User::updateOrCreate(
             ['email' => 'superadmin@system.com'],
             [
@@ -481,7 +467,7 @@ class RolesAndPermissionsSeeder extends Seeder
         );
         $superAdminUser->syncRoles([$superAdmin]);
 
-        // Create Admin User - WITHOUT type field
+        // Create Admin User
         $adminUser = User::updateOrCreate(
             ['email' => 'admin@system.com'],
             [
@@ -492,7 +478,7 @@ class RolesAndPermissionsSeeder extends Seeder
         );
         $adminUser->syncRoles([$admin]);
 
-        // Create Manager User - WITHOUT type field
+        // Create Manager User
         $managerUser = User::updateOrCreate(
             ['email' => 'manager@system.com'],
             [
@@ -503,7 +489,7 @@ class RolesAndPermissionsSeeder extends Seeder
         );
         $managerUser->syncRoles([$manager]);
 
-        // Create Sales Executive User - WITHOUT type field
+        // Create Sales Executive User
         $salesUser = User::updateOrCreate(
             ['email' => 'sales@system.com'],
             [
@@ -514,7 +500,7 @@ class RolesAndPermissionsSeeder extends Seeder
         );
         $salesUser->syncRoles([$salesExecutive]);
 
-        // Create Accountant User - WITHOUT type field
+        // Create Accountant User
         $accountantUser = User::updateOrCreate(
             ['email' => 'accountant@system.com'],
             [
@@ -525,7 +511,7 @@ class RolesAndPermissionsSeeder extends Seeder
         );
         $accountantUser->syncRoles([$accountant]);
 
-        // Create Stock Manager User - WITHOUT type field
+        // Create Stock Manager User
         $stockUser = User::updateOrCreate(
             ['email' => 'stock@system.com'],
             [
@@ -536,7 +522,7 @@ class RolesAndPermissionsSeeder extends Seeder
         );
         $stockUser->syncRoles([$stockManager]);
 
-        // Create Employee User - WITHOUT type field
+        // Create Employee User
         $regularUser = User::updateOrCreate(
             ['email' => 'employee@system.com'],
             [

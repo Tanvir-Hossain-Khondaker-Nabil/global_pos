@@ -6,8 +6,10 @@ use Illuminate\Support\Facades\Artisan;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PlanController;
 use App\Http\Controllers\RankController;
+use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\AwardController;
+use App\Http\Controllers\BrandController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\SalesController;
 use App\Http\Controllers\LadgerController;
@@ -50,7 +52,7 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 
 // auth routes
 Route::middleware('auth')->group(function () {
-    
+
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->name('home');
 
     // users managment
@@ -158,10 +160,12 @@ Route::middleware('auth')->group(function () {
 
     // profile
     Route::controller(AuthController::class)->group(function () {
-        Route::get('/profile', 'profileView')->middleware('permission:profile.view')->name('profile.view');
-        Route::post('/profile', 'profileUpdate')->middleware('permission:profile.update')->name('profile.update');
-        Route::get('/security', 'securityView')->middleware('permission:security.view')->name('security.view');
-        Route::post('/security', 'securityUpdate')->middleware('permission:security.update')->name('security.post');
+        Route::get('/profile', 'profileView')->name('profile.view');
+        Route::get('/business/profile', 'businessProfileView')->name('businessProfile.view');
+        Route::post('/business/profile/{id?}', 'businessProfileUpdate')->name('businessProfile.update');
+        Route::post('/profile', 'profileUpdate')->name('profile.update');
+        Route::get('/security', 'securityView')->name('security.view');
+        Route::post('/security', 'securityUpdate')->name('security.post');
         Route::get('/logout', 'logout')->name('logout');
     });
 
@@ -388,41 +392,42 @@ Route::middleware('auth')->group(function () {
         'edit' => 'brands.edit',
         'update' => 'brands.update',
         'destroy' => 'brands.destroy',
-    ]);
+    ])->middleware('permission:brands.view|brands.create|brands.edit|brands.delete');
 
-       Route::prefix('roles')->name('roles.')->group(function () {
+    // Roles Routes with permissions
+    Route::prefix('roles')->name('roles.')->group(function () {
+        Route::get('/', [RoleController::class, 'index'])
+            ->middleware('permission:roles.view')
+            ->name('index');
+
         Route::get('/create', [RoleController::class, 'create'])
             ->middleware('permission:roles.create')
             ->name('create');
-            
+
         Route::post('/', [RoleController::class, 'store'])
             ->middleware('permission:roles.create')
             ->name('store');
 
+        Route::get('/{role}', [RoleController::class, 'show'])
+            ->middleware('permission:roles.show')
+            ->name('show');
+
         Route::get('/{role}/edit', [RoleController::class, 'edit'])
             ->middleware('permission:roles.edit')
             ->name('edit');
-            
+
         Route::put('/{role}', [RoleController::class, 'update'])
             ->middleware('permission:roles.edit')
             ->name('update');
-            
+
         Route::delete('/{role}', [RoleController::class, 'destroy'])
             ->middleware('permission:roles.delete')
             ->name('destroy');
-
-        Route::get('/{role}', [RoleController::class, 'show'])
-            ->middleware('permission:roles.view')
-            ->name('show');
-
-        Route::get('/', [RoleController::class, 'index'])
-            ->middleware('permission:roles.view')
-            ->name('index');
     });
 
 
 
-    
+
 
 });
 

@@ -5,11 +5,12 @@ import { Trash, X, Plus, ChevronDown, ChevronUp, Factory, Package } from "lucide
 import { toast } from "react-toastify";
 import { useTranslation } from "../../hooks/useTranslation";
 
-export default function AddProduct({ category, update, attributes }) {
+export default function AddProduct({ category, update, brand, attributes }) {
     const { t, locale } = useTranslation();
     const [variants, setVariants] = useState([]);
     const [errors, setErrors] = useState({});
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [availableAttributes, setAvailableAttributes] = useState([]);
     const [selectedAttributes, setSelectedAttributes] = useState({});
     const [showAttributeSelector, setShowAttributeSelector] = useState(false);
@@ -18,6 +19,7 @@ export default function AddProduct({ category, update, attributes }) {
     const productForm = useForm({
         id: update ? update.id : "",
         product_name: update ? update.name : "",
+        brand_id : update ? update.brand_id : "",
         category_id: update ? update.category_id : "",
         product_no: update ? update.product_no : "",
         description: update ? update.description : "",
@@ -46,6 +48,24 @@ export default function AddProduct({ category, update, attributes }) {
             }
         } else {
             setCategories([]);
+        }
+
+        //brand
+
+        if (Array.isArray(brand)) {
+            setBrands(brand);
+        } else if (brand && typeof brand === 'object') {
+            if (brand.data && Array.isArray(brand.data)) {
+                setBrands(brand.data);
+            } else {
+                const brandsArray = Object.entries(brand).map(([id, name]) => ({
+                    id: id,
+                    name: name
+                }));
+                setBrands(brandsArray);
+            }
+        } else {
+            setBrands([]);
         }
 
         // Process attributes
@@ -196,6 +216,11 @@ export default function AddProduct({ category, update, attributes }) {
             newErrors.category_id = t('product.category_required', 'Category is required');
         }
 
+        // if (!productForm.data.brand_id) {
+        //     hasError = true;
+        //     newErrors.brand_id = t('product.brand_required', 'Brand is required');
+        // }
+
         if (!productForm.data.product_no?.trim()) {
             hasError = true;
             newErrors.product_no = t('product.product_code_required', 'Product code is required');
@@ -264,6 +289,7 @@ export default function AddProduct({ category, update, attributes }) {
         const formData = {
             id: productForm.data.id,
             product_name: productForm.data.product_name,
+            brand_id: productForm.data.brand_id,
             category_id: productForm.data.category_id,
             product_no: productForm.data.product_no,
             description: productForm.data.description,
@@ -323,6 +349,7 @@ export default function AddProduct({ category, update, attributes }) {
             productForm.setData({
                 id: update.id || "",
                 product_name: update.name || "",
+                brand_id: update.brand_id || "",
                 category_id: update.category_id || "",
                 product_no: update.product_no || "",
                 description: update.description || "",
@@ -441,7 +468,7 @@ export default function AddProduct({ category, update, attributes }) {
 
                 {/* Product Basic Information */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                    <fieldset className="fieldset col-span-2">
+                    <fieldset className="fieldset ">
                         <legend className="fieldset-legend">
                             {t('product.from_product_name', 'Product Name')}*
                         </legend>
@@ -456,6 +483,31 @@ export default function AddProduct({ category, update, attributes }) {
                         />
                         {errors.product_name && (
                             <p className="text-sm text-error mt-1">{errors.product_name}</p>
+                        )}
+                    </fieldset>
+
+                    <fieldset className="fieldset">
+                        <legend className="fieldset-legend">
+                            {t('product.brand', 'Brand')}*
+                        </legend>
+                        <select
+                            value={productForm.data.brand_id}
+                            className={`select ${errors.brand_id ? 'select-error' : ''}`}
+                            onChange={(e) =>
+                                productForm.setData("brand_id", e.target.value)
+                            }
+                        >
+                            <option value="">
+                                {t('product.pick_brand', '--Pick a brand--')}
+                            </option>
+                            {brands.map((brand) => (
+                                <option key={brand.id} value={brand.id}>
+                                    {brand.name}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.brand_id && (
+                            <p className="text-sm text-error mt-1">{errors.brand_id}</p>
                         )}
                     </fieldset>
 

@@ -31,6 +31,7 @@ return [
     'complete_refund' => 'Complete Refund',
     'export' => 'Export',
     'print' => 'Print',
+    'item_total' => 'Item Total',
 
     // Status & Types
     'all_statuses' => 'All Statuses',

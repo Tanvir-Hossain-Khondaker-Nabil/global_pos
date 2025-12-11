@@ -17,6 +17,10 @@ return [
     'add_products' => 'Add Products',
     'search_products' => 'Search products by name or code...',
     'no_products_found' => 'No products found matching',
+    'uncategorized' => 'Uncategorized',
+    'brand' => 'Brand',
+    'not_available' => 'N/A',
+    'download_pdf' => 'Download',
     
     // Payment Information
     'payment_information' => 'Payment Information',
@@ -134,7 +138,7 @@ return [
     
     // PurchaseShow Component
     'purchase_details_title' => 'Purchase Details',
-    'purchase_number_label' => 'Purchase Number',
+    'purchase_number_label' => 'Purchase Number: ',
     'purchase_date_label' => 'Purchase Date',
     'supplier_information' => 'Supplier Information',
     'warehouse_information' => 'Warehouse Information',

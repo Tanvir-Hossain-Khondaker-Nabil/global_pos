@@ -26,7 +26,9 @@ import {
     Star,
     BadgeDollarSign,
     Clock,
-    Plane
+    Plane,
+    BoxIcon,
+    TagIcon
 } from "lucide-react";
 
 // Common menu - Keep original English titles
@@ -88,6 +90,13 @@ const baseMenu = [
         role: "admin",
     },
     {
+        title: "All Purchase Items",
+        icon: <ArrowRightLeft size={16} />,
+        route: route("purchase.items"),
+        active: "purchase.items",
+        role: "admin",
+    },
+    {
         title: "Purchase Return",
         icon: <Receipt size={16} />,
         route: route("purchase-return.list"),
@@ -137,6 +146,13 @@ const baseMenu = [
         role: "admin",
     },
     {
+        title: "Brands",
+        icon: <TagIcon size={16} />,
+        route: route("brands.index"),
+        active: "brands.index",
+        role: "admin",
+    },
+    {
         title: "Categories",
         icon: <Box size={16} />,
         route: route("category.view"),
@@ -180,7 +196,7 @@ const baseMenu = [
     },
     {
         title: "Subscriptions Payments",
-        icon: <Barcode size={16} />,
+        icon: <DollarSign size={16} />,
         route: route("subscriptions.payments"),
         active: "subscriptions.payments",
         role: "admin",
@@ -194,14 +210,14 @@ const baseMenu = [
     },
     {
         title: "Ledgers",
-        icon: <DollarSign size={16} />,
+        icon: <BoxIcon size={16} />,
         route: route("ledgers.index"),
         active: "ledgers.index",
         role: "admin",
     },
     {
         title: "Dealerships",
-        icon: <DollarSign size={16} />,
+        icon: <BoxIcon size={16} />,
         route: route("dealerships.index"),
         active: "dealerships.index",
         role: "admin",

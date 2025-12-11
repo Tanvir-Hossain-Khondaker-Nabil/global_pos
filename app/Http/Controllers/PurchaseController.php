@@ -138,7 +138,7 @@ class PurchaseController extends Controller
         return Inertia::render('Purchase/AddPurchase', [
             'suppliers' => Supplier::all(),
             'warehouses' => Warehouse::where('is_active', true)->get(),
-            'products' => Product::with('variants')->get(),
+            'products' => Product::with('variants','brand')->get(),
             'isShadowUser' => $isShadowUser
         ]);
     }
@@ -360,7 +360,7 @@ class PurchaseController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $purchase = Purchase::with(['supplier', 'warehouse', 'items.product', 'items.variant'])
+        $purchase = Purchase::with(['supplier', 'warehouse', 'items.product','items.product.brand', 'items.variant'])
             ->findOrFail($id);
 
         // Transform data for shadow users
