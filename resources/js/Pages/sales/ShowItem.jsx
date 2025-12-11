@@ -299,8 +299,8 @@ export default function SaleItemShow({ saleItem }) {
                                         </span>
                                     </div>
                                     <div>
-                                        <label className="label font-semibold">Product Number</label>
-                                        <p className="text-lg">{saleItem.product?.product_no || 'N/A'}</p>
+                                        <label className="label font-semibold">Brand Name</label>
+                                        <p className="text-lg">{saleItem.product?.brand?.name || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>

@@ -27,7 +27,8 @@ import {
     BadgeDollarSign,
     Clock,
     Plane,
-    BoxIcon
+    BoxIcon,
+    TagIcon
 } from "lucide-react";
 
 // Common menu - Keep original English titles
@@ -142,6 +143,13 @@ const baseMenu = [
         icon: <ShoppingBag size={16} />,
         route: route("product.add"),
         active: "product.add",
+        role: "admin",
+    },
+    {
+        title: "Brands",
+        icon: <TagIcon size={16} />,
+        route: route("brands.index"),
+        active: "brands.index",
         role: "admin",
     },
     {

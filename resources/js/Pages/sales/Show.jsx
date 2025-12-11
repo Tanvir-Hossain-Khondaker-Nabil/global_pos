@@ -92,13 +92,6 @@ export default function SaleShow({ sale }) {
                             <Download size={16} />
                             Download
                         </button>
-                        <button
-                            onClick={handleEmail}
-                            className="btn btn-outline btn-sm"
-                        >
-                            <Mail size={16} />
-                            Email
-                        </button>
                         {auth.role === 'admin' && (
                             <>
                                 <Link
@@ -106,7 +99,7 @@ export default function SaleShow({ sale }) {
                                     className="btn btn-warning btn-sm"
                                 >
                                     <Edit size={16} />
-                                    Edit
+                                    View Detais
                                 </Link>
                             </>
                         )}
@@ -243,6 +236,7 @@ export default function SaleShow({ sale }) {
                             <thead className="bg-primary text-white print:bg-gray-800">
                                 <tr>
                                     <th className="text-left p-2 print:p-1">Product</th>
+                                    <th className="text-left p-2 print:p-1">Brand</th>
                                     <th className="text-center p-2 print:p-1">Variant</th>
                                     <th className="text-center p-2 print:p-1">Warehouse</th>
                                     <th className="text-center p-2 print:p-1">Quantity</th>
@@ -258,6 +252,13 @@ export default function SaleShow({ sale }) {
                                                 <p className="font-semibold print:font-normal">{item.product?.name}</p>
                                                 <p className="text-sm text-gray-500 print:text-xs">SKU: {item.product?.product_no || 'N/A'}</p>
                                             </div>
+                                        </td>
+                                        <td>
+                                            {item.product?.brand ? (
+                                                <span className="font-semibold print:font-normal">{item.product.brand.name}</span>
+                                            ) : (
+                                                <span className="text-gray-500 print:text-xs">N/A</span>
+                                            )}
                                         </td>
                                         
                                         <td className="text-center p-2 print:p-1">

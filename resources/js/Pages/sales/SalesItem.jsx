@@ -269,6 +269,7 @@ export default function AllSalesItems({ salesItems }) {
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Product Details:</strong>
                                                         <div><strong>Name:</strong> {item.product?.name}</div>
+                                                        <div><strong>Brand:</strong> {item.product?.brand?.name || 'N/A'}</div>
                                                         <div><strong>Code:</strong> {item.product?.product_no || 'N/A'}</div>
                                                         {item.variant && (
                                                         <div>
