@@ -101,12 +101,21 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                 <span>Profile</span>
                             </Link>
                         </li>
+
+                        <li>
+                            <Link href={route("businessProfile.view")}>
+                                <User size={14} />
+                                <span>Business Profile</span>
+                            </Link>
+                        </li>
+
                         <li>
                             <Link href={route("security.view")}>
                                 <Lock size={14} />
                                 <span>Security</span>
                             </Link>
                         </li>
+
                         <li>
                             <Link
                                 href={route("logout")}

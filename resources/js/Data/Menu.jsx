@@ -89,6 +89,13 @@ const baseMenu = [
         role: "admin",
     },
     {
+        title: "All Purchase Items",
+        icon: <ArrowRightLeft size={16} />,
+        route: route("purchase.items"),
+        active: "purchase.items",
+        role: "admin",
+    },
+    {
         title: "Purchase Return",
         icon: <Receipt size={16} />,
         route: route("purchase-return.list"),
