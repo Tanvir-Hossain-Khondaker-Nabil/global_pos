@@ -44,7 +44,7 @@ class Sale extends Model
     // relation to sale items
     public function items()
     {
-        return $this->hasMany(SaleItem::class, 'sale_id')->with('product', 'variant');
+        return $this->hasMany(SaleItem::class, 'sale_id')->with('product', 'variant','product.brand');
     }
 
     //payments relation

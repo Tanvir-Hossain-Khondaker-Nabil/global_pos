@@ -36,7 +36,7 @@ class SalesController extends Controller
         $pos === 'pos' ? $type = 'pos' : $type = 'inventory';
 
 
-        $sales = Sale::with(['customer', 'items.product', 'items.variant','payments'])->where('type', $type)
+        $sales = Sale::with(['customer', 'items.product', 'items.product.brand', 'items.variant','payments'])->where('type', $type)
         ->where('status', '!=', 'cancelled')
         ->when($search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
@@ -497,7 +497,7 @@ class SalesController extends Controller
     { 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
-        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse','creator'])->findOrFail($sale->id);
+        $sale = Sale::with(['customer', 'items.product','items.product.brand' ,'items.variant', 'items.warehouse','creator'])->findOrFail($sale->id);
 
         if ($isShadowUser) {
             $sale = $this->transformToShadowData($sale);
@@ -514,7 +514,7 @@ class SalesController extends Controller
 
     public function print(Sale $sale)
     {
-        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse'])
+        $sale = Sale::with(['customer', 'items.product','items.product.brand', 'items.variant', 'items.warehouse'])
             ->findOrFail($sale->id);
 
         return Inertia::render('Sales/Print', [
@@ -525,7 +525,7 @@ class SalesController extends Controller
 
     public function downloadPdf(Sale $sale)
     {
-        $sale = Sale::with(['customer', 'items.product', 'items.variant', 'items.warehouse'])
+        $sale = Sale::with(['customer', 'items.product','items.product.brand', 'items.variant', 'items.warehouse'])
             ->findOrFail($sale->id);
 
         return response()->json(['message' => 'PDF download would be implemented here']);
