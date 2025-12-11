@@ -182,7 +182,7 @@ export default function EmployeeAwards({ employeeAwards, filters, employees, awa
 
             {/* Assign Award Form */}
             {showAssignForm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="fixed inset-0  bg-[#0000003b] flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-lg w-full max-w-md max-h-screen overflow-y-auto">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">Assign Award to Employee</h2>

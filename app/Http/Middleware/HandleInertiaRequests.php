@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Session;
 use Inertia\Middleware;
+use App\Models\Requisition;
+use Carbon\Carbon;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -26,24 +28,39 @@ class HandleInertiaRequests extends Middleware
             'bn' => ['name' => 'Bengali', 'native' => 'বাংলা']
         ];
 
+        $user = $request->user();
+        
+       
         return array_merge(parent::share($request), [
             'locale' => fn () => App::getLocale(),
             'availableLocales' => fn () => $availableLocales,
             'language' => fn () => $this->getLanguageStrings(App::getLocale()),
-            'flash' => [
-                'error' => fn () => $request->session()->get('error'),
-                'success' => fn () => $request->session()->get('success'),
-            ],
-            'auth' => $request->user() ? [
-                'id' => $request->user()->id,
-                'name' => $request->user()->name,
-                'email' => $request->user()->email,
-                'type' => $request->user()->type,
-                'role' => $request->user()->role,
-                'profile' => $request->user()->profile,
-            ] : null,
             'currentRoute' => Route::currentRouteName(),
             'appName' => config('app.name'),
+            
+            // Authentication data - Combined structure
+            'auth' => [
+                'user' => $user ? array_merge(
+                    $user->only(['id', 'name', 'email', 'type', 'role', 'profile']),
+                    [
+                        'roles'       => $user->getRoleNames(),
+                        'permissions' => $user->getAllPermissions()->pluck('name'),
+                    ]
+                ) : null,
+            ],
+
+
+            'can' => $user
+                ? $user->getAllPermissions()->pluck('name')->flip()
+                : [],
+
+            // Flash messages - Expanded
+            'flash' => [
+                'success' => fn () => $request->session()->get('success'),
+                'error'   => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'info'    => fn () => $request->session()->get('info'),
+            ],
         ]);
     }
 
@@ -64,5 +81,10 @@ class HandleInertiaRequests extends Middleware
         }
         
         return $translations;
+    }
+
+    public function version(Request $request): ?string
+    {
+        return parent::version($request);
     }
 }

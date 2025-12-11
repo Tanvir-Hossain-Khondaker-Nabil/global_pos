@@ -73,8 +73,8 @@ export default function Sidebar({ status, setStatus }) {
             'Provident Fund': t('auth.provident_fund', 'Provident Fund'),
             'Overall Summary': t('auth.overall_summary', 'Overall Summary'),
             'Allowances': t('auth.allowances', 'Allowances'),
+            
             'Ranks': t('auth.ranks', 'Ranks'),
-            'Awards': t('auth.awards', 'Awards'),
             'Employee Awards': t('auth.employee_awards', 'Employee Awards'),
             'Award Statistics': t('auth.award_statistics', 'Award Statistics'),
             'Assign Monthly': t('auth.assign_monthly', 'Assign Monthly'),

@@ -118,7 +118,7 @@ export default function Allowance({ allowanceSettings, employees }) {
 
             {/* Reset Confirmation Modal */}
             {showResetConfirm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="fixed inset-0  bg-[#0000003b] flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-lg w-full max-w-md">
                         <div className="text-center">
                             <div className="text-red-500 text-4xl mb-4">⚠️</div>
@@ -148,7 +148,7 @@ export default function Allowance({ allowanceSettings, employees }) {
 
             {/* Add/Edit Allowance Form */}
             {showForm && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="fixed inset-0  bg-[#0000003b] flex items-center justify-center z-50">
                     <div className="bg-white p-6 rounded-lg w-full max-w-md">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold">

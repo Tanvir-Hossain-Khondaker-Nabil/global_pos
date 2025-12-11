@@ -241,23 +241,6 @@ const baseMenu = [
         route: route("attendance.index"),
         active: "attendance.index",
         role: "admin",
-        children: [
-            {
-                title: "Monthly Report",
-                route: route("attendance.monthly-report"),
-                active: "attendance.monthly-report",
-            },
-            {
-                title: "Top Performers",
-                route: route("attendance.top-performers"),
-                active: "attendance.top-performers",
-            },
-            {
-                title: "Manual Entry",
-                route: route("attendance.manual-form"),
-                active: "attendance.manual-form",
-            }
-        ]
     },
     {
         title: "Salary",
@@ -265,23 +248,6 @@ const baseMenu = [
         route: route("salary.index"),
         active: "salary.index",
         role: "admin",
-        children: [
-            {
-                title: "Salary Report",
-                route: route("salary.report"),
-                active: "salary.report",
-            },
-            {
-                title: "Test Salary",
-                route: route("salary.test-form"),
-                active: "salary.test-form",
-            },
-            {
-                title: "Process Awards",
-                route: route("salary.process-award-payments"),
-                active: "salary.process-award-payments",
-            }
-        ]
     },
     {
         title: "Provident Fund",
@@ -289,13 +255,6 @@ const baseMenu = [
         route: route("provident-fund.index"),
         active: "provident-fund.index",
         role: "admin",
-        children: [
-            {
-                title: "Overall Summary",
-                route: route("provident-fund.summary"),
-                active: "provident-fund.summary",
-            }
-        ]
     },
     {
         title: "Allowances",
@@ -317,18 +276,6 @@ const baseMenu = [
         route: route("bonus.index"),
         active: "bonus.index",
         role: "admin",
-        children: [
-            {
-                title: "Apply Eid Bonus",
-                route: route("bonus.apply-eid"),
-                active: "bonus.apply-eid",
-            },
-            {
-                title: "Apply Festival Bonus",
-                route: route("bonus.apply-festival"),
-                active: "bonus.apply-festival",
-            }
-        ]
     }
 ];
 
