@@ -168,6 +168,8 @@ Route::middleware('auth')->group(function () {
     // profile
     Route::controller(AuthController::class)->group(function () {
         Route::get('/profile', 'profileView')->name('profile.view');
+        Route::get('/business/profile', 'businessProfileView')->name('businessProfile.view');
+        Route::post('/business/profile/{id?}', 'businessProfileUpdate')->name('businessProfile.update');
         Route::post('/profile', 'profileUpdate')->name('profile.update');
         Route::get('/security', 'securityView')->name('security.view');
         Route::post('/security', 'securityUpdate')->name('security.post');

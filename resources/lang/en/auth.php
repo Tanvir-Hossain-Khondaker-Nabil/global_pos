@@ -29,6 +29,17 @@ return [
     'customer' => 'Customer',
     'companies' => 'Companies',
     'users' => 'Users',
+    'thumbnail_hint' => 'Thumbnail',
+    'logo_hint' => 'Logo',
+    'website' => 'Website',
+    'website_placeholder' => 'Enter the business website',
+    'phone_placeholder' => 'Enter the business phone',
+    'no_image' => 'No Image',
+    'tax_number_placeholder' => "Enter the tax number" ,
+    'address_placeholder' => 'Enter Business Address',
+    'description_placeholder' => "Enter Description",
+    'description' => 'Description',
+
     
     // HR/Employee Management
     'employees' => 'Employees',
@@ -64,15 +75,21 @@ return [
     'login_button' => 'Login',
     'enter_email' => 'Enter email',
     'enter_password' => 'Enter password',
+    'tax_number' => 'Tax Number',
+    'thumbnail' => 'Thumbnail',
+    'logo' => 'Logo',
 
     // Profile Component
     'profile_title' => 'Update Your Profile',
+    'business_profile_title' => 'Update Your Business Profile',
     'profile_subtitle' => 'Keep your details fresh and make your account truly yours.',
     'your_name' => 'Your Name',
     'your_phone' => 'Your Phone',
     'address' => 'Address',
     'save_changes' => 'Save Changes',
     'type_here' => 'Type here',
+    'business_name' => 'Business Name',
+    'phone' => 'Phone',
 
     // Security Component
     'security_title' => 'Update Your Security',

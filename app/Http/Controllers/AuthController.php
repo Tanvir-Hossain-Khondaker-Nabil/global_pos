@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BusinessProfile;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Auth as FacadesAuth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class AuthController extends Controller
@@ -56,6 +57,73 @@ class AuthController extends Controller
     public function profileView()
     {
         return Inertia::render('auth/Profile');
+    }
+
+
+
+    public function businessProfileView()
+    {
+        $business = BusinessProfile::where('user_id', Auth::id())->first();
+
+        return Inertia::render('auth/BusinessProfile', [
+            'business' => $business,
+        ]);
+    }
+
+    public function businessProfileUpdate(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|min:3|max:255',
+            'email' => 'required|email|lowercase|max:255',
+            'phone' => 'required',
+            'address' => 'required|string|min:3|max:500',
+            'website' => 'nullable|url|max:255',
+            'description' => 'nullable|string|max:1000',
+            'tax_number' => 'nullable|string|max:50',
+            'thum' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'logo' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+        ]);
+
+        try {
+            $data = $validated;
+
+            // Handle thumbnail upload
+            if ($request->hasFile('thum')) {
+                $business = BusinessProfile::where('user_id', Auth::id())->first();
+                // Delete old thumbnail if exists
+                if ($business && $business->thum) {
+                    Storage::disk('public')->delete($business->thum);
+                }
+
+                $data['thum'] = $request->file('thum')->store('business/thumbs', 'public');
+            }
+
+            // Handle logo upload
+            if ($request->hasFile('logo')) {
+                $business = BusinessProfile::where('user_id', Auth::id())->first();
+                // Delete old logo if exists
+                if ($business && $business->logo) {
+                    Storage::disk('public')->delete($business->logo);
+                }
+
+                $data['logo'] = $request->file('logo')->store('business/logos', 'public');
+            }
+
+            // Add user_id to data
+            $data['user_id'] = Auth::id();
+
+            // Update or create business profile
+            $business = BusinessProfile::updateOrCreate(
+                ['user_id' => Auth::id()],
+                $data
+            );
+
+            // Return success response
+            return back()->with('success', 'Business profile updated successfully.');
+        } catch (\Exception $e) {
+
+            return back()->withErrors(['error' => 'Failed to update business profile. Please try again.']);
+        }
     }
 
     // update profile
