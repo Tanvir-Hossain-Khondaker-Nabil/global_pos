@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Models\Variant;
 use App\Models\Category;
 use App\Models\Attribute;
+use App\Models\Brand;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,7 +21,8 @@ class ProductController extends Controller
     {
         $product = Product::with([
             'category',
-            'variants.stock' 
+            'variants.stock',
+            'brand'
         ])->findOrFail($id);
 
         return Inertia::render('product/ViewProduct', [
@@ -31,7 +33,7 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products = Product::latest()
-            ->with(['category', 'variants.stock'])
+            ->with(['category', 'variants.stock', 'brand'])
             ->filter($request->only('search'))
             ->paginate(10);
 
@@ -49,7 +51,7 @@ class ProductController extends Controller
         $update = null;
 
         if ($querystring && isset($querystring['id'])) {
-            $update = Product::with(['variants'])->find($querystring['id']);
+            $update = Product::with(['variants','brand'])->find($querystring['id']);
         }
 
         // Get attributes with their active values
@@ -71,6 +73,7 @@ class ProductController extends Controller
         return Inertia::render('product/AddProduct', [
             'category' => Category::pluck('name', 'id'),
             'update' => $update,
+            'brand' => Brand::pluck('name', 'id'),
             'attributes' => $attributes
         ]);
     }
@@ -81,6 +84,7 @@ class ProductController extends Controller
         $validator = Validator::make($request->all(), [
             'product_name' => 'required',
             'category_id' => 'required',
+            'brand_id' => 'nullable',
             'product_no' => 'required',
             'description' => 'nullable|string',
             'product_type' => 'required',
@@ -127,6 +131,7 @@ class ProductController extends Controller
             $product->name = $request->product_name;
             $product->product_no = $request->product_no;
             $product->category_id = $request->category_id;
+            $product->brand_id = $request->brand_id;
             $product->description = $request->description;
             $product->product_type = $request->product_type;
 
@@ -202,7 +207,6 @@ class ProductController extends Controller
 
         } catch (\Exception $th) {
             DB::rollBack();
-            \Log::error('Product update error: ' . $th->getMessage());
             return redirect()->back()->with('error', "Server error: " . $th->getMessage());
         }
     }

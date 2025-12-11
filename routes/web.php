@@ -34,6 +34,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\BonusSettingController;
+use App\Http\Controllers\BrandController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
@@ -250,6 +251,16 @@ Route::middleware('auth')->group(function () {
         'edit' => 'companies.edit',
         'update' => 'companies.update',
         'destroy' => 'companies.destroy',
+    ]);
+
+    Route::resource('brands', BrandController::class)->names([
+        'index' => 'brands.index',
+        'create' => 'brands.create',
+        'store' => 'brands.store',
+        'show' => 'brands.show',
+        'edit' => 'brands.edit',
+        'update' => 'brands.update',
+        'destroy' => 'brands.destroy',
     ]);
 
     Route::resource('dealerships', DealershipController::class)->names([

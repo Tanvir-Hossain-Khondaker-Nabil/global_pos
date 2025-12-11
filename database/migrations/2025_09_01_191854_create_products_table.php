@@ -24,6 +24,7 @@ return new class extends Migration {
             $table->decimal('in_house_shadow_sale_price', 10, 2)->nullable();
             $table->integer('in_house_initial_stock')->default(0);
             $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('brand_id')->nullable();
             $table->timestamps();
         });
     }

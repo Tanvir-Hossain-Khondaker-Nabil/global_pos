@@ -16,6 +16,7 @@ return [
         'product_code' => 'Product Code',
         'product_name' => 'Product Name',
         'category' => 'Category',
+        'brand' => 'Brand',
         'attributes' => 'Attributes',
         'total_stock' => 'Total Stock',
         'variants' => 'Variants',
@@ -30,6 +31,8 @@ return [
         'price' => 'Price',
         'description' => 'Description',
         'not_available' => 'N/A',
+        'brand' => 'Brand',
+        'pick_brand' => '--Pick a brand--',
         
         // Status messages
         'product_added' => 'Product added successfully!',
