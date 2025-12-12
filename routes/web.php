@@ -216,8 +216,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->middleware('permission:user.toggle_type')->name('user.toggle.type');
 
-    Route::patch('/purchases/{id}/update-payment', [PurchaseController::class, 'updatePayment'])->middleware('permission:purchase.update_payment')->name('purchase.updatePayment');
-    Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->middleware('permission:purchase.approve')->name('purchase.approve');
+    // Route::patch('/purchases/updatePayment/{id}', [PurchaseController::class, 'updatePayment'])->middleware('permission:purchase.update_payment')->name('purchase.updatePayment');
+    // Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->middleware('permission:purchase.approve')->name('purchase.approve');
     Route::get('/purchase/statistics', [PurchaseController::class, 'getStatistics'])->middleware('permission:purchase.statistics_view')->name('purchase.statistics');
     Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->middleware('permission:purchase.recent_view')->name('purchase.recent');
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->middleware('permission:purchase.export_pdf')->name('purchase.exportPdf');
