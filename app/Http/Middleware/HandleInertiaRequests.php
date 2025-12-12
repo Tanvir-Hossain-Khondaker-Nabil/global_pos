@@ -29,26 +29,30 @@ class HandleInertiaRequests extends Middleware
         ];
 
         $user = $request->user();
-        
-       
+
+        // NULL চেক যোগ করুন
+        if ($user) {
+            logger()->info($user->getAllPermissions()->pluck('name'));
+        }
+
         return array_merge(parent::share($request), [
-            'locale' => fn () => App::getLocale(),
-            'availableLocales' => fn () => $availableLocales,
-            'language' => fn () => $this->getLanguageStrings(App::getLocale()),
+            'locale' => fn() => App::getLocale(),
+            'availableLocales' => fn() => $availableLocales,
+            'language' => fn() => $this->getLanguageStrings(App::getLocale()),
             'currentRoute' => Route::currentRouteName(),
             'appName' => config('app.name'),
-            
+
             // Authentication data - Combined structure
             'auth' => [
                 'user' => $user ? array_merge(
                     $user->only(['id', 'name', 'email', 'type', 'role', 'profile']),
                     [
-                        'roles'       => $user->getRoleNames(),
+                        'roles' => $user->getRoleNames(),
                         'permissions' => $user->getAllPermissions()->pluck('name'),
                     ]
+
                 ) : null,
             ],
-
 
             'can' => $user
                 ? $user->getAllPermissions()->pluck('name')->flip()
@@ -56,10 +60,10 @@ class HandleInertiaRequests extends Middleware
 
             // Flash messages - Expanded
             'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-                'warning' => fn () => $request->session()->get('warning'),
-                'info'    => fn () => $request->session()->get('info'),
+                'success' => fn() => $request->session()->get('success'),
+                'error' => fn() => $request->session()->get('error'),
+                'warning' => fn() => $request->session()->get('warning'),
+                'info' => fn() => $request->session()->get('info'),
             ],
         ]);
     }
@@ -70,16 +74,16 @@ class HandleInertiaRequests extends Middleware
     protected function getLanguageStrings($locale)
     {
         $translations = [];
-        
+
         $langPath = resource_path("lang/{$locale}");
-        
+
         if (is_dir($langPath)) {
             foreach (glob("{$langPath}/*.php") as $file) {
                 $filename = pathinfo($file, PATHINFO_FILENAME);
                 $translations[$filename] = require $file;
             }
         }
-        
+
         return $translations;
     }
 

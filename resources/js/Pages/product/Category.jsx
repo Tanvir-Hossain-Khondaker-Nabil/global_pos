@@ -77,14 +77,12 @@ export default function Category({ category, filters }) {
                         placeholder={t('category.search_placeholder', 'Search categories...')}
                         className="input input-sm"
                     />
-                    {auth.role == "admin" && (
                         <button
                             onClick={() => setModel(!model)}
                             className="btn btn-primary btn-sm"
                         >
                             <Plus size={15} /> {t('category.add_new', 'Add New')}
                         </button>
-                    )}
                 </div>
             </PageHeader>
 
@@ -120,7 +118,6 @@ export default function Category({ category, filters }) {
                                     </td>
                                     <td>{user.join_at}</td>
                                     <td>
-                                        {auth.role === "admin" ? (
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     disabled={editProccesing}
@@ -152,11 +149,6 @@ export default function Category({ category, filters }) {
                                                     <Trash2 size={10} /> {t('category.delete', 'Delete')}
                                                 </Link>
                                             </div>
-                                        ) : (
-                                            <p className="text-sm text-gray-500">
-                                                {t('category.no_permission', 'No permission')}
-                                            </p>
-                                        )}
                                     </td>
                                 </tr>
                             ))}

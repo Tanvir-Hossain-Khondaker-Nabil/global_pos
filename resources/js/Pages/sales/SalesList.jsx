@@ -314,7 +314,6 @@ export default function SalesList({ sales, filters, salesdata }) {
                                                     </button>
                                                 )}
 
-                                                {auth.role === "admin" && (
                                                     <Link
                                                         href={route(
                                                             "sales.list.del",
@@ -336,7 +335,6 @@ export default function SalesList({ sales, filters, salesdata }) {
                                                         <Trash2 size={10} />{" "}
                                                         Delete
                                                     </Link>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>

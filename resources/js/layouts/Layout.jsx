@@ -5,6 +5,19 @@ import { Bounce, toast, ToastContainer } from "react-toastify";
 import { usePage } from "@inertiajs/react";
 
 export default function Layout({ children }) {
+
+
+    const { auth } = usePage().props;
+    const user = auth?.user;
+
+    // Function to check if user has permission
+    const hasPermission = (permission) => {
+        if (!user?.permissions) return true;
+        return user.permissions.includes(permission);
+    };
+
+
+
     const { flash } = usePage().props;
     const [sidebarOpen, setSidebarOpen] = useState(false);
 

@@ -53,15 +53,20 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 // auth routes
 Route::middleware('auth')->group(function () {
 
-    Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->name('home');
+    Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('home');
 
     // users managment
     Route::controller(UserController::class)->prefix('users')->group(function () {
-        Route::get('/', 'index')->middleware('permission:users.view')->name('userlist.view');
-        Route::get('/delete/{id}', 'delete')->middleware('permission:users.delete')->name('userlist.delete');
-        Route::post('/create', 'store')->middleware('permission:users.create')->name('userlist.store');
-        Route::get('/create/edit/{id}', 'edit')->middleware('permission:users.edit')->name('userlist.edit');
-    });
+    Route::get('/', 'index')->middleware('permission:users.view')->name('userlist.view');
+    Route::get('/create', 'create')->middleware('permission:users.create')->name('users.create');
+    Route::post('/store', 'store')->middleware('permission:users.create')->name('userlist.store');
+    Route::get('/edit/{id}', 'edit')->middleware('permission:users.edit')->name('userlist.edit');
+    Route::post('/update/{id}', 'update')->middleware('permission:users.edit')->name('users.update');
+    Route::get('/delete/{id}', 'delete')->middleware('permission:users.delete')->name('userlist.delete');
+    Route::post('/toggle-status/{id}', 'toggleStatus')->middleware('permission:users.edit')->name('users.toggle-status');
+    Route::post('/toggle-user-type', 'toggleUserType')->name('toggle.user.type');
+});
+
 
     // customer manage
     Route::controller(CustomerController::class)->prefix('customer')->group(function () {

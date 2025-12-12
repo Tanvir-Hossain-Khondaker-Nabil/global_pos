@@ -29,7 +29,6 @@ export default function Dashboard({
                 </p>
             </div>
 
-            {auth.role == "admin" ? (
                 <div className="grid mt-5 grid-cols-1 md:grid-cols-5 gap-3">
                     {/* Total Sales */}
                     <div className="bg-primary rounded-box p-7 flex items-center gap-3">
@@ -106,14 +105,7 @@ export default function Dashboard({
                         </div>
                     </div>
                 </div>
-            ) : (
-                <div className="border border-gray-400 border-dashed rounded-box py-8 px-5 mt-5 flex flex-col items-center">
-                    <Annoyed size={25} className="mb-2 text-gray-500"/>
-                    <p className="text-gray-500">
-                        {t('dashboard.no_permission', 'You have no permission!')}
-                    </p>
-                </div>
-            )}
+
 
             <Head title={t('dashboard.title', 'Dashboard')} />
         </div>

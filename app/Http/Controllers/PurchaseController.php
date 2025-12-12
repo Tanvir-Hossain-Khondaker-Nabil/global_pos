@@ -228,7 +228,7 @@ class PurchaseController extends Controller
                 'warehouse_id' => $request->warehouse_id,
                 'purchase_date' => $request->purchase_date,
                 'grand_total' => $totalAmount,
-                'shadow_total_amount' => $shadowTotalAmount,
+                'shadow_grand_total' => $shadowTotalAmount,
                 'paid_amount' => $paidAmount,
                 'shadow_paid_amount' => $shadowPaidAmount,
                 'due_amount' => $dueAmount,

@@ -12,14 +12,14 @@ export default function AddProduct({ category, update, brand, attributes }) {
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [availableAttributes, setAvailableAttributes] = useState([]);
-    const [selectedAttributes, setSelectedAttributes] = useState({});
+    const [selectedAttributes, setSelectedAttributes] = useState([]);
     const [showAttributeSelector, setShowAttributeSelector] = useState(false);
     const [productType, setProductType] = useState('regular');
 
     const productForm = useForm({
         id: update ? update.id : "",
         product_name: update ? update.name : "",
-        brand_id : update ? update.brand_id : "",
+        brand_id: update ? update.brand_id : "",
         category_id: update ? update.category_id : "",
         product_no: update ? update.product_no : "",
         description: update ? update.description : "",
@@ -50,8 +50,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
             setCategories([]);
         }
 
-        //brand
-
+        // Brand processing
         if (Array.isArray(brand)) {
             setBrands(brand);
         } else if (brand && typeof brand === 'object') {
@@ -77,13 +76,16 @@ export default function AddProduct({ category, update, brand, attributes }) {
         if (update && update.product_type) {
             setProductType(update.product_type);
         }
-    }, [category, attributes, update]);
+    }, [category, attributes, update, brand]);
 
     // Generate variants based on selected attribute combinations
     const generateVariants = () => {
-        const selectedValues = Object.values(selectedAttributes).filter(arr => arr.length > 0);
+        // Filter out empty selections
+        const validSelections = selectedAttributes.filter(attr => 
+            attr.values && attr.values.length > 0
+        );
 
-        if (selectedValues.length === 0) {
+        if (validSelections.length === 0) {
             // If no attributes selected, create one default variant
             setVariants([{
                 id: null,
@@ -92,50 +94,76 @@ export default function AddProduct({ category, update, brand, attributes }) {
             return;
         }
 
-        // Generate all combinations of selected attribute values
-        const combinations = selectedValues.reduce((acc, curr) => {
-            if (acc.length === 0) return curr.map(val => [val]);
-            return acc.flatMap(comb =>
-                curr.map(val => [...comb, val])
-            );
-        }, []);
-
-        const newVariants = combinations.map(combination => {
-            const attributeValues = {};
-            combination.forEach(item => {
-                attributeValues[item.attribute_code] = item.value;
+        // Generate separate variants for each selection
+        const newVariants = [];
+        
+        validSelections.forEach(attr => {
+            attr.values.forEach(valueObj => {
+                const attributeValues = {};
+                attributeValues[attr.attributeCode] = valueObj.value;
+                
+                newVariants.push({
+                    id: null,
+                    attribute_values: attributeValues,
+                });
             });
-
-            return {
-                id: null,
-                attribute_values: attributeValues,
-            };
         });
 
-        setVariants(newVariants);
+        // Remove duplicates (same attribute combinations)
+        const uniqueVariants = Array.from(
+            new Map(
+                newVariants.map(variant => [
+                    JSON.stringify(variant.attribute_values),
+                    variant
+                ])
+            ).values()
+        );
+
+        setVariants(uniqueVariants);
     };
 
     // Handle attribute selection
     const handleAttributeSelect = (attributeCode, value, checked) => {
         setSelectedAttributes(prev => {
-            const newSelection = { ...prev };
-
+            // Find if this attribute is already selected
+            const attributeIndex = prev.findIndex(attr => attr.attributeCode === attributeCode);
+            
             if (checked) {
-                if (!newSelection[attributeCode]) {
-                    newSelection[attributeCode] = [];
+                if (attributeIndex >= 0) {
+                    // Add value to existing attribute
+                    const updated = [...prev];
+                    if (!updated[attributeIndex].values.some(v => v.value === value.value)) {
+                        updated[attributeIndex].values.push(value);
+                    }
+                    return updated;
+                } else {
+                    // Add new attribute with value
+                    const attributeName = availableAttributes.find(attr => attr.code === attributeCode)?.name || attributeCode;
+                    return [
+                        ...prev,
+                        {
+                            attributeCode: attributeCode,
+                            attributeName: attributeName,
+                            values: [value]
+                        }
+                    ];
                 }
-                newSelection[attributeCode].push(value);
             } else {
-                newSelection[attributeCode] = newSelection[attributeCode]?.filter(
-                    item => item.value !== value.value
-                ) || [];
-
-                if (newSelection[attributeCode].length === 0) {
-                    delete newSelection[attributeCode];
+                if (attributeIndex >= 0) {
+                    // Remove value from attribute
+                    const updated = [...prev];
+                    updated[attributeIndex].values = updated[attributeIndex].values.filter(
+                        v => v.value !== value.value
+                    );
+                    
+                    // Remove attribute if no values left
+                    if (updated[attributeIndex].values.length === 0) {
+                        updated.splice(attributeIndex, 1);
+                    }
+                    return updated;
                 }
+                return prev;
             }
-
-            return newSelection;
         });
     };
 
@@ -216,11 +244,6 @@ export default function AddProduct({ category, update, brand, attributes }) {
             newErrors.category_id = t('product.category_required', 'Category is required');
         }
 
-        // if (!productForm.data.brand_id) {
-        //     hasError = true;
-        //     newErrors.brand_id = t('product.brand_required', 'Brand is required');
-        // }
-
         if (!productForm.data.product_no?.trim()) {
             hasError = true;
             newErrors.product_no = t('product.product_code_required', 'Product code is required');
@@ -276,7 +299,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
         return hasError;
     };
 
-    // Form submission - FIXED VERSION
+    // Form submission
     const formSubmit = (e) => {
         e.preventDefault();
 
@@ -313,7 +336,6 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
         const url = update ? route("product.update.post") : route("product.add.post");
 
-        // FIXED: Send data directly, not wrapped in "data" key
         productForm.post(url, {
             ...formData,
             preserveScroll: true,
@@ -325,7 +347,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                 if (!update) {
                     productForm.reset();
                     setVariants([{ attribute_values: {} }]);
-                    setSelectedAttributes({});
+                    setSelectedAttributes([]);
                     setProductType('regular');
                 }
             },
@@ -369,16 +391,27 @@ export default function AddProduct({ category, update, brand, attributes }) {
                 setVariants(mappedVariants);
 
                 // Pre-select attributes for editing
-                const selectedAttrs = {};
+                const selectedAttrs = [];
                 mappedVariants.forEach(variant => {
                     Object.entries(variant.attribute_values || {}).forEach(([attrCode, value]) => {
-                        if (!selectedAttrs[attrCode]) {
-                            selectedAttrs[attrCode] = [];
-                        }
-                        if (!selectedAttrs[attrCode].some(item => item.value === value)) {
-                            selectedAttrs[attrCode].push({
-                                value: value,
-                                attribute_code: attrCode
+                        const attrName = availableAttributes.find(attr => attr.code === attrCode)?.name || attrCode;
+                        const existingAttrIndex = selectedAttrs.findIndex(attr => attr.attributeCode === attrCode);
+                        
+                        if (existingAttrIndex >= 0) {
+                            if (!selectedAttrs[existingAttrIndex].values.some(v => v.value === value)) {
+                                selectedAttrs[existingAttrIndex].values.push({
+                                    value: value,
+                                    attribute_code: attrCode
+                                });
+                            }
+                        } else {
+                            selectedAttrs.push({
+                                attributeCode: attrCode,
+                                attributeName: attrName,
+                                values: [{
+                                    value: value,
+                                    attribute_code: attrCode
+                                }]
                             });
                         }
                     });
@@ -394,7 +427,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
     // Auto-generate variants when selectedAttributes changes
     useEffect(() => {
-        if (Object.keys(selectedAttributes).length > 0) {
+        if (selectedAttributes.length > 0) {
             generateVariants();
         }
     }, [selectedAttributes]);
@@ -468,7 +501,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
                 {/* Product Basic Information */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-                    <fieldset className="fieldset ">
+                    <fieldset className="fieldset">
                         <legend className="fieldset-legend">
                             {t('product.from_product_name', 'Product Name')}*
                         </legend>
@@ -486,13 +519,13 @@ export default function AddProduct({ category, update, brand, attributes }) {
                         )}
                     </fieldset>
 
-                    <fieldset className="fieldset">
+                    {/* <fieldset className="fieldset">
                         <legend className="fieldset-legend">
-                            {t('product.brand', 'Brand')}*
+                            {t('product.brand', 'Brand')}
                         </legend>
                         <select
                             value={productForm.data.brand_id}
-                            className={`select ${errors.brand_id ? 'select-error' : ''}`}
+                            className="select"
                             onChange={(e) =>
                                 productForm.setData("brand_id", e.target.value)
                             }
@@ -506,10 +539,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                                 </option>
                             ))}
                         </select>
-                        {errors.brand_id && (
-                            <p className="text-sm text-error mt-1">{errors.brand_id}</p>
-                        )}
-                    </fieldset>
+                    </fieldset> */}
 
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">
@@ -715,9 +745,9 @@ export default function AddProduct({ category, update, brand, attributes }) {
                                                 <label key={value.id} className="flex items-center space-x-2 cursor-pointer hover:bg-gray-100 p-1 rounded">
                                                     <input
                                                         type="checkbox"
-                                                        checked={selectedAttributes[attribute.code]?.some(
-                                                            item => item.value === value.value
-                                                        ) || false}
+                                                        checked={selectedAttributes
+                                                            .find(attr => attr.attributeCode === attribute.code)
+                                                            ?.values?.some(item => item.value === value.value) || false}
                                                         onChange={(e) =>
                                                             handleAttributeSelect(
                                                                 attribute.code,
@@ -736,7 +766,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                             </div>
                             <div className="flex justify-between items-center mt-4">
                                 <div className="text-sm text-gray-500">
-                                    {t('product.selected_count', 'Selected')}: {Object.keys(selectedAttributes).length} {t('product.attributes', 'attributes')}
+                                    {t('product.selected_count', 'Selected')}: {selectedAttributes.length} {t('product.attributes', 'attributes')}
                                 </div>
                                 <button
                                     type="button"
@@ -750,16 +780,22 @@ export default function AddProduct({ category, update, brand, attributes }) {
                     )}
 
                     {/* Selected Attributes Summary */}
-                    {Object.keys(selectedAttributes).length > 0 && (
+                    {selectedAttributes.length > 0 && (
                         <div className="mb-4">
                             <h4 className="font-semibold mb-2">
                                 {t('product.selected_attributes', 'Selected Attributes')}:
                             </h4>
-                            <div className="flex flex-wrap gap-2">
-                                {Object.entries(selectedAttributes).map(([attributeCode, values]) => (
-                                    <div key={attributeCode} className="badge badge-primary gap-1">
-                                        <span className="font-medium">{attributeCode}:</span>
-                                        <span>{values.map(v => v.value).join(', ')}</span>
+                            <div className="space-y-2">
+                                {selectedAttributes.map((attr) => (
+                                    <div key={attr.attributeCode} className="flex items-start gap-2">
+                                        <span className="font-medium min-w-[100px]">{attr.attributeName}:</span>
+                                        <div className="flex flex-wrap gap-1">
+                                            {attr.values.map((value, idx) => (
+                                                <span key={idx} className="badge badge-primary">
+                                                    {value.value}
+                                                </span>
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>

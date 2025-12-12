@@ -73,7 +73,7 @@ export default function Sidebar({ status, setStatus }) {
             'Provident Fund': t('auth.provident_fund', 'Provident Fund'),
             'Overall Summary': t('auth.overall_summary', 'Overall Summary'),
             'Allowances': t('auth.allowances', 'Allowances'),
-            
+
             'Ranks': t('auth.ranks', 'Ranks'),
             'Employee Awards': t('auth.employee_awards', 'Employee Awards'),
             'Award Statistics': t('auth.award_statistics', 'Award Statistics'),
@@ -92,104 +92,127 @@ export default function Sidebar({ status, setStatus }) {
                 status ? "left-0" : "-left-full"
             } duration-300 top-0 ${locale === 'bn' ? 'bangla-font' : ''}`}
         >
-            {/* logo */}
-            <div className="h-[80px] flex items-center justify-between lg:justify-start px-8">
-                <img 
-                    src="https://nexoryn.com/wp-content/uploads/2025/02/NEXORYN.png" 
-                    className="h-[30px] w-auto" 
-                    alt="Nexoryn" 
-                />
+            {/* Logo Section - Fixed */}
+            <div className="h-[80px] flex items-center justify-between lg:justify-start px-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                    {/* Logo Image - Properly sized */}
+                    <div className="flex items-center justify-center">
+                        <img 
+                            src="https://i.ibb.co.com/DHPRjDkT/Whats-App-Image-2025-12-11-at-2-57-24-PM-1.jpg" 
+                            className="h-12 w-auto object-contain" 
+                            alt="M/s. Motor" 
+                        />
+                    </div>
+                    
+                    {/* Company Name */}
+                    <div className="flex flex-col">
+                        <span className="font-bold text-lg text-gray-800">
+                            M/s. Motor
+                        </span>
+                        <span className="text-xs text-gray-500">
+                            Cycle Enterprise
+                        </span>
+                    </div>
+                </div>
+                
+                {/* Close Button (Mobile) */}
                 <button
-                    className="btn btn-error btn-xs btn-circle lg:hidden"
+                    className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
                     onClick={() => setStatus(!status)}
                 >
-                    <X size={10} />
+                    <X size={20} className="text-gray-600" />
                 </button>
             </div>
 
-            {/* menu */}
-            <ul>
-                {baseMenu.map((item, index) => {
-                    if (item.role === "all" || item.role === auth.role) {
-                        const isActive = currentRoute === item.active || hasActiveChild(item);
-                        const translatedTitle = getTranslatedTitle(item.title);
-                        const hasChildren = item.children && item.children.length > 0;
-                        const isSubmenuOpen = openSubmenus[index];
+            {/* Menu */}
+            <div className="py-4 overflow-y-auto h-[calc(100vh-80px)]">
+                <ul>
+                    {baseMenu.map((item, index) => {
+                        if (item.role === "all" || item.role === auth.role) {
+                            const isActive = currentRoute === item.active || hasActiveChild(item);
+                            const translatedTitle = getTranslatedTitle(item.title);
+                            const hasChildren = item.children && item.children.length > 0;
+                            const isSubmenuOpen = openSubmenus[index];
 
-                        return (
-                            <li key={index}>
-                                {hasChildren ? (
-                                    <>
-                                        <button
-                                            onClick={() => toggleSubmenu(index)}
-                                            className={`flex items-center justify-between w-full px-8 py-3 rounded-box duration-300 transition-colors 
+                            return (
+                                <li key={index} className="mb-1">
+                                    {hasChildren ? (
+                                        <>
+                                            <button
+                                                onClick={() => toggleSubmenu(index)}
+                                                className={`flex items-center justify-between w-full px-4 py-3 mx-2 rounded-lg duration-300 transition-colors 
+                                                    ${isActive
+                                                        ? "bg-primary/10 text-primary font-semibold"
+                                                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                                    }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-gray-500">
+                                                        {item.icon}
+                                                    </span>
+                                                    <span className={`${locale === 'bn' ? 'text-sm leading-relaxed' : 'text-sm'}`}>
+                                                        {translatedTitle}
+                                                    </span>
+                                                </div>
+                                                {isSubmenuOpen ? (
+                                                    <ChevronDown size={16} className="text-gray-400" />
+                                                ) : (
+                                                    <ChevronRight size={16} className="text-gray-400" />
+                                                )}
+                                            </button>
+                                            
+                                            {/* Submenu */}
+                                            {isSubmenuOpen && (
+                                                <ul className="ml-10 pl-2">
+                                                    {item.children.map((child, childIndex) => {
+                                                        const isChildActive = currentRoute === child.active;
+                                                        const translatedChildTitle = getTranslatedTitle(child.title);
+                                                        
+                                                        return (
+                                                            <li key={childIndex}>
+                                                                <Link
+                                                                    href={child.route}
+                                                                    className={`flex items-center gap-3 px-4 py-2 mx-2 rounded-lg duration-300 transition-colors text-sm
+                                                                        ${isChildActive
+                                                                            ? "bg-primary/10 text-primary font-medium"
+                                                                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                                                                        }`}
+                                                                >
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                                                    <span className={`${locale === 'bn' ? 'text-xs leading-relaxed' : ''}`}>
+                                                                        {translatedChildTitle}
+                                                                    </span>
+                                                                </Link>
+                                                            </li>
+                                                        );
+                                                    })}
+                                                </ul>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Link
+                                            href={item.route}
+                                            className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg duration-300 transition-colors 
                                                 ${isActive
-                                                    ? "bg-gradient-to-r from-primary/5 to-white border-l-5 border-primary pl-9 bg-primary/5 text-primary font-medium"
+                                                    ? "bg-primary/10 text-primary font-semibold"
                                                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                                                 }`}
                                         >
-                                            <div className="flex items-center gap-3">
+                                            <span className="text-gray-500">
                                                 {item.icon}
-                                                <span className={locale === 'bn' ? 'text-sm leading-relaxed' : ''}>
-                                                    {translatedTitle}
-                                                </span>
-                                            </div>
-                                            {isSubmenuOpen ? (
-                                                <ChevronDown size={16} className="text-gray-400" />
-                                            ) : (
-                                                <ChevronRight size={16} className="text-gray-400" />
-                                            )}
-                                        </button>
-                                        
-                                        {/* Submenu */}
-                                        {isSubmenuOpen && (
-                                            <ul className="ml-8 pl-6 border-l border-gray-200">
-                                                {item.children.map((child, childIndex) => {
-                                                    const isChildActive = currentRoute === child.active;
-                                                    const translatedChildTitle = getTranslatedTitle(child.title);
-                                                    
-                                                    return (
-                                                        <li key={childIndex}>
-                                                            <Link
-                                                                href={child.route}
-                                                                className={`flex items-center gap-3 px-4 py-2 rounded-box duration-300 transition-colors text-sm
-                                                                    ${isChildActive
-                                                                        ? "bg-primary/10 text-primary font-medium"
-                                                                        : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
-                                                                    }`}
-                                                            >
-                                                                <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-                                                                <span className={locale === 'bn' ? 'text-sm leading-relaxed' : ''}>
-                                                                    {translatedChildTitle}
-                                                                </span>
-                                                            </Link>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        )}
-                                    </>
-                                ) : (
-                                    <Link
-                                        href={item.route}
-                                        className={`flex items-center gap-3 px-8 py-3 rounded-box duration-300 transition-colors 
-                                            ${isActive
-                                                ? "bg-gradient-to-r from-primary/5 to-white border-l-5 border-primary pl-9 bg-primary/5 text-primary font-medium"
-                                                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-                                            }`}
-                                    >
-                                        {item.icon}
-                                        <span className={locale === 'bn' ? 'text-sm leading-relaxed' : ''}>
-                                            {translatedTitle}
-                                        </span>
-                                    </Link>
-                                )}
-                            </li>
-                        );
-                    }
-                    return null;
-                })}
-            </ul>
+                                            </span>
+                                            <span className={`${locale === 'bn' ? 'text-sm leading-relaxed' : 'text-sm'}`}>
+                                                {translatedTitle}
+                                            </span>
+                                        </Link>
+                                    )}
+                                </li>
+                            );
+                        }
+                        return null;
+                    })}
+                </ul>
+            </div>
         </div>
     );
 }

@@ -131,14 +131,12 @@ export default function Index({ modules, filters }) {
                         placeholder={t('module.search_placeholder', 'Search modules...')}
                         className="input input-sm input-bordered w-64"
                     />
-                    {auth.role === "admin" && (
                         <button
                             onClick={() => setModel(true)}
                             className="btn btn-primary btn-sm"
                         >
                             <Plus size={15} /> {t('module.add_new', 'Add New')}
                         </button>
-                    )}
                 </div>
             </PageHeader>
 
@@ -198,7 +196,6 @@ export default function Index({ modules, filters }) {
                                         </div>
                                     </td>
                                     <td>
-                                        {auth.role === "admin" ? (
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     disabled={editProcessing}
@@ -214,11 +211,6 @@ export default function Index({ modules, filters }) {
                                                     <Trash2 size={12} /> {t('module.delete', 'Delete')}
                                                 </button>
                                             </div>
-                                        ) : (
-                                            <p className="text-sm text-gray-500">
-                                                {t('module.no_permission', 'No permission')}
-                                            </p>
-                                        )}
                                     </td>
                                 </tr>
                             ))}
@@ -240,14 +232,12 @@ export default function Index({ modules, filters }) {
                                 }
                             </p>
                         </div>
-                        {auth.role === "admin" && (
                             <button
                                 onClick={() => setModel(true)}
                                 className="btn btn-primary btn-sm"
                             >
                                 <Plus size={15} /> {t('module.add_new_module', 'Add New Module')}
                             </button>
-                        )}
                     </div>
                 )}
             </div>

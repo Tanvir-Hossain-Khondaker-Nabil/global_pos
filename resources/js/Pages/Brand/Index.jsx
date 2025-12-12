@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
 import { Frown, Pen, Plus, Trash2, X, Search, Loader2, Image as ImageIcon } from "lucide-react";
-import { router, useForm, usePage } from "@inertiajs/react";
+
+import { useForm, usePage, router, Link } from "@inertiajs/react";
+
 import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Index({ brands, filters }) {
-    
+
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
     const [deleteLoading, setDeleteLoading] = useState(null);
@@ -15,7 +17,7 @@ export default function Index({ brands, filters }) {
     const searchForm = useForm({
         search: filters.search || "",
     });
-    
+
     const handleSearch = (e) => {
         const value = e.target.value;
         searchForm.setData("search", value);
@@ -25,8 +27,8 @@ export default function Index({ brands, filters }) {
         }
 
         const timeout = setTimeout(() => {
-            router.get(route("brands.index"), 
-                { search: value }, 
+            router.get(route("brands.index"),
+                { search: value },
                 {
                     preserveScroll: true,
                     preserveState: true,
@@ -66,17 +68,17 @@ export default function Index({ brands, filters }) {
     // Format date based on locale
     const formatDate = (dateString) => {
         if (!dateString) return '-';
-        
+
         try {
             const date = new Date(dateString);
             if (isNaN(date.getTime())) return '-';
-            
+
             const options = {
                 year: 'numeric',
                 month: 'short',
                 day: 'numeric',
             };
-            
+
             if (locale === 'bn') {
                 return date.toLocaleDateString('bn-BD', options);
             } else {
@@ -130,15 +132,13 @@ export default function Index({ brands, filters }) {
                             </button>
                         )}
                     </div>
-                    {auth.role === "admin" && (
-                        <a
-                            href={route("brands.create")}
-                            className="btn btn-primary btn-sm gap-2"
-                        >
-                            <Plus size={16} />
-                            <span>{t('brand.add_new', 'Add New')}</span>
-                        </a>
-                    )}
+                    <Link
+                        href={route("brands.create")}
+                        className="btn btn-primary btn-sm gap-2"
+                    >
+                        <Plus size={16} />
+                        <span>{t('brand.add_new', 'Add New')}</span>
+                    </Link>
                 </div>
             </PageHeader>
 
@@ -171,8 +171,8 @@ export default function Index({ brands, filters }) {
                                             {brand.logo ? (
                                                 <div className="avatar">
                                                     <div className="w-10 h-10 rounded-full ring-1 ring-gray-200 ring-offset-2">
-                                                        <img 
-                                                            src={brand.logo_url || `/storage/${brand.logo}`} 
+                                                        <img
+                                                            src={brand.logo_url || `/storage/${brand.logo}`}
                                                             alt={brand.name}
                                                             className="object-cover w-full h-full"
                                                             onError={(e) => {
@@ -219,7 +219,6 @@ export default function Index({ brands, filters }) {
                                             </div>
                                         </td>
                                         <td>
-                                            {auth.role === "admin" ? (
                                                 <div className="flex items-center gap-2">
                                                     <a
                                                         href={route("brands.edit", { brand: brand.id })}
@@ -241,11 +240,6 @@ export default function Index({ brands, filters }) {
                                                         <span className="hidden sm:inline">{t('brand.delete', 'Delete')}</span>
                                                     </button>
                                                 </div>
-                                            ) : (
-                                                <span className="text-xs text-gray-500 italic">
-                                                    {t('brand.no_permission', 'No permission')}
-                                                </span>
-                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -262,7 +256,7 @@ export default function Index({ brands, filters }) {
                                 {t('brand.no_brands_found', 'No brands found')}
                             </h3>
                             <p className="text-gray-400 text-sm">
-                                {searchForm.data.search 
+                                {searchForm.data.search
                                     ? t('brand.no_matching_brands', 'No brands matching ":search"', {
                                         search: searchForm.data.search
                                     })
@@ -270,7 +264,6 @@ export default function Index({ brands, filters }) {
                                 }
                             </p>
                         </div>
-                        {auth.role === "admin" && (
                             <a
                                 href={route("brands.create")}
                                 className="btn btn-primary btn-sm gap-2"
@@ -278,7 +271,6 @@ export default function Index({ brands, filters }) {
                                 <Plus size={16} />
                                 <span>{t('brand.add_new_brand', 'Add New Brand')}</span>
                             </a>
-                        )}
                     </div>
                 )}
             </div>

@@ -55,7 +55,6 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                             placeholder={t('warehouse.search_placeholder', 'Search warehouses...')}
                             className="input input-sm input-bordered"
                         />
-                        {auth.role === "admin" && (
                             <Link
                                 href={route("warehouse.create")}
                                 className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
@@ -63,7 +62,6 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                                 <Plus size={15} /> 
                                 {t('warehouse.add_warehouse', 'Add New Warehouse')}
                             </Link>
-                        )}
                     </div>
                 </div>
             </PageHeader>
@@ -132,14 +130,12 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                                             >
                                                 <Eye size={12} /> {t('warehouse.view_stock', 'Stock')}
                                             </Link>
-                                            {auth.role === "admin" && (
                                                 <button
                                                     onClick={() => handleDelete(warehouse.id)}
                                                     className="btn btn-xs btn-error btn-outline"
                                                 >
                                                     <Trash2 size={12} /> {t('warehouse.delete', 'Delete')}
                                                 </button>
-                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -161,7 +157,6 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                                 : t('warehouse.get_started', 'Get started by creating your first warehouse')
                             }
                         </p>
-                        {auth.role === "admin" && (
                             <Link
                                 href={route("warehouse.create")}
                                 className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'} mt-2`}
@@ -169,7 +164,6 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                                 <Plus size={15} /> 
                                 {t('warehouse.add_warehouse', 'Add New Warehouse')}
                             </Link>
-                        )}
                     </div>
                 )}
             </div>

@@ -27,6 +27,8 @@ return new class extends Migration {
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->timestamps();
         });
+
+        
     }
 
     /**

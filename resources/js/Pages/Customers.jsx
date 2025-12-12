@@ -292,7 +292,6 @@ export default function Customers({ customers, filters }) {
                                             >
                                                 <Eye size={12} />
                                             </Link>
-                                            {auth.role === "admin" && (
                                                 <>
                                                     <button
                                                         disabled={editProcessing}
@@ -315,7 +314,6 @@ export default function Customers({ customers, filters }) {
                                                         <Trash2 size={12} />
                                                     </Link>
                                                 </>
-                                            )}
                                         </div>
                                     </td>
                                 </tr>

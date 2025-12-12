@@ -223,7 +223,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                 <th className="bg-opacity-20">#</th>
                                 <th>{t('purchase.purchase_details', 'Purchase Details')}</th>
                                 <th>{t('purchase.supplier_warehouse', 'Supplier & Warehouse')}</th>
-                                <th>{t('purchase.items_amount', 'Items & Amount')}</th>
+                                {/* <th>{t('purchase.items_amount', 'Items & Amount')}</th> */}
                                 <th>{t('purchase.payment_status', 'Payment Status')}</th>
                                 <th>{t('purchase.actions', 'Actions')}</th>
                             </tr>
@@ -277,7 +277,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                             </div>
                                         </div>
                                     </td>
-                                    <td>
+                                    {/* <td>
                                         <div className="space-y-2">
                                             <div className="flex items-center gap-2">
                                                 <Package size={14} className="text-purple-600" />
@@ -305,7 +305,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                 </div>
                                             )}
                                         </div>
-                                    </td>
+                                    </td> */}
                                     <td>
                                         <div className="flex flex-col gap-1">
                                             <span className={`badge badge-${purchase.status_color || 'neutral'} badge-sm`}>

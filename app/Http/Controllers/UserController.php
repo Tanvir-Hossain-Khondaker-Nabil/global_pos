@@ -8,126 +8,261 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
-    // index
+    /**
+     * Display a listing of the resource.
+     */
     public function index(Request $request)
     {
-        return Inertia::render("UserList", [
-            'filters' => $request->only('search'),
-            'users' => User::orderBy('role')
-                ->with('business')
-                ->filter($request->only('search'))
-                ->paginate(10)
-                ->withQueryString()
+        $query = User::query()
+            ->with(['roles', 'business'])
+            ->where('id', '!=', Auth::id()) // Exclude current user
+            ->latest();
+
+        // Search filter
+        if ($request->has('search') && $request->search) {
+            $query->where(function ($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%')
+                  ->orWhere('phone', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        // Role filter
+        if ($request->has('role') && $request->role) {
+            $query->whereHas('roles', function ($q) use ($request) {
+                $q->where('name', $request->role);
+            });
+        }
+
+        // Get all roles for filter dropdown
+        $allRoles = Role::where('name', '!=', 'Super Admin')->get()->pluck('name');
+
+        return Inertia::render('Users/Index', [
+            'filters' => $request->only(['search', 'role']),
+            'users' => $query->paginate(10)->withQueryString()
                 ->through(fn($user) => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
                     'avatar' => $user->profile,
-                    'role' => $user->role,
+                    'roles' => $user->roles->pluck('name'),
                     'address' => $user->address,
-                    'join_at' => $user->created_at,
+                    'type' => $user->type,
+                    'join_at' => $user->created_at->format('d M Y'),
+                    'last_login' => $user->last_login_at?->format('d M Y H:i'),
                 ]),
+            'roles' => $allRoles,
+            'statistics' => [
+                'total_users' => User::count(),
+                'admins_count' => User::role('admin')->count(),
+            ]
         ]);
     }
 
-    // add/update new user
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required',
-            'email' => 'required|email|unique:users,email,' . $request->id,
-            'phone' => 'nullable|min:11',
-            'password' => $request->id ? 'nullable' : 'required' . '|min:6',
-            'address' => 'nullable|min:2',
-            'role' => 'required|in:admin,saller'
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'password' => 'required|string|min:8|confirmed',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'exists:roles,name',
         ]);
 
         try {
+            DB::beginTransaction();
 
-            if ($request->id && $request->role !== 'admin') {
-                if (User::where('role', 'admin')->count() <= 1) {
-                    return redirect()->back()->with('error', 'Action blocked: You cannot change role the last remaining administrator.');
-                }
-            }
+            // Create user
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'address' => $request->address,
+                'password' => Hash::make($request->password),
+            ]);
 
-            $q = $request->id ? User::find($request->id) : new User();
+            // Assign roles
+            $user->syncRoles($request->roles);
 
-            $q->name = $request->name;
-            $q->email = $request->email;
-            $q->phone = $request->phone;
-            $q->role = $request->role;
-            $q->address = $request->address;
+            DB::commit();
 
-            // Only update password if provided
-            if ($request->filled('password')) {
-                $q->password = Hash::make($request->password);
-            }
+            return redirect()->route('userlist.view')
+                ->with('success', 'User created successfully.');
 
-            $q->save();
-
-            return redirect()->back()->with('success', $request->id ? 'User profile updated success' : 'New user addedd success.');
-        } catch (\Exception $th) {
-            return redirect()->back()->with('error', 'Something went wrong while processing your request. Please try again.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->with('error', 'Failed to create user: ' . $e->getMessage())
+                ->withInput();
         }
     }
 
-    // edit model handle
+    /**
+     * Show the form for editing the specified resource.
+     */
     public function edit($id)
     {
         try {
-            if (!$id) {
-                return redirect()->back()->with('error', 'Invalid request, please try again.');
+            $user = User::with('roles')->findOrFail($id);
+
+            // Prevent editing super admin users
+            if ($user->hasRole('Super Admin') && !Auth::user()->hasRole('Super Admin')) {
+                return redirect()->route('userlist.view')
+                    ->with('error', 'Cannot edit Super Admin user.');
             }
 
-            $user = User::find($id);
-            if (!$user) {
-                return redirect()->back()->with('error', 'Invalid request, please try again.');
-            }
+            return Inertia::render('Users/Edit', [
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'phone' => $user->phone,
+                    'address' => $user->address,
+                    'roles' => $user->roles->pluck('name'),
+                ],
+                'roles' => Role::where('name', '!=', 'Super Admin')->get()->pluck('name'),
+            ]);
 
-            return response()->json(['data' => $user]);
-        } catch (\Exception $th) {
-            return redirect()->back()->with('error', 'Something went wrong while processing your request. Please try again.');
+        } catch (\Exception $e) {
+            return redirect()->route('userlist.view')
+                ->with('error', 'User not found.');
         }
     }
 
-    // delete user
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        // Prevent updating super admin users
+        if ($user->hasRole('Super Admin') && !Auth::user()->hasRole('Super Admin')) {
+            return redirect()->route('userlist.view')
+                ->with('error', 'Cannot update Super Admin user.');
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:500',
+            'password' => 'nullable|string|min:8|confirmed',
+            'roles' => 'required|array|min:1',
+            'roles.*' => 'exists:roles,name',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Update user
+            $user->update([
+                'name' => $request->name,
+                'email' => $request->email,
+                'phone' => $request->phone,
+                'address' => $request->address,
+            ]);
+
+            // Update password if provided
+            if ($request->filled('password')) {
+                $user->update([
+                    'password' => Hash::make($request->password),
+                ]);
+            }
+
+            // Sync roles
+            $user->syncRoles($request->roles);
+
+            DB::commit();
+
+            return redirect()->route('userlist.view')
+                ->with('success', 'User updated successfully.');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            
+            return redirect()->back()
+                ->with('error', 'Failed to update user: ' . $e->getMessage())
+                ->withInput();
+        }
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
     public function delete($id)
     {
         try {
             $user = User::findOrFail($id);
 
-            if (!$user) {
-                return redirect()->back()->with('error', 'The requested user could not be found.');
+            // Prevent deleting self
+            if ($user->id === Auth::id()) {
+                return redirect()->route('userlist.view')
+                    ->with('error', 'You cannot delete your own account.');
             }
 
-            // prevent deleting the only admin
-            if (User::where('role', 'admin')->count() <= 1 && $user->role == 'admin') {
-                return redirect()->back()->with('error', 'Action blocked: You cannot delete the last remaining administrator.');
-            }
-
-            // prevent self-delete
-            if (Auth::id() == $user->id) {
-                return redirect()->back()->with('error', 'Action blocked: You cannot delete your own account.');
-            }
-
-            if ($user->profile) {
-                if ($user->profile && file_exists(public_path('media/uploads/' . $user->profile))) {
-                    unlink(public_path('media/uploads/' . $user->profile));
-                }
+            // Prevent deleting super admin users
+            if ($user->hasRole('Super Admin')) {
+                return redirect()->route('userlist.view')
+                    ->with('error', 'Cannot delete Super Admin user.');
             }
 
             $user->delete();
+            
+            return redirect()->route('userlist.view')
+                ->with('success', 'User deleted successfully.');
 
-            return redirect()->back()->with('success', 'One user deleted success');
-        } catch (\Exception $th) {
-            return redirect()->back()->with('error', "somthing was wrong try again!");
+        } catch (\Exception $e) {
+            return redirect()->route('userlist.view')
+                ->with('error', 'Failed to delete user: ' . $e->getMessage());
         }
     }
 
+    /**
+     * Toggle user active status
+     */
+    public function toggleStatus($id)
+    {
+        try {
+            $user = User::findOrFail($id);
+
+            // Prevent toggling self
+            if ($user->id === Auth::id()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'You cannot deactivate your own account.'
+                ], 403);
+            }
+
+
+            return response()->json([
+                'success' => true,
+                'message' => 'User status updated successfully.',
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update user status.'
+            ], 500);
+        }
+    }
+
+    /**
+     * Toggle user type between shadow and general
+     */
     public function toggleUserType(Request $request)
     {
         $user = Auth::user();
@@ -136,52 +271,35 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'User not authenticated');
         }
 
-        \Log::info('Toggle user type - Before update', [
-            'user_id' => $user->id,
-            'current_type' => $user->type,
-            'user_email' => $user->email
-        ]);
-
         // Toggle between shadow and general
         $newType = $user->type === 'shadow' ? 'general' : 'shadow';
-
-        \Log::info('Attempting to update', [
-            'user_id' => $user->id,
-            'new_type' => $newType
-        ]);
-
+        
         try {
-            // Method 1: Direct update
             $user->type = $newType;
-            $saved = $user->save();
+            $user->save();
+            
+            // Refresh the user in the session
+            Auth::setUser($user->fresh());
 
-            \Log::info('Save result', [
-                'success' => $saved,
-                'saved_type' => $user->type
-            ]);
-
-            if ($saved) {
-                // Refresh the user in the session
-                Auth::setUser($user->fresh());
-
-                \Log::info('User type updated successfully', [
-                    'user_id' => $user->id,
-                    'final_type' => $user->fresh()->type
-                ]);
-
-                return redirect()->back()->with('success', "Switched to {$newType} mode");
-            } else {
-                \Log::error('Failed to save user type');
-                return redirect()->back()->with('error', 'Failed to save user type');
-            }
+            return redirect()->back()->with('success', "Switched to {$newType} mode");
 
         } catch (\Exception $e) {
-            \Log::error("Error updating user type: " . $e->getMessage(), [
+            Log::error("Error updating user type: " . $e->getMessage(), [
                 'user_id' => $user->id,
                 'new_type' => $newType
             ]);
 
             return redirect()->back()->with('error', 'Failed to switch mode: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Show create form
+     */
+    public function create()
+    {
+        return Inertia::render('Users/Create', [
+            'roles' => Role::where('name', '!=', 'Super Admin')->get()->pluck('name'),
+        ]);
     }
 }

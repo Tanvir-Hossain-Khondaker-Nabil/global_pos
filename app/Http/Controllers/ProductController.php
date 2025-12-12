@@ -8,10 +8,8 @@ use App\Models\Product;
 use App\Models\Variant;
 use App\Models\Category;
 use App\Models\Attribute;
-use App\Models\Brand;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -21,8 +19,8 @@ class ProductController extends Controller
     {
         $product = Product::with([
             'category',
-            'variants.stock',
-            'brand'
+            'brand', // Add brand
+            'variants.stock'
         ])->findOrFail($id);
 
         return Inertia::render('product/ViewProduct', [
@@ -32,51 +30,64 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
+        // Debug: Check what's in the database
+        \Log::info('Fetching products from database');
+        \Log::info('Total products in DB:', ['count' => Product::count()]);
+        
         $products = Product::latest()
-            ->with(['category', 'variants.stock', 'brand'])
+            ->with(['category', 'brand', 'variants.stock']) // Add brand here
             ->filter($request->only('search'))
             ->paginate(10);
 
+        // Debug: Check what's being sent to frontend
+        \Log::info('Products sent to frontend:', [
+            'total' => $products->total(),
+            'count' => $products->count(),
+            'first_product' => $products->first() ? $products->first()->toArray() : null
+        ]);
 
         return Inertia::render("product/Product", [
             'filters' => $request->only('search'),
-            'product' => $products->withQueryString()
+            'product' => $products
         ]);
     }
 
-    public function add_index(Request $request)
-    {
+   public function add_index(Request $request)
+{
+    $querystring = $request->only('id');
+    $update = null;
 
-        $querystring = $request->only('id');
-        $update = null;
-
-        if ($querystring && isset($querystring['id'])) {
-            $update = Product::with(['variants','brand'])->find($querystring['id']);
+    if ($querystring && isset($querystring['id'])) {
+        $update = Product::with(['variants', 'category', 'brand'])->find($querystring['id']);
+        
+        // Check if product was found
+        if (!$update) {
+            return redirect()->route('product.list')->with('error', 'Product not found');
         }
-
-        // Get attributes with their active values
-        $attributes = Attribute::with(['activeValues'])->get()->map(function ($attribute) {
-            return [
-                'id' => $attribute->id,
-                'name' => $attribute->name,
-                'code' => $attribute->code,
-                'active_values' => $attribute->activeValues->map(function ($value) {
-                    return [
-                        'id' => $value->id,
-                        'value' => $value->value,
-                        'code' => $value->code,
-                    ];
-                })
-            ];
-        });
-
-        return Inertia::render('product/AddProduct', [
-            'category' => Category::pluck('name', 'id'),
-            'update' => $update,
-            'brand' => Brand::pluck('name', 'id'),
-            'attributes' => $attributes
-        ]);
     }
+
+    $attributes = Attribute::with(['activeValues'])->get()->map(function ($attribute) {
+        return [
+            'id' => $attribute->id,
+            'name' => $attribute->name,
+            'code' => $attribute->code,
+            'active_values' => $attribute->activeValues->map(function ($value) {
+                return [
+                    'id' => $value->id,
+                    'value' => $value->value,
+                    'code' => $value->code,
+                ];
+            })
+        ];
+    });
+
+    return Inertia::render('product/AddProduct', [
+        'category' => Category::pluck('name', 'id'),
+        'brand' => \App\Models\Brand::pluck('name', 'id'),
+        'update' => $update ? $update->toArray() : null, // Convert to array
+        'attributes' => $attributes
+    ]);
+}
 
     public function update(Request $request)
     {
@@ -84,10 +95,10 @@ class ProductController extends Controller
         $validator = Validator::make($request->all(), [
             'product_name' => 'required',
             'category_id' => 'required',
-            'brand_id' => 'nullable',
             'product_no' => 'required',
             'description' => 'nullable|string',
             'product_type' => 'required',
+            'variants' => 'required|array|min:1',
         ]);
 
         // Add conditional validation for in_house fields
@@ -111,14 +122,30 @@ class ProductController extends Controller
             return $input->product_type === 'in_house';
         });
 
+        // Validate each variant
+        $validator->after(function ($validator) use ($request) {
+            if (empty($request->variants) || !is_array($request->variants)) {
+                $validator->errors()->add('variants', 'At least one variant is required.');
+                return;
+            }
+
+            foreach ($request->variants as $index => $variant) {
+                if (empty($variant['attribute_values']) || !is_array($variant['attribute_values'])) {
+                    $validator->errors()->add("variants.$index", "Variant #" . ($index + 1) . " must have attribute values.");
+                }
+            }
+        });
+
         // Validate
         if ($validator->fails()) {
-            DB::rollBack();
+            \Log::error('Validation failed:', $validator->errors()->toArray());
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput()
                 ->with('error', 'Please fix the validation errors');
         }
+
+        \Log::info('Product save/update request:', $request->all());
 
         DB::beginTransaction();
         try {
@@ -129,11 +156,12 @@ class ProductController extends Controller
             }
 
             $product->name = $request->product_name;
+            $product->brand_id = $request->brand_id ?: null;
             $product->product_no = $request->product_no;
             $product->category_id = $request->category_id;
-            $product->brand_id = $request->brand_id;
             $product->description = $request->description;
             $product->product_type = $request->product_type;
+            $product->created_by = auth()->id();
 
             // In-house settings
             if ($request->product_type === 'in_house') {
@@ -142,24 +170,23 @@ class ProductController extends Controller
                 $product->in_house_sale_price = $request->in_house_sale_price;
                 $product->in_house_shadow_sale_price = $request->in_house_shadow_sale_price;
                 $product->in_house_initial_stock = $request->in_house_initial_stock;
-                $product->created_by = Auth::id();
             } else {
                 $product->in_house_cost = null;
                 $product->in_house_shadow_cost = null;
                 $product->in_house_sale_price = null;
                 $product->in_house_shadow_sale_price = null;
                 $product->in_house_initial_stock = 0;
-                $product->created_by = Auth::id();
             }
 
             $product->save();
+            \Log::info('Product saved:', ['id' => $product->id, 'name' => $product->name]);
 
             // Handle variants
             $existingVariantIds = $product->variants()->pluck('id')->toArray();
             $newVariantIds = [];
 
             foreach ($request->variants as $variantData) {
-                if (empty($variantData['attribute_values'])) {
+                if (empty($variantData['attribute_values']) || !is_array($variantData['attribute_values'])) {
                     continue;
                 }
 
@@ -187,6 +214,7 @@ class ProductController extends Controller
                         'sku' => $sku,
                     ]);
                     $newVariantIds[] = $variant->id;
+                    \Log::info('Variant created:', ['id' => $variant->id, 'sku' => $sku]);
 
                     // Create stock for in-house products
                     if ($product->product_type === 'in_house') {
@@ -199,25 +227,31 @@ class ProductController extends Controller
             $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
             if (!empty($variantsToDelete)) {
                 Variant::whereIn('id', $variantsToDelete)->delete();
+                // Also delete associated stock
+                Stock::whereIn('variant_id', $variantsToDelete)->delete();
+                \Log::info('Variants deleted:', $variantsToDelete);
             }
 
             DB::commit();
+            \Log::info('Product transaction committed successfully');
 
             return redirect()->route('product.list')->with('success', "Product " . ($request->id ? 'updated' : 'created') . " successfully");
 
         } catch (\Exception $th) {
             DB::rollBack();
+            \Log::error('Product update error: ' . $th->getMessage());
+            \Log::error('Stack trace:', $th->getTrace());
             return redirect()->back()->with('error', "Server error: " . $th->getMessage());
         }
     }
 
     private function createInHouseStock(Product $product, Variant $variant)
     {
-        // ইন-হাউস ওয়্যারহাউস খুঁজুন
+        // Find or create In-House warehouse
         $inHouseWarehouse = Warehouse::where('code', 'IN-HOUSE')->first();
 
         if (!$inHouseWarehouse) {
-            // যদি না থাকে, তৈরি করুন
+            // Create if doesn't exist
             $inHouseWarehouse = Warehouse::create([
                 'name' => 'In-House Production',
                 'code' => 'IN-HOUSE',
@@ -226,17 +260,36 @@ class ProductController extends Controller
             ]);
         }
 
-        // স্টক তৈরি করুন
-        Stock::create([
-            'warehouse_id' => $inHouseWarehouse->id,
-            'product_id' => $product->id,
-            'variant_id' => $variant->id,
-            'quantity' => $product->in_house_initial_stock,
-            'purchase_price' => $product->in_house_cost,
-            'sale_price' => $product->in_house_sale_price,
-            'shadow_purchase_price' => $product->in_house_shadow_cost,
-            'shadow_sale_price' => $product->in_house_shadow_sale_price,
-        ]);
+        // Check if stock already exists for this variant
+        $existingStock = Stock::where('warehouse_id', $inHouseWarehouse->id)
+            ->where('product_id', $product->id)
+            ->where('variant_id', $variant->id)
+            ->first();
+
+        if ($existingStock) {
+            // Update existing stock
+            $existingStock->update([
+                'quantity' => $product->in_house_initial_stock,
+                'purchase_price' => $product->in_house_cost,
+                'sale_price' => $product->in_house_sale_price,
+                'shadow_purchase_price' => $product->in_house_shadow_cost,
+                'shadow_sale_price' => $product->in_house_shadow_sale_price,
+            ]);
+            \Log::info('Stock updated for variant:', ['variant_id' => $variant->id]);
+        } else {
+            // Create new stock
+            Stock::create([
+                'warehouse_id' => $inHouseWarehouse->id,
+                'product_id' => $product->id,
+                'variant_id' => $variant->id,
+                'quantity' => $product->in_house_initial_stock,
+                'purchase_price' => $product->in_house_cost,
+                'sale_price' => $product->in_house_sale_price,
+                'shadow_purchase_price' => $product->in_house_shadow_cost,
+                'shadow_sale_price' => $product->in_house_shadow_sale_price,
+            ]);
+            \Log::info('Stock created for variant:', ['variant_id' => $variant->id]);
+        }
     }
 
     private function generateSku(Product $product, array $attributeValues): string
@@ -255,6 +308,7 @@ class ProductController extends Controller
             Product::find($id)->delete();
             return redirect()->back()->with('success', "Product deleted successfully");
         } catch (\Exception $th) {
+            \Log::error('Product delete error: ' . $th->getMessage());
             return redirect()->back()->with('error', "Server error: " . $th->getMessage());
         }
     }

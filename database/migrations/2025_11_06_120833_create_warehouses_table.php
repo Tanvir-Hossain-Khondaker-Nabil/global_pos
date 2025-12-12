@@ -1,10 +1,11 @@
 <?php
 
+use App\Models\User;
 use App\Models\Warehouse;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Support\Facades\Auth;
 
 return new class extends Migration {
     /**
@@ -30,7 +31,7 @@ return new class extends Migration {
             'code' => 'IN-HOUSE',
             'address' => 'Internal Production Department',
             'is_active' => true,
-            'created_by' => Auth::id(),
+            'created_by' => User::count() + 1,
         ]);
     }
 

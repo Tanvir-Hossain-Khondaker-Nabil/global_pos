@@ -334,12 +334,12 @@ export default function Users({ employees, ranks, filters }) {
                                             >
                                                 Edit
                                             </Link>
-                                            <Link
+                                            {/* <Link
                                                 href={route('users.promote-form', user.id)}
                                                 className="text-green-600 hover:text-green-900 transition-colors"
                                             >
                                                 Promote
-                                            </Link>
+                                            </Link> */}
                                         </div>
                                     </td>
                                 </tr>

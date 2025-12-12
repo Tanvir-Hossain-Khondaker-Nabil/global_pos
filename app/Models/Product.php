@@ -14,9 +14,23 @@ class Product extends Model
         'name',
         'product_no',
         'category_id',
+        'brand_id',
         'description',
         'created_by',
-        'brand_id',
+        'product_type',
+        'in_house_cost',
+        'in_house_shadow_cost',
+        'in_house_sale_price',
+        'in_house_shadow_sale_price',
+        'in_house_initial_stock',
+    ];
+
+    protected $casts = [
+        'in_house_cost' => 'decimal:2',
+        'in_house_shadow_cost' => 'decimal:2',
+        'in_house_sale_price' => 'decimal:2',
+        'in_house_shadow_sale_price' => 'decimal:2',
+        'in_house_initial_stock' => 'integer',
     ];
 
     protected static function booted()
@@ -39,28 +53,6 @@ class Product extends Model
         return $this->belongsTo(Brand::class);
     }
 
-
-    // Calculate total stock
-    public function getTotalStockAttribute()
-    {
-        return $this->variants->sum(function($variant) {
-            return $variant->stock ? $variant->stock->quantity : 0;
-        });
-    }
-
-    // Get price range
-    public function getPriceRangeAttribute()
-    {
-        $prices = $this->variants->pluck('price')->filter();
-        if ($prices->isEmpty())
-            return null;
-
-        $min = $prices->min();
-        $max = $prices->max();
-
-        return $min === $max ? "₹{$min}" : "₹{$min} - ₹{$max}";
-    }
-
     // Scope for filtering
     public function scopeFilter($query, array $filters)
     {
@@ -72,6 +64,9 @@ class Product extends Model
                     ->orWhereHas('category', function ($query) use ($search) {
                         $query->where('name', 'like', '%' . $search . '%');
                     })
+                    ->orWhereHas('brand', function ($query) use ($search) {
+                        $query->where('name', 'like', '%' . $search . '%');
+                    })
                     ->orWhereHas('variants', function ($query) use ($search) {
                         $query->where('sku', 'like', '%' . $search . '%')
                             ->orWhereJsonContains('attribute_values', $search);
@@ -80,33 +75,18 @@ class Product extends Model
         });
     }
 
-    public function stocks()
+    // This method might not be needed, but keep it if you use it elsewhere
+    public function getTotalStockAttribute()
     {
-        return $this->hasManyThrough(Stock::class, Variant::class);
+        if (!$this->relationLoaded('variants')) {
+            return 0;
+        }
+        
+        return $this->variants->sum(function($variant) {
+            if ($variant->relationLoaded('stock')) {
+                return $variant->stock ? $variant->stock->quantity : 0;
+            }
+            return 0;
+        });
     }
-
-    // Remove these relationships as they might cause conflicts
-    // public function attributeValue()
-    // {
-    //     return $this->hasMany(AttributeValue::class);
-    // }
-    
-    // public function stock()
-    // {
-    //     return $this->hasOne(Stock::class, 'variant_id');
-    // }
-
-    // Remove getProductAttributes as it's not needed with current structure
-    // public function getProductAttributes()
-    // {
-    //     return Attribute::whereIn('id', function($query) {
-    //         $query->select('attribute_id')
-    //               ->from('product_variant_attributes')
-    //               ->whereIn('product_variant_id', function($q) {
-    //                   $q->select('id')
-    //                     ->from('product_variants')
-    //                     ->where('product_id', $this->id);
-    //               });
-    //     })->get();
-    // }
 }

@@ -110,14 +110,12 @@ export default function Product({ product, filters }) {
                         placeholder={t('product.search_placeholder', 'Search products...')}
                         className="input input-sm"
                     />
-                    {auth.role === "admin" && (
                         <button
                             onClick={() => router.visit(route("product.add"))}
                             className="btn btn-primary btn-sm"
                         >
                             <Plus size={15} /> {t('product.add_new', 'Add New')}
                         </button>
-                    )}
                 </div>
             </PageHeader>
 
@@ -235,7 +233,6 @@ export default function Product({ product, filters }) {
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-2">
-                                                {auth.role === "admin" && (
                                                     <>
                                                         <Link
                                                             href={route(
@@ -269,7 +266,6 @@ export default function Product({ product, filters }) {
                                                             <Trash2 size={10} /> {t('product.delete', 'Delete')}
                                                         </Link>
                                                     </>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>
