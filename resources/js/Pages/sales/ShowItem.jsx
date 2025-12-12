@@ -494,10 +494,10 @@ export default function SaleItemShow({ saleItem }) {
                         <div className="info-card accent-border">
                             <h3 className="print-text-sm print-font-semibold print-mb-2 print-text-gray-800">FROM</h3>
                             <div className="print-space-y-1">
-                                <p className="print-text-base print-font-bold print-text-gray-900">Iduvisul</p>
-                                <p className="print-text-xs print-text-gray-700">123 Business Street</p>
-                                <p className="print-text-xs print-text-gray-700">City, Country 12345</p>
-                                <p className="print-text-xs print-text-gray-700">info@iduvisul.com</p>
+                                <p className="print-text-base print-font-bold print-text-gray-900">{saleItem.sale?.creator?.business?.name || 'Iduvisul'}</p>
+                                <p className="print-text-xs print-text-gray-700">{saleItem.sale?.creator?.business?.address || '123 Business Street'}</p>
+                                <p className="print-text-xs print-text-gray-700">{saleItem.sale?.creator?.business?.city || 'City'}, {saleItem.sale?.creator?.business?.country || 'Country'} {saleItem.sale?.creator?.business?.zip || '12345'}</p>
+                                <p className="print-text-xs print-text-gray-700">{saleItem.sale?.creator?.business?.email || 'info@iduvisul.com'}</p>
                                 <div className="print-mt-2">
                                     <span className="badge badge-primary">Sales Item</span>
                                 </div>

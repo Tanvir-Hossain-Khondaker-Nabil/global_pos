@@ -32,7 +32,7 @@ class SaleItem extends Model
     //relation to sale
     public function sale()
     {
-        return $this->belongsTo(Sale::class, 'sale_id')->with('customer');
+        return $this->belongsTo(Sale::class, 'sale_id')->with('customer','creator');
     }
 
     //relation to purchase

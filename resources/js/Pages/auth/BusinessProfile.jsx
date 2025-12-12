@@ -16,7 +16,7 @@ export default function Profile() {
     // handle form - updated to match fillable fields
     const { data, setData, errors, processing, post } = useForm({
         name: businessData.name || '',
-        email: businessData.email || auth.email || '',
+        email: businessData.email || '',
         phone: businessData.phone || '',
         address: businessData.address || '',
         website: businessData.website || '',
@@ -29,7 +29,7 @@ export default function Profile() {
     const handleUpdate = (e) => {
         e.preventDefault()
         post(route('businessProfile.update'), {
-            _method: 'POST', // Since your route uses POST method
+            _method: 'POST', 
             ...data,
             preserveScroll: true,
         })

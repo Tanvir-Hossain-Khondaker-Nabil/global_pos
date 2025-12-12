@@ -126,7 +126,7 @@ class SalesController extends Controller
             'customers' => $customers,
             'productstocks'  => $stock,
         ]);
-        //
+       
     }
 
     /**
@@ -134,6 +134,7 @@ class SalesController extends Controller
      */
     public function store(Request $request)
     {
+
 
         $type = $request->input('type', 'pos');
 
@@ -190,20 +191,24 @@ class SalesController extends Controller
             $status = 'pending' ;
         } else {
             $existingCustomer = Customer::where('phone', $request->phone)
-                                        ->orWhere('customer_name', $request->customer_name)
-                                        ->first();
+                                    ->orWhere('customer_name', $request->customer_name)
+                                    ->first();
+            
             $status = 'paid' ;
             
             if ($existingCustomer) {
                 $customerId = $existingCustomer->id;
             } else {
-            $customerId = Customer::create([
-                'customer_name' => $request->customer_name ?? 'Walk-in Customer',
-                'phone'         => $request->phone ?? null,
-                'advance_amount' => 0,
-                'due_amount' => 0,
-                'is_active' => 1,
+
+                $customerId = Customer::create([
+                    'customer_name' => $request->customer_name ?? 'Walk-in Customer',
+                    'phone'         => $request->phone ?? null,
+                    'advance_amount' => 0,
+                    'due_amount' => 0,
+                    'is_active' => 1,
+                    'created_by' => Auth::id(),
             ])->id;
+
             }
         }
 
@@ -614,13 +619,14 @@ class SalesController extends Controller
         $isShadowUser = $user->type === 'shadow';
         $saleItem = SaleItem::with(['sale.customer','product','variant', 'warehouse',])->findOrFail($id);
 
-         if ($isShadowUser) {
+        if($isShadowUser) {
              $saleItem = self::transformToShadowItemData($saleItem);
         }
 
 
         return Inertia::render('sales/ShowItem', [
             'saleItem' => $saleItem,
+            'isShadowUser' => $isShadowUser,
         ]);
     }
 

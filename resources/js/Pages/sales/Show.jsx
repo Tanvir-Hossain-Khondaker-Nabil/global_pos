@@ -134,10 +134,10 @@ export default function SaleShow({ sale }) {
                     <div className="lg:col-span-2 print:col-span-1">
                         <h2 className="text-lg font-semibold text-gray-900 mb-2 print:text-base print:mb-1">Company Information</h2>
                         <div className="bg-gray-50 p-4 rounded-box print:p-3 print:bg-transparent print:border print:border-gray-300">
-                            <p className="font-bold text-lg print:text-base">{sale?.creator?.business?.name}</p>
-                            <p className="text-gray-600 print:text-sm">{sale?.creator?.business?.address}</p>
-                            <p className="text-gray-600 print:text-sm">Phone: {sale?.creator?.business?.phone}</p>
-                            <p className="text-gray-600 print:text-sm">Email: {sale?.creator?.business?.email}</p>
+                            <p className="font-bold text-lg print:text-base">{sale?.creator?.business?.name || 'Business Name'}</p>
+                            <p className="text-gray-600 print:text-sm">{sale?.creator?.business?.address || 'Business Address'}</p>
+                            <p className="text-gray-600 print:text-sm">Phone: {sale?.creator?.business?.phone || 'Business Phone'}</p>
+                            <p className="text-gray-600 print:text-sm">Email: {sale?.creator?.business?.email || 'Business Email'}</p>
                             {sale?.creator?.business?.website && (
                                 <p className="text-gray-600 print:text-sm">Website: {sale?.creator?.business?.website}</p>
                             )}
