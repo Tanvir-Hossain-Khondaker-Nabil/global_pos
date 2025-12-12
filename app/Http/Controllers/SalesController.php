@@ -507,7 +507,7 @@ class SalesController extends Controller
 
         return Inertia::render($render, [
             'sale' => $sale,
-            'business_name' => $sale->creator->business->name,
+            'business_name' => @$sale->creator->business->name,
         ]);
     }
 
