@@ -94,7 +94,26 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
         if (variant.attribute_values) {
             if (typeof variant.attribute_values === 'object') {
                 attrsText = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => `${key}: ${value}`)
+                    .map(([key, value]) => `${value}`)
+                    .join(', ');
+            } else {
+                attrsText = variant.attribute_values;
+            }
+        }
+        
+        return attrsText || 'N/A';
+    };
+
+    const getBrandText = () => {
+        if (!purchaseItem.variant) return 'N/A';
+        
+        const variant = purchaseItem.variant;
+        let attrsText = '';
+        
+        if (variant.attribute_values) {
+            if (typeof variant.attribute_values === 'object') {
+                attrsText = Object.entries(variant.attribute_values)
+                    .map(([key, value]) => `${key}`)
                     .join(', ');
             } else {
                 attrsText = variant.attribute_values;
