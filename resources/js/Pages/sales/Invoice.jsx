@@ -168,11 +168,11 @@ export default function Invoice({ sale }) {
                 <tbody>
                     ${sale.items?.map(item => `
                         <tr>
-                            <td>${item.product?.name}</td>
+                            <td>${item.product?.name} (${item.product?.product_no || 'N/A'})</td>
                             <td class="text-center">${item.quantity} x ${formatCurrency(item.unit_price)}</td>
                             <td class="text-right">${formatCurrency(item.total_price)}</td>
                         </tr>
-                        ${item.variant?.name ? `<tr><td colspan="3" style="font-size: 10px; padding-left: 10px;">↳ ${item.variant.name}</td></tr>` : ''}
+                        ${item.variant?.sku ? `<tr><td colspan="3" style="font-size: 10px; padding-left: 10px;">↳ ${item.variant.sku}</td></tr>` : ''}
                     `).join('')}
                 </tbody>
             </table>
