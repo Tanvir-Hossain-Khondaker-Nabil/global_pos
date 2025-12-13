@@ -29,6 +29,7 @@ return [
     'bank' => 'Bank Transfer',
     'mobile' => 'Mobile Banking',
     'online' => 'Online Payment',
+    'brand' => 'Brand',
     
     // Status
     'completed' => 'Completed',
