@@ -312,7 +312,7 @@ class SalesController extends Controller
             if ($type === 'inventory') {
                 return to_route('sales.index')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
             } else {
-                return to_route('salesPos.index',$type)->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
+                return to_route('salesPos.index','pos')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
             }
 
         } catch (\Exception $e) {
