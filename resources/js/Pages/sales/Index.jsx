@@ -302,7 +302,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                         </td>
                                         <td>
                                             <span className={`badge capitalize ${
-                                                sale.status === 'completed' 
+                                                sale.status === 'paid' 
                                                     ? 'badge-success' 
                                                     : sale.status === 'cancelled'
                                                     ? 'badge-error'
@@ -476,19 +476,19 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                             <span className="text-gray-600">Grand Total:</span>
                                             <p className="font-semibold">{formatCurrency(selectedSale.grand_total)} Tk</p>
                                         </div>
-                                        <div>
+                                        {/* <div>
                                             <span className="text-gray-600">Shadow Grand Total:</span>
                                             <p className="font-semibold">{formatCurrency(selectedSale.shadow_grand_total)} Tk</p>
-                                        </div>
+                                        </div> */}
 
                                         <div>
                                             <span className="text-gray-600">Total Paid:</span>
                                             <p className="font-semibold text-success">{formatCurrency(selectedSale.paid_amount)} Tk</p>
                                         </div>
-                                        <div>
+                                        {/* <div>
                                             <span className="text-gray-600">Shadow Total Paid:</span>
                                             <p className="font-semibold text-success">{formatCurrency(selectedSale.shadow_paid_amount)} Tk</p>
-                                        </div>
+                                        </div> */}
 
                                         <div>
                                             <span className="text-gray-600">Due Amount:</span>
@@ -496,12 +496,12 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                 {formatCurrency(selectedSale.due_amount)} Tk
                                             </p>
                                         </div>
-                                         <div>
+                                         {/* <div>
                                             <span className="text-gray-600">Shadow Due Amount:</span>
                                             <p className={`font-semibold ${selectedSale.shadow_due_amount > 0 ? 'text-error' : 'text-success'}`}>
                                                 {formatCurrency(selectedSale.shadow_due_amount)} Tk
                                             </p>
-                                        </div>
+                                        </div> */}
                                         <div>
                                             <span className="text-gray-600">Payment Status:</span>
                                             <p className="font-semibold capitalize">{selectedSale.payment_status || selectedSale.status}</p>
@@ -575,7 +575,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                             />
                                         </div>
 
-                                        <div className="form-control">
+                                        {/* <div className="form-control">
                                             <label className="label">
                                                 <span className="label-text">Shadow Amount to Pay</span>
                                                 <span className="label-text-alt">Due: {formatCurrency(selectedSale.shadow_due_amount)} Tk</span>
@@ -590,7 +590,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                 step="0.01"
                                                 className="input input-bordered"
                                             />
-                                        </div>
+                                        </div> */}
 
                                         <div className="form-control">
                                             <label className="label">
@@ -647,30 +647,30 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                     <span>Current Due:</span>
                                                     <span>{formatCurrency(selectedSale.due_amount)} Tk</span>
                                                 </div>
-                                                <div className="flex justify-between">
+                                                {/* <div className="flex justify-between">
                                                     <span>Shadow Current Due:</span>
                                                     <span>{formatCurrency(selectedSale.shadow_due_amount)} Tk</span>
-                                                </div>
+                                                </div> */}
                                                 <div className="flex justify-between">
                                                     <span>Paying Now:</span>
                                                     <span className="text-success">{formatCurrency(paymentData.paid_amount)} Tk</span>
                                                 </div>
-                                                <div className="flex justify-between">
+                                                {/* <div className="flex justify-between">
                                                     <span>Shadow Paying Now:</span>
                                                     <span className="text-success">{formatCurrency(paymentData.shadow_paid_amount)} Tk</span>
-                                                </div>
+                                                </div> */}
                                                 <div className="flex justify-between font-semibold border-t pt-1">
                                                     <span>Remaining Due:</span>
                                                     <span className={selectedSale.due_amount - paymentData.paid_amount > 0 ? 'text-error' : 'text-success'}>
                                                         {formatCurrency(selectedSale.due_amount - paymentData.paid_amount)} Tk
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between font-semibold">
+                                                {/* <div className="flex justify-between font-semibold">
                                                     <span>Shadow Remaining Due:</span>
                                                     <span className={selectedSale.shadow_due_amount - paymentData.shadow_paid_amount > 0 ? 'text-error' : 'text-success'}>
                                                         {formatCurrency(selectedSale.shadow_due_amount - paymentData.shadow_paid_amount)} Tk
                                                     </span>
-                                                </div>
+                                                </div> */}
                                             </div>
                                         </div>
 

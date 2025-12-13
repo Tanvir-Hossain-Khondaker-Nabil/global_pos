@@ -87,7 +87,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title={isShadowUser ? "Sales History (POS)" : "Sales History (POS)"}
+                title= {isShadowUser ? "Sales History (POS)" : "Sales History (POS)"}
                 subtitle={isShadowUser ? "View sales data" : "Manage your product sales"}
             >
                 <div className="flex items-center gap-3 flex-wrap">
@@ -150,7 +150,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                     
                     <Link
                         className="btn btn-primary btn-sm"
-                        href={route("sales.create")}
+                        href={route("sales.add")}
                     >
                         <Plus size={16} />
                         New Sale
@@ -215,7 +215,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                         </td>
                                         <td>
                                             <span className={`badge capitalize ${
-                                                sale.status === 'completed' 
+                                                sale.status === 'paid' 
                                                     ? 'badge-success' 
                                                     : sale.status === 'cancelled'
                                                     ? 'badge-error'

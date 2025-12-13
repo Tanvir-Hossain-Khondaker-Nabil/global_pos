@@ -188,7 +188,13 @@ class SalesController extends Controller
 
         if($type == 'inventory') {
             $customerId = $request->customer_id;
-            $status = 'pending' ;
+
+            if($request->paid_amount == $request->grand_amount){
+                $status = 'paid' ;
+            } else {
+                $status = 'pending' ;
+            }
+
         } else {
             $existingCustomer = Customer::where('phone', $request->phone)
                                     ->orWhere('customer_name', $request->customer_name)
@@ -244,7 +250,7 @@ class SalesController extends Controller
                 $variant = Variant::findOrFail($item['variant_id']);
                 $quantity = $item['quantity'];
                 $unitPrice = $item['unit_price'];
-                $shadowUnitPrice = $item['shadow_sell_price'];
+                $shadowUnitPrice = $item['shadow_sell_price'] * 0;
                 $shadowtotalPrice = $quantity * $shadowUnitPrice;
                 $totalPrice = $quantity * $unitPrice;
 
@@ -267,8 +273,8 @@ class SalesController extends Controller
                     'quantity'   => $quantity,
                     'unit_price' => $unitPrice,
                     'total_price'=> $totalPrice,
-                    'shadow_unit_price' => $shadowUnitPrice,
-                    'shadow_total_price'=> $shadowtotalPrice,
+                    'shadow_unit_price' => $shadowUnitPrice ?? 0,
+                    'shadow_total_price'=> $shadowtotalPrice ?? 0,
                     'created_by' => Auth::id(),
                 ]);
 
@@ -285,8 +291,8 @@ class SalesController extends Controller
          
 
             $sale->update([
-                'shadow_sub_total'   => $shadowSubTotal,
-                'shadow_grand_total' => $shadowGrandTotal,
+                'shadow_sub_total'   => $shadowSubTotal ?? 0,
+                'shadow_grand_total' => $shadowGrandTotal ?? 0,
                 'shadow_due_amount'  => $shadowDueAmount ?? 0,
                 'shadow_paid_amount' => $shadowPaidAmount ?? 0,
             ]);
@@ -296,7 +302,7 @@ class SalesController extends Controller
                 $payment = new Payment();
                 $payment->sale_id = $sale->id;
                 $payment->amount = $paidAmount;
-                $payment->shadow_amount = $shadowPaidAmount;
+                $payment->shadow_amount = $shadowPaidAmount ?? 0;
                 $payment->payment_method = $request->payment_method 
                                 ?? ($payment_type ?? 'cash');
                 $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
@@ -311,7 +317,8 @@ class SalesController extends Controller
 
             if ($type === 'inventory') {
                 return to_route('sales.index')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
-            } else {
+            } 
+            if ($type === 'pos') {
                 return to_route('salesPos.index','pos')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
             }
 
@@ -328,11 +335,12 @@ class SalesController extends Controller
     {
         $customerId = $sale->customer_id;
 
+
         Payment::create([
             'sale_id' => $sale->id,
             'customer_id' => $customerId,
             'amount' => $request->amount,
-            'shadow_amount' => $request->shadow_paid_amount,
+            'shadow_amount' => $request->shadow_paid_amount ?? 0,
             'payment_method' => $request->payment_method,
             'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
             'note' => $request->notes ?? 'sales due payment clearance',
@@ -343,7 +351,7 @@ class SalesController extends Controller
 
         $sale->update([
             'paid_amount' => $sale->paid_amount + $request->amount,
-            'shadow_paid_amount' => $sale->shadow_paid_amount + $request->shadow_paid_amount,
+            'shadow_paid_amount' => $sale->shadow_paid_amount + $request->shadow_paid_amount ,
             'due_amount' => 0,
             'shadow_due_amount' => 0,
             'status' => 'paid',

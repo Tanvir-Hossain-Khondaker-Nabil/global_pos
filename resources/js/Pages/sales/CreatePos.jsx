@@ -635,7 +635,7 @@ export default function AddSale({ customers, productstocks }) {
                                                     required
                                                 />
                                             </div>
-                                            <div className="form-control">
+                                            {/* <div className="form-control">
                                                 <label className="label"><span className="label-text">Sh Unit Price (৳) *</span></label>
                                                 <input
                                                     type="number"
@@ -646,7 +646,7 @@ export default function AddSale({ customers, productstocks }) {
                                                     onChange={(e) => updateItem(index, 'shadow_sell_price', e.target.value)}
                                                     required
                                                 />
-                                            </div>
+                                            </div> */}
                                             <div className="form-control">
                                                 <label className="label"><span className="label-text">Total Price (৳)</span></label>
                                                 <input
@@ -656,7 +656,7 @@ export default function AddSale({ customers, productstocks }) {
                                                     readOnly
                                                 />
                                             </div>
-                                            <div className="form-control">
+                                            {/* <div className="form-control">
                                                 <label className="label"><span className="label-text">Sh Total Price (৳)</span></label>
                                                 <input
                                                     type="number"
@@ -664,7 +664,7 @@ export default function AddSale({ customers, productstocks }) {
                                                     value={formatCurrency(item.shadow_sell_price * item.quantity)}
                                                     readOnly
                                                 />
-                                            </div>
+                                            </div> */}
                                         </div>
                                     </div>
                                 ))}
