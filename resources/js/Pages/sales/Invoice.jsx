@@ -301,6 +301,7 @@ export default function Invoice({ sale }) {
                         <thead>
                             <tr className="border-b-2 border-black">
                                 <th className="text-left pb-1 print-pb-1">ITEM</th>
+                                <th className="text-left pb-1 print-pb-1">Brand</th>
                                 <th className="text-center pb-1 print-pb-1">QTY</th>
                                 <th className="text-right pb-1 print-pb-1">PRICE</th>
                                 <th className="text-right pb-1 print-pb-1">TOTAL</th>
@@ -312,11 +313,50 @@ export default function Invoice({ sale }) {
                                     <tr className="border-bottom-dashed">
                                         <td className="py-1 print-py-1">
                                             <div>
-                                                <p className="font-medium">{item.product?.name}</p>
-                                                {item.variant?.name && (
-                                                    <p className="text-xs text-gray-500 print-text-xs">↳ {item.variant.name}</p>
-                                                )}
+                                                <p className="font-medium">{item.product?.name} ( {item.product?.product_no} )</p>
+                                                {(() => {
+                                                    const variant = item.variant;
+                                                    let attrsText = '';
+
+                                                    if (variant.attribute_values) {
+                                                        if (typeof variant.attribute_values === 'object') {
+                                                        attrsText = Object.entries(variant.attribute_values)
+                                                            .map(([key, value]) => ` ${value}`)
+                                                            .join(', ');
+                                                        } else {
+                                                        attrsText = variant.attribute_values;
+                                                        }
+                                                    }
+
+                                                    return (
+                                                        <>
+                                                        {attrsText || 'N/A'} ( {variant.sku || 'N/A'})
+                                                        </>
+                                                    );
+                                                })()}<br />
                                             </div>
+                                        </td>
+                                        <td className="text-left py-1 print-py-1">
+                                                {(() => {
+                                                const variant = item.variant;
+                                                let attrsText = '';
+
+                                                if (variant.attribute_values) {
+                                                    if (typeof variant.attribute_values === 'object') {
+                                                    attrsText = Object.entries(variant.attribute_values)
+                                                        .map(([key, value]) => ` ${key}`)
+                                                        .join(', ');
+                                                    } else {
+                                                    attrsText = variant.attribute_values;
+                                                    }
+                                                }
+
+                                                return (
+                                                    <>
+                                                    {attrsText || 'N/A'} 
+                                                    </>
+                                                );
+                                            })()}<br />
                                         </td>
                                         <td className="text-center py-1 print-py-1">{item.quantity}</td>
                                         <td className="text-right py-1 print-py-1">{formatCurrency(item.unit_price)}</td>
