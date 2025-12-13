@@ -269,7 +269,28 @@ export default function AllSalesItems({ salesItems }) {
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Product Details:</strong>
                                                         <div><strong>Name:</strong> {item.product?.name}</div>
-                                                        <div><strong>Brand:</strong> {item.product?.brand?.name || 'N/A'}</div>
+                                                        <div><strong>Brand:</strong> 
+                                                         {(() => {
+                                                            const variant = item.variant;
+                                                            let attrsText = '';
+
+                                                            if (variant.attribute_values) {
+                                                                if (typeof variant.attribute_values === 'object') {
+                                                                attrsText = Object.entries(variant.attribute_values)
+                                                                    .map(([key, value]) => ` ${key}`)
+                                                                    .join(', ');
+                                                                } else {
+                                                                attrsText = variant.attribute_values;
+                                                                }
+                                                            }
+
+                                                            return (
+                                                                <>
+                                                                {attrsText || 'N/A'} 
+                                                                </>
+                                                            );
+                                                            })()}<br />
+                                                        </div>
                                                         <div><strong>Code:</strong> {item.product?.product_no || 'N/A'}</div>
                                                         {item.variant && (
                                                         <div>
@@ -281,7 +302,7 @@ export default function AllSalesItems({ salesItems }) {
                                                             if (variant.attribute_values) {
                                                                 if (typeof variant.attribute_values === 'object') {
                                                                 attrsText = Object.entries(variant.attribute_values)
-                                                                    .map(([key, value]) => `${key}: ${value}`)
+                                                                    .map(([key, value]) => ` ${value}`)
                                                                     .join(', ');
                                                                 } else {
                                                                 attrsText = variant.attribute_values;

@@ -292,6 +292,15 @@ export default function Customers({ customers, filters }) {
                                             >
                                                 <Eye size={12} />
                                             </Link>
+
+                                            <Link
+                                                href={route("advancePayment.store", { id: customer.id })}
+                                                className="btn btn-xs btn-success"
+                                                title={t('customer.add_advance', 'Add Advance')}
+                                            >
+                                                <Plus size={12} />
+                                            </Link>
+
                                                 <>
                                                     <button
                                                         disabled={editProcessing}

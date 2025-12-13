@@ -253,12 +253,23 @@ export default function SaleShow({ sale }) {
                                                 <p className="text-sm text-gray-500 print:text-xs">SKU: {item.product?.product_no || 'N/A'}</p>
                                             </div>
                                         </td>
-                                        <td>
-                                            {item.product?.brand ? (
-                                                <span className="font-semibold print:font-normal">{item.product.brand.name}</span>
-                                            ) : (
-                                                <span className="text-gray-500 print:text-xs">N/A</span>
-                                            )}
+                                        <td className='text-left p-2 print:p-1'>
+                                               {(() => {
+                                                    const variant = item.variant;
+                                                    let attrsText = '';
+
+                                                    if (variant.attribute_values) {
+                                                    if (typeof variant.attribute_values === 'object') {
+                                                        attrsText = Object.entries(variant.attribute_values)
+                                                        .map(([key, value]) => `${key}`)
+                                                        .join(', ');
+                                                    } else {
+                                                        attrsText = variant.attribute_values;
+                                                    }
+                                                    }
+
+                                                    return <>{attrsText || 'N/A'}</>;
+                                                })()}<br />
                                         </td>
                                         
                                         <td className="text-center p-2 print:p-1">
@@ -271,7 +282,7 @@ export default function SaleShow({ sale }) {
                                                     if (variant.attribute_values) {
                                                     if (typeof variant.attribute_values === 'object') {
                                                         attrsText = Object.entries(variant.attribute_values)
-                                                        .map(([key, value]) => `${key}: ${value}`)
+                                                        .map(([key, value]) => `${value}`)
                                                         .join(', ');
                                                     } else {
                                                         attrsText = variant.attribute_values;
@@ -280,6 +291,7 @@ export default function SaleShow({ sale }) {
 
                                                     return <>{attrsText || 'N/A'}</>;
                                                 })()}
+                                                  
                                                 <br />
                                                 <span className="text-sm text-gray-500 print:text-xs">
                                                     {item.variant?.sku || 'No SKU'}
