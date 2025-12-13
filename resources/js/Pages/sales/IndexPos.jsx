@@ -24,7 +24,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
         if (filterForm.data.date_from) queryParams.date_from = filterForm.data.date_from;
         if (filterForm.data.date_to) queryParams.date_to = filterForm.data.date_to;
 
-        router.get(route("sales.index"), queryParams, {
+        router.get(route("salesPos.index",'pos'), queryParams, {
             preserveScroll: true,
             preserveState: true,
             replace: true,
@@ -45,7 +45,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
             date_to: "",
         });
         setTimeout(() => {
-            router.get(route("sales.index"), {}, {
+            router.get(route("salesPos.index" , 'pos'), {}, {
                 preserveScroll: true,
                 preserveState: true,
             });
