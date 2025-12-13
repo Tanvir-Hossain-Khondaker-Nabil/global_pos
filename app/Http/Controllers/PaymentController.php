@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BusinessProfile;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -102,7 +103,7 @@ class PaymentController extends Controller
     public function show(Payment $payment)
     {
 
-        $payment = Payment::with(['customer', 'sale.items'])->findOrFail($payment->id);
+        $payment = Payment::with(['customer', 'sale.items','supplier','purchase.items'])->findOrFail($payment->id);
 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
@@ -112,7 +113,9 @@ class PaymentController extends Controller
         }
 
         return Inertia::render('Payments/Show', [
-            'payment' => $payment
+            'payment' => $payment,
+            'business' => BusinessProfile::where('user_id', Auth::id())->first(),
+            'isShadowUser' => $isShadowUser,
         ]);
     }
 

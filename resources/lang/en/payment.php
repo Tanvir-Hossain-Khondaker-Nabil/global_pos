@@ -30,11 +30,16 @@ return [
     'mobile' => 'Mobile Banking',
     'online' => 'Online Payment',
     'brand' => 'Brand',
+    'no_related_sale' => 'No related sale',
     
     // Status
     'completed' => 'Completed',
     'pending' => 'Pending',
     'failed' => 'Failed',
+    'customer_info' => 'Customer Info',
+    'payment_info' => 'Payment Info',
+    'reference' => 'Reference',
+    'amount_info' => 'Amount',
     
     // Customer Info
     'walk_in_customer' => 'Walk-in Customer',
@@ -55,7 +60,17 @@ return [
     'cash_payments' => 'Cash Payments',
     'card_payments' => 'Card Payments',
     'bank_payments' => 'Bank Payments',
-    
+    'customer_name' => 'Customer Name',
+    'phone' => 'Phone',
+    'address' => 'Address',
+    'method' => 'Method',
+    'sale_info' => 'Sale Info',
+    'business_info' => 'Business Info',
+    'amount_paid' => 'Amount Paid',
+    'terms' => 'Terms',
+    'grand_total' => 'Grand Total',
+    'notes' => 'Notes',
+
     // Empty State
     'no_payments_found' => 'No payments found!',
     'adjust_filters' => 'Try adjusting your search filters to find what you\'re looking for.',

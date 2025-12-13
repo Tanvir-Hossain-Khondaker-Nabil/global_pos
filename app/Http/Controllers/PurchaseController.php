@@ -147,6 +147,7 @@ class PurchaseController extends Controller
     // Store a new purchase
     public function store(Request $request)
     {
+
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
@@ -158,15 +159,15 @@ class PurchaseController extends Controller
             'purchase_date' => 'required|date',
             'notes' => 'nullable|string',
             'paid_amount' => 'required|numeric|min:0',
-            'shadow_paid_amount' => 'required|numeric|min:0', // Add this line
+            'shadow_paid_amount' => 'nullable|numeric|min:0', // Add this line
             'payment_status' => 'required|in:unpaid,partial,paid',
-            'shadow_payment_status' => 'required|in:unpaid,partial,paid', // Add this line
+            'shadow_payment_status' => 'nullable|in:unpaid,partial,paid', // Add this line
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.variant_id' => 'required|exists:variants,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.shadow_unit_price' => 'required|numeric|min:0',
-            'items.*.shadow_sale_price' => 'required|numeric|min:0',
+            'items.*.shadow_unit_price' => 'nullable|numeric|min:0',
+            'items.*.shadow_sale_price' => 'nullable|numeric|min:0',
             // For shadow users, real prices are optional
             'items.*.unit_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
             'items.*.sale_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
@@ -174,11 +175,12 @@ class PurchaseController extends Controller
             'items.*.product_name' => 'sometimes|string',
             'items.*.variant_name' => 'sometimes|string',
             'items.*.total_price' => 'sometimes|numeric',
-            'items.*.shadow_total_price' => 'sometimes|numeric',
+            'items.*.shadow_total_price' => 'nullable|sometimes|numeric',
             'adjust_from_advance' => 'nullable|boolean', // Add this
             'manual_payment_override' => 'nullable|boolean', // Add this
             'use_partial_payment' => 'nullable|boolean', // Add this
         ]);
+
 
         $adjustamount = $request->adjust_from_advance ?? false;
         $payment_type = 'cash'; // Default
@@ -228,13 +230,13 @@ class PurchaseController extends Controller
                 'warehouse_id' => $request->warehouse_id,
                 'purchase_date' => $request->purchase_date,
                 'grand_total' => $totalAmount,
-                'shadow_grand_total' => $shadowTotalAmount,
+                'shadow_grand_total' => $shadowTotalAmount ?? 0,
                 'paid_amount' => $paidAmount,
-                'shadow_paid_amount' => $shadowPaidAmount,
+                'shadow_paid_amount' => $shadowPaidAmount ?? 0,
                 'due_amount' => $dueAmount,
-                'shadow_due_amount' => $shadowDueAmount,
+                'shadow_due_amount' => $shadowDueAmount ?? 0,
                 'payment_status' => $request->payment_status,
-                'shadow_payment_status' => $request->shadow_payment_status,
+                'shadow_payment_status' => $request->shadow_payment_status ?? 'unpaid',
                 'notes' => $request->notes,
                 'status' => 'completed',
                 'created_by' => $user->id,
@@ -248,7 +250,7 @@ class PurchaseController extends Controller
                     'product_id' => $item['product_id'],
                     'unit_price' => $item['unit_price'] ?? 'null',
                     'sale_price' => $item['sale_price'] ?? 'null',
-                    'shadow_unit_price' => $item['shadow_unit_price'],
+                    'shadow_unit_price' => $item['shadow_unit_price'] ,
                     'shadow_sale_price' => $item['shadow_sale_price'],
                 ]);
 
@@ -275,10 +277,10 @@ class PurchaseController extends Controller
                     'quantity' => $item['quantity'],
                     'unit_price' => $unitPrice,
                     'sale_price' => $salePrice,
-                    'shadow_unit_price' => $shadowUnitPrice,
-                    'shadow_sale_price' => $shadowSalePrice,
+                    'shadow_unit_price' => $shadowUnitPrice ?? 0,
+                    'shadow_sale_price' => $shadowSalePrice ?? 0,
                     'total_price' => $totalPrice,
-                    'shadow_total_price' => $shadowTotalPrice,
+                    'shadow_total_price' => $shadowTotalPrice ?? 0,
                     'user_type' => $user->type,
                     'created_by' => $user->id,
                     'warehouse_id' => $request->warehouse_id
@@ -310,8 +312,8 @@ class PurchaseController extends Controller
                         'quantity' => $item['quantity'],
                         'purchase_price' => $isShadowUser ? 0 : $unitPrice,
                         'sale_price' => $isShadowUser ? 0 : $salePrice,
-                        'shadow_purchase_price' => $shadowUnitPrice,
-                        'shadow_sale_price' => $shadowSalePrice,
+                        'shadow_purchase_price' => $shadowUnitPrice ?? 0,
+                        'shadow_sale_price' => $shadowSalePrice ?? 0,
                         'user_type' => $user->type,
                         'created_by' => $user->id,
                     ]);
@@ -330,7 +332,7 @@ class PurchaseController extends Controller
                 $payment = new Payment();
                 $payment->purchase_id = $purchase->id;
                 $payment->amount = $paidAmount;
-                $payment->shadow_amount = $shadowPaidAmount;
+                $payment->shadow_amount = $shadowPaidAmount ?? 0;
                 $payment->payment_method = $request->payment_method
                     ?? ($payment_type ?? 'cash');
                 $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));

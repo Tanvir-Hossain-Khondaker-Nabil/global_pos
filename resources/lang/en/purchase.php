@@ -150,6 +150,7 @@ return [
     'email' => 'Email',
     'code' => 'Code',
     'address' => 'Address',
+    'payment_options_summary' => 'Payment Options & Summary',
     'purchase_status' => 'Purchase Status',
     'created' => 'Created',
     'last_updated' => 'Last Updated',

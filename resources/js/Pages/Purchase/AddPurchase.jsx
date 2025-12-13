@@ -778,7 +778,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                     </div>
                                 </div>
 
-                                <div className="card card-compact bg-info/10 border border-info/20">
+                                {/* <div className="card card-compact bg-info/10 border border-info/20">
                                     <div className="card-body">
                                         <h3 className="card-title text-sm font-semibold flex items-center gap-2 text-info">
                                             <Shield size={16} /> 
@@ -833,7 +833,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </div> */}
                             </div>
                         )}
 
@@ -995,7 +995,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                             </div>
                                                         )}
 
-                                                        <div className="form-control">
+                                                        {/* <div className="form-control">
                                                             <label className="label py-1">
                                                                 <span className="label-text text-xs flex items-center gap-1">
                                                                     {isShadowUser ? t('purchase.unit_price', 'Unit Price') : t('purchase.shadow_unit_price', 'Shadow Unit Price')} *
@@ -1009,6 +1009,23 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                                 className={`input input-bordered input-sm w-full ${isShadowUser ? 'border-warning' : 'border-info'}`}
                                                                 value={item.shadow_unit_price}
                                                                 onChange={(e) => updateItem(index, 'shadow_unit_price', parseFloat(e.target.value) || 0)}
+                                                                required
+                                                            />
+                                                        </div> */}
+
+                                                     
+
+                                                        <div className="form-control">
+                                                            <label className="label py-1">
+                                                                <span className="label-text text-xs">{t('purchase.sale_price', 'Sale Price')} *</span>
+                                                            </label>
+                                                            <input
+                                                                type="number"
+                                                                min="0.01"
+                                                                step="0.01"
+                                                                className="input input-bordered input-sm w-full"
+                                                                value={item.sale_price}
+                                                                onChange={(e) => updateItem(index, 'sale_price', parseFloat(e.target.value) || 0)}
                                                                 required
                                                             />
                                                         </div>
@@ -1026,8 +1043,9 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                                 readOnly
                                                             />
                                                         </div>
-                                                    </div>
 
+                                                    </div>
+{/* 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                                         {!isShadowUser && (
                                                             <div className="form-control">
@@ -1063,7 +1081,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                                 required
                                                             />
                                                         </div>
-                                                    </div>
+                                                    </div> */}
 
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-3 border-t border-base-300">
                                                         {!isShadowUser && (
@@ -1078,7 +1096,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                                 </div>
                                                             </div>
                                                         )}
-                                                        <div className={`text-xs space-y-1 ${isShadowUser ? 'text-warning' : 'text-info'}`}>
+                                                        {/* <div className={`text-xs space-y-1 ${isShadowUser ? 'text-warning' : 'text-info'}`}>
                                                             <div className="flex justify-between">
                                                                 <span className="font-medium">
                                                                     {isShadowUser ? t('purchase.active_total', 'Active Total') : t('purchase.shadow_total', 'Shadow Total')}:
@@ -1091,7 +1109,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                                 </span>
                                                                 <span className="font-semibold">৳{formatCurrency(item.shadow_sale_price)}</span>
                                                             </div>
-                                                        </div>
+                                                        </div> */}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1161,7 +1179,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                             </div>
                                         )}
 
-                                        <div className={`card card-compact ${isShadowUser ? 'bg-warning/10 border border-warning' : 'bg-info/10 border border-info/20'}`}>
+                                        {/* <div className={`card card-compact ${isShadowUser ? 'bg-warning/10 border border-warning' : 'bg-info/10 border border-info/20'}`}>
                                             <div className="card-body">
                                                 <h4 className="card-title text-sm font-semibold flex items-center gap-2">
                                                     {isShadowUser ? t('purchase.active_amounts', 'Active Amounts') : t('purchase.shadow_amounts', 'Shadow Amounts')}
@@ -1196,7 +1214,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </div> */}
                                     </div>
 
                                     {/* Advanced Options Summary */}
