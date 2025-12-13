@@ -375,6 +375,7 @@ export default function PaymentShow({ payment }) {
                                     <tr>
                                         <th>{t('payment.product', 'Product')}</th>
                                         <th>{t('payment.variant', 'Variant')}</th>
+                                        <th>{t('payment.brand', 'Brand')}</th>
                                         <th>{t('payment.quantity', 'Quantity')}</th>
                                         <th>{t('payment.unit_price', 'Unit Price')}</th>
                                         <th>{t('payment.total', 'Total')}</th>
@@ -405,7 +406,7 @@ export default function PaymentShow({ payment }) {
                                                         if (variant.attribute_values) {
                                                         if (typeof variant.attribute_values === 'object') {
                                                             attrsText = Object.entries(variant.attribute_values)
-                                                            .map(([key, value]) => `${key}: ${value}`)
+                                                            .map(([key, value]) => `${value}`)
                                                             .join(', ');
                                                         } else {
                                                             attrsText = variant.attribute_values;
@@ -418,6 +419,28 @@ export default function PaymentShow({ payment }) {
                                                     <span className="text-sm text-gray-500">
                                                         {item.variant?.sku || t('payment.no_sku', 'No SKU')}
                                                     </span>
+                                                    </>
+                                                )}
+                                            </td>
+                                            <td className="text-left">
+                                                {item.variant && (
+                                                    <>
+                                                    {(() => {
+                                                        const variant = item.variant;
+                                                        let attrsText = '';
+
+                                                        if (variant.attribute_values) {
+                                                        if (typeof variant.attribute_values === 'object') {
+                                                            attrsText = Object.entries(variant.attribute_values)
+                                                            .map(([key, value]) => `${key}`)
+                                                            .join(', ');
+                                                        } else {
+                                                            attrsText = variant.attribute_values;
+                                                        }
+                                                        }
+
+                                                        return <>{attrsText || 'N/A'}</>;
+                                                    })()}
                                                     </>
                                                 )}
                                             </td>
