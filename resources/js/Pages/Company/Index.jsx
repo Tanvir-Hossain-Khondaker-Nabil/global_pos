@@ -177,14 +177,12 @@ export default function Index({ companies, filters }) {
                         placeholder={t('company.search_placeholder', 'Search companies...')}
                         className="input input-sm input-bordered w-64"
                     />
-                    {auth?.role === "admin" && (
                         <button
                             onClick={() => setModel(true)}
                             className="btn btn-primary btn-sm"
                         >
                             <Plus size={15} /> {t('company.add_new', 'Add New')}
                         </button>
-                    )}
                 </div>
             </PageHeader>
 
@@ -307,14 +305,12 @@ export default function Index({ companies, filters }) {
                                 }
                             </p>
                         </div>
-                        {auth?.role === "admin" && (
                             <button
                                 onClick={() => setModel(true)}
                                 className="btn btn-primary btn-sm"
                             >
                                 <Plus size={15} /> {t('company.add_new_company', 'Add New Company')}
                             </button>
-                        )}
                     </div>
                 )}
             </div>

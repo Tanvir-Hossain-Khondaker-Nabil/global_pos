@@ -57,15 +57,15 @@ Route::middleware('auth')->group(function () {
 
     // users managment
     Route::controller(UserController::class)->prefix('users')->group(function () {
-    Route::get('/', 'index')->middleware('permission:users.view')->name('userlist.view');
-    Route::get('/create', 'create')->middleware('permission:users.create')->name('users.create');
-    Route::post('/store', 'store')->middleware('permission:users.create')->name('userlist.store');
-    Route::get('/edit/{id}', 'edit')->middleware('permission:users.edit')->name('userlist.edit');
-    Route::post('/update/{id}', 'update')->middleware('permission:users.edit')->name('users.update');
-    Route::get('/delete/{id}', 'delete')->middleware('permission:users.delete')->name('userlist.delete');
-    Route::post('/toggle-status/{id}', 'toggleStatus')->middleware('permission:users.edit')->name('users.toggle-status');
-    Route::post('/toggle-user-type', 'toggleUserType')->name('toggle.user.type');
-});
+        Route::get('/', 'index')->middleware('permission:users.view')->name('userlist.view');
+        Route::get('/create', 'create')->middleware('permission:users.create')->name('users.create');
+        Route::post('/store', 'store')->middleware('permission:users.create')->name('userlist.store');
+        Route::get('/edit/{id}', 'edit')->middleware('permission:users.edit')->name('userlist.edit');
+        Route::post('/update/{id}', 'update')->middleware('permission:users.edit')->name('users.update');
+        Route::get('/delete/{id}', 'delete')->middleware('permission:users.delete')->name('userlist.delete');
+        Route::post('/toggle-status/{id}', 'toggleStatus')->middleware('permission:users.edit')->name('users.toggle-status');
+        Route::post('/toggle-user-type', 'toggleUserType')->name('toggle.user.type');
+    });
 
 
     // customer manage
@@ -214,7 +214,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/purchase/{id}/approve', [PurchaseController::class, 'approve'])->middleware('permission:purchase.approve')->name('purchase.approve');
     Route::delete('/purchase/{id}', [PurchaseController::class, 'destroy'])->middleware('permission:purchase.delete')->name('purchase.destroy');
 
-    Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->middleware('permission:user.toggle_type')->name('user.toggle.type');
+    Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 
     // Route::patch('/purchases/updatePayment/{id}', [PurchaseController::class, 'updatePayment'])->middleware('permission:purchase.update_payment')->name('purchase.updatePayment');
     // Route::patch('/purchases/{id}/approve', [PurchaseController::class, 'approve'])->middleware('permission:purchase.approve')->name('purchase.approve');
@@ -430,10 +430,6 @@ Route::middleware('auth')->group(function () {
             ->name('destroy');
     });
 
-
-
-
-
 });
 
 
@@ -441,11 +437,10 @@ Route::middleware('auth')->group(function () {
 
 
 Route::post('/switch-locale', [Controller::class, 'switchLocale'])->name('locale.switch');
-
-Route::get('/lang/{locale}', [Controller::class, 'setLang'])->name('lang.switch');
-
-Route::get('/current-lang', [Controller::class, 'getLang'])->name('lang.current');
-
+Route::get('/lang/{locale}', [Controller::class, 'setLang'])
+    ->middleware('permission:locale.switch')->name('lang.switch');
+Route::get('/current-lang', [Controller::class, 'getLang'])
+    ->middleware('permission:lang.current')->name('lang.current');
 
 require __DIR__ . '/command.php';
 

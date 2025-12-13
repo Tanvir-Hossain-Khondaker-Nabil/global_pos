@@ -310,6 +310,8 @@ class RolesAndPermissionsSeeder extends Seeder
             // ========== PDF GENERATION ==========
             'pdf.download',
             'pdf.view',
+            'lang.switch',
+            'lang.current',
         ];
 
         foreach ($permissions as $permission) {

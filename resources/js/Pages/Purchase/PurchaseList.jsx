@@ -172,7 +172,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             </button>
                         )}
                     </div>
-                    {auth?.role === "admin" && (
                         <Link
                             href={route("purchase.create")}
                             className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
@@ -180,7 +179,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             <Plus size={15} />
                             {t('purchase.new_purchase', 'New Purchase')}
                         </Link>
-                    )}
                 </div>
             </PageHeader>
 
@@ -418,7 +416,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                     {t('purchase.clear_filters', 'Clear Filters')}
                                 </button>
                             )}
-                            {auth?.role === "admin" && (
                                 <Link
                                     href={route("purchase.create")}
                                     className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
@@ -426,7 +423,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                     <Plus size={15} />
                                     {t('purchase.new_purchase', 'Create Purchase')}
                                 </Link>
-                            )}
                         </div>
                     </div>
                 )}
