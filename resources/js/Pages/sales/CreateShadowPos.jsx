@@ -84,15 +84,31 @@ export default function AddSale({ customers, productstocks }) {
         if (variant.attribute_values) {
             if (typeof variant.attribute_values === 'object') {
                 const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => `${key}: ${value}`)
+                    .map(([key, value]) => ` ${value}`)
                     .join(', ');
-                parts.push(`Attribute: ${attrs}`);
+                parts.push(` ${attrs}`);
             } else {
                 parts.push(`Attribute: ${variant.attribute_values}`);
             }
         }
 
-        if (variant.sku) parts.push(`Sku: ${variant.sku}`);
+         if (variant.sku) parts.push(`Sku: ${variant.sku}`);
+        return parts.join(', ') || 'Default Variant';
+    };
+
+    const getBrandName = (variant) => {
+        const parts = [];
+
+        if (variant.attribute_values) {
+            if (typeof variant.attribute_values === 'object') {
+                const attrs = Object.entries(variant.attribute_values)
+                    .map(([key, value]) => `${key}`)
+                    .join(', ');
+                parts.push(` ${attrs}`);
+            } else {
+                parts.push(`Attribute: ${variant.attribute_values}`);
+            }
+        }
 
         return parts.join(', ') || 'Default Variant';
     };
@@ -135,7 +151,7 @@ export default function AddSale({ customers, productstocks }) {
                     product_name: productstock.product.name,
                     product_code: productstock.product.product_no || '',
                     variant_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
-                    brand_name: productstock.product?.brand?.name || 'N/A',
+                    brand_name: variant ? getBrandName(variant) : 'Default Brand',
                     quantity: 1,
                     stockQuantity: Number(productstock.quantity) || 0,
                     unit_price: salePrice,
@@ -342,11 +358,17 @@ export default function AddSale({ customers, productstocks }) {
                             {productSearch && filteredProducts.length > 0 && (
                                 <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
                                     {filteredProducts.map(filteredProduct => {
-                                        const attributes = filteredProduct.variant?.attribute_values
+                                        const brand = filteredProduct.variant?.attribute_values
                                             ? Object.entries(filteredProduct.variant.attribute_values)
-                                                .map(([key, value]) => `${key}: ${value}`)
+                                                .map(([key, value]) => `${key}`)
                                                 .join(', ')
                                             : null;
+
+                                        const attributes = filteredProduct.variant?.attribute_values
+                                        ? Object.entries(filteredProduct.variant.attribute_values)
+                                            .map(([key, value]) => `${value}`)
+                                            .join(', ')
+                                        : null;
 
                                         return (
                                             <div
@@ -359,10 +381,10 @@ export default function AddSale({ customers, productstocks }) {
                                                         <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
                                                         <Plus size={14} className="text-primary" />
                                                     </div>
-                                                    {attributes && (
+                                                 {attributes && (
                                                         <div className="text-sm text-gray-500 mt-1">
-                                                            <span>BrandName : {filteredProduct.product?.brand?.name} || </span>
-                                                            {attributes}
+                                                            <span>BrandName: {brand} || </span>
+                                                            { attributes && <span>Variant: {attributes}  </span>}
                                                         </div>
                                                     )}
                                                 </div>
