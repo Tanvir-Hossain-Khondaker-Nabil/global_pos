@@ -81,7 +81,27 @@ export default function SaleItemShow({ saleItem }) {
         if (variant.attribute_values) {
             if (typeof variant.attribute_values === 'object') {
                 attrsText = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => `${key}: ${value}`)
+                    .map(([key, value]) => `${value}`)
+                    .join(', ');
+            } else {
+                attrsText = variant.attribute_values;
+            }
+        }
+        
+        return attrsText || 'N/A';
+    };
+
+    
+    const getBrandText = () => {
+        if (!saleItem.variant) return 'N/A';
+        
+        const variant = saleItem.variant;
+        let attrsText = '';
+        
+        if (variant.attribute_values) {
+            if (typeof variant.attribute_values === 'object') {
+                attrsText = Object.entries(variant.attribute_values)
+                    .map(([key, value]) => `${key}`)
                     .join(', ');
             } else {
                 attrsText = variant.attribute_values;
@@ -300,7 +320,7 @@ export default function SaleItemShow({ saleItem }) {
                                     </div>
                                     <div>
                                         <label className="label font-semibold">Brand Name</label>
-                                        <p className="text-lg">{saleItem.product?.brand?.name || 'N/A'}</p>
+                                        <p className="text-lg">{getBrandText() || 'N/A'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -531,12 +551,12 @@ export default function SaleItemShow({ saleItem }) {
                                 <h4 className="print-text-xs print-font-semibold print-text-gray-700 print-mb-2">Product Info</h4>
                                 <div className="print-space-y-2">
                                     <div className="print-flex print-justify-between">
-                                        <span className="print-text-xs print-text-gray-600">Name:</span>
-                                        <span className="print-text-xs print-font-medium">{saleItem.product?.name || 'N/A'}</span>
+                                        <span className="print-text-xs print-text-gray-600">Product:</span>
+                                        <span className="print-text-xs print-font-medium">{saleItem.product?.name || 'N/A'} ( {saleItem.product?.product_no || 'N/A'} )</span>
                                     </div>
-                                    <div className="print-flex print-justify-between">
-                                        <span className="print-text-xs print-text-gray-600">Code:</span>
-                                        <span className="print-text-xs print-font-medium">{saleItem.product?.product_no || 'N/A'}</span>
+                                     <div className="print-flex print-justify-between">
+                                        <span className="print-text-xs print-text-gray-600">Brand:</span>
+                                        <span className="print-text-xs print-font-medium">{getBrandText()}</span>
                                     </div>
                                     <div className="print-flex print-justify-between">
                                         <span className="print-text-xs print-text-gray-600">Variant:</span>
@@ -637,8 +657,8 @@ export default function SaleItemShow({ saleItem }) {
                             <div className="print-text-xs print-font-medium print-text-blue-700 print-mb-1">DISCOUNT</div>
                             <div className="print-text-sm print-font-bold print-text-gray-900">{saleItem.sale?.discount || 0}%</div>
                         </div>
-                        <div className="print-p-2 print-bg-gradient-to-r print-from-green-400 print-to-blue-500 print-rounded print-text-center">
-                            <div className="print-text-xs print-font-medium print-text-white print-mb-1">TOTAL</div>
+                        <div className="print-p-2 print-bg-blue-50 print-rounded print-text-center">
+                            <div className="print-text-xs print-font-medium print-text-blue-700 print-mb-1">TOTAL</div>
                             <div className="print-text-sm print-font-bold print-text-white">{calculateItemTotal()} Tk</div>
                         </div>
                     </div>
@@ -654,7 +674,7 @@ export default function SaleItemShow({ saleItem }) {
                             Computer-generated receipt • No signature required
                         </p>
                         <div className="print-mt-3 print-text-xs print-text-gray-400">
-                            <p>Iduvisul Business Solutions • Email: info@iduvisul.com</p>
+                            <p>{saleItem.sale?.creator?.business?.name || 'Iduvisul'} • Email: {saleItem.sale?.creator?.email || 'info@iduvisul.com'}</p>
                             <p className="print-mt-1">Generated: {formatDate(new Date().toISOString())}</p>
                         </div>
                     </div>
