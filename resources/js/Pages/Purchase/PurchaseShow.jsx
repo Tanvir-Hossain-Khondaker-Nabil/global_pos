@@ -59,24 +59,38 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
 
     // Helper function to get variant display name - FIXED for new attribute_values format
     const getVariantDisplayName = (variant) => {
-        if (!variant) return 'Default Variant';
-        
-        // Check if variant has attribute_values (new format)
-        if (variant.attribute_values && Object.keys(variant.attribute_values).length > 0) {
-            const parts = [];
-            for (const [attributeCode, value] of Object.entries(variant.attribute_values)) {
-                parts.push(`${attributeCode}: ${value}`);
-            }
-            return parts.join(', ');
-        }
-        
-        // Fallback to old format
         const parts = [];
-        if (variant.size) parts.push(`Size: ${variant.size}`);
-        if (variant.color) parts.push(`Color: ${variant.color}`);
-        if (variant.material) parts.push(`Material: ${variant.material}`);
-        
-        return parts.length > 0 ? parts.join(', ') : 'Default Variant';
+
+        if (variant.attribute_values) {
+            if (typeof variant.attribute_values === 'object') {
+                const attrs = Object.entries(variant.attribute_values)
+                    .map(([key, value]) => ` ${value}`)
+                    .join(', ');
+                parts.push(` ${attrs}`);
+            } else {
+                parts.push(`Attribute: ${variant.attribute_values}`);
+            }
+        }
+
+         if (variant.sku) parts.push(`Sku: ${variant.sku}`);
+        return parts.join(', ') || 'Default Variant';
+    };
+
+    const getBrandName = (variant) => {
+        const parts = [];
+
+        if (variant.attribute_values) {
+            if (typeof variant.attribute_values === 'object') {
+                const attrs = Object.entries(variant.attribute_values)
+                    .map(([key, value]) => `${key}`)
+                    .join(', ');
+                parts.push(` ${attrs}`);
+            } else {
+                parts.push(`Attribute: ${variant.attribute_values}`);
+            }
+        }
+
+        return parts.join(', ') || 'Default Variant';
     };
 
     const handlePrint = () => {
@@ -408,10 +422,9 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                         <div>${item.product?.name || 'N/A'}</div>
                                         <small>#${item.product_id}</small>
                                     </td>
-                                    <td>${item.product?.brand?.name || 'N/A'}</td>
+                                    <td>${getBrandName(item.variant)}</td>
                                     <td>
                                         <div>${getVariantDisplayName(item.variant)}</div>
-                                        ${item.variant ? `<small>#${item.variant_id}</small>` : ''}
                                     </td>
                                     <td class="text-right">${item.quantity}</td>
                                     <td class="text-right">${formatCurrency(getPrice(item, 'unit_price'))}</td>
@@ -513,7 +526,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
     };
 
     const handleDownloadPDF = () => {
-        handlePrint(); // Use the same print function for PDF download
+        handlePrint(); 
     };
 
     const getPaymentStatusColor = (status) => {
@@ -778,19 +791,14 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                                             </div>
                                         </td>
                                         <td>
-                                            <span className="badge badge-outline p-3">
-                                                {item.product?.brand?.name || t('purchase.not_available', 'N/A')}
-                                            </span>
+                                            <div className="text-sm">
+                                                {getBrandName(item.variant)}
+                                            </div>
                                         </td>
                                         <td>
                                             <div className="text-sm">
                                                 {getVariantDisplayName(item.variant)}
                                             </div>
-                                            {item.variant && (
-                                                <div className="text-xs text-gray-500">
-                                                    #{item.variant_id}
-                                                </div>
-                                            )}
                                         </td>
                                         <td className="text-right font-mono">{item.quantity}</td>
                                         <td className="text-right font-mono">
