@@ -1,38 +1,38 @@
 import PageHeader from "../../components/PageHeader";
-import { Link, router, usePage } from "@inertiajs/react";
-import { ArrowLeft, Printer, Download, Calendar, User, Warehouse, Package, DollarSign, FileText, Hash, Shield } from "lucide-react";
+import { Link, router, useForm, usePage } from "@inertiajs/react";
+import { ArrowLeft, Printer, Download, ChevronRight } from "lucide-react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useState, useRef } from "react";
+import { useState } from "react";
 
 export default function PurchaseShow({ purchase, isShadowUser }) {
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
-    const printRef = useRef(null);
     const [isPrinting, setIsPrinting] = useState(false);
 
     const formatDate = (date) => {
-        return new Date(date).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-IN', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
+        if (!date) return 'N/A';
+        return new Date(date).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
         });
     };
 
     const formatCurrency = (amount) => {
+        if (!amount) amount = 0;
         return new Intl.NumberFormat(locale === 'bn' ? 'bn-BD' : 'en-IN', {
-            style: 'currency',
-            currency: 'BDT'
-        }).format(amount || 0);
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount);
     };
 
     const calculateTotalQuantity = () => {
-        return purchase.items.reduce((sum, item) => sum + item.quantity, 0);
+        return purchase.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
     };
 
-    // Get the correct price based on user type - FIXED
+    // Get the correct price based on user type
     const getPrice = (item, field) => {
         if (isShadowUser) {
-            // Use shadow prices for shadow users
             switch (field) {
                 case 'unit_price': return item.shadow_unit_price;
                 case 'total_price': return item.shadow_total_price;
@@ -40,11 +40,10 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                 default: return item[field];
             }
         }
-        // Use regular prices for general users
         return item[field];
     };
 
-    // Get purchase amounts based on user type - FIXED
+    // Get purchase amounts based on user type
     const getPurchaseAmount = (field) => {
         if (isShadowUser) {
             switch (field) {
@@ -57,833 +56,861 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
         return purchase[field];
     };
 
-    // Helper function to get variant display name - FIXED for new attribute_values format
-    const getVariantDisplayName = (variant) => {
-        const parts = [];
+    // Get company name from supplier or default
+    const getCompanyName = () => {
+        if (purchase.supplier?.company) {
+            return purchase.supplier.company;
+        }
+        if (purchase.supplier?.name) {
+            return purchase.supplier.name;
+        }
+        return "AUTO PARTS LTD.";
+    };
 
+    // Get address from supplier or default
+    const getSupplierAddress = () => {
+        if (purchase.supplier?.address) {
+            return purchase.supplier.address;
+        }
+        return "N/A";
+    };
+
+    // Get phone from supplier or default
+    const getSupplierPhone = () => {
+        if (purchase.supplier?.phone) {
+            return purchase.supplier.phone;
+        }
+        return "N/A";
+    };
+
+    // Get email from supplier or default
+    const getSupplierEmail = () => {
+        if (purchase.supplier?.email) {
+            return purchase.supplier.email;
+        }
+        return "N/A";
+    };
+
+    // Helper function to get variant display name
+    const getVariantDisplayName = (variant) => {
+        if (!variant) return 'N/A';
+        
+        const parts = [];
         if (variant.attribute_values) {
             if (typeof variant.attribute_values === 'object') {
                 const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => ` ${value}`)
+                    .map(([key, value]) => `${value}`)
                     .join(', ');
-                parts.push(` ${attrs}`);
+                parts.push(attrs);
             } else {
-                parts.push(`Attribute: ${variant.attribute_values}`);
+                parts.push(variant.attribute_values);
             }
         }
-
-         if (variant.sku) parts.push(`Sku: ${variant.sku}`);
-        return parts.join(', ') || 'Default Variant';
+        
+        if (variant.sku) {
+            parts.push(`SKU: ${variant.sku}`);
+        }
+        
+        return parts.join(', ') || 'N/A';
     };
 
     const getBrandName = (variant) => {
-        const parts = [];
-
-        if (variant.attribute_values) {
-            if (typeof variant.attribute_values === 'object') {
-                const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => `${key}`)
-                    .join(', ');
-                parts.push(` ${attrs}`);
-            } else {
-                parts.push(`Attribute: ${variant.attribute_values}`);
-            }
-        }
-
-        return parts.join(', ') || 'Default Variant';
+        if (!variant?.brand) return 'N/A';
+        return variant.brand.name || variant.brand;
     };
 
     const handlePrint = () => {
         setIsPrinting(true);
         
-        // Create a print-friendly version of the page
-        const printContent = document.createElement('div');
-        printContent.innerHTML = `
+        // Calculate totals for print
+        const totalQuantity = calculateTotalQuantity();
+        const grandTotal = getPurchaseAmount('grand_total');
+        const paidAmount = getPurchaseAmount('paid_amount');
+        const dueAmount = grandTotal - paidAmount;
+        
+        const printContent = `
             <!DOCTYPE html>
             <html>
             <head>
-                <title>Purchase Invoice - ${purchase.purchase_no}</title>
+                <title>${getCompanyName()} - Invoice ${purchase.purchase_no}</title>
+                <meta charset="UTF-8">
                 <style>
                     @page {
-                        size: A4;
-                        margin: 0.5in;
+                        size: A4 portrait;
+                        margin: 0.2in;
                     }
                     * {
                         margin: 0;
                         padding: 0;
                         box-sizing: border-box;
+                        font-family: Arial, sans-serif;
                     }
                     body {
-                        font-family: 'Segoe UI', 'Roboto', sans-serif;
-                        font-size: 12px;
-                        line-height: 1.4;
-                        color: #333;
-                        padding: 10px;
+                        font-size: 11px;
+                        color: #000;
+                        background: white;
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
-                    .invoice-container {
-                        max-width: 100%;
+                    .invoice-paper {
+                        width: 100%;
+                        max-width: 8.5in;
+                        padding: 5px;
                         margin: 0 auto;
                     }
-                    /* Header Section */
-                    .invoice-header {
-                        border-bottom: 2px solid #333;
-                        padding-bottom: 15px;
-                        margin-bottom: 20px;
-                        text-align: center;
-                    }
-                    .invoice-title {
-                        font-size: 24px;
-                        font-weight: bold;
-                        margin-bottom: 5px;
-                        color: #333;
-                    }
-                    .invoice-subtitle {
-                        font-size: 14px;
-                        color: #666;
-                        margin-bottom: 5px;
-                    }
-                    .invoice-meta {
-                        display: flex;
-                        justify-content: center;
-                        gap: 20px;
-                        margin-top: 10px;
-                    }
-                    .meta-item {
-                        font-size: 12px;
-                    }
-                    .status-badge {
-                        display: inline-block;
-                        padding: 2px 8px;
-                        border-radius: 3px;
-                        font-size: 10px;
-                        font-weight: bold;
-                        margin-left: 5px;
-                    }
-                    .status-completed { background: #10b981; color: white; }
-                    .status-pending { background: #f59e0b; color: white; }
-                    .status-paid { background: #10b981; color: white; }
-                    .status-partial { background: #f59e0b; color: white; }
-                    .status-unpaid { background: #ef4444; color: white; }
-                    .shadow-label {
-                        background: #f59e0b;
+                    .header-red {
+                        background-color: #dc2626 !important;
                         color: white;
-                        padding: 2px 8px;
-                        border-radius: 3px;
-                        font-size: 10px;
+                        padding: 2px 12px;
+                        font-size: 9px;
                         font-weight: bold;
-                        margin-left: 10px;
+                        width: 50%;
+                        display: inline-block;
+                        margin-bottom: 15px;
                     }
-                    
-                    /* Information Grid */
-                    .info-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 20px;
-                        margin-bottom: 20px;
+                    .company-name {
+                        font-size: 20px;
+                        font-weight: 900;
+                        letter-spacing: 0.5px;
+                        margin-bottom: 2px;
+                        color: #000;
                     }
-                    .info-section {
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                        padding: 15px;
-                        background: #f9fafb;
+                    .company-red {
+                        color: #dc2626;
                     }
-                    .section-title {
-                        font-size: 14px;
-                        font-weight: bold;
-                        margin-bottom: 10px;
-                        padding-bottom: 5px;
-                        border-bottom: 1px solid #ddd;
-                        color: #444;
-                    }
-                    .info-row {
+                    .flex-container {
                         display: flex;
-                        justify-content: space-between;
+                        align-items: center;
+                        border-bottom: 1px solid #000;
+                        padding-bottom: 8px;
                         margin-bottom: 8px;
                     }
-                    .info-label {
-                        font-weight: 500;
-                        color: #555;
-                        min-width: 120px;
+                    .logo-space {
+                        margin-right: 15px;
+                        flex-shrink: 0;
                     }
-                    .info-value {
-                        color: #333;
-                        text-align: right;
+                    .logo-svg {
+                        height: 35px;
+                        width: 35px;
+                        color: #dc2626;
                     }
-                    
-                    /* Items Table */
-                    .items-section {
-                        margin: 20px 0;
+                    .company-info {
+                        flex-grow: 1;
                     }
-                    .items-title {
-                        font-size: 16px;
-                        font-weight: bold;
+                    .office-info {
+                        width: 35%;
+                        display: flex;
+                        font-size: 0.65rem;
+                        line-height: 0.85rem;
+                    }
+                    .office-left, .office-right {
+                        padding: 0 5px;
+                    }
+                    .office-left {
+                        border-right: 1px solid #ccc;
+                        width: 55%;
+                    }
+                    .office-right {
+                        width: 45%;
+                        padding-left: 8px;
+                    }
+                    .office-title {
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        margin-bottom: 2px;
+                        color: #c10007;
+                    }
+                    .detail-grid {
+                        display: grid;
+                        grid-template-columns: repeat(4, 1fr);
+                        gap: 8px;
                         margin-bottom: 10px;
-                        padding-bottom: 5px;
-                        border-bottom: 1px solid #ddd;
                     }
-                    .items-table {
+                    .detail-item {
+                        margin-bottom: 3px;
+                    }
+                    .detail-label {
+                        font-weight: 600;
+                        display: inline-block;
+                        width: 80px;
+                    }
+                    .detail-value {
+                        float: right;
+                        text-align: right;
+                        font-weight: 500;
+                    }
+                    .invoice-table {
                         width: 100%;
                         border-collapse: collapse;
-                        margin-bottom: 20px;
+                        margin-top: 2px;
                     }
-                    .items-table th {
-                        background-color: ${isShadowUser ? '#f59e0b' : '#3b82f6'};
-                        color: white;
-                        text-align: left;
-                        padding: 8px;
+                    .invoice-table th {
+                        padding: 3px 4px;
+                        border: 1px solid #000 !important;
                         font-weight: 600;
-                        font-size: 11px;
-                        border: 1px solid ${isShadowUser ? '#d97706' : '#2563eb'};
-                    }
-                    .items-table td {
-                        padding: 6px 8px;
-                        border: 1px solid #ddd;
-                        font-size: 11px;
-                        vertical-align: top;
-                    }
-                    .items-table tr:nth-child(even) {
-                        background-color: #f8f9fa;
-                    }
-                    .items-table tfoot td {
-                        background-color: ${isShadowUser ? '#fef3c7' : '#dbeafe'};
-                        font-weight: bold;
-                        border: 1px solid ${isShadowUser ? '#f59e0b' : '#3b82f6'};
-                    }
-                    
-                    /* Summary Section */
-                    .summary-grid {
-                        display: grid;
-                        grid-template-columns: 1fr 1fr;
-                        gap: 20px;
-                        margin: 20px 0;
-                    }
-                    .summary-card {
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                        padding: 15px;
-                        background: #f9fafb;
-                    }
-                    .summary-title {
-                        font-size: 14px;
-                        font-weight: bold;
-                        margin-bottom: 15px;
-                        padding-bottom: 5px;
-                        border-bottom: 1px solid #ddd;
-                    }
-                    .summary-row {
-                        display: flex;
-                        justify-content: space-between;
-                        margin-bottom: 10px;
-                        padding-bottom: 5px;
-                        border-bottom: 1px dotted #ddd;
-                    }
-                    .total-row {
-                        font-size: 14px;
-                        font-weight: bold;
-                        color: ${isShadowUser ? '#d97706' : '#1d4ed8'};
-                    }
-                    
-                    /* Notes Section */
-                    .notes-section {
-                        border: 1px solid #ddd;
-                        border-radius: 4px;
-                        padding: 15px;
-                        margin-top: 20px;
-                        background: #f9fafb;
-                    }
-                    .notes-title {
-                        font-size: 14px;
-                        font-weight: bold;
-                        margin-bottom: 10px;
-                        color: #444;
-                    }
-                    
-                    /* Footer */
-                    .invoice-footer {
-                        margin-top: 30px;
-                        padding-top: 15px;
-                        border-top: 1px solid #ddd;
                         text-align: center;
-                        color: #666;
+                        background-color: #f0f0f0 !important;
                         font-size: 10px;
                     }
-                    
-                    /* Utilities */
+                    .invoice-table td {
+                        padding: 3px 4px;
+                        border: 1px solid #ccc !important;
+                        vertical-align: top;
+                        font-size: 10px;
+                    }
+                    .table-footer-row {
+                        border: 1px solid #ccc !important;
+                        height: 20px;
+                    }
+                    .signature-grid {
+                        display: grid;
+                        grid-template-columns: 2fr 1fr 1fr 1fr;
+                        gap: 10px;
+                        margin-top: 10px;
+                        padding-top: 8px;
+                        border-top: 1px solid #000;
+                    }
+                    .signature-box {
+                        text-align: center;
+                    }
+                    .signature-title {
+                        font-weight: 700;
+                        border-bottom: 1px dashed #000;
+                        width: 70%;
+                        margin: 0 auto 3px auto;
+                        padding-bottom: 1px;
+                    }
+                    .signature-text {
+                        font-size: 0.6rem;
+                        line-height: 0.8rem;
+                    }
+                    .software-info {
+                        text-align: right;
+                        font-size: 0.55rem;
+                        color: #666;
+                        margin-top: 5px;
+                    }
+                    .text-left { text-align: left; }
+                    .text-center { text-align: center; }
                     .text-right { text-align: right; }
-                    .font-bold { font-weight: bold; }
-                    .border-all { border: 1px solid #ddd; }
-                    .border-top { border-top: 1px solid #ddd; }
-                    .border-bottom { border-bottom: 1px solid #ddd; }
-                    .bg-light { background-color: #f8f9fa; }
-                    .mb-1 { margin-bottom: 5px; }
-                    .mb-2 { margin-bottom: 10px; }
-                    .mb-3 { margin-bottom: 15px; }
-                    .mt-1 { margin-top: 5px; }
-                    .mt-2 { margin-top: 10px; }
-                    .mt-3 { margin-top: 15px; }
-                    .py-1 { padding-top: 5px; padding-bottom: 5px; }
-                    .py-2 { padding-top: 10px; padding-bottom: 10px; }
-                    .py-3 { padding-top: 15px; padding-bottom: 15px; }
-                    .px-1 { padding-left: 5px; padding-right: 5px; }
-                    .px-2 { padding-left: 10px; padding-right: 10px; }
-                    .px-3 { padding-left: 15px; padding-right: 15px; }
+                    .font-bold { font-weight: 700; }
+                    .font-semibold { font-weight: 600; }
+                    .float-right { float: right; }
+                    .w-3 { width: 3%; }
+                    .w-10 { width: 10%; }
+                    .w-30 { width: 30%; }
+                    .w-5 { width: 5%; }
+                    .w-7 { width: 7%; }
+                    .w-8 { width: 8%; }
+                    .w-55 { width: 55%; }
+                    .w-45 { width: 45%; }
+                    .border-r { border-right: 1px solid #ccc; }
+                    .border-b { border-bottom: 1px solid #000; }
+                    .border-t { border-top: 1px solid #000; }
+                    .mb-1 { margin-bottom: 3px; }
+                    .mt-2 { margin-top: 8px; }
+                    .pt-4 { padding-top: 16px; }
+                    .col-span-2 { grid-column: span 2; }
+                    
+                    /* Print-specific styles */
+                    @media print {
+                        body {
+                            margin: 0;
+                            padding: 0;
+                            width: 100%;
+                            height: 100%;
+                        }
+                        .invoice-paper {
+                            padding: 0;
+                            margin: 0;
+                        }
+                        .no-print {
+                            display: none !important;
+                        }
+                    }
                 </style>
             </head>
             <body>
-                <div class="invoice-container">
-                    <!-- Header -->
-                    <div class="invoice-header">
-                        <div class="invoice-title">
-                            PURCHASE INVOICE
-                            ${isShadowUser ? '<span class="shadow-label">SHADOW PURCHASE</span>' : ''}
-                        </div>
-                        <div class="invoice-subtitle">
-                            Invoice #${purchase.purchase_no} | Date: ${formatDate(purchase.purchase_date)}
-                        </div>
-                        <div class="invoice-meta">
-                            <div class="meta-item">
-                                Status: ${purchase.status}
-                                <span class="status-badge status-${purchase.status}">${purchase.status.toUpperCase()}</span>
-                            </div>
-                            <div class="meta-item">
-                                Payment: ${purchase.payment_status}
-                                <span class="status-badge status-${purchase.payment_status}">${purchase.payment_status.toUpperCase()}</span>
-                            </div>
-                        </div>
+                <div class="invoice-paper">
+                    <!-- Authorised Channel Partner Banner -->
+                    <div class="header-red">
+                        Authorised Channel Partner
                     </div>
                     
-                    <!-- Information Grid -->
-                    <div class="info-grid">
-                        <!-- Supplier Info -->
-                        <div class="info-section">
-                            <div class="section-title">SUPPLIER INFORMATION</div>
-                            <div class="info-row">
-                                <span class="info-label">Name:</span>
-                                <span class="info-value">${purchase.supplier?.name || 'N/A'}</span>
-                            </div>
-                            <div class="info-row">
-                                <span class="info-label">Company:</span>
-                                <span class="info-value">${purchase.supplier?.company || 'N/A'}</span>
-                            </div>
-                            ${purchase.supplier?.phone ? `
-                            <div class="info-row">
-                                <span class="info-label">Phone:</span>
-                                <span class="info-value">${purchase.supplier.phone}</span>
-                            </div>` : ''}
-                            ${purchase.supplier?.email ? `
-                            <div class="info-row">
-                                <span class="info-label">Email:</span>
-                                <span class="info-value">${purchase.supplier.email}</span>
-                            </div>` : ''}
+                    <!-- Company Header -->
+                    <div class="flex-container">
+                        <div class="logo-space">
+                            <svg class="logo-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
                         </div>
                         
-                        <!-- Warehouse Info -->
-                        <div class="info-section">
-                            <div class="section-title">WAREHOUSE INFORMATION</div>
-                            <div class="info-row">
-                                <span class="info-label">Name:</span>
-                                <span class="info-value">${purchase.warehouse?.name || 'N/A'}</span>
+                        <div class="company-info">
+                            <h1 class="company-name">
+                                ${getCompanyName()}
+                            </h1>
+                            <p class="text-xss" style="font-size: 0.65rem; line-height: 0.9rem; color: #666;">Quality Auto Parts Supplier</p>
+                        </div>
+
+                        <div class="office-info">
+                            <div class="office-left">
+                                <p class="office-title">Head Office</p>
+                                <p>${getSupplierAddress()}</p>
+                                <p class="font-semibold">PH: ${getSupplierPhone()}</p>
+                                <p>Email: ${getSupplierEmail()}</p>
                             </div>
-                            <div class="info-row">
-                                <span class="info-label">Code:</span>
-                                <span class="info-value">${purchase.warehouse?.code || 'N/A'}</span>
+                            <div class="office-right">
+                                <p class="office-title">Dhaka Office</p>
+                                <p>358, Babor Road, Shyamoli, Dhaka</p>
+                                <p class="font-semibold">PH: 02-58133544</p>
                             </div>
-                            ${purchase.warehouse?.address ? `
-                            <div class="info-row">
-                                <span class="info-label">Address:</span>
-                                <span class="info-value">${purchase.warehouse.address}</span>
-                            </div>` : ''}
                         </div>
                     </div>
                     
-                    <!-- Items Table -->
-                    <div class="items-section">
-                        <div class="items-title">
-                            PURCHASE ITEMS (${purchase.items?.length || 0} items, ${calculateTotalQuantity()} units)
+                    <!-- Invoice Title -->
+                    <div style="text-align: center; padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid #000;">
+                        <h1 style="font-weight: 600; font-size: 14px;">INVOICE</h1>
+                    </div>
+                    
+                    <!-- Invoice Details Grid - 4 columns -->
+                    <div class="detail-grid">
+                        <!-- Column 1 -->
+                        <div>
+                            <div class="detail-item">
+                                <span class="detail-label">Bill No.</span>
+                                <span class="detail-value">${purchase.purchase_no}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Delivery Date</span>
+                                <span class="detail-value">${formatDate(purchase.purchase_date)}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Bill To</span>
+                                <span class="detail-value">${purchase.supplier?.company || purchase.supplier?.name || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Address</span>
+                                <span class="detail-value">${getSupplierAddress()}</span>
+                            </div>
                         </div>
-                        <table class="items-table">
-                            <thead>
+                        
+                        <!-- Column 2 -->
+                        <div>
+                            <div class="detail-item">
+                                <span class="detail-label">Invoice No.</span>
+                                <span class="detail-value">${purchase.purchase_no}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Project</span>
+                                <span class="detail-value">${getCompanyName()}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Delivered By</span>
+                                <span class="detail-value">${purchase.delivered_by || 'HASIBUL'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Column 3 -->
+                        <div>
+                            <div class="detail-item">
+                                <span class="detail-label">Ref No.</span>
+                                <span class="detail-value">${purchase.reference_no || purchase.id}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Served By</span>
+                                <span class="detail-value">${purchase.created_by?.name || auth.user?.name || 'HASIB'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Terms</span>
+                                <span class="detail-value">${purchase.payment_status === 'paid' ? 'Cash' : 'Credit'}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Column 4 -->
+                        <div>
+                            <div class="detail-item">
+                                <span class="detail-label">Warehouse</span>
+                                <span class="detail-value">${purchase.warehouse?.name || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Code</span>
+                                <span class="detail-value">${purchase.warehouse?.code || 'N/A'}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Status</span>
+                                <span class="detail-value">${purchase.status?.toUpperCase() || 'PENDING'}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Table -->
+                    <table class="invoice-table">
+                        <thead>
+                            <tr>
+                                <th class="w-3 text-center">SL</th>
+                                <th class="w-10 text-center">Part No.</th>
+                                <th class="w-30 text-left">Description</th>
+                                <th class="w-10 text-center">Model</th>
+                                <th class="w-10 text-center">Brand</th>
+                                <th class="w-5 text-center">Qty.</th>
+                                <th class="w-10 text-center">Pcs.</th>
+                                <th class="w-7 text-center">Price</th>
+                                <th class="w-7 text-center">Trades Add (5%)</th>
+                                <th class="w-8 text-center">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${purchase.items?.map((item, index) => `
                                 <tr>
-                                    <th>#</th>
-                                    <th>Product</th>
-                                    <th>Brand</th>
-                                    <th>Variant</th>
-                                    <th class="text-right">Qty</th>
-                                    <th class="text-right">Unit Price</th>
-                                    <th class="text-right">Sale Price</th>
-                                    <th class="text-right">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${purchase.items?.map((item, index) => `
-                                <tr>
-                                    <td>${index + 1}</td>
-                                    <td>
-                                        <div>${item.product?.name || 'N/A'}</div>
-                                        <small>#${item.product_id}</small>
-                                    </td>
-                                    <td>${getBrandName(item.variant)}</td>
-                                    <td>
-                                        <div>${getVariantDisplayName(item.variant)}</div>
-                                    </td>
-                                    <td class="text-right">${item.quantity}</td>
+                                    <td class="text-center">${index + 1}</td>
+                                    <td class="text-center">${item.product?.sku || item.product_id || 'N/A'}</td>
+                                    <td class="text-left">${item.product?.name || 'N/A'}</td>
+                                    <td class="text-center">${getVariantDisplayName(item.variant)}</td>
+                                    <td class="text-center">${getBrandName(item.variant)}</td>
+                                    <td class="text-center">${item.quantity}</td>
+                                    <td class="text-center">${formatCurrency(getPrice(item, 'unit_price'))}</td>
                                     <td class="text-right">${formatCurrency(getPrice(item, 'unit_price'))}</td>
-                                    <td class="text-right">${formatCurrency(getPrice(item, 'sale_price'))}</td>
-                                    <td class="text-right font-bold" style="color: ${isShadowUser ? '#d97706' : '#1d4ed8'}">
+                                    <td class="text-right">0.00</td>
+                                    <td class="text-right" style="${isShadowUser ? 'color: #d97706;' : 'color: #1d4ed8;'} font-weight: bold;">
                                         ${formatCurrency(getPrice(item, 'total_price'))}
                                     </td>
-                                </tr>`).join('')}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colspan="4" class="text-right font-bold">TOTALS:</td>
-                                    <td class="text-right font-bold">${calculateTotalQuantity()}</td>
-                                    <td></td>
-                                    <td></td>
-                                    <td class="text-right font-bold" style="font-size: 12px; color: ${isShadowUser ? '#d97706' : '#1d4ed8'}">
-                                        ${formatCurrency(getPurchaseAmount('grand_total'))}
-                                    </td>
                                 </tr>
-                            </tfoot>
-                        </table>
+                            `).join('')}
+                            <tr class="table-footer-row">
+                                <td colspan="10"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <!-- Summary Section -->
+                    <div style="margin-top: 10px; padding: 8px; background: #f9f9f9; border: 1px solid #ccc; font-size: 10px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                            <span>Total Items: <strong>${purchase.items?.length || 0}</strong></span>
+                            <span>Total Quantity: <strong>${totalQuantity}</strong></span>
+                            <span>Grand Total: <strong style="${isShadowUser ? 'color: #d97706;' : 'color: #1d4ed8;'}">${formatCurrency(grandTotal)}</strong></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 4px; padding-top: 4px; border-top: 1px solid #ccc;">
+                            <span style="color: #16a34a;">Paid: <strong>${formatCurrency(paidAmount)}</strong></span>
+                            <span style="color: #ea580c;">Due: <strong>${formatCurrency(dueAmount)}</strong></span>
+                            <span>Status: <strong style="color: ${purchase.payment_status === 'paid' ? '#16a34a' : purchase.payment_status === 'partial' ? '#d97706' : '#dc2626'}">
+                                ${purchase.payment_status?.toUpperCase() || 'UNPAID'}
+                            </strong></span>
+                        </div>
                     </div>
                     
-                    <!-- Summary Grid -->
-                    <div class="summary-grid">
-                        <!-- Amount Summary -->
-                        <div class="summary-card">
-                            <div class="summary-title">AMOUNT SUMMARY</div>
-                            <div class="summary-row">
-                                <span>Total Amount:</span>
-                                <span class="font-bold" style="color: ${isShadowUser ? '#d97706' : '#1d4ed8'}">
-                                    ${formatCurrency(getPurchaseAmount('grand_total'))}
-                                </span>
-                            </div>
-                            <div class="summary-row" style="color: #10b981;">
-                                <span>Paid Amount:</span>
-                                <span class="font-bold">${formatCurrency(getPurchaseAmount('paid_amount'))}</span>
-                            </div>
-                            <div class="summary-row total-row" style="color: ${(getPurchaseAmount('grand_total') - getPurchaseAmount('paid_amount')) > 0 ? '#f59e0b' : '#10b981'};">
-                                <span>Due Amount:</span>
-                                <span class="font-bold">
-                                    ${formatCurrency(getPurchaseAmount('grand_total') - getPurchaseAmount('paid_amount'))}
-                                </span>
-                            </div>
+                    <!-- Signature Section -->
+                    <div class="signature-grid">
+                        <div class="signature-box text-left">
+                            <p class="signature-title">Checked By</p>
+                            <p class="signature-text">(Name, seal, time) checked and verified the consignment. (All materials checked, verified, and sealed as per company policy.)</p>
                         </div>
-                        
-                        <!-- Document Details -->
-                        <div class="summary-card">
-                            <div class="summary-title">DOCUMENT DETAILS</div>
-                            <div class="summary-row">
-                                <span>Created Date:</span>
-                                <span>${formatDate(purchase.created_at)}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span>Last Updated:</span>
-                                <span>${formatDate(purchase.updated_at)}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span>Total Items:</span>
-                                <span>${purchase.items?.length || 0}</span>
-                            </div>
-                            <div class="summary-row">
-                                <span>Total Quantity:</span>
-                                <span>${calculateTotalQuantity()}</span>
+                        <div class="signature-box">
+                            <p class="signature-title">Authorised</p>
+                            <p class="signature-text">(Signature & Seal)</p>
+                        </div>
+                        <div class="signature-box">
+                            <p class="signature-title">Received</p>
+                            <p class="signature-text">(Signature & Seal)</p>
+                        </div>
+                        <div class="signature-box">
+                            <p class="signature-title">Delivery By</p>
+                            <div class="software-info">
+                                <p>Software by TETRA SOFT</p>
+                                <p>Phone 01911-387001</p>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Notes Section -->
+                    <!-- Notes Section (if any) -->
                     ${purchase.notes ? `
-                    <div class="notes-section">
-                        <div class="notes-title">NOTES</div>
-                        <p>${purchase.notes.replace(/\n/g, '<br>')}</p>
-                    </div>` : ''}
-                    
-                    <!-- Footer -->
-                    <div class="invoice-footer">
-                        <p>This document is computer generated and does not require a signature.</p>
-                        <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
-                    </div>
+                        <div style="margin-top: 10px; padding: 4px; background: #fef3c7; border: 1px solid #fbbf24; font-size: 9px;">
+                            <strong>Notes:</strong> ${purchase.notes}
+                        </div>
+                    ` : ''}
                 </div>
+                
+                <script>
+                    window.onload = function() {
+                        setTimeout(() => {
+                            window.print();
+                            setTimeout(() => {
+                                window.close();
+                            }, 100);
+                        }, 500);
+                    };
+                </script>
             </body>
             </html>
         `;
         
-        // Create a new window for printing
-        const printWindow = window.open('', '_blank', 'width=800,height=600');
-        printWindow.document.write(printContent.innerHTML);
+        const printWindow = window.open('', '_blank', 'width=900,height=600');
+        
+        // Write the complete HTML document
+        printWindow.document.open();
+        printWindow.document.write(printContent);
         printWindow.document.close();
         
-        // Add print event listener
-        printWindow.onload = function() {
-            setTimeout(() => {
-                printWindow.print();
-                printWindow.close();
-                setIsPrinting(false);
-            }, 500);
+        // Handle print completion
+        printWindow.onbeforeunload = () => {
+            setIsPrinting(false);
         };
+        
+        // Fallback in case print window doesn't open properly
+        setTimeout(() => {
+            if (printWindow.closed || !printWindow.document) {
+                setIsPrinting(false);
+            }
+        }, 3000);
     };
 
     const handleDownloadPDF = () => {
-        handlePrint(); 
-    };
-
-    const getPaymentStatusColor = (status) => {
-        switch (status) {
-            case 'paid': return 'success';
-            case 'partial': return 'warning';
-            case 'unpaid': return 'error';
-            default: return 'neutral';
-        }
+        // For now, we'll use print as PDF
+        handlePrint();
     };
 
     return (
-        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
-            {/* Header */}
-            <PageHeader
-                title={t('purchase.purchase_details_title', 'Purchase Details')}
-                subtitle={`${t('purchase.purchase_number_label', 'Purchase #')}${purchase.purchase_no}`}
-            >
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="flex gap-2">
+        <div className="bg-gray-50 min-h-screen p-4">
+            {/* Header Actions - Hidden during print */}
+            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm no-print">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-800">Purchase Invoice</h1>
+                        <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+                            <span>Invoice #{purchase.purchase_no}</span>
+                            <ChevronRight size={12} />
+                            <span>{formatDate(purchase.purchase_date)}</span>
+                            {isShadowUser && (
+                                <>
+                                    <ChevronRight size={12} />
+                                    <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded">Shadow Purchase</span>
+                                </>
+                            )}
+                        </div>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2">
                         <button
                             onClick={() => router.visit(route("purchase.list"))}
-                            className="btn btn-sm btn-ghost"
+                            className="btn btn-sm btn-ghost border border-gray-300"
                         >
-                            <ArrowLeft size={15} /> {t('purchase.back_to_list', 'Back to List')}
+                            <ArrowLeft size={15} className="mr-1" />
+                            Back to List
                         </button>
                         <button
                             onClick={handlePrint}
-                            className="btn btn-sm btn-outline"
+                            className="btn btn-sm bg-red-700 hover:bg-red-800 text-white"
                             disabled={isPrinting}
                         >
-                            <Printer size={15} /> {t('purchase.print', 'Print')}
+                            <Printer size={15} className="mr-1" />
+                            Print Invoice
                             {isPrinting && <span className="loading loading-spinner loading-xs ml-1"></span>}
                         </button>
                         <button
                             onClick={handleDownloadPDF}
-                            className="btn btn-sm btn-outline btn-success"
+                            className="btn btn-sm bg-gray-800 hover:bg-gray-900 text-white"
                             disabled={isPrinting}
                         >
-                            <Download size={15} /> {t('purchase.download_pdf', 'Download PDF')}
+                            <Download size={15} className="mr-1" />
+                            Download PDF
                             {isPrinting && <span className="loading loading-spinner loading-xs ml-1"></span>}
                         </button>
-                
-                    </div>
-                </div>
-            </PageHeader>
-
-            {/* Main Content - This will be hidden during print */}
-            <div className="print:hidden">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                    {/* Purchase Information */}
-                    <div className="lg:col-span-2 space-y-6">
-                        {/* Basic Info Cards */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="card bg-base-100 shadow-sm border">
-                                <div className="card-body p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className={`p-2 rounded-box ${isShadowUser ? 'bg-warning/10' : 'bg-primary/10'}`}>
-                                            <Hash size={20} className={isShadowUser ? 'text-warning' : 'text-primary'} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold text-lg"> { purchase.purchase_no}</h3>
-                                            <p className="text-sm text-gray-600">
-                                                {t('purchase.purchase_number_label', 'Purchase Number')}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    {isShadowUser && (
-                                        <div className="mt-2">
-                                            <span className="badge badge-warning badge-sm">
-                                                <Shield size={12} className="mr-1" />
-                                                {t('purchase.shadow_purchase', 'Shadow Purchase')}
-                                            </span>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div className="card bg-base-100 shadow-sm border">
-                                <div className="card-body p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-info/10 p-2 rounded-box">
-                                            <Calendar size={20} className="text-info" />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-bold">{formatDate(purchase.purchase_date)}</h3>
-                                            <p className="text-sm text-gray-600">{t('purchase.purchase_date_label', 'Purchase Date')}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Supplier & Warehouse */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="card bg-base-100 shadow-sm border">
-                            <div className="card-body p-4">
-                                <h3 className="font-bold mb-3 flex items-center gap-2">
-                                    <User size={16} /> {t('purchase.supplier_information', 'Supplier Information')}
-                                </h3>
-                                <div className="space-y-2">
-                                    <div>
-                                        <label className="text-sm text-gray-600">{t('purchase.name', 'Name')}</label>
-                                        <p className="font-medium">{purchase.supplier?.name || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm text-gray-600">{t('purchase.company', 'Company')}</label>
-                                        <p className="font-medium">{purchase.supplier?.company || 'N/A'}</p>
-                                    </div>
-                                    {purchase.supplier?.phone && (
-                                        <div>
-                                            <label className="text-sm text-gray-600">{t('purchase.phone', 'Phone')}</label>
-                                            <p className="font-medium">{purchase.supplier.phone}</p>
-                                        </div>
-                                    )}
-                                    {purchase.supplier?.email && (
-                                        <div>
-                                            <label className="text-sm text-gray-600">{t('purchase.email', 'Email')}</label>
-                                            <p className="font-medium">{purchase.supplier.email}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="card bg-base-100 shadow-sm border">
-                            <div className="card-body p-4">
-                                <h3 className="font-bold mb-3 flex items-center gap-2">
-                                    <Warehouse size={16} /> {t('purchase.warehouse_information', 'Warehouse Information')}
-                                </h3>
-                                <div className="space-y-2">
-                                    <div>
-                                        <label className="text-sm text-gray-600">{t('purchase.name', 'Name')}</label>
-                                        <p className="font-medium">{purchase.warehouse?.name || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <label className="text-sm text-gray-600">{t('purchase.code', 'Code')}</label>
-                                        <p className="font-medium">{purchase.warehouse?.code || 'N/A'}</p>
-                                    </div>
-                                    {purchase.warehouse?.address && (
-                                        <div>
-                                            <label className="text-sm text-gray-600">{t('purchase.address', 'Address')}</label>
-                                            <p className="font-medium text-sm">{purchase.warehouse.address}</p>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Status & Summary */}
-                <div className="space-y-6">
-                    {/* Status Card */}
-                    <div className="card bg-base-100 shadow-sm border">
-                        <div className="card-body p-4">
-                            <h3 className="font-bold mb-3">{t('purchase.purchase_status', 'Purchase Status')}</h3>
-                            <div className="text-center">
-                                <span className={`badge badge-lg badge-${purchase.status === 'completed' ? 'success' : 'warning'}`}>
-                                    {t(`purchase.${purchase.status}`, purchase.status?.toUpperCase() || 'PENDING')}
-                                </span>
-                            </div>
-                            <div className="divider my-3"></div>
-                            <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                    <span>{t('purchase.payment_status', 'Payment Status')}:</span>
-                                    <span className={`badge badge-${getPaymentStatusColor(purchase.payment_status)}`}>
-                                        {t(`purchase.${purchase.payment_status}`, purchase.payment_status)}
-                                    </span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>{t('purchase.created', 'Created')}:</span>
-                                    <span>{formatDate(purchase.created_at)}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>{t('purchase.last_updated', 'Last Updated')}:</span>
-                                    <span>{formatDate(purchase.updated_at)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Amount Summary */}
-                    <div className="card bg-base-100 shadow-sm border">
-                        <div className="card-body p-4">
-                            <h3 className="font-bold mb-3 flex items-center gap-2">
-                                <DollarSign size={16} /> 
-                                {t('purchase.amount_summary', 'Amount Summary')}
-                            </h3>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <span>{t('purchase.total_amount', 'Total Amount')}:</span>
-                                    <span className={`font-bold text-lg ${isShadowUser ? 'text-warning' : 'text-primary'}`}>
-                                        {formatCurrency(getPurchaseAmount('grand_total'))}
-                                    </span>
-                                </div>
-                                
-                                <div className="flex justify-between items-center text-green-600">
-                                    <span>{t('purchase.paid_amount', 'Paid Amount')}:</span>
-                                    <span className="font-bold">
-                                        {formatCurrency(getPurchaseAmount('paid_amount'))}
-                                    </span>
-                                </div>
-                                
-                                <div className={`flex justify-between items-center ${getPurchaseAmount('due_amount') > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                                    <span>{t('purchase.due_amount', 'Due Amount')}:</span>
-                                    <span className="font-bold">
-                                        {formatCurrency(getPurchaseAmount('grand_total' ) - getPurchaseAmount('paid_amount'))}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Items Table */}
-            <div className="card bg-base-100 shadow-sm border mt-6">
-                <div className="card-body p-0">
-                    <div className="p-4 border-b">
-                        <h3 className="font-bold flex items-center gap-2">
-                            <Package size={16} /> 
-                            {t('purchase.purchase_items', 'Purchase Items')} ({purchase.items?.length || 0})
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                            {t('purchase.total_units_purchased', 'Total units purchased')} {calculateTotalQuantity()}
-                        </p>
+            {/* Invoice Design for Web View */}
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-300 invoice-container">
+                {/* Authorised Channel Partner Banner */}
+                <div className="mb-6">
+                    <div className="bg-red-700 text-white py-1 px-4 text-xs font-bold inline-block">
+                        Authorised Channel Partner
+                    </div>
+                </div>
+                
+                {/* Company Header */}
+                <div className="flex items-center pb-4 mb-4">
+                    <div className="mr-4 flex-shrink-0">
+                        <svg className="h-10 w-10 text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
                     </div>
                     
-                    <div className="overflow-x-auto">
-                        <table className="table table-auto w-full">
-                            <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
-                                <tr>
-                                    <th className="bg-opacity-20">#</th>
-                                    <th>{t('purchase.product', 'Product')}</th>
-                                    <th>{t('purchase.brand', 'Brand')}</th>
-                                    <th>{t('purchase.variant', 'Variant')}</th>
-                                    <th className="text-right">{t('purchase.quantity', 'Quantity')}</th>
-                                    <th className="text-right">
-                                        {t('purchase.unit_price', 'Unit Price')}
-                                    </th>
-                                    <th className="text-right">
-                                        {t('purchase.sale_price', 'Sale Price')}
-                                    </th>
-                                    <th className="text-right">
-                                        {t('purchase.total_price', 'Total Price')}
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {purchase.items?.map((item, index) => (
-                                    <tr key={item.id} className="hover:bg-base-100">
-                                        <th className="bg-base-200">{index + 1}</th>
-                                        <td>
-                                            <div>
-                                                <div className="font-medium">
-                                                    {item.product?.name || 'N/A'}
-                                                </div>
-                                                <div className="text-xs text-gray-500">
-                                                    #{item.product_id}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="text-sm">
-                                                {getBrandName(item.variant)}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <div className="text-sm">
+                    <div className="flex-grow">
+                        <h1 className="text-2xl font-extrabold tracking-tight">
+                            {getCompanyName()}
+                        </h1>
+                        <p className="text-xs text-gray-600">Quality Auto Parts Supplier</p>
+                    </div>
+
+                    <div className="w-1/3 flex text-xs text-gray-700">
+                        <div className="w-55 pr-4 border-r border-gray-300">
+                            <p className="font-bold uppercase text-xs text-[#c10007]">Head Office</p>
+                            <p className="text-xs leading-tight mt-1">{getSupplierAddress()}</p>
+                            <p className="font-semibold text-xs mt-1">PH: {getSupplierPhone()}</p>
+                            <p className="text-xs mt-1">Email: {getSupplierEmail()}</p>
+                        </div>
+                        <div className="w-45 pl-4">
+                            <p className="font-bold uppercase text-xs text-[#c10007]">Dhaka Office</p>
+                            <p className="text-xs leading-tight mt-1">358, Babor Road, Shyamoli, Dhaka</p>
+                            <p className="font-semibold text-xs mt-1">PH: 02-58133544</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-center pb-4 mb-4">
+                    <div className="border-b border-black">
+                        <h1 className="font-semibold">
+                        Invoice
+                        </h1>
+                    </div>
+                </div>
+                
+                {/* Invoice Details Grid - 4 columns */}
+                <div className="grid grid-cols-4 gap-4 text-xs mb-6">
+                    {/* Column 1 */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Bill No.</span>
+                            <span className="font-mono">{purchase.purchase_no}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Delivery Date</span>
+                            <span>{formatDate(purchase.purchase_date)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Bill To</span>
+                            <span className="text-right">{purchase.supplier?.company || purchase.supplier?.name || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Address</span>
+                            <span className="text-right text-xs">{getSupplierAddress()}</span>
+                        </div>
+                    </div>
+                    
+                    {/* Column 2 */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Invoice No.</span>
+                            <span className="font-mono">{purchase.purchase_no}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Project</span>
+                            <span>{getCompanyName()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Delivered By</span>
+                            <span>{purchase.delivered_by || 'HASIBUL'}</span>
+                        </div>
+                    </div>
+                    
+                    {/* Column 3 */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Ref No.</span>
+                            <span>{purchase.reference_no || purchase.id}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Served By</span>
+                            <span>{purchase.created_by?.name || auth.user?.name || 'HASIB'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Terms</span>
+                            <span className={`px-2 py-0.5 rounded text-xs ${purchase.payment_status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {purchase.payment_status === 'paid' ? 'Cash' : 'Credit'}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {/* Column 4 */}
+                    <div className="space-y-1">
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Warehouse</span>
+                            <span>{purchase.warehouse?.name || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Code</span>
+                            <span>{purchase.warehouse?.code || 'N/A'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="font-semibold">Status</span>
+                            <span className={`px-2 py-0.5 rounded text-xs ${purchase.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                {purchase.status?.toUpperCase() || 'PENDING'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Items Table */}
+                <div className="mb-8">
+                    <table className="w-full text-xs border border-gray-300">
+                        <thead>
+                            <tr>
+                                <th className="w-[3%] p-1 border border-gray-300 text-center font-semibold">SL</th>
+                                <th className="w-[10%] p-1 border border-gray-300 text-center font-semibold">Part No.</th>
+                                <th className="w-[30%] p-1 border border-gray-300 text-left font-semibold">Description</th>
+                                <th className="w-[10%] p-1 border border-gray-300 text-center font-semibold">Model</th>
+                                <th className="w-[10%] p-1 border border-gray-300 text-center font-semibold">Brand</th>
+                                <th className="w-[5%] p-1 border border-gray-300 text-center font-semibold">Qty.</th>
+                                <th className="w-[10%] p-1 border border-gray-300 text-center font-semibold">Pcs.</th>
+                                <th className="w-[7%] p-1 border border-gray-300 text-center font-semibold">Price</th>
+                                <th className="w-[7%] p-1 border border-gray-300 text-center font-semibold">Trades Add (5%)</th>
+                                <th className="w-[8%] p-1 border border-gray-300 text-center font-semibold">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {purchase.items?.map((item, index) => (
+                                <tr key={item.id} className="hover:bg-gray-50">
+                                    <td className="p-1 border border-gray-300 text-center">{index + 1}</td>
+                                    <td className="p-1 border border-gray-300 text-center font-mono">
+                                        {item.product?.sku || item.product_id || 'N/A'}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-left">
+                                        <div className="font-medium">{item.product?.name || 'N/A'}</div>
+                                        {item.variant && (
+                                            <div className="text-xs text-gray-500 mt-0.5">
                                                 {getVariantDisplayName(item.variant)}
                                             </div>
-                                        </td>
-                                        <td className="text-right font-mono">{item.quantity}</td>
-                                        <td className="text-right font-mono">
-                                            {formatCurrency(getPrice(item, 'unit_price'))}
-                                        </td>
-                                        <td className="text-right font-mono">
-                                            {formatCurrency(getPrice(item, 'sale_price'))}
-                                        </td>
-                                        <td className={`text-right font-mono font-bold ${isShadowUser ? 'text-warning' : 'text-primary'}`}>
-                                            {formatCurrency(getPrice(item, 'total_price'))}
-                                        </td>
-                                    </tr>
-                                ))}
-                                {(!purchase.items || purchase.items.length === 0) && (
-                                    <tr>
-                                        <td colSpan="7" className="text-center py-8 text-gray-500">
-                                            {t('purchase.no_items_found', 'No items found in this purchase')}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                            <tfoot className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
-                                <tr>
-                                    <th colSpan="3" className="text-right bg-opacity-20">{t('purchase.totals', 'Totals')}:</th>
-                                    <th className="text-right bg-opacity-20 font-bold">{calculateTotalQuantity()}</th>
-                                    <th className="text-right bg-opacity-20"></th>
-                                    <th className="text-right bg-opacity-20"></th>
-                                    <th className="text-right bg-opacity-20 font-bold">
-                                        {formatCurrency(getPurchaseAmount('grand_total'))}
-                                    </th>
+                                        )}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-center">
+                                        {getVariantDisplayName(item.variant)}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-center">
+                                        {getBrandName(item.variant)}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-center font-bold">
+                                        {item.quantity}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-center font-mono">
+                                        {formatCurrency(getPrice(item, 'unit_price'))}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-right font-mono">
+                                        {formatCurrency(getPrice(item, 'unit_price'))}
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-right font-mono">
+                                        0.00
+                                    </td>
+                                    <td className="p-1 border border-gray-300 text-right font-mono font-bold" style={{ color: isShadowUser ? '#d97706' : '#1d4ed8' }}>
+                                        {formatCurrency(getPrice(item, 'total_price'))}
+                                    </td>
                                 </tr>
-                            </tfoot>
-                        </table>
+                            ))}
+                            {(!purchase.items || purchase.items.length === 0) && (
+                                <tr>
+                                    <td colSpan="10" className="p-4 text-center text-gray-500">
+                                        No items found in this purchase
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colSpan="10" className="h-8 border border-gray-300"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                {/* Amount Summary */}
+                <div className="mt-4 p-4 bg-gray-50 border border-gray-300 rounded mb-6">
+                    <div className="grid grid-cols-3 gap-4">
+                        <div>
+                            <p className="text-sm font-semibold text-gray-700 mb-1">Total Items</p>
+                            <p className="text-lg font-bold">{purchase.items?.length || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-700 mb-1">Total Quantity</p>
+                            <p className="text-lg font-bold">{calculateTotalQuantity()}</p>
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold text-gray-700 mb-1">Total Amount</p>
+                            <p className={`text-lg font-bold ${isShadowUser ? 'text-yellow-600' : 'text-blue-600'}`}>
+                                {formatCurrency(getPurchaseAmount('grand_total'))}
+                            </p>
+                        </div>
+                        <div className="col-span-3 mt-2 pt-2 border-t border-gray-300">
+                            <div className="grid grid-cols-3 gap-4">
+                                <div className="text-green-600">
+                                    <p className="text-sm font-semibold mb-1">Paid Amount</p>
+                                    <p className="text-lg font-bold">{formatCurrency(getPurchaseAmount('paid_amount'))}</p>
+                                </div>
+                                <div className="text-orange-600">
+                                    <p className="text-sm font-semibold mb-1">Due Amount</p>
+                                    <p className="text-lg font-bold">{formatCurrency(getPurchaseAmount('grand_total') - getPurchaseAmount('paid_amount'))}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-gray-700 mb-1">Payment Status</p>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${purchase.payment_status === 'paid' ? 'bg-green-100 text-green-800' : purchase.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
+                                        {purchase.payment_status?.toUpperCase() || 'UNPAID'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+
+                {/* Signature Section */}
+                <div className="grid grid-cols-4 gap-4 text-xs border-t border-black pt-4">
+                    <div className="col-span-2">
+                        <p className="font-bold border-b border-dashed border-black w-2/3 text-center mb-2">Checked By</p>
+                        <p className="text-xs text-gray-700 leading-tight">
+                            (Name, seal, time) checked and verified the consignment. (All materials checked, verified, and sealed as per company policy.)
+                        </p>
+                    </div>
+                    <div className="text-center">
+                        <p className="font-bold border-b border-dashed border-black w-2/3 mx-auto mb-2">Authorised</p>
+                        <p className="text-xs text-gray-700">(Signature & Seal)</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="font-bold border-b border-dashed border-black w-2/3 mx-auto mb-2">Received</p>
+                        <p className="text-xs text-gray-700">(Signature & Seal)</p>
+                    </div>
+                    <div className="col-span-4 text-right">
+                        <div className="inline-block text-left">
+                            <p className="font-bold border-b border-dashed border-black mb-2">Delivery By</p>
+                            <p className="text-[0.6rem] text-gray-600">Software by TETRA SOFT</p>
+                            <p className="text-[0.6rem] text-gray-600">Phone 01911-387001</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Notes Section */}
+                {purchase.notes && (
+                    <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
+                        <h4 className="font-bold text-sm mb-2">Additional Notes</h4>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{purchase.notes}</p>
+                    </div>
+                )}
             </div>
 
-            {/* Notes */}
-            {purchase.notes && (
-                <div className="card bg-base-100 shadow-sm border mt-6">
-                    <div className="card-body p-4">
-                        <h3 className="font-bold mb-3 flex items-center gap-2">
-                            <FileText size={16} /> {t('purchase.notes', 'Notes')}
-                        </h3>
-                        <p className="text-gray-700 whitespace-pre-wrap">{purchase.notes}</p>
-                    </div>
-                </div>
-            )}
-        </div>
-
-            {/* Print Styles */}
+            {/* Global Print Styles */}
             <style>{`
                 @media print {
                     body * {
                         visibility: hidden;
                     }
-                    
-                    .print\\:hidden {
-                        display: none !important;
-                    }
-                    
-                    .btn, .card, .table {
-                        display: none !important;
-                    }
-                    
-                    /* Only show print content */
-                    .print-content, .print-content * {
+                    .invoice-container,
+                    .invoice-container * {
                         visibility: visible;
                     }
-                    
-                    .print-content {
+                    .invoice-container {
                         position: absolute;
                         left: 0;
                         top: 0;
                         width: 100%;
+                        padding: 0;
+                        margin: 0;
+                        box-shadow: none;
+                        border: none;
+                        background: white;
                     }
-                }
-                
-                .loading-spinner {
-                    animation: spin 1s linear infinite;
-                }
-                
-                @keyframes spin {
-                    from { transform: rotate(0deg); }
-                    to { transform: rotate(360deg); }
+                    .no-print {
+                        display: none !important;
+                    }
+                    @page {
+                        margin: 0.2in;
+                        size: A4;
+                    }
                 }
             `}</style>
         </div>
