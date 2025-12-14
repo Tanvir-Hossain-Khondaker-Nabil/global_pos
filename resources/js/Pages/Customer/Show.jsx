@@ -288,21 +288,19 @@ const Show = () => {
                                                     {formatCurrency(sale.due_amount)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${sale.due_amount === 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                        {sale.due_amount === 0 ? 'Paid' : 'Due'}
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${sale.due_amount == 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {sale.due_amount == 0 ? 'Paid' : 'Due'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    <div className="flex gap-2">
+                                                    <div className="text-center gap-2">
                                                         <Link
                                                             href={route('sales.show', sale.id)}
                                                             className="text-blue-600 hover:text-blue-900"
                                                         >
                                                             View
                                                         </Link>
-                                                        <button className="text-gray-400 hover:text-gray-600">
-                                                            <Printer className="w-4 h-4" />
-                                                        </button>
+                                                  
                                                     </div>
                                                 </td>
                                             </tr>
@@ -354,6 +352,8 @@ const Show = () => {
                                                 <thead>
                                                     <tr className="bg-gray-100">
                                                         <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                                                        <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase">Brand</th>
+                                                        <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase">Varient</th>
                                                         <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                                                         <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
                                                         <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
@@ -365,11 +365,49 @@ const Show = () => {
                                                             <td className="py-3 px-4">
                                                                 <div>
                                                                     <p className="font-medium">{item.product?.name || 'N/A'}</p>
-                                                                    {item.product?.sku && (
-                                                                        <p className="text-xs text-gray-500">SKU: {item.product.sku}</p>
+                                                                    {item.product?.product_no && (
+                                                                        <p className="text-xs text-gray-500">SKU: {item.product.product_no}</p>
                                                                     )}
                                                                 </div>
                                                             </td>
+                                                            <td className='text-left p-2 print:p-1'>
+                                                                {(() => {
+                                                                        const variant = item.variant;
+                                                                        let attrsText = '';
+
+                                                                        if (variant.attribute_values) {
+                                                                        if (typeof variant.attribute_values === 'object') {
+                                                                            attrsText = Object.entries(variant.attribute_values)
+                                                                            .map(([key, value]) => `${key}`)
+                                                                            .join(', ');
+                                                                        } else {
+                                                                            attrsText = variant.attribute_values;
+                                                                        }
+                                                                        }
+
+                                                                        return <>{attrsText || 'N/A'}</>;
+                                                                    })()}<br />
+                                                            </td>
+                                                            
+                                                            <td className='text-left p-2 print:p-1'>
+                                                                {(() => {
+                                                                        const variant = item.variant;
+                                                                        let attrsText = '';
+
+                                                                        if (variant.attribute_values) {
+                                                                        if (typeof variant.attribute_values === 'object') {
+                                                                            attrsText = Object.entries(variant.attribute_values)
+                                                                            .map(([key, value]) => `${value}`)
+                                                                            .join(', ');
+                                                                        } 
+                                                                        }
+
+                                                                        return <>{attrsText || 'N/A'}</>;
+                                                                    })()}<br />
+                                                                   
+                                                                    <p className="text-xs text-gray-500">SKU: {item.variant?.sku}</p>
+                                                            </td>
+
                                                             <td className="py-3 px-4">{item.quantity}</td>
                                                             <td className="py-3 px-4">{formatCurrency(item.unit_price)}</td>
                                                             <td className="py-3 px-4 font-medium">{formatCurrency(item.total_price)}</td>

@@ -466,6 +466,7 @@ export default function SupplierLedger({
     const paymentForm = useForm({
       paid_amount: Math.min(dueAmount, Math.max(0, advanceAmount + dueAmount)).toString(),
       payment_type: "cash",
+      type: "supplier",
     });
 
     const handlePaymentSubmit = (e) => {
