@@ -330,7 +330,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                     {t(`purchase.${displayAmounts.payment_status}`, displayAmounts.payment_status)}
                                                 </div>
                                             </div>
-                                            {/* {!isShadowUser && purchase.shadow_payment_status && (
+                                             {!isShadowUser && purchase.shadow_payment_status && (
                                                 <div className="text-xs text-blue-600 mt-1">
                                                     <div className="flex justify-between">
                                                         <span>{t('purchase.shadow', 'Shadow')}:</span>
@@ -341,7 +341,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                                                         </span>
                                                     </div>
                                                 </div>
-                                            )} */}
+                                            )}
                                         </div>
                                     </td>
                                     <td>
