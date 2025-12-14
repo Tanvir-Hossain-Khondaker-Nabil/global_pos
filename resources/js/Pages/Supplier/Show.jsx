@@ -238,13 +238,6 @@ const Show = () => {
                             </div>
 
                             <div className="flex flex-col gap-3 min-w-[200px]">
-                                <Link
-                                    href={route('supplier.edit', supplier.id)}
-                                    className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-md hover:shadow-lg"
-                                >
-                                    <Edit className="w-4 h-4" />
-                                    Edit Supplier
-                                </Link>
                                 
                                 <Link
                                     href={route('purchase.create', { supplier_id: supplier.id })}
@@ -412,10 +405,10 @@ const Show = () => {
                                     <span className="text-sm text-gray-500">
                                         {totalPurchases} purchase(s) found
                                     </span>
-                                    <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
+                                    {/* <button className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors">
                                         <Download className="w-4 h-4" />
                                         Export
-                                    </button>
+                                    </button> */}
                                 </div>
                             </div>
                         </div>
@@ -466,11 +459,11 @@ const Show = () => {
                                                     {formatCurrency(purchase.paid_amount)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600">
-                                                    {formatCurrency(purchase.due_amount)}
+                                                    {formatCurrency(purchase.grand_total - purchase.paid_amount)}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${purchase.due_amount === 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                        {purchase.due_amount === 0 ? 'Paid' : 'Due'}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${(purchase.grand_total - purchase.paid_amount) == 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {(purchase.grand_total - purchase.paid_amount) == 0 ? 'Paid' : 'Due'}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -481,20 +474,6 @@ const Show = () => {
                                                         >
                                                             View
                                                         </Link>
-                                                        <button 
-                                                            className="text-gray-400 hover:text-gray-600"
-                                                            title="Print"
-                                                        >
-                                                            <Printer className="w-4 h-4" />
-                                                        </button>
-                                                        {purchase.due_amount > 0 && (
-                                                            <Link
-                                                                href={route('purchase.edit', purchase.id)}
-                                                                className="text-green-600 hover:text-green-800 font-medium"
-                                                            >
-                                                                Pay
-                                                            </Link>
-                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -535,8 +514,8 @@ const Show = () => {
                                                     <h3 className="text-lg font-semibold text-gray-900">
                                                         Invoice #{purchase.purchase_no || purchase.id}
                                                     </h3>
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${purchase.due_amount === 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                        {purchase.due_amount === 0 ? 'Paid' : 'Due: ' + formatCurrency(purchase.due_amount)}
+                                                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${(purchase.grand_total - purchase.paid_amount)  == 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                                                        {(purchase.grand_total - purchase.paid_amount) == 0 ? 'Paid' : 'Due: ' + formatCurrency(purchase.grand_total - purchase.paid_amount)}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-wrap gap-4 text-sm text-gray-500">
@@ -561,7 +540,7 @@ const Show = () => {
                                                         Paid: {formatCurrency(purchase.paid_amount)}
                                                     </span>
                                                     <span className="text-red-600">
-                                                        Due: {formatCurrency(purchase.due_amount)}
+                                                        Due: {formatCurrency(purchase.grand_total - purchase.paid_amount)}
                                                     </span>
                                                 </div>
                                             </div>
@@ -576,6 +555,8 @@ const Show = () => {
                                                         <thead className="bg-gray-100">
                                                             <tr>
                                                                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                                                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Brand</th>
+                                                                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Variant</th>
                                                                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
                                                                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Unit Price</th>
                                                                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase">Subtotal</th>
@@ -589,11 +570,49 @@ const Show = () => {
                                                                             <p className="font-medium text-gray-900">
                                                                                 {item.product?.name || 'N/A'}
                                                                             </p>
-                                                                            {item.product?.sku && (
-                                                                                <p className="text-xs text-gray-500">SKU: {item.product.sku}</p>
+                                                                            {item.product?.product_no && (
+                                                                                <p className="text-xs text-gray-500">Product No: {item.product.product_no}</p>
                                                                             )}
                                                                         </div>
                                                                     </td>
+                                                                    <td className='text-left p-2 print:p-1'>
+                                                                        {(() => {
+                                                                                const variant = item.variant;
+                                                                                let attrsText = '';
+
+                                                                                if (variant.attribute_values) {
+                                                                                if (typeof variant.attribute_values === 'object') {
+                                                                                    attrsText = Object.entries(variant.attribute_values)
+                                                                                    .map(([key, value]) => `${key}`)
+                                                                                    .join(', ');
+                                                                                } else {
+                                                                                    attrsText = variant.attribute_values;
+                                                                                }
+                                                                                }
+
+                                                                                return <>{attrsText || 'N/A'}</>;
+                                                                            })()}<br />
+                                                                    </td>
+                                                                    
+                                                                    <td className='text-left p-2 print:p-1'>
+                                                                        {(() => {
+                                                                                const variant = item.variant;
+                                                                                let attrsText = '';
+
+                                                                                if (variant.attribute_values) {
+                                                                                if (typeof variant.attribute_values === 'object') {
+                                                                                    attrsText = Object.entries(variant.attribute_values)
+                                                                                    .map(([key, value]) => `${value}`)
+                                                                                    .join(', ');
+                                                                                } 
+                                                                                }
+
+                                                                                return <>{attrsText || 'N/A'}</>;
+                                                                            })()}<br />
+                                                                        
+                                                                            <p className="text-xs text-gray-500">SKU: {item.variant?.sku}</p>
+                                                                    </td>
+
                                                                     <td className="py-3 px-4">{item.quantity}</td>
                                                                     <td className="py-3 px-4">{formatCurrency(item.unit_price)}</td>
                                                                     <td className="py-3 px-4 font-medium text-gray-900">

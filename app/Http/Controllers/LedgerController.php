@@ -420,7 +420,7 @@ class LedgerController extends Controller
         // ------------------------------------------------------------
         // CUSTOMER DUE CLEARING
         // ------------------------------------------------------------
-        if ($request->type === 'customer') {
+        if ($request->type == 'customer') {
 
             $customer = Customer::findOrFail($id);
             if ($paymentMethod === 'advance_adjustment') {
@@ -475,7 +475,7 @@ class LedgerController extends Controller
         // ------------------------------------------------------------
         // SUPPLIER DUE CLEARING
         // ------------------------------------------------------------
-      if ($request->type === 'supplier') {
+      if ($request->type == 'supplier') {
             $supplier = Supplier::findOrFail($id);
 
 

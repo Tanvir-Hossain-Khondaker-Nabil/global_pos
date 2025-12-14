@@ -78,6 +78,17 @@ return [
     
     // Show Page Sections
     'payment_information' => 'Payment Information',
+    'payment_type' => 'Payment Type',
+    'related_purchase' => 'Related Purchase',
+    'purchase_total' => 'Purchase Total',
+    'customer_payment' => 'Customer Payment',
+    'supplier_payment' => 'Supplier Payment',
+    'business' => 'Business',
+    'purchase_status' => 'Purchase Status',
+    'related_purchases' => 'Related Purchases',
+    'purchase_invoice' => 'Purchase Invoice',
+    'supplier_information' => 'Supplier Information',
+    'purchase_items' => 'Purchase Items',
     'payment_id' => 'Payment ID',
     'transaction_reference' => 'Transaction Reference',
     'related_sale' => 'Related Sale',
