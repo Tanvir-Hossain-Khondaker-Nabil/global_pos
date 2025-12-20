@@ -39,6 +39,7 @@ return [
     'address_placeholder' => 'Enter Business Address',
     'description_placeholder' => "Enter Description",
     'description' => 'Description',
+    'logging_in' => 'Logging in...',
 
     
     // HR/Employee Management
