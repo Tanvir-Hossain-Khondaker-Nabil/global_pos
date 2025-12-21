@@ -260,7 +260,7 @@ class SalesController extends Controller
 
                 $warehouse_id = Stock::where('product_id', $product->id)
                     ->where('variant_id', $variant->id)
-                    ->where('quantity', '>', 0)
+                    // ->where('quantity', '>', 0)
                     ->orderBy('created_at', 'asc')
                     ->value('warehouse_id');
 

@@ -66,6 +66,7 @@ class SalesReturnController extends Controller
                 $stock = Stock::where('warehouse_id', $item->warehouse_id)
                     ->where('product_id', $item->product_id)
                     ->where('variant_id', $item->variant_id)
+                    ->where('quantity', '>', 0)
                     ->first();
 
                     $saleItems[] = [
