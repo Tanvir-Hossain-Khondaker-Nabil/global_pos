@@ -18,9 +18,10 @@ class Stock extends Model
         'quantity',
         'purchase_price',
         'sale_price',
-        'shadow_purchase_price', // Add this
-        'shadow_sale_price',     // Add this
+        'shadow_purchase_price',
+        'shadow_sale_price',
         'created_by',
+        'batch_no',
     ];
 
     protected $casts = [

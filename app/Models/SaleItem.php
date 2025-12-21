@@ -19,6 +19,7 @@ class SaleItem extends Model
         'shadow_total_price',
         'status',
         'created_by',
+        'stock_id'
     ];
 
 

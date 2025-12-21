@@ -21,6 +21,7 @@ return new class extends Migration
             $table->integer('quantity')->default(1);
             $table->decimal('unit_price', 10,2)->default(0);
             $table->decimal('total_price', 10,2)->default(0);
+            $table->unsignedBigInteger('stock_id')->nullable();
 
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('completed');
 

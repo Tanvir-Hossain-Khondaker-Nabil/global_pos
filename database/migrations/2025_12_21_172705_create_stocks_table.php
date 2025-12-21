@@ -11,24 +11,22 @@ return new class extends Migration
      */
     public function up(): void
     {
-       Schema::create('stocks', function (Blueprint $table) {
+        Schema::create('stocks', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('warehouse_id');
-            $table->unsignedBigInteger('product_id');
-            $table->unsignedBigInteger('variant_id');
+
+            $table->unsignedBigInteger('warehouse_id')->nullable();
+            $table->unsignedBigInteger('product_id')->nullable();
+            $table->unsignedBigInteger('variant_id')->nullable();
             $table->integer('quantity')->default(0);
             $table->decimal('purchase_price', 10, 2)->default(0);
             $table->decimal('sale_price', 10, 2)->default(0);
             $table->decimal('shadow_purchase_price', 10, 2)->default(0);
             $table->decimal('shadow_sale_price', 10, 2)->default(0);
             $table->unsignedBigInteger('created_by')->nullable();
+            $table->string('batch_no')->nullable();
             $table->timestamps();
 
-            $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('cascade');
-            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
-            $table->foreign('variant_id')->references('id')->on('variants')->onDelete('cascade');
-            
-            $table->unique(['warehouse_id', 'product_id', 'variant_id'], 'unique_stock');
+            $table->index(['warehouse_id', 'product_id', 'variant_id', 'batch_no']);
         });
     }
 

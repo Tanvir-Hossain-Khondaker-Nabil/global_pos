@@ -96,6 +96,7 @@ class SalesController extends Controller
         $isShadowUser = $user->type === 'shadow';
 
         $customers = Customer::active()->get();
+        
         $stock = Stock::with(['warehouse', 'product', 'variant'])
             ->where('quantity', '>', 0)
             ->orderBy('created_at', 'asc')
