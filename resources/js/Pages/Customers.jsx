@@ -239,7 +239,7 @@ export default function Customers({ customers, filters }) {
 
             <div className="overflow-x-auto">
                 {customers.data.length > 0 ? (
-                    <table className="table table-auto w-full h-100">
+                    <table className="table table-auto w-full ">
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th className="w-12">#</th>
