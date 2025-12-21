@@ -19,13 +19,13 @@ return new class extends Migration
             $table->unsignedBigInteger('variant_id')->nullable();
             $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
-            $table->decimal('unit_price', 15, 2)->nullable();
-            $table->decimal('shadow_unit_price', 15, 2)->nullable();
-            $table->decimal('sale_price', 15, 2)->nullable();
-            $table->decimal('shadow_sale_price', 15, 2)->nullable();
-            $table->decimal('total_price', 15, 2)->nullable();
-            $table->decimal('shadow_total_price', 15, 2)->nullable();
-            $table->integer('return_quantity');
+            $table->decimal('unit_price', 15, 2)->default(0);
+            $table->decimal('shadow_unit_price', 15, 2)->default(0);
+            $table->decimal('sale_price', 15, 2)->default(0);
+            $table->decimal('shadow_sale_price', 15, 2)->default(0);
+            $table->decimal('total_price', 15, 2)->default(0);
+            $table->decimal('shadow_total_price', 15, 2)->default(0);
+            $table->integer('return_quantity')->default(0);
             $table->string('reason')->nullable();
             $table->string('type')->default('sale_return'); // return or replacement // damaged
             $table->enum('status', ['pending', 'processed'])->default('pending');

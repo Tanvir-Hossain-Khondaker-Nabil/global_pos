@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('sale_id');
             $table->unsignedBigInteger('customer_id')->nullable();
-            $table->decimal('refunded_amount', 15, 2);
+            $table->decimal('refunded_amount', 15, 2)->default(0);
             $table->decimal('shadow_refunded_amount', 15, 2)->default(0);
             $table->enum('return_type', ['money_back', 'product_replacement', 'adjustment']);
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');

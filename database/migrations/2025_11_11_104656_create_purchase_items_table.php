@@ -18,13 +18,13 @@ return new class extends Migration
             $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('variant_id')->nullable();
-            $table->integer('quantity');
-            $table->decimal('unit_price', 10, 2);
-            $table->decimal('shadow_unit_price', 10, 2);
-            $table->decimal('sale_price', 10, 2)->nullable();
-            $table->decimal('shadow_sale_price', 10, 2)->nullable();
-            $table->decimal('total_price', 10, 2);
-            $table->decimal('shadow_total_price', 10, 2);
+            $table->integer('quantity')->default(0);
+            $table->decimal('unit_price', 10, 2)->default(0);
+            $table->decimal('shadow_unit_price', 10, 2)->default(0);
+            $table->decimal('sale_price', 10, 2)->default(0);
+            $table->decimal('shadow_sale_price', 10, 2)->default(0);
+            $table->decimal('total_price', 10, 2)->default(0);
+            $table->decimal('shadow_total_price', 10, 2)->default(0);
             $table->timestamps();
 
             $table->foreign('purchase_id')->references('id')->on('purchases')->onDelete('cascade');

@@ -16,8 +16,8 @@ return new class extends Migration {
             $table->unsignedBigInteger('supplier_id');
             $table->unsignedBigInteger('warehouse_id');
             $table->date('purchase_date');
-            $table->decimal('grand_total', 12, 2);
-            $table->decimal('shadow_grand_total', 12, 2);
+            $table->decimal('grand_total', 12, 2)->default(0);
+            $table->decimal('shadow_grand_total', 12, 2)->default(0);
             $table->decimal('paid_amount', 12, 2)->default(0);
             $table->decimal('shadow_paid_amount', 12, 2)->default(0);
             $table->decimal('due_amount', 12, 2)->default(0);

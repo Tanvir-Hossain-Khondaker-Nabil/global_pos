@@ -96,7 +96,10 @@ class SalesController extends Controller
         $isShadowUser = $user->type === 'shadow';
 
         $customers = Customer::active()->get();
-        $stock = Stock::with(['warehouse','product','variant'])->get();
+        $stock = Stock::with(['warehouse', 'product', 'variant'])
+            ->where('quantity', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->get();
 
         $isShadowUser? $render = 'sales/CreateShadow' : $render = 'sales/Create';
 
@@ -117,7 +120,10 @@ class SalesController extends Controller
         $isShadowUser = $user->type === 'shadow';
 
         $customers = Customer::all();
-        $stock = Stock::with(['warehouse','product','variant'])->get();
+        $stock = Stock::with(['warehouse', 'product', 'variant'])
+            ->where('quantity', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->get();
 
         $isShadowUser? $render = 'sales/CreateShadowPos' : $render = 'sales/CreatePos';
 
