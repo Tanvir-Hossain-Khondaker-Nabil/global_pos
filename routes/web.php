@@ -39,6 +39,7 @@ use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\SalesReturnController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -120,6 +121,16 @@ Route::middleware('auth')->group(function () {
 
         Route::delete('/sales-items/{id}', 'destroy')->middleware('permission:sales.delete')->name('sales.items.destroy');
     });
+
+        // Sales Return Routes
+    Route::get('/return/create', [SalesReturnController::class, 'create'])->middleware('permission:dashboard.view')->name('return.create');
+    Route::post('/return/store', [SalesReturnController::class, 'store'])->name('return.store');
+    Route::get('/return', [SalesReturnController::class, 'index'])->name('salesReturn.list');
+    Route::get('/return/{id}', [SalesReturnController::class, 'show'])->name('salesReturn.show');
+    Route::get('/return/{id}/edit', [SalesReturnController::class, 'edit'])->name('salesReturn.edit');
+    Route::put('/return/{id}', [SalesReturnController::class, 'update'])->name('salesReturn.update');
+    Route::delete('/return/{id}', [SalesReturnController::class, 'destroy'])->name('salesReturn.destroy');
+    
 
     Route::get('/items/{id}', [SalesController::class, 'showItem'])->middleware('permission:sales.items.view')->name('sales.items.show');
     Route::get('/sales-items', [SalesController::class, 'allSalesItems'])->middleware('permission:sales.view')->name('salesItems.list');

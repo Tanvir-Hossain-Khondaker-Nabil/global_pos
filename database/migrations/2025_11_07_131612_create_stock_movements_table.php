@@ -19,7 +19,8 @@ return new class extends Migration
             $table->enum('type', ['in','out']);
             $table->integer('qty');
             $table->string('created_by')->nullable();
-            $table->nullableMorphs('reference'); 
+            $table->string('reason')->nullable();
+            $table->nullableMorphs('reference');
             $table->softDeletes();
 
             $table->timestamps();
