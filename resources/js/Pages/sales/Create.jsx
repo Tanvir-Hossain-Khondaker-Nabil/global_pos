@@ -198,13 +198,17 @@ export default function AddSale({ customers, productstocks }) {
     const addItem = (productstock, variant) => {
         const variantId = variant?.id || 0;
 
+        // const existingItem = selectedItems.find(
+        //     item => item.product_id === productstock.product.id && item.variant_id === variantId
+        // );
+
         const existingItem = selectedItems.find(
-            item => item.product_id === productstock.product.id && item.variant_id === variantId
+            item => item.product_id === productstock.product.id && item.variant_id === variantId && item.stockId === productstock.id
         );
 
         if (existingItem) {
             setSelectedItems(selectedItems.map(item =>
-                item.product_id === productstock.product.id && item.variant_id === variantId
+                item.product_id === productstock.product.id && item.variant_id === variantId && item.stockId === productstock.id
                     ? { ...item, quantity: item.quantity }
                     : item
             ));
@@ -223,6 +227,7 @@ export default function AddSale({ customers, productstocks }) {
                     variant_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
                     quantity: 1,
                     stockQuantity: Number(productstock.quantity) || 0,
+                    stockId: availableStock.id,
                     unit_price: salePrice,
                     sell_price: salePrice,
                     total_price: salePrice,
@@ -494,7 +499,7 @@ export default function AddSale({ customers, productstocks }) {
                                             >
                                                 <div className="flex flex-col">
                                                     <div className="flex justify-between items-center">
-                                                        <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
+                                                        {/* <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span> */}
                                                         <Plus size={14} className="text-primary" />
                                                     </div>
                                                     {attributes && (
