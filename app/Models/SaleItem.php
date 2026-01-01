@@ -19,7 +19,13 @@ class SaleItem extends Model
         'shadow_total_price',
         'status',
         'created_by',
-        'stock_id'
+        'stock_id',
+        // ADD THESE NEW FIELDS:
+        'item_type',           // Add this
+        'product_name',        // Add this
+        'brand',               // Add this
+        'variant_name',        // Add this
+        'purchase_item_id',    // Add this
     ];
 
 
@@ -29,6 +35,11 @@ class SaleItem extends Model
         static::addGlobalScope(new UserScope);
     }
 
+    //stock relation
+    public function stock()
+    {
+        return $this->belongsTo(Stock::class, 'stock_id');
+    }
 
     //relation to sale
     public function sale()
@@ -118,6 +129,11 @@ class SaleItem extends Model
             ->when($filters['date_to'] ?? null, function ($query, $dateTo) {
                 $query->whereDate('created_at', '<=', $dateTo);
             });
+    }
+
+    public function purchaseItem()
+    {
+        return $this->belongsTo(PurchaseItem::class);
     }
 
 

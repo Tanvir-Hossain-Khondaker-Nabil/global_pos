@@ -40,6 +40,8 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\SalesReturnController;
+use App\Http\Controllers\AccountController;
+
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -130,6 +132,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/return/{id}/edit', [SalesReturnController::class, 'edit'])->name('salesReturn.edit');
     Route::put('/return/{id}', [SalesReturnController::class, 'update'])->name('salesReturn.update');
     Route::delete('/return/{id}', [SalesReturnController::class, 'destroy'])->name('salesReturn.destroy');
+
+
+    // account route will be here
+    Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/accounts/create', [AccountController::class, 'create'])->name('accounts.create');
+    Route::post('/accounts', [AccountController::class, 'store'])->name('accounts.store');
+    Route::get('/accounts/{account}/edit', [AccountController::class, 'edit'])->name('accounts.edit');
+    Route::put('/accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
+    Route::delete('/accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
+    Route::get('/accounts/{account}', [AccountController::class, 'show'])->name('accounts.show');
+    Route::post('/accounts/{account}/deposit', [AccountController::class, 'deposit'])->name('accounts.deposit');
+    Route::post('/accounts/{account}/withdraw', [AccountController::class, 'withdraw'])->name('accounts.withdraw');
+    Route::post('/accounts/transfer', [AccountController::class, 'transfer'])->name('accounts.transfer');
     
 
     Route::get('/items/{id}', [SalesController::class, 'showItem'])->middleware('permission:sales.items.view')->name('sales.items.show');
