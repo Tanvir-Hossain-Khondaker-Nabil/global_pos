@@ -1,6 +1,6 @@
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
-import { ArrowLeft, Plus, Trash2, Search, User, Phone, Mail, MapPin, DollarSign, ShoppingBag, Store, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Search, User, Phone, Mail, MapPin,Wallet, DollarSign, ShoppingBag, Store, X } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 

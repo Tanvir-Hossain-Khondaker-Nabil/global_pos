@@ -191,7 +191,7 @@ export default function AccountCreate() {
                                 min="0"
                                 value={data.opening_balance}
                                 onChange={(e) => setData('opening_balance', e.target.value)}
-                                className="input input-bordered w-full pl-10"
+                                className="input input-bordered w-full pl-3"
                                 placeholder="0.00"
                             />
                         </div>

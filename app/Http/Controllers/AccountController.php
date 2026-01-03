@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Auth;
 
 class AccountController extends Controller
 {
+
+    //index method will be here
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -48,15 +50,18 @@ class AccountController extends Controller
         ]);
     }
 
+
+    // create wil be here
     public function create()
     {
         return Inertia::render('Accounts/AccountCreate');
     }
 
+
+    // store method will be here
     public function store(AccountStore $request)
     {
-        $validated = $request->validate();
-
+        $validated = $request->validated();
 
         DB::transaction(function () use ($validated) {
             $account = Account::create([
@@ -66,7 +71,6 @@ class AccountController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            // If this is the first account, make it default
             if (Account::where('user_id', Auth::id())->count() == 1) {
                 $account->update(['is_default' => true]);
             }
@@ -150,6 +154,8 @@ class AccountController extends Controller
             ->with('success', 'Account updated successfully.');
     }
 
+
+    //destroy method will be here
     public function destroy(Account $account)
     {
         // Check if account has transactions
@@ -178,6 +184,8 @@ class AccountController extends Controller
             ->with('success', 'Account deleted successfully.');
     }
 
+
+    //deposit method will be here
     public function deposit(Request $request, Account $account)
     {
         $validated = $request->validate([
@@ -206,6 +214,8 @@ class AccountController extends Controller
             ->with('success', 'Deposit successful.');
     }
 
+
+    //withdraw method will be here
     public function withdraw(Request $request, Account $account)
     {
         $validated = $request->validate([
@@ -243,6 +253,8 @@ class AccountController extends Controller
             ->with('success', 'Withdrawal successful.');
     }
 
+
+    //transfer method
     public function transfer(Request $request)
     {
         $validated = $request->validate([
