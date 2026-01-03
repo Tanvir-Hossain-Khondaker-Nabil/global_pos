@@ -3,7 +3,7 @@ import { useForm, router } from "@inertiajs/react";
 import { ArrowLeft, Plus, Trash2, Search, User, Phone, Mail, MapPin, DollarSign } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 
-export default function AddSale({ customers, productstocks }) {
+export default function AddSale({ customers, productstocks , accounts }) {
     const [selectedItems, setSelectedItems] = useState([]);
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
@@ -226,6 +226,8 @@ export default function AddSale({ customers, productstocks }) {
         }
     }, [productSearch, productstocks]);
 
+
+
     const addItem = (productstock, variant) => {
         const variantId = variant?.id || 0;
 
@@ -250,10 +252,12 @@ export default function AddSale({ customers, productstocks }) {
                     variant_id: variantId,
                     product_name: productstock.product.name,
                     product_code: productstock.product.product_no || '',
-                    variant_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
-                    brand_name: variant ? getBrandName(variant) : 'Default Variant',
+                    model_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
+                    variant_name: variant ? getBrandName(variant) : 'Default Variant',
                     quantity: 1,
                     stockQuantity: Number(productstock.quantity) || 0,
+                    stockId: productstock.id,
+                    batch_no : productstock.batch_no ?? 'N/A',
                     unit_price: salePrice,
                     sell_price: salePrice,
                     total_price: salePrice,
@@ -277,9 +281,9 @@ export default function AddSale({ customers, productstocks }) {
         
         updated[index][field] = numValue;
 
-        if (field === 'quantity' || field === 'unit_price') {
-            const quantity = field === 'quantity' ? numValue : updated[index].quantity;
-            const unitPrice = field === 'unit_price' ? numValue : updated[index].unit_price;
+        if (field == 'quantity' || field == 'unit_price') {
+            const quantity = field == 'quantity' ? numValue : updated[index].quantity;
+            const unitPrice = field == 'unit_price' ? numValue : updated[index].unit_price;
             updated[index].total_price = quantity * unitPrice;
         }
 
@@ -298,7 +302,7 @@ export default function AddSale({ customers, productstocks }) {
     const submit = (e) => {
         e.preventDefault();
         
-        if (selectedItems.length === 0) {
+        if (selectedItems.length == 0) {
             alert("Please add at least one product to the sale");
             return;
         }
@@ -575,8 +579,8 @@ export default function AddSale({ customers, productstocks }) {
                                                     </div>
                                                     {attributes && (
                                                         <div className="text-sm text-gray-500 mt-1">
-                                                            <span>BrandName: {brand} || </span>
-                                                            { attributes && <span>Variant: {attributes}  </span>}
+                                                            <span> <strong>Variant: </strong>{brand} || </span>
+                                                            { attributes && <span> <strong>Model: </strong>{attributes}  </span>} || <span> <strong>Batch No: </strong>{filteredProduct.batch_no}  </span>
                                                         </div>
                                                     )}
                                                 </div>
@@ -596,7 +600,7 @@ export default function AddSale({ customers, productstocks }) {
                                             <div className="flex-1">
                                                 <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
                                                 <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
-                                                <p className="text-sm text-gray-600"><strong>BrandName: </strong> {item.brand_name}</p>
+                                                <p className="text-sm text-gray-600"><strong>Model: </strong> {item.model_name}</p>
                                                 <p className="text-sm text-gray-600"> <strong>Available Stock:</strong> {item.stockQuantity} | <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
                                             </div>
                                             <button
