@@ -29,6 +29,8 @@ return [
     'customer' => 'গ্রাহক',
     'companies' => 'কোম্পানি',
     'users' => 'ব্যবহারকারী',
+    'logging_in' => 'লগইন হচ্ছে...',
+    'thumbnail_hint' => 'থাম্বনেইল',
     
     // HR/Employee Management
     'employees' => 'কর্মচারী',

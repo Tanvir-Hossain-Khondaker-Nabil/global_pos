@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Account;
 use Illuminate\Http\Request;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -9,7 +10,9 @@ use App\Models\Product;
 use App\Models\StockMovement;
 use App\Models\Customer;
 use App\Models\Payment;
+use App\Models\PurchaseItem;
 use App\Models\Stock;
+use App\Models\Supplier;
 use App\Models\Variant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -88,46 +91,70 @@ class SalesController extends Controller
 
 
     /**
-     * Show form
-     */
+     * Show form for the sale(inventory) creation
+    */
     public function create()
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
         $customers = Customer::active()->get();
-        $stock = Stock::with(['warehouse','product','variant'])->get();
 
-        $isShadowUser? $render = 'sales/CreateShadow' : $render = 'sales/Create';
+        $stock = Stock::with(['warehouse', 'product', 'variant'])
+            ->where('quantity', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->get();
 
-        return  Inertia::render($render, [
+        // Get active accounts
+        $accounts = Account::where('is_active', true)->get();
+
+        $isShadowUser ? $render = 'sales/CreateShadow' : $render = 'sales/Create';
+
+        $supplier = Supplier::get();
+
+        return Inertia::render($render, [
             'customers' => $customers,
-            'productstocks'  => $stock,
+            'productstocks' => $stock,
+            'accounts' => $accounts, 
             'isShadowUser' => $isShadowUser,
+            'suppliers' => $supplier,
         ]);
-        //
     }
 
 
 
-    //createPos 
+    /**
+     * Show form for the sale(pos) creation
+    */
     public function createPos()
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
         $customers = Customer::all();
-        $stock = Stock::with(['warehouse','product','variant'])->get();
+        $stock = Stock::with(['warehouse', 'product', 'variant'])
+            ->where('quantity', '>', 0)
+            ->orderBy('created_at', 'asc')
+            ->get();
 
-        $isShadowUser? $render = 'sales/CreateShadowPos' : $render = 'sales/CreatePos';
+        // Get active accounts
+        $accounts = Account::where('is_active', true)->get();
+        $supplier = Supplier::get();
+
+        $isShadowUser ? $render = 'sales/CreateShadowPos' : $render = 'sales/CreatePos';
 
 
         return  Inertia::render($render, [
             'customers' => $customers,
-            'productstocks'  => $stock,
+            'productstocks' => $stock,
+            'accounts' => $accounts, 
+            'isShadowUser' => $isShadowUser,
+            'suppliers' => $supplier,
         ]);
        
     }
+
+
 
     /**
      * Store sale
@@ -135,7 +162,7 @@ class SalesController extends Controller
     public function store(Request $request)
     {
 
-
+        
         $type = $request->input('type', 'pos');
 
         if ($type == 'inventory') {
@@ -155,37 +182,66 @@ class SalesController extends Controller
             'items.*.quantity'      => 'required|integer|min:1',
         ]);
 
-        $request->validate($rules);
+        if ($request->has('pickup_items') && count($request->pickup_items) > 0) {
+            $rules['supplier_id'] = 'required|exists:suppliers,id';
+        }
 
+
+        $request->validate($rules);
 
         DB::beginTransaction();
 
         $adjust_amount =  $request->adjust_from_advance ;
         $advance_adjustment = $request->advance_adjustment ;
         $paid_amount = $request->paid_amount ?? 0;
+        $account_id = $request->account_id;
+        $supplier_id = $request->supplier_id ?? null;
+        $pickup_items = $request->pickup_items ?? [];
+        $regular_items = $request->items ?? [];
 
-        if($adjust_amount == true){
-            
-            if($paid_amount > $advance_adjustment){
-                return back()->withErrors(['error' => 'If you want to adjust from advance, the advance adjustment cannot be greater than available advance amount.']);
+        // Validate account
+        $account = Account::find($account_id);
+        if (!$account || !$account->is_active) {
+            throw new \Exception('Selected account is not active or not found.');
+        }
+
+        // Validate supplier for pickup items
+        if (count($pickup_items) > 0) {
+            if (!$supplier_id) {
+                throw new \Exception('Supplier is required for pickup items.');
+            }
+
+            $supplier = Supplier::find($supplier_id);
+            if (!$supplier) {
+                throw new \Exception('Selected supplier not found.');
+            }
+        }
+
+
+        // Handle advance adjustment
+        $payment_type = $account->type;
+
+        if ($adjust_amount == true && $request->customer_id) {
+            $customer = Customer::find($request->customer_id);
+            if (!$customer) {
+                throw new \Exception('Customer not found for advance adjustment.');
+            }
+
+            if ($paid_amount > $customer->advance_amount) {
+                throw new \Exception('Adjustment amount cannot be greater than available advance amount.');
             }
 
             $payment_type = 'advance_adjustment';
-            $customer = Customer::find($request->customer_id);
-
             $customer->update([
                 'advance_amount' => $customer->advance_amount - $paid_amount,
             ]);
-
-            // if($customer->advance_amount < $advance_adjustment){
-            //     return back()->withErrors(['error' => 'Customer does not have enough advance amount for this adjustment.']);
-            // }
         }
 
 
         $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
 
 
+        //customer check
         if($type == 'inventory') {
             $customerId = $request->customer_id;
 
@@ -214,10 +270,8 @@ class SalesController extends Controller
                     'is_active' => 1,
                     'created_by' => Auth::id(),
             ])->id;
-
             }
         }
-
 
         try {
             $sale = Sale::create([
@@ -235,94 +289,199 @@ class SalesController extends Controller
                 'shadow_grand_total' => 0,
                 'shadow_paid_amount' =>  0,
                 'shadow_due_amount'  => 0,
+                'account_id' => $account->id,
                 'payment_type'=> $payment_type ?? 'cash',
                 'status'      => $status ?? 'pending',
                 'type'        => $type ?? 'pos',
+                'sale_type' => count($pickup_items) > 0 ? 'both' : 'real',
                 'created_by' => Auth::id(),
             ]);
 
 
             $shadowSubTotal = 0;
+            $regularSubTotal = 0;
+            $regularCostTotal = 0;
 
-            foreach($request->items as $item)
-            {
-                $product = Product::findOrFail($item['product_id']);
-                $variant = Variant::findOrFail($item['variant_id']);
-                $quantity = $item['quantity'];
-                $unitPrice = $item['unit_price'];
-                $shadowUnitPrice = $item['shadow_sell_price'] * 0;
-                $shadowtotalPrice = $quantity * $shadowUnitPrice;
-                $totalPrice = $quantity * $unitPrice;
+            // Process regular items from inventory
 
-                // if ($type === 'inventory') {
-                    self::fifoOut($product->id, $variant->id, $quantity, $sale->id);
-                // }
+            if (count($regular_items) > 0) {
+                foreach ($regular_items as $item) {
 
-                $warehouse_id = Stock::where('product_id', $product->id)
-                    ->where('variant_id', $variant->id)
-                    ->where('quantity', '>', 0)
-                    ->orderBy('created_at', 'asc')
-                    ->value('warehouse_id');
+                    // Check if required fields exist
+                    if (!isset($item['product_id']) || !isset($item['variant_id'])) {
+                        throw new \Exception('Product ID and Variant ID are required for inventory items.');
+                    }
 
-                // 4. Create sale item
-                SaleItem::create([
-                    'sale_id'    => $sale->id,
-                    'product_id' => $product->id,
-                    'variant_id' => $variant->id,
-                    'warehouse_id' => $warehouse_id ?? null,
-                    'quantity'   => $quantity,
-                    'unit_price' => $unitPrice,
-                    'total_price'=> $totalPrice,
-                    'shadow_unit_price' => $shadowUnitPrice ?? 0,
-                    'shadow_total_price'=> $shadowtotalPrice ?? 0,
-                    'created_by' => Auth::id(),
-                ]);
+                    $product = Product::find($item['product_id']);
+                    $variant = Variant::find($item['variant_id']);
 
-                $shadowSubTotal += $shadowtotalPrice;
+                    if (!$product || !$variant) {
+                        throw new \Exception('Product or Variant not found for inventory item.');
+                    }
+
+                    $quantity = $item['quantity'] ?? 1;
+                    $unitPrice = $item['unit_price'] ?? 0;
+                    $shadowUnitPrice = $item['shadow_sell_price'] ?? $unitPrice;
+                    $shadowtotalPrice = $quantity * $shadowUnitPrice;
+                    $totalPrice = $quantity * $unitPrice;
+
+                    // Process FIFO stock deduction
+                    $this->fifoOut($product->id, $variant->id, $quantity, $sale->id, $item['stock_id'] ?? null);
+
+
+                    // Get warehouse_id from stock
+                    $warehouse_id = Stock::where('product_id', $product->id)
+                        ->where('variant_id', $variant->id)
+                        ->where('quantity', '>', 0)
+                        ->orderBy('created_at', 'asc')
+                        ->value('warehouse_id');
+
+
+
+                    // Create sale item
+                    SaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => $product->id,
+                        'variant_id' => $variant->id,
+                        'warehouse_id' => $warehouse_id ?? null,
+                        'quantity' => $quantity,
+                        'unit_price' => $unitPrice,
+                        'total_price' => $totalPrice,
+                        'stock_id' => $item['stock_id'] ?? null,
+                        'shadow_unit_price' => $shadowUnitPrice,
+                        'shadow_total_price' => $shadowtotalPrice,
+                        'status' => 'completed',
+                        'created_by' => Auth::id(),
+                        'item_type' => 'real',
+                    ]);
+
+                    $shadowSubTotal += $shadowtotalPrice;
+                    $regularSubTotal += $totalPrice;
+                }
             }
 
-            $shadowGrandTotal =  $shadowSubTotal;
-            $shadowGrandTotal += $shadowSubTotal * $request->vat_rate / 100; 
-            $shadowGrandTotal -= $shadowSubTotal * $request->discount_rate / 100;
+
+            // Process pickup items
+            if (count($pickup_items) > 0) {
+
+
+                foreach ($pickup_items as $pickupItem) {
+                    $pickupQuantity = $pickupItem['quantity'] ?? 1;
+                    $pickupUnitPrice = $pickupItem['unit_price'] ?? 0;
+                    $pickupSalePrice = $pickupItem['sale_price'] ?? $pickupUnitPrice;
+                    $pickupTotalPrice = $pickupItem['total_price'] ?? ($pickupQuantity * $pickupSalePrice);
+
+                    //Create a purchase item with pickup type 
+
+
+                    $purchaseItem = PurchaseItem::create([
+                        'purchase_id' => null,
+                        'product_id' => null,
+                        'variant_id' => null,
+                        'warehouse_id' => null,
+                        'supplier_id' => $supplier_id,
+                        'quantity' => $pickupQuantity,
+                        'unit_price' => $pickupUnitPrice,
+                        'total_price' => $pickupUnitPrice * $pickupQuantity,
+                        'shadow_unit_price' => $pickupUnitPrice,
+                        'shadow_total_price' => $pickupUnitPrice * $pickupQuantity,
+                        'shadow_sale_price' => $pickupSalePrice,
+                        'sale_price' => $pickupSalePrice,
+                        'created_by' => Auth::id(),
+
+                        'item_type' => 'pickup',
+                        'product_name' => $pickupItem['product_name'] ?? null,
+                        'brand' => $pickupItem['brand'] ?? null,
+                        'variant_name' => $pickupItem['variant'] ?? null,
+                    ]);
+
+
+
+
+                    // Create sale item with pickup type
+                    $saleItem = SaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => null,
+                        'variant_id' => null,
+                        'warehouse_id' => null,
+                        'stock_id' => null,
+                        'quantity' => $pickupQuantity ?? 0,
+                        'unit_price' => $pickupSalePrice ?? 0,
+                        'total_price' => $pickupTotalPrice ?? 0,
+                        'shadow_unit_price' => $pickupSalePrice ?? 0,
+                        'shadow_total_price' => $pickupTotalPrice ?? 0,
+                        'status' => 'completed',
+                        'created_by' => Auth::id(),
+                        'item_type' => 'pickup',
+                        'product_name' => $pickupItem['product_name'] ?? null,
+                        'brand' => $pickupItem['brand'] ?? null,
+                        'variant_name' => $pickupItem['variant'] ?? null,
+                        'purchase_item_id' => $purchaseItem->id,
+                    ]);
+
+
+                    $shadowSubTotal += $pickupTotalPrice;
+                    $regularSubTotal += $pickupTotalPrice;
+                    $regularCostTotal += $pickupUnitPrice * $pickupQuantity;
+                }
+            }
+
+
+            if (count($regular_items) == 0 && count($pickup_items) == 0) {
+                throw new \Exception('At least one item is required for a sale.');
+            }
+
+            // Calculate shadow amounts (if needed)
+            $shadowGrandTotal = $shadowSubTotal;
+            if ($shadowSubTotal > 0) {
+                $shadowGrandTotal += $shadowSubTotal * ($request->vat_rate ?? 0) / 100;
+                $shadowGrandTotal -= $shadowSubTotal * ($request->discount_rate ?? 0) / 100;
+            }
+
 
             $type == 'inventory' ? $shadowPaidAmount = $request->shadow_paid_amount : $shadowPaidAmount = $shadowGrandTotal;
             $shadowDueAmount = $shadowGrandTotal - $shadowPaidAmount;
 
-         
 
+             // Update sale with calculated totals
             $sale->update([
-                'shadow_sub_total'   => $shadowSubTotal ?? 0,
-                'shadow_grand_total' => $shadowGrandTotal ?? 0,
-                'shadow_due_amount'  => $shadowDueAmount ?? 0,
-                'shadow_paid_amount' => $shadowPaidAmount ?? 0,
+                'sub_total' => $regularSubTotal,
+                'grand_total' => $request->grand_amount,
+                'shadow_sub_total' => $shadowSubTotal,
+                'shadow_grand_total' => $shadowGrandTotal,
+                'shadow_due_amount' => $shadowDueAmount,
+                'shadow_paid_amount' => $shadowPaidAmount,
             ]);
 
-            // create payment record if paid_amount > 0
+
+             // Create payment record if paid_amount > 0
             if ($paidAmount > 0) {
                 $payment = new Payment();
                 $payment->sale_id = $sale->id;
-                $payment->amount = $paidAmount;
+                $payment->account_id = $account_id;
+                $payment->amount = $paidAmount ?? 0;
                 $payment->shadow_amount = $shadowPaidAmount ?? 0;
-                $payment->payment_method = $request->payment_method 
-                                ?? ($payment_type ?? 'cash');
-                $payment->txn_ref = $request->txn_ref ?? ('nexoryn-' . Str::random(10));
+                $payment->payment_method = $request->payment_method ?? ($payment_type ?? 'cash');
+                $payment->txn_ref = $request->txn_ref ?? ('SIOP-' . Str::random(10));
                 $payment->note = $request->notes ?? null;
-                $payment->customer_id =  $customerId ?? null;
+                $payment->customer_id = $customerId;
                 $payment->paid_at = Carbon::now();
+                $payment->status = 'completed';
                 $payment->created_by = Auth::id();
                 $payment->save();
+
+                // Update account balance
+                if( $adjust_amount == false)
+                {
+                    $account->updateBalance($paidAmount-$regularCostTotal, 'credit');
+                }
             }
 
             DB::commit();
 
-            if ($type === 'inventory') {
-                return to_route('sales.index')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
-            } 
-            if ($type === 'pos') {
-                return to_route('salesPos.index','pos')->with('success', 'Sale created successfully! Invoice: '.$sale->invoice_no);
-            }
-
-        } catch (\Exception $e) {
+            return to_route('sales.show', $sale->id)->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
+        }
+         catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
         }
@@ -330,7 +489,6 @@ class SalesController extends Controller
 
 
     // payment Clearance
-
     public function storePayment(Request $request, Sale $sale)
     {
         $customerId = $sale->customer_id;
@@ -767,41 +925,44 @@ class SalesController extends Controller
     /**
      * FIFO stock deduction
      */
-    private static function fifoOut($productId, $variantId, $qtyNeeded, $saleId)
+    private static function fifoOut($productId, $variantId, $qtyNeeded, $saleId, $stockId = null)
     {
         $stocks = Stock::where('product_id', $productId)
             ->where('variant_id', $variantId)
             ->where('quantity', '>', 0)
+            ->where(function ($query) use ($stockId) {
+                if ($stockId) {
+                    $query->where('id', $stockId);
+                }
+            })
             ->orderBy('created_at', 'asc')
             ->get();
 
 
-        foreach($stocks as $stock)
-        {
-            if ($qtyNeeded <= 0) break;
+        foreach ($stocks as $stock) {
+            if ($qtyNeeded <= 0)
+                break;
 
             $take = min($stock->quantity, $qtyNeeded);
-
-            // reduce stock
             $stock->decrement('quantity', $take);
 
             // log movement
             StockMovement::create([
-                'warehouse_id'   => $stock->warehouse_id ?? null,
-                'product_id'     => $productId,
-                'variant_id'     => $variantId,
-                'type'           => 'out',
-                'qty'            => $take,
+                'warehouse_id' => $stock->warehouse_id ?? null,
+                'product_id' => $productId,
+                'variant_id' => $variantId,
+                'type' => 'out',
+                'qty' => $take,
                 'reference_type' => Sale::class,
-                'reference_id'   => $saleId,
-                'created_by'     => Auth::id(),
+                'reference_id' => $saleId,
+                'created_by' => Auth::id(),
             ]);
 
             $qtyNeeded -= $take;
         }
 
-        if($qtyNeeded > 0){
-           return back()->withErrors(["Not enough stock for product ID $productId."]);
+        if ($qtyNeeded > 0) {
+            return back()->withErrors(["Not enough stock for product ID $productId."]);
         }
     }
 

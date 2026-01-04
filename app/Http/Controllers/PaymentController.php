@@ -22,7 +22,8 @@ class PaymentController extends Controller
             'purchase',
             'customer',
             'creator',
-            'supplier'
+            'supplier',
+            'account'
         ])
             ->where('status', '!=', 'cancelled')
             ->search($search)

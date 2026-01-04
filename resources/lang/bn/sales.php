@@ -48,4 +48,6 @@ return [
     'customer_phone' => 'গ্রাহকের ফোন',
     'size' => 'সাইজ',
     'color' => 'রং',
+    'payment_account' => 'পেমেন্ট অ্যাকাউন্ট',
+    'select_account' => '--অ্যাকাউন্ট নির্বাচন করুন--',
 ];

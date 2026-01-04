@@ -7,8 +7,9 @@ use App\Scopes\UserScope;
 
 class Sale extends Model
 {
-    protected $fillable = [
+  protected $fillable = [
         'customer_id',
+        'supplier_id',
         'invoice_no',
         'sub_total',
         'discount',
@@ -16,16 +17,18 @@ class Sale extends Model
         'grand_total',
         'paid_amount',
         'due_amount',
-        'payment_type',
-        'status',
-        'type',
-        'shadow_sub_total',
-        'shadow_discount',
         'shadow_vat_tax',
+        'shadow_discount',
+        'shadow_sub_total',
         'shadow_grand_total',
         'shadow_paid_amount',
         'shadow_due_amount',
         'shadow_type',
+        'payment_type',
+        'account_id',
+        'status',
+        'type',
+        'sale_type',
         'created_by',
     ];
 
@@ -34,6 +37,14 @@ class Sale extends Model
     {
         static::addGlobalScope(new UserScope);
     }
+
+    //account relation
+    // public function account()
+    // {
+    //     return $this->belongsTo(Account::class, 'account_id');
+    // }
+
+    
 
     //relation to customer
     public function customer()
@@ -44,11 +55,11 @@ class Sale extends Model
     // relation to sale items
     public function items()
     {
-        return $this->hasMany(SaleItem::class, 'sale_id')->with('product', 'variant','product.brand');
+        return $this->hasMany(SaleItem::class, 'sale_id')->with('product', 'variant', 'product.brand', 'warehouse', 'stock');
     }
 
     //payments relation
-    public function payments()  
+    public function payments()
     {
         return $this->hasMany(Payment::class, 'sale_id');
     }
@@ -57,5 +68,23 @@ class Sale extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by')->with('business');
+    }
+
+    //returns relation
+    public function returns()
+    {
+        return $this->hasMany(SalesReturn::class, 'sale_id');
+    }
+
+
+    //warehouse relation
+    public function warehouse()
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
     }
 }

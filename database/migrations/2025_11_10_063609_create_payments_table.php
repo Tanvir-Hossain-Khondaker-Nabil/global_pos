@@ -26,6 +26,11 @@ return new class extends Migration
             $table->string('status')->default('completed'); // e.g., completed, pending, failed
             $table->unsignedBigInteger('created_by')->default(0)->nullable();
             $table->timestamps();
+            $table->unsignedBigInteger('account_id')->nullable();
+            $table->foreign('account_id')->references('id')->on('accounts')->onDelete('set null');
+            $table->unsignedBigInteger('salary_id')->default(0)->nullable();
+            $table->unsignedBigInteger('expense_id')->default(0)->nullable();
+            $table->unsignedBigInteger('product_id')->default(0)->nullable();
         });
     }
 

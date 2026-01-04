@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PurchaseStore;
 use App\Models\BusinessProfile;
 use App\Models\Payment;
 use Inertia\Inertia;
@@ -23,6 +24,10 @@ use Illuminate\Support\Str;
 
 class PurchaseController extends Controller
 {
+
+
+    // List all purchases
+
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -70,8 +75,10 @@ class PurchaseController extends Controller
         ]);
     }
 
-    //purchase items
 
+
+
+    //List of purchase items
     public function allPurchasesItems(Request $request)
     {
         $user = Auth::user();
@@ -105,6 +112,8 @@ class PurchaseController extends Controller
     }
 
 
+
+
     // show purchase item details
     public function showPurchasesItem($id)
     {
@@ -129,6 +138,8 @@ class PurchaseController extends Controller
     }
 
 
+
+
     // Show create purchase form
     public function create()
     {
@@ -145,42 +156,13 @@ class PurchaseController extends Controller
 
 
     // Store a new purchase
-    public function store(Request $request)
+    public function store(PurchaseStore $request)
     {
 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        // dd($user);
-
-        $request->validate([
-            'supplier_id' => 'required|exists:suppliers,id',
-            'warehouse_id' => 'required|exists:warehouses,id',
-            'purchase_date' => 'required|date',
-            'notes' => 'nullable|string',
-            'paid_amount' => 'required|numeric|min:0',
-            'shadow_paid_amount' => 'nullable|numeric|min:0', // Add this line
-            'payment_status' => 'required|in:unpaid,partial,paid',
-            'shadow_payment_status' => 'nullable|in:unpaid,partial,paid', // Add this line
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.variant_id' => 'required|exists:variants,id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.shadow_unit_price' => 'nullable|numeric|min:0',
-            'items.*.shadow_sale_price' => 'nullable|numeric|min:0',
-            // For shadow users, real prices are optional
-            'items.*.unit_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
-            'items.*.sale_price' => $isShadowUser ? 'nullable|numeric|min:0' : 'required|numeric|min:0',
-            // Additional fields
-            'items.*.product_name' => 'sometimes|string',
-            'items.*.variant_name' => 'sometimes|string',
-            'items.*.total_price' => 'sometimes|numeric',
-            'items.*.shadow_total_price' => 'nullable|sometimes|numeric',
-            'adjust_from_advance' => 'nullable|boolean', // Add this
-            'manual_payment_override' => 'nullable|boolean', // Add this
-            'use_partial_payment' => 'nullable|boolean', // Add this
-        ]);
-
+        $request->validated();
 
         $adjustamount = $request->adjust_from_advance ?? false;
         $payment_type = 'cash'; // Default
@@ -246,13 +228,13 @@ class PurchaseController extends Controller
 
             // Create purchase items and update stock
             foreach ($request->items as $item) {
-                Log::info('Item data:', [
-                    'product_id' => $item['product_id'],
-                    'unit_price' => $item['unit_price'] ?? 'null',
-                    'sale_price' => $item['sale_price'] ?? 'null',
-                    'shadow_unit_price' => $item['shadow_unit_price'] ,
-                    'shadow_sale_price' => $item['shadow_sale_price'],
-                ]);
+                // Log::info('Item data:', [
+                //     'product_id' => $item['product_id'],
+                //     'unit_price' => $item['unit_price'] ?? 'null',
+                //     'sale_price' => $item['sale_price'] ?? 'null',
+                //     'shadow_unit_price' => $item['shadow_unit_price'] ,
+                //     'shadow_sale_price' => $item['shadow_sale_price'],
+                // ]);
 
                 // Calculate total prices
                 $totalPrice = $item['quantity'] * ($item['unit_price'] ?? 0);
@@ -340,23 +322,26 @@ class PurchaseController extends Controller
                 $payment->supplier_id = $request->supplier_id ?? null;
                 $payment->paid_at = Carbon::now();
                 $payment->created_by = Auth::id();
+                $payment->status = 'completed';
                 $payment->save();
             }
 
             DB::commit();
 
-            return redirect()->route('purchase.list')->with(
-                'success',
+            return to_route('purchase.list')->with('success',
                 $isShadowUser ? 'Shadow purchase created successfully' : 'Purchase created successfully'
             );
         } catch (\Exception $e) {
             DB::rollBack();
             // \Log::error('Purchase creation error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Error creating purchase: ' . $e->getMessage());
+            return to_route('purchase.list')->with('error', 'Error creating purchase: ' . $e->getMessage());
         }
     }
 
+    
 
+
+    // Show purchase details
     public function show($id)
     {
         $user = Auth::user();

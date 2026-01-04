@@ -14,18 +14,30 @@ return new class extends Migration
         Schema::create('sale_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sale_id')->constrained('sales')->cascadeOnDelete();
-            $table->foreignId('product_id')->constrained('products')->cascadeOnDelete()->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
-            $table->unsignedBigInteger('variant_id')->nullable();
             $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->integer('quantity')->default(1);
-            $table->decimal('unit_price', 10,2)->default(0);
-            $table->decimal('total_price', 10,2)->default(0);
+            $table->decimal('unit_price', 10, 2)->default(0);
+            $table->decimal('total_price', 10, 2)->default(0);
+            $table->unsignedBigInteger('stock_id')->nullable();
 
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('completed');
 
-            $table->decimal('shadow_unit_price', 10,2)->default(0);
-            $table->decimal('shadow_total_price', 10,2)->default(0);
+            $table->decimal('shadow_unit_price', 10, 2)->default(0);
+            $table->decimal('shadow_total_price', 10, 2)->default(0);
+
+
+            $table->string('item_type')->default('real');
+            $table->string('product_name')->nullable();
+            $table->string('brand')->nullable();
+            $table->string('variant_name')->nullable();
+            $table->unsignedBigInteger('purchase_item_id')->nullable();
+
+            $table->unsignedBigInteger('product_id')->nullable();
+            $table->unsignedBigInteger('variant_id')->nullable();
+
+            $table->foreignId('product_id')->nullable()->change();
+            $table->foreignId('variant_id')->nullable()->change();
             $table->softDeletes();
             $table->timestamps();
         });

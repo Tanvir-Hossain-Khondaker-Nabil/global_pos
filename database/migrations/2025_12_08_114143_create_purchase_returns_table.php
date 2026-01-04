@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('warehouse_id');
             $table->date('return_date');
             $table->enum('return_type', ['money_back', 'product_replacement']);
-            $table->decimal('total_return_amount', 12, 2);
+            $table->decimal('total_return_amount', 12, 2)->default(0);
             $table->decimal('refunded_amount', 12, 2)->default(0);
             $table->decimal('shadow_return_amount', 12, 2)->default(0);
             $table->decimal('shadow_refunded_amount', 12, 2)->default(0);

@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ClearDueStore;
+use App\Models\Account;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\Supplier;
@@ -28,20 +30,24 @@ class LedgerController extends Controller
         $customerQuery = Customer::query();
         $supplierQuery = Supplier::query();
 
+
         // Apply search filter
         if ($search) {
+
             $customerQuery->where(function ($q) use ($search) {
-                $q->where('customer_name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
+                  $q->where('customer_name', $search)
+                    ->orWhere('customer_name', 'LIKE', "%{$search}%")
+                    ->orWhere('phone', $search)
                     ->orWhereHas('sales', function ($query) use ($search) {
                         $query->where('invoice_no', 'like', "%{$search}%");
                     });
             });
 
             $supplierQuery->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
+                $q->where('name', $search)
+                    ->orWhere('name', 'LIKE', "%{$search}%")
+                    ->orWhere('phone', $search)
+                    ->orWhere('email', $search)
                     ->orWhereHas('purchases', function ($query) use ($search) {
                         $query->where('purchase_no', 'like', "%{$search}%");
                     });
@@ -293,6 +299,7 @@ class LedgerController extends Controller
 
         return Inertia::render('Ledger/Customer', [
             'customer' => $customer,
+            'accounts' => Account::where('is_active', true)->get(),
             'sales' => $sales,
             'stats' => [
                 'total_sales' => $totalSales,
@@ -384,6 +391,7 @@ class LedgerController extends Controller
         return Inertia::render('Ledger/Supplier', [
             'supplier' => $supplier,
             'purchases' => $purchases,
+            'accounts' => Account::where('is_active', 1)->get(),
             'stats' => [
                 'total_purchases' => $totalPurchases,
                 'total_transactions' => $totalTransactions,
@@ -406,15 +414,13 @@ class LedgerController extends Controller
 
 
     // Clear Due Store Method
-    public function clearDueStore($id, Request $request)
+    public function clearDueStore($id, ClearDueStore $request)
     {
-        $request->validate([
-            'paid_amount' => 'required|numeric|min:0.01',
-            'payment_type' => 'required|string',
-        ]);
-
+        $request->validated();
         $paid_amount = $request->paid_amount;
         $paymentMethod = $request->payment_type;
+        $account = Account::where('id', $request->account_id)->first();
+
 
 
         // ------------------------------------------------------------
@@ -423,7 +429,10 @@ class LedgerController extends Controller
         if ($request->type == 'customer') {
 
             $customer = Customer::findOrFail($id);
-            if ($paymentMethod === 'advance_adjustment') {
+
+            //  Handle Advance Adjustment
+            if ($paymentMethod == 'advance_adjustment') {
+
                 if ($customer->advance_amount < $paid_amount) {
                     return back()->withErrors([
                         'paid_amount' => 'Paid amount exceeds advance amount.'
@@ -431,6 +440,10 @@ class LedgerController extends Controller
                 }
                 $customer->advance_amount -= $paid_amount;
                 $customer->save();
+            }
+
+            if ($paymentMethod == 'account_adjustment' && $account) {
+                $account->updateBalance($paid_amount , 'credit');
             }
 
             //  Get all due sales
@@ -446,16 +459,18 @@ class LedgerController extends Controller
 
                 $saleDue = $sale->due_amount;
                 $applied = min($saleDue, $paid_amount);
+                //  Record Payment
                 Payment::create([
                     'sale_id'        => $sale->id,
                     'customer_id'    => $customer->id,
                     'amount'         => $applied,
                     'shadow_amount'  => 0,
-                    'payment_method' => $paymentMethod ?? 'cash',
-                    'txn_ref'        => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+                    'payment_method' => $account->type ?? $paymentMethod ?? 'cash',
+                    'txn_ref'        => $request->txn_ref ?? ('CDA-' . Str::random(10)),
                     'note'           => $request->notes ?? 'clearing due payment',
                     'paid_at'        => Carbon::now(),
                     'created_by'     => Auth::id(),
+                    'status'         => 'completed'
                 ]);
 
                 //  Update Sale
@@ -475,110 +490,135 @@ class LedgerController extends Controller
         // ------------------------------------------------------------
         // SUPPLIER DUE CLEARING
         // ------------------------------------------------------------
-      if ($request->type == 'supplier') {
-            $supplier = Supplier::findOrFail($id);
+        if ($request->type == 'supplier') {
+                $supplier = Supplier::findOrFail($id);
 
 
-            //  Handle Advance Adjustment
-            if ($paymentMethod === 'advance_adjustment') {
-                if ($supplier->advance_amount < $paid_amount) {
-                    return back()->withErrors([
-                        'paid_amount' => 'Paid amount exceeds advance amount.'
-                    ]);
+                //  Handle Advance Adjustment
+                if ($paymentMethod == 'advance_adjustment') {
+                    if ($supplier->advance_amount < $paid_amount) {
+                        return back()->withErrors([
+                            'paid_amount' => 'Paid amount exceeds advance amount.'
+                        ]);
+                    }
+
+                    $supplier->advance_amount -= $paid_amount;
+                    $supplier->save();
                 }
 
-                $supplier->advance_amount -= $paid_amount;
-                $supplier->save();
-            }
-
-            //  Get all due purchases
-            $purchases = $supplier->purchases()
-                ->where('due_amount', '>', 0)
-                ->orderBy('created_at')
-                ->get();
 
 
-            foreach ($purchases as $purchase) {
-
-                if ($paid_amount <= 0) break;
                 
-                $purchaseDue = $purchase->grand_total - $purchase->paid_amount;
-                $applied = min($purchaseDue, $paid_amount);
+                if ($paymentMethod == 'account_adjustment' && $account) {
 
-                //  Record Payment
-                Payment::create([
-                    'purchase_id'    => $purchase->id,
-                    'supplier_id'    => $supplier->id,
-                    'amount'         => $applied,
-                    'shadow_amount'  => 0,
-                    'payment_method' => $paymentMethod ?? 'cash',
-                    'txn_ref'        => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
-                    'note'           => $request->notes ?? 'clearing due payment',
-                    'paid_at'        => Carbon::now(),
-                    'created_by'     => Auth::id(),
-                ]);
+                    if($account->current_balance < $paid_amount){
+                        return back()->withErrors(['account_id' => 'Paid amount exceeds account balance']);
+                    }
 
-                // Update Purchase
-                $purchase->paid_amount += $applied;
-                $purchase->due_amount -= $applied;
-
-                if ($purchase->due_amount <= 0) {
-                    $purchase->due_amount = 0;
-                    $purchase->status = 'completed';
+                    $account->updateBalance($paid_amount , 'withdraw');
                 }
 
-                $purchase->save();
-                $paid_amount -= $applied;
-            }
-        }
+                //  Get all due purchases
+                $purchases = $supplier->purchases()
+                    ->where('due_amount', '>', 0)
+                    ->orderBy('created_at')
+                    ->get();
 
-        return back()->with('success', 'Payment recorded successfully.');
+
+
+                foreach ($purchases as $purchase) {
+
+                    if ($paid_amount <= 0) break;
+                    
+                    $purchaseDue = $purchase->grand_total - $purchase->paid_amount;
+                    $applied = min($purchaseDue, $paid_amount);
+
+
+                    //  Record Payment
+                    Payment::create([
+                        'purchase_id'    => $purchase->id,
+                        'supplier_id'    => $supplier->id,
+                        'amount'         => $applied,
+                        'shadow_amount'  => 0,
+                        'payment_method' => $paymentMethod ?? 'cash',
+                        'txn_ref'        => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+                        'note'           => $request->notes ?? 'clearing due payment',
+                        'paid_at'        => Carbon::now(),
+                        'created_by'     => Auth::id(),
+                    ]);
+
+                    // Update Purchase
+                    $purchase->paid_amount += $applied;
+                    $purchase->due_amount -= $applied;
+
+
+
+                    if ($purchase->due_amount <= 0) {
+                        $purchase->due_amount = 0;
+                        $purchase->status = 'completed';
+                    }
+                    $purchase->save();
+                    $paid_amount -= $applied;
+                }
+            }
+
+            return back()->with('success', 'Payment recorded successfully.');
     }
 
 
     //advancePaymentStore method
-
     public function advancePaymentStore($id, Request $request)
     {
+
         $request->validate([
-            'paid_amount' => 'required|numeric|min:0.01',
-            'payment_type' => 'required|string',
-            'transaction_id' => 'nullable|string',
+            'amount' => 'required|numeric|min:0.01',
+            'account_id' => 'required|exists:accounts,id',
             'notes' => 'nullable|string',
         ]);
-
-        $paid_amount = $request->input('paid_amount');
-
+        
+        
+        $paid_amount = $request->input('amount');
+        $account = Account::where('id', $request->input('account_id'))->first();
 
         if($request->type == 'supplier'){
             $supplier = Supplier::findOrFail($id);
+
+            if($account->current_balance < $paid_amount){
+                return back()->withErrors(['account_id' => 'Paid amount exceeds account balance']);
+            }
+
             $supplier->advance_amount += $paid_amount;
             $supplier->save();
+            $account->updateBalance($paid_amount,'withdraw');
+
         }else {
             $customer = Customer::findOrFail($id);
             $customer->advance_amount += $paid_amount;
             $customer->save();
+            $account->updateBalance($paid_amount,'deposit');
         }
 
 
-      
+
         // Record Payment
         Payment::create([
             'supplier_id'    => $supplier->id ?? null,
             'customer_id'    => $customer->id ?? null,
             'amount'         => $paid_amount,
             'shadow_amount'  => 0,
-            'payment_method' => $request->input('payment_type'),
-            'txn_ref'        => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
+            'payment_method' => $account->type ?? 'cash',
+            'txn_ref'        => $request->input('transaction_id') ?? ('ADB-' . Str::random(10)),
             'note'           => $request->input('notes') ?? 'advance payment',
             'paid_at'        => Carbon::now(),
+            'status'         => 'completed',
             'created_by'     => Auth::id(),
         ]);
 
         return back()->with('success', 'Advance payment recorded successfully.');
     }
 
-      public function clearDueStore1($id, Request $request)
+
+    public function clearDueStore1($id, Request $request)
     {
         $request->validate([
             'paid_amount' => 'required|numeric|min:0.01',
@@ -642,7 +682,6 @@ class LedgerController extends Controller
  
         } elseif ($request->type === 'supplier') {
 
-            dd($request->all());
 
             $supplier = Supplier::findOrFail($id);
 

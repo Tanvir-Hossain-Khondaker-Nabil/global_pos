@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, Globe, DollarSign, CheckCircle, XCircle } from "lucide-react";
+import { Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, Globe, DollarSign, CheckCircle, XCircle, CreditCard, Wallet, Receipt } from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -10,12 +10,21 @@ export default function Index({ suppliers, filters }) {
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
+    const [advanceModel, setAdvanceModel] = useState(false);
+    const [selectedSupplier, setSelectedSupplier] = useState(null);
     const [editProcessing, setEditProcessing] = useState(false);
 
     // Model close handle
     const modelClose = () => {
         supplyForm.reset();
         setModel(false);
+    };
+
+    // Advance model close handle
+    const advanceModelClose = () => {
+        advanceForm.reset();
+        setSelectedSupplier(null);
+        setAdvanceModel(false);
     };
 
     // Handle search
@@ -37,7 +46,7 @@ export default function Index({ suppliers, filters }) {
         );
     };
 
-    // Handle form submission
+    // Handle supplier form submission
     const supplyForm = useForm({
         id: "",
         name: "",
@@ -52,6 +61,47 @@ export default function Index({ suppliers, filters }) {
         due_amount: 0,
         is_active: true,
     });
+
+    // Handle advance payment form
+    const advanceForm = useForm({
+        supplier_id: "",
+        amount: "",
+        payment_type: "cash",
+        type: 'supplier',
+        transaction_id: "",
+        notes: "",
+        is_advance: true,
+    });
+
+    const handleAdvancePayment = (supplier) => {
+        setSelectedSupplier(supplier);
+        advanceForm.setData({
+            supplier_id: supplier.id,
+            amount: "",
+            payment_type: "cash",
+            transaction_id: "",
+            notes: "",
+            type: 'supplier' ,
+            is_advance: true,
+        });
+        setAdvanceModel(true);
+    };
+
+    const handleAdvanceSubmit = (e) => {
+        e.preventDefault();
+
+        advanceForm.post(route("advancePayment.store", { id: selectedSupplier.id }), {
+            onSuccess: () => {
+                advanceForm.reset();
+                setAdvanceModel(false);
+                setSelectedSupplier(null);
+                router.reload({ only: ['suppliers'] });
+            },
+            onError: (errors) => {
+                console.log(errors);
+            }
+        });
+    };
 
     const handleSupplyCreateForm = (e) => {
         e.preventDefault();
@@ -106,24 +156,30 @@ export default function Index({ suppliers, filters }) {
             router.delete(route("supplier.del", { id }), {
                 preserveScroll: true,
                 onSuccess: () => {
-                    // Optionally show a success message or perform additional actions
                     alert(t('supplier.deleted_successfully', 'Supplier contact deleted successfully!'));
                 },
             });
         }
     };
 
+    // Calculate due amount from purchases
+    const calculateDueAmount = (purchases) => {
+        if (!purchases || purchases.length === 0) return 0;
+        return purchases.reduce((total, purchase) => {
+            const due = (parseFloat(purchase.grand_total) || 0) - (parseFloat(purchase.paid_amount) || 0);
+            return total + (due > 0 ? due : 0);
+        }, 0);
+    };
+
     // Format currency based on locale
     const formatCurrency = (amount) => {
         if (locale === 'bn') {
-            // Bengali locale formatting
             return new Intl.NumberFormat('bn-BD', {
                 style: 'currency',
                 currency: 'BDT',
                 minimumFractionDigits: 2
             }).format(amount);
         } else {
-            // English locale formatting
             return new Intl.NumberFormat('en-BD', {
                 style: 'currency',
                 currency: 'BDT',
@@ -161,14 +217,40 @@ export default function Index({ suppliers, filters }) {
                         placeholder={t('supplier.search_placeholder', 'Search suppliers...')}
                         className="input input-sm input-bordered w-64"
                     />
-                        <button
-                            onClick={() => setModel(true)}
-                            className="btn btn-primary btn-sm"
-                        >
-                            <Plus size={15} /> {t('supplier.add_new', 'Add New')}
-                        </button>
+                    <button
+                        onClick={() => setModel(true)}
+                        className="btn btn-primary btn-sm"
+                    >
+                        <Plus size={15} /> {t('supplier.add_new', 'Add New')}
+                    </button>
                 </div>
             </PageHeader>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-blue-50 border border-blue-100 rounded-box p-4">
+                    <p className="text-sm text-blue-600 font-medium">{t('supplier.total_suppliers', 'Total Suppliers')}</p>
+                    <p className="text-2xl font-bold text-blue-700">{suppliers.total}</p>
+                </div>
+                <div className="bg-green-50 border border-green-100 rounded-box p-4">
+                    <p className="text-sm text-green-600 font-medium">{t('supplier.active_suppliers', 'Active Suppliers')}</p>
+                    <p className="text-2xl font-bold text-green-700">
+                        {suppliers.data.filter(s => s.is_active).length}
+                    </p>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 rounded-box p-4">
+                    <p className="text-sm text-amber-600 font-medium">{t('supplier.total_advance', 'Total Advance')}</p>
+                    <p className="text-2xl font-bold text-amber-700">
+                        {formatCurrency(suppliers.data.reduce((sum, s) => sum + parseFloat(s.advance_amount || 0), 0))}
+                    </p>
+                </div>
+                <div className="bg-red-50 border border-red-100 rounded-box p-4">
+                    <p className="text-sm text-red-600 font-medium">{t('supplier.total_due', 'Total Due')}</p>
+                    <p className="text-2xl font-bold text-red-700">
+                        {formatCurrency(suppliers.data.reduce((sum, s) => sum + calculateDueAmount(s.purchases), 0))}
+                    </p>
+                </div>
+            </div>
 
             <div className="overflow-x-auto">
                 {suppliers.data.length > 0 ? (
@@ -181,7 +263,7 @@ export default function Index({ suppliers, filters }) {
                                 <th>{t('supplier.financial_info', 'Financial Info')}</th>
                                 <th>{t('supplier.status', 'Status')}</th>
                                 <th>{t('supplier.added_on', 'Added On')}</th>
-                                <th className="w-32">{t('supplier.actions', 'Actions')}</th>
+                                <th className="w-40">{t('supplier.actions', 'Actions')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -234,7 +316,7 @@ export default function Index({ suppliers, filters }) {
                                                 <span className="text-sm">
                                                     {t('supplier.advance_amount', 'Advance')}:
                                                     <span className="font-semibold ml-1 text-green-600">
-                                                        {formatCurrency(supplier.advance_amount)}
+                                                        {formatCurrency(supplier.advance_amount || 0)}
                                                     </span>
                                                 </span>
                                             </div>
@@ -242,14 +324,7 @@ export default function Index({ suppliers, filters }) {
                                                 <span className="text-sm">
                                                     {t('supplier.due_amount', 'Due')}:
                                                     <span className="font-semibold ml-1 text-red-600">
-                                                        {formatCurrency(
-                                                            supplier?.purchases?.reduce(
-                                                                (sum, p) => sum + (parseFloat(p?.grand_total - p?.paid_amount) || 0),
-                                                                0
-                                                            )
-                                                        )}
-
-
+                                                        {formatCurrency(calculateDueAmount(supplier.purchases) || 0)}
                                                     </span>
                                                 </span>
                                             </div>
@@ -279,21 +354,30 @@ export default function Index({ suppliers, filters }) {
                                         </div>
                                     </td>
                                     <td>
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    disabled={editProcessing}
-                                                    onClick={() => handleSupplyEdit(supplier.id)}
-                                                    className="btn btn-xs btn-warning"
-                                                >
-                                                    <Pen size={12} /> {t('supplier.edit', 'Edit')}
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(supplier.id)}
-                                                    className="btn btn-xs btn-error"
-                                                >
-                                                    <Trash2 size={12} /> {t('supplier.delete', 'Delete')}
-                                                </button>
-                                            </div>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={() => handleAdvancePayment(supplier)}
+                                                className="btn btn-xs btn-success"
+                                                title={t('supplier.add_advance', 'Add Advance')}
+                                            >
+                                                <DollarSign size={12} />
+                                            </button>
+                                            <button
+                                                disabled={editProcessing}
+                                                onClick={() => handleSupplyEdit(supplier.id)}
+                                                title={t('supplier.edit', 'Edit')}
+                                                className="btn btn-xs btn-warning"
+                                            >
+                                                <Pen size={12} /> 
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(supplier.id)}
+                                                title={t('supplier.delete', 'Delete')}
+                                                className="btn btn-xs btn-error"
+                                            >
+                                                <Trash2 size={12} /> 
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -315,12 +399,12 @@ export default function Index({ suppliers, filters }) {
                                 }
                             </p>
                         </div>
-                            <button
-                                onClick={() => setModel(true)}
-                                className="btn btn-primary btn-sm"
-                            >
-                                <Plus size={15} /> {t('supplier.add_new_contact', 'Add New Contact')}
-                            </button>
+                        <button
+                            onClick={() => setModel(true)}
+                            className="btn btn-primary btn-sm"
+                        >
+                            <Plus size={15} /> {t('supplier.add_new_contact', 'Add New Contact')}
+                        </button>
                     </div>
                 )}
             </div>
@@ -332,7 +416,7 @@ export default function Index({ suppliers, filters }) {
                 </div>
             )}
 
-            {/* Add/Edit Modal */}
+            {/* Add/Edit Supplier Modal */}
             <dialog className={`modal ${model ? 'modal-open' : ''}`}>
                 <div className="modal-box max-w-3xl">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
@@ -480,8 +564,9 @@ export default function Index({ suppliers, filters }) {
                                     min="0"
                                     value={supplyForm.data.advance_amount}
                                     onChange={(e) => supplyForm.setData("advance_amount", parseFloat(e.target.value) || 0)}
-                                    className="input input-bordered w-full"
+                                    className={`input input-bordered w-full ${supplyForm.data.id ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                                     placeholder={t('supplier.advance_amount_placeholder', 'Enter advance amount')}
+                                    readOnly={!!supplyForm.data.id}
                                 />
                                 {supplyForm.errors.advance_amount && (
                                     <div className="text-red-500 text-sm mt-1">
@@ -489,8 +574,6 @@ export default function Index({ suppliers, filters }) {
                                     </div>
                                 )}
                             </fieldset>
-
-
 
                             {/* Status */}
                             <fieldset className="fieldset">
@@ -564,6 +647,176 @@ export default function Index({ suppliers, filters }) {
                             </button>
                         </div>
                     </form>
+                </div>
+            </dialog>
+
+            {/* Add Advance Payment Modal */}
+            <dialog className={`modal ${advanceModel ? 'modal-open' : ''}`}>
+                <div className="modal-box max-w-md">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
+                        <h1 className="text-lg font-semibold text-gray-900">
+                            {t('supplier.add_advance_payment', 'Add Advance Payment')}
+                        </h1>
+                        <button
+                            onClick={advanceModelClose}
+                            className="btn btn-circle btn-xs btn-ghost"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    {selectedSupplier && (
+                        <>
+                            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                                <h3 className="font-medium text-gray-900 mb-3">
+                                    {t('supplier.supplier_info', 'Supplier Information')}
+                                </h3>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">{t('supplier.supply_name', 'Supplier Name')}:</span>
+                                        <span className="font-medium">{selectedSupplier.name}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">{t('supplier.contact_person', 'Contact Person')}:</span>
+                                        <span>{selectedSupplier.contact_person}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">{t('supplier.phone', 'Phone')}:</span>
+                                        <span>{selectedSupplier.phone}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">{t('supplier.current_advance', 'Current Advance')}:</span>
+                                        <span className="font-semibold text-green-600">
+                                            {formatCurrency(selectedSupplier.advance_amount || 0)}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleAdvanceSubmit} className="space-y-4">
+                                <fieldset className="fieldset">
+                                    <legend className="fieldset-legend">
+                                        {t('supplier.amount', 'Amount')}
+                                        <span className="text-red-500 ml-1">*</span>
+                                    </legend>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                                            <DollarSign size={16} className="text-gray-400" />
+                                        </span>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={advanceForm.data.amount}
+                                            onChange={(e) => advanceForm.setData("amount", e.target.value)}
+                                            className="input input-bordered w-full pl-3"
+                                            placeholder={t('supplier.amount_placeholder', 'Enter amount')}
+                                            required
+                                        />
+                                    </div>
+                                    {advanceForm.errors.amount && (
+                                        <div className="text-red-500 text-sm mt-1">
+                                            {advanceForm.errors.amount}
+                                        </div>
+                                    )}
+                                </fieldset>
+
+                                {/* Payment Type */}
+                                <fieldset className="fieldset">
+                                    <legend className="fieldset-legend">
+                                        {t('supplier.payment_type', 'Payment Type')}
+                                    </legend>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['cash', 'bank', 'mobile'].map((type) => (
+                                            <label key={type} className="flex flex-col items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                                <input
+                                                    type="radio"
+                                                    name="payment_type"
+                                                    value={type}
+                                                    checked={advanceForm.data.payment_type === type}
+                                                    onChange={(e) => advanceForm.setData("payment_type", e.target.value)}
+                                                    className="radio radio-primary"
+                                                />
+                                                <span className="text-xs mt-2 capitalize">
+                                                    {type === 'cash' && <Wallet size={14} className="inline mr-1" />}
+                                                    {type === 'bank' && <CreditCard size={14} className="inline mr-1" />}
+                                                    {type === 'mobile' && <Phone size={14} className="inline mr-1" />}
+                                                    {t(`supplier.payment_${type}`, type)}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {advanceForm.errors.payment_type && (
+                                        <div className="text-red-500 text-sm mt-1">
+                                            {advanceForm.errors.payment_type}
+                                        </div>
+                                    )}
+                                </fieldset>
+
+                                {/* Transaction ID (if not cash) */}
+                                {advanceForm.data.payment_type !== 'cash' && (
+                                    <fieldset className="fieldset">
+                                        <legend className="fieldset-legend">
+                                            {t('supplier.transaction_id', 'Transaction ID')}
+                                            <span className="text-red-500 ml-1">*</span>
+                                        </legend>
+                                        <input
+                                            type="text"
+                                            value={advanceForm.data.transaction_id}
+                                            onChange={(e) => advanceForm.setData("transaction_id", e.target.value)}
+                                            className="input input-bordered w-full"
+                                            placeholder={t('supplier.transaction_id_placeholder', 'Enter transaction ID')}
+                                            required={advanceForm.data.payment_type !== 'cash'}
+                                        />
+                                        {advanceForm.errors.transaction_id && (
+                                            <div className="text-red-500 text-sm mt-1">
+                                                {advanceForm.errors.transaction_id}
+                                            </div>
+                                        )}
+                                    </fieldset>
+                                )}
+
+                                {/* Notes */}
+                                <fieldset className="fieldset">
+                                    <legend className="fieldset-legend">
+                                        {t('supplier.notes', 'Notes')}
+                                    </legend>
+                                    <textarea
+                                        value={advanceForm.data.notes}
+                                        onChange={(e) => advanceForm.setData("notes", e.target.value)}
+                                        className="textarea textarea-bordered w-full"
+                                        rows="2"
+                                        placeholder={t('supplier.notes_placeholder', 'Any additional notes...')}
+                                    />
+                                    {advanceForm.errors.notes && (
+                                        <div className="text-red-500 text-sm mt-1">
+                                            {advanceForm.errors.notes}
+                                        </div>
+                                    )}
+                                </fieldset>
+
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={advanceForm.processing}
+                                        className="btn btn-success flex-1"
+                                    >
+                                        {advanceForm.processing
+                                            ? t('supplier.processing', 'Processing...')
+                                            : t('supplier.submit_payment', 'Submit Payment')
+                                        }
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={advanceModelClose}
+                                        className="btn btn-ghost"
+                                    >
+                                        {t('supplier.cancel', 'Cancel')}
+                                    </button>
+                                </div>
+                            </form>
+                        </>
+                    )}
                 </div>
             </dialog>
         </div>

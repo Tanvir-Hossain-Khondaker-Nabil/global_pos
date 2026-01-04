@@ -276,25 +276,16 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Head title="Ledger" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Ledger</h1>
               <p className="text-gray-600 mt-2">
                 Overview of customers, suppliers, sales, and purchases
               </p>
             </div>
-            {/* <div className="flex items-center gap-3">
-              <button
-                onClick={() => window.print()}
-                className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 flex items-center gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export
-              </button>
-            </div> */}
           </div>
         </div>
 
@@ -347,7 +338,7 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
               </select>
             </div>
 
-            <div className="md:col-span-1">
+            <div className="md:col-span-2">
               <button
                 onClick={handleFilter}
                 className="w-full h-12 bg-gradient-to-r from-blue-600 to-blue-700 text-white 
@@ -358,30 +349,6 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                 Apply
               </button>
             </div>
-
-
-            {/* <div className="md:col-span-4 flex gap-2">
-              <div className="flex-1">
-                <input
-                  type="date"
-                  value={filterForm.data.start_date}
-                  onChange={(e) => filterForm.setData("start_date", e.target.value)}
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                />
-              </div>
-              <div className="flex-1">
-                <input
-                  type="date"
-                  value={filterForm.data.end_date}
-                  onChange={(e) => filterForm.setData("end_date", e.target.value)}
-                  className="w-full h-12 px-4 border border-gray-300 rounded-xl bg-gray-50
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                />
-              </div>
-            </div> */}
-
-
           </div>
         </div>
 
@@ -515,42 +482,41 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           {allEntities.length > 0 ? (
             <>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-4 sm:mx-0">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
                     <tr>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Entity
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Type
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
-                        Contact Info
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Contact
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
-                        Transactions
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Trans
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
-                        Total Amount
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Total
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
-                         Paid Amount
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Paid
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
-                        Balance
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Advance
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
-                        Due Amount
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                        Due
                       </th>
-                      <th className="px-8 py-4 text-left text-sm font-semibold text-gray-900 uppercase">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {allEntities.map((entity) => {
-                      console.log(entity);
                       const isCustomer = "customer_name" in entity;
                       const entityConfig = getEntityTypeConfig(entity);
                       const transactions = isCustomer ? entity.sales : entity.purchases;
@@ -561,12 +527,11 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                           0
                         )) || 0;
 
-                        const totalPaidAmount =
+                      const totalPaidAmount =
                         (transactions?.reduce(
                           (sum, t) => sum + (parseFloat(t?.paid_amount) || 0),
                           0
                         )) || 0;
-
 
                       const totalDueAmount = totalAmount - totalPaidAmount;
                       const transactionCount = transactions?.length || 0;
@@ -575,73 +540,66 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
 
                       return (
                         <tr key={entity.id} className="hover:bg-gray-50/50 transition-colors">
-                          <td className="px-8 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                                <User className="h-5 w-5 text-blue-600" />
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center flex-shrink-0">
+                                <User className="h-4 w-4 text-blue-600" />
                               </div>
-                              <div>
-                                <div className="font-medium text-gray-900">
+                              <div className="min-w-0">
+                                <div className="font-medium text-gray-900 truncate max-w-[120px]">
                                   {isCustomer ? entity.customer_name : entity.name}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {entity.email || "No email"}
                                 </div>
                               </div>
                             </div>
                           </td>
 
                           {/* Type badge */}
-                          <td className="px-8 py-5">
+                          <td className="px-4 py-3">
                             <div
-                              className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border ${entityConfig.color}`}
+                              className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${entityConfig.color}`}
                             >
-                              <EntityIcon className="h-3.5 w-3.5" />
-                              {entityConfig.label}
+                              <EntityIcon className="h-3 w-3" />
+                              <span className="hidden sm:inline">{entityConfig.label}</span>
+                              <span className="inline sm:hidden">
+                                {entityConfig.label === 'Customer' ? 'Cust' : 'Supp'}
+                              </span>
                             </div>
                           </td>
 
                           {/* Contact */}
-                          <td className="px-8 py-5">
-                            <div className="space-y-1">
+                          <td className="px-4 py-3">
+                            <div className="space-y-0.5">
                               {entity.phone && (
-                                <div className="text-sm text-gray-900">{entity.phone}</div>
-                              )}
-                              {entity.address && (
-                                <div className="text-xs text-gray-500 truncate max-w-xs">
-                                  {entity.address}
-                                </div>
+                                <div className="text-sm text-gray-900 truncate max-w-[100px]">{entity.phone}</div>
                               )}
                             </div>
                           </td>
 
                           {/* Transaction Count */}
-                          <td className="px-8 py-5">
-                            <div className="text-lg font-bold text-gray-900">
+                          <td className="px-4 py-3">
+                            <div className="text-base font-bold text-gray-900">
                               {transactionCount}
                             </div>
-                            <div className="text-sm text-gray-500">transactions</div>
                           </td>
 
                           {/* Total Amount */}
-                          <td className="px-8 py-5">
-                            <div className="text-lg font-bold text-gray-900">
+                          <td className="px-4 py-3">
+                            <div className="text-base font-bold text-gray-900">
                               ৳{formatCurrency(totalAmount)}
                             </div>
-                            <div className="text-sm text-gray-500">total value</div>
                           </td>
 
-                          <td className="px-8 py-5">
-                            <div className="text-lg font-bold text-gray-900">
+                          {/* Paid Amount */}
+                          <td className="px-4 py-3">
+                            <div className="text-base font-bold text-gray-900">
                               ৳{formatCurrency(totalPaidAmount)}
                             </div>
-                            <div className="text-sm text-gray-500">total value</div>
                           </td>
 
                           {/* Advance */}
-                          <td className="px-8 py-5">
+                          <td className="px-4 py-3">
                             <div
-                              className={`text-lg font-bold ${(entity.balance || 0) >= 0
+                              className={`text-base font-bold ${(advanceAmount || 0) >= 0
                                   ? "text-emerald-600"
                                   : "text-rose-600"
                                 }`}
@@ -651,16 +609,15 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                           </td>
 
                           {/* Due */}
-                          <td className="px-8 py-5">
-                            <div className="text-lg font-bold text-gray-900">
+                          <td className="px-4 py-3">
+                            <div className="text-base font-bold text-gray-900">
                               ৳{formatCurrency(totalDueAmount)}
                             </div>
-                            <div className="text-sm text-gray-500">Due Amount</div>
                           </td>
 
                           {/* Actions */}
-                          <td className="px-8 py-5">
-                            <div className="flex items-center gap-2">
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-1">
                               {/* Ledger link */}
                               <Link
                                 href={route(
@@ -675,43 +632,41 @@ export default function LedgerIndex({ customers = [], suppliers = [], filters = 
                                     }),
                                   }
                                 )}
-                                className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                className="p-1.5 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                 title="View Ledger"
                               >
-                                <Eye className="h-4 w-4" />
+                                <Eye className="h-3.5 w-3.5" />
                               </Link>
 
                               {/* Customer / Supplier Profile */}
                               {isCustomer ? (
                                 <Link
                                   href={`/customer/show/${entity.id}`}
-                                  className="p-2 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                                   title="View Customer"
                                 >
-                                  <User className="h-4 w-4" />
+                                  <User className="h-3.5 w-3.5" />
                                 </Link>
                               ) : (
                                 <Link
                                   href={`/supplier/show/${entity.id}`}
-                                  className="p-2 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-gray-600 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
                                   title="View Supplier"
                                 >
-                                  <Truck className="h-4 w-4" />
+                                  <Truck className="h-3.5 w-3.5" />
                                 </Link>
                               )}
-
                             </div>
                           </td>
                         </tr>
                       );
                     })}
                   </tbody>
-
                 </table>
               </div>
 
               {/* Pagination */}
-              <div className="px-8 py-6 border-t border-gray-100">
+              <div className="px-4 sm:px-6 py-4 border-t border-gray-100">
                 {type === 'all' ? (
                   <div className="space-y-4">
                     {customers && (Array.isArray(customers) ? customers.length : customers?.data?.length) > 0 && (

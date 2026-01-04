@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import Pagination from "../components/Pagination";
-import { Eye, Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, User, CheckCircle, XCircle, DollarSign } from "lucide-react";
+import { Eye, Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, User, CheckCircle, XCircle, DollarSign, CreditCard, Wallet, Receipt } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
@@ -10,6 +10,8 @@ export default function Customers({ customers, filters }) {
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
+    const [advanceModel, setAdvanceModel] = useState(false);
+    const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [editProcessing, setEditProcessing] = useState(false);
 
     // Model close handle
@@ -18,17 +20,24 @@ export default function Customers({ customers, filters }) {
         setModel(false);
     };
 
+    // Advance model close handle
+    const advanceModelClose = () => {
+        advanceForm.reset();
+        setSelectedCustomer(null);
+        setAdvanceModel(false);
+    };
+
     // Handle search
     const searchForm = useForm({
         search: filters.search || "",
     });
-    
+
     const handleSearch = (e) => {
         const value = e.target.value;
         searchForm.setData("search", value);
 
-        router.get(route("customer.index"), 
-            { search: value }, 
+        router.get(route("customer.index"),
+            { search: value },
             {
                 preserveScroll: true,
                 preserveState: true,
@@ -37,7 +46,7 @@ export default function Customers({ customers, filters }) {
         );
     };
 
-    // Handle form submission
+    // Handle customer form submission
     const customerForm = useForm({
         id: "",
         customer_name: "",
@@ -48,6 +57,42 @@ export default function Customers({ customers, filters }) {
         due_amount: 0,
         is_active: true,
     });
+
+    // Handle advance payment form
+    const advanceForm = useForm({
+        customer_id: "",
+        amount: "",
+        payment_type: "cash",
+        transaction_id: "",
+        notes: "",
+    });
+
+    const handleAdvancePayment = (customer) => {
+        setSelectedCustomer(customer);
+        advanceForm.setData({
+            customer_id: customer.id,
+            amount: "",
+            payment_type: "cash",
+            transaction_id: "",
+            notes: "",
+        });
+        setAdvanceModel(true);
+    };
+
+    const handleAdvanceSubmit = (e) => {
+        e.preventDefault();
+
+        advanceForm.post(route("advancePayment.store", { id: selectedCustomer.id }), {
+            onSuccess: () => {
+                advanceForm.reset();
+                setAdvanceModel(false);
+                setSelectedCustomer(null);
+            },
+            onError: (errors) => {
+                console.log(errors);
+            }
+        });
+    };
 
     const handleCustomerCreateForm = (e) => {
         e.preventDefault();
@@ -132,7 +177,7 @@ export default function Customers({ customers, filters }) {
             month: 'short',
             day: 'numeric'
         };
-        
+
         if (locale === 'bn') {
             return new Date(dateString).toLocaleDateString('bn-BD', options);
         } else {
@@ -194,7 +239,7 @@ export default function Customers({ customers, filters }) {
 
             <div className="overflow-x-auto">
                 {customers.data.length > 0 ? (
-                    <table className="table table-auto w-full">
+                    <table className="table table-auto w-full ">
                         <thead className="bg-primary text-white">
                             <tr>
                                 <th className="w-12">#</th>
@@ -244,7 +289,7 @@ export default function Customers({ customers, filters }) {
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm">
-                                                    {t('customer.advance', 'Advance')}: 
+                                                    {t('customer.advance', 'Advance')}:
                                                     <span className="font-semibold ml-1 text-green-600">
                                                         {formatCurrency(customer.advance_amount || 0)}
                                                     </span>
@@ -252,7 +297,7 @@ export default function Customers({ customers, filters }) {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <span className="text-sm">
-                                                    {t('customer.due', 'Due')}: 
+                                                    {t('customer.due', 'Due')}:
                                                     <span className="font-semibold ml-1 text-red-600">
                                                         {formatCurrency(calculateDueAmount(customer.sales) || 0)}
                                                     </span>
@@ -293,36 +338,36 @@ export default function Customers({ customers, filters }) {
                                                 <Eye size={12} />
                                             </Link>
 
-                                            <Link
-                                                href={route("advancePayment.store", { id: customer.id })}
+                                            <button
+                                                onClick={() => handleAdvancePayment(customer)}
                                                 className="btn btn-xs btn-success"
                                                 title={t('customer.add_advance', 'Add Advance')}
                                             >
-                                                <Plus size={12} />
-                                            </Link>
+                                                <DollarSign size={12} />
+                                            </button>
 
-                                                <>
-                                                    <button
-                                                        disabled={editProcessing}
-                                                        onClick={() => handleCustomerEdit(customer.id)}
-                                                        className="btn btn-xs btn-warning"
-                                                        title={t('customer.edit', 'Edit')}
-                                                    >
-                                                        <Pen size={12} />
-                                                    </button>
-                                                    <Link
-                                                        href={route("customer.del", { id: customer.id })}
-                                                        onClick={(e) => {
-                                                            if (!confirm(t('customer.delete_confirmation', 'Are you sure you want to delete this customer?'))) {
-                                                                e.preventDefault();
-                                                            }
-                                                        }}
-                                                        className="btn btn-xs btn-error"
-                                                        title={t('customer.delete', 'Delete')}
-                                                    >
-                                                        <Trash2 size={12} />
-                                                    </Link>
-                                                </>
+                                            <>
+                                                <button
+                                                    disabled={editProcessing}
+                                                    onClick={() => handleCustomerEdit(customer.id)}
+                                                    className="btn btn-xs btn-warning"
+                                                    title={t('customer.edit', 'Edit')}
+                                                >
+                                                    <Pen size={12} />
+                                                </button>
+                                                <Link
+                                                    href={route("customer.del", { id: customer.id })}
+                                                    onClick={(e) => {
+                                                        if (!confirm(t('customer.delete_confirmation', 'Are you sure you want to delete this customer?'))) {
+                                                            e.preventDefault();
+                                                        }
+                                                    }}
+                                                    className="btn btn-xs btn-error"
+                                                    title={t('customer.delete', 'Delete')}
+                                                >
+                                                    <Trash2 size={12} />
+                                                </Link>
+                                            </>
                                         </div>
                                     </td>
                                 </tr>
@@ -337,7 +382,7 @@ export default function Customers({ customers, filters }) {
                                 {t('customer.no_customers_found', 'No customers found')}
                             </h3>
                             <p className="text-gray-400 text-sm">
-                                {searchForm.data.search 
+                                {searchForm.data.search
                                     ? t('customer.no_matching_customers', 'No customers matching ":search"', {
                                         search: searchForm.data.search
                                     })
@@ -362,12 +407,12 @@ export default function Customers({ customers, filters }) {
                 </div>
             )}
 
-            {/* Add/Edit Modal */}
+            {/* Add/Edit Customer Modal */}
             <dialog className={`modal ${model ? 'modal-open' : ''}`}>
                 <div className="modal-box max-w-2xl">
                     <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
                         <h1 className="text-lg font-semibold text-gray-900">
-                            {customerForm.data.id 
+                            {customerForm.data.id
                                 ? t('customer.edit_customer', 'Edit Customer')
                                 : t('customer.add_new_customer', 'Add New Customer')
                             }
@@ -424,21 +469,31 @@ export default function Customers({ customers, filters }) {
                                 )}
                             </fieldset>
 
-
                             {/* Advance Amount */}
                             <fieldset className="fieldset">
                                 <legend className="fieldset-legend">
                                     {t('customer.advance_amount', 'Advance Amount')}
                                 </legend>
+
                                 <input
                                     type="number"
                                     step="0.01"
                                     min="0"
                                     value={customerForm.data.advance_amount}
-                                    onChange={(e) => customerForm.setData("advance_amount", parseFloat(e.target.value) || 0)}
-                                    className="input input-bordered w-full"
-                                    placeholder={t('customer.advance_amount_placeholder', 'Enter advance amount')}
+                                    onChange={(e) =>
+                                        customerForm.setData(
+                                            "advance_amount",
+                                            parseFloat(e.target.value) || 0
+                                        )
+                                    }
+                                    readOnly={!!customerForm.data.id}
+                                    className={`input input-bordered w-full ${!!customerForm.data.id ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                                    placeholder={t(
+                                        'customer.advance_amount_placeholder',
+                                        'Enter advance amount'
+                                    )}
                                 />
+
                                 {customerForm.errors.advance_amount && (
                                     <div className="text-red-500 text-sm mt-1">
                                         {customerForm.errors.advance_amount}
@@ -446,7 +501,6 @@ export default function Customers({ customers, filters }) {
                                 )}
                             </fieldset>
 
-                     
 
                             {/* Status */}
                             <fieldset className="fieldset">
@@ -461,7 +515,7 @@ export default function Customers({ customers, filters }) {
                                         className="toggle toggle-primary"
                                     />
                                     <span className="label-text">
-                                        {customerForm.data.is_active 
+                                        {customerForm.data.is_active
                                             ? t('customer.active_status', 'Active')
                                             : t('customer.inactive_status', 'Inactive')
                                         }
@@ -495,9 +549,9 @@ export default function Customers({ customers, filters }) {
                                 disabled={customerForm.processing}
                                 className="btn btn-primary flex-1"
                             >
-                                {customerForm.processing 
+                                {customerForm.processing
                                     ? t('customer.saving', 'Saving...')
-                                    : customerForm.data.id 
+                                    : customerForm.data.id
                                         ? t('customer.update_customer', 'Update Customer')
                                         : t('customer.add_customer', 'Add Customer')
                                 }
@@ -511,6 +565,174 @@ export default function Customers({ customers, filters }) {
                             </button>
                         </div>
                     </form>
+                </div>
+            </dialog>
+
+            {/* Add Advance Payment Modal */}
+            <dialog className={`modal ${advanceModel ? 'modal-open' : ''}`}>
+                <div className="modal-box max-w-md">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
+                        <h1 className="text-lg font-semibold text-gray-900">
+                            {t('customer.add_advance_payment', 'Add Advance Payment')}
+                        </h1>
+                        <button
+                            onClick={advanceModelClose}
+                            className="btn btn-circle btn-xs btn-ghost"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    {selectedCustomer && (
+                        <>
+                            {/* Customer Information */}
+                            <div className="bg-gray-50 p-4 rounded-lg mb-6">
+                                <h3 className="font-medium text-gray-900 mb-3">
+                                    {t('customer.customer_info', 'Customer Information')}
+                                </h3>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">{t('customer.customer_name', 'Customer Name')}:</span>
+                                        <span className="font-medium">{selectedCustomer.customer_name}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">{t('customer.phone', 'Phone')}:</span>
+                                        <span>{selectedCustomer.phone}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-sm text-gray-600">{t('customer.current_advance', 'Current Advance')}:</span>
+                                        <span className="font-semibold text-green-600">
+                                            {formatCurrency(selectedCustomer.advance_amount || 0)}
+                                        </span>
+                                    </div>
+
+                                </div>
+                            </div>
+
+                            <form onSubmit={handleAdvanceSubmit} className="space-y-4">
+                                <fieldset className="fieldset">
+                                    <legend className="fieldset-legend">
+                                        {t('customer.amount', 'Amount')}
+                                        <span className="text-red-500 ml-1">*</span>
+                                    </legend>
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                                            <DollarSign size={16} className="text-gray-400" />
+                                        </span>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            value={advanceForm.data.amount}
+                                            onChange={(e) => advanceForm.setData("amount", e.target.value)}
+                                            className="input input-bordered w-full pl-3"
+                                            placeholder={t('customer.amount_placeholder', 'Enter amount')}
+                                            required
+                                        />
+                                    </div>
+                                    {advanceForm.errors.amount && (
+                                        <div className="text-red-500 text-sm mt-1">
+                                            {advanceForm.errors.amount}
+                                        </div>
+                                    )}
+                                </fieldset>
+
+                                {/* Payment Type */}
+                                <fieldset className="fieldset">
+                                    <legend className="fieldset-legend">
+                                        {t('customer.payment_type', 'Payment Type')}
+                                    </legend>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {['cash', 'bank', 'mobile'].map((type) => (
+                                            <label key={type} className="flex flex-col items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                                                <input
+                                                    type="radio"
+                                                    name="payment_type"
+                                                    value={type}
+                                                    checked={advanceForm.data.payment_type === type}
+                                                    onChange={(e) => advanceForm.setData("payment_type", e.target.value)}
+                                                    className="radio radio-primary"
+                                                />
+                                                <span className="text-xs mt-2 capitalize">
+                                                    {type === 'cash' && <Wallet size={14} className="inline mr-1" />}
+                                                    {type === 'bank' && <CreditCard size={14} className="inline mr-1" />}
+                                                    {type === 'mobile' && <Phone size={14} className="inline mr-1" />}
+                                                    {t(`customer.payment_${type}`, type)}
+                                                </span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                    {advanceForm.errors.payment_type && (
+                                        <div className="text-red-500 text-sm mt-1">
+                                            {advanceForm.errors.payment_type}
+                                        </div>
+                                    )}
+                                </fieldset>
+
+                                {/* Transaction ID (if not cash) */}
+                                {advanceForm.data.payment_type !== 'cash' && (
+                                    <fieldset className="fieldset">
+                                        <legend className="fieldset-legend">
+                                            {t('customer.transaction_id', 'Transaction ID')}
+                                            <span className="text-red-500 ml-1">*</span>
+                                        </legend>
+                                        <input
+                                            type="text"
+                                            value={advanceForm.data.transaction_id}
+                                            onChange={(e) => advanceForm.setData("transaction_id", e.target.value)}
+                                            className="input input-bordered w-full"
+                                            placeholder={t('customer.transaction_id_placeholder', 'Enter transaction ID')}
+                                            required={advanceForm.data.payment_type !== 'cash'}
+                                        />
+                                        {advanceForm.errors.transaction_id && (
+                                            <div className="text-red-500 text-sm mt-1">
+                                                {advanceForm.errors.transaction_id}
+                                            </div>
+                                        )}
+                                    </fieldset>
+                                )}
+
+                                {/* Notes */}
+                                <fieldset className="fieldset">
+                                    <legend className="fieldset-legend">
+                                        {t('customer.notes', 'Notes')}
+                                    </legend>
+                                    <textarea
+                                        value={advanceForm.data.notes}
+                                        onChange={(e) => advanceForm.setData("notes", e.target.value)}
+                                        className="textarea textarea-bordered w-full"
+                                        rows="2"
+                                        placeholder={t('customer.notes_placeholder', 'Any additional notes...')}
+                                    />
+                                    {advanceForm.errors.notes && (
+                                        <div className="text-red-500 text-sm mt-1">
+                                            {advanceForm.errors.notes}
+                                        </div>
+                                    )}
+                                </fieldset>
+
+                                <div className="flex gap-3 pt-4">
+                                    <button
+                                        type="submit"
+                                        disabled={advanceForm.processing}
+                                        className="btn btn-success flex-1"
+                                    >
+                                        {advanceForm.processing
+                                            ? t('customer.processing', 'Processing...')
+                                            : t('customer.submit_payment', 'Submit Payment')
+                                        }
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={advanceModelClose}
+                                        className="btn btn-ghost"
+                                    >
+                                        {t('customer.cancel', 'Cancel')}
+                                    </button>
+                                </div>
+                            </form>
+                        </>
+                    )}
                 </div>
             </dialog>
         </div>
