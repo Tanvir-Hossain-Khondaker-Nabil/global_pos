@@ -39,10 +39,10 @@ class Sale extends Model
     }
 
     //account relation
-    // public function account()
-    // {
-    //     return $this->belongsTo(Account::class, 'account_id');
-    // }
+    public function account()
+    {
+        return $this->belongsTo(Account::class, 'account_id');
+    }
 
     
 

@@ -16,27 +16,31 @@ export default function AllSalesItems({ salesItems }) {
     });
 
     // Handle search and filtering
-    const searchForm = useForm({
-        search: "",
-        customer_id: "",
-        product_id: "",
-        warehouse_id: "",
-    });
-
-    const handleFilterChange = (field, value) => {
-        searchForm.setData(field, value);
+    const handleFilter = (field, value) => {
+        const newFilters = { ...filters, [field]: value };
+        setFilters(newFilters);
+        const queryString = {};
+        if (newFilters.search) queryString.search = newFilters.search;
+        if (newFilters.customer) queryString.customer_id = newFilters.customer;
+        if (newFilters.product) queryString.product_id = newFilters.product;
+        if (newFilters.warehouse) queryString.warehouse_id = newFilters.warehouse;
+        router.get(route("salesItems.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
     };
 
-    const handleSearch = () => {
-        searchForm.get(route("salesItems.list"), {
-            preserveState: true,
-            preserveScroll: true,
-        });
+    const handleKeyPress = (e) => {
+        if (e.key == 'Enter') {
+            const queryString = {};
+            if (filters.search) queryString.search = filters.search;
+            if (filters.customer) queryString.customer_id = filters.customer;
+            if (filters.product) queryString.product_id = filters.product;
+            if (filters.warehouse) queryString.warehouse_id = filters.warehouse;
+            router.get(route("salesItems.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
+        }
     };
 
     const clearFilters = () => {
-        searchForm.reset();
-        router.get(route("salesItems.list"));
+        setFilters({ search: "", customer: "", product: "", warehouse: "" });
+        router.get(route("salesItems.list"), {}, { replace: true });
     };
 
     // Toggle row expansion
@@ -55,12 +59,23 @@ export default function AllSalesItems({ salesItems }) {
         });
     };
 
+    // Format currency
+    const formatCurrency = (amount) => {
+        const num = parseFloat(amount) || 0;
+        return new Intl.NumberFormat('en-IN', {
+            style: 'currency',
+            currency: 'BDT',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
+    };
+
     // Calculate item total
     const calculateItemTotal = (item) => {
         const price = parseFloat(item.unit_price) || 0;
         const quantity = parseFloat(item.quantity) || 0;
         const discount = parseFloat(item.discount) || 0;
-        
+
         const subtotal = price * quantity;
         const discountAmount = (subtotal * discount) / 100;
         return (subtotal - discountAmount).toFixed(2);
@@ -75,10 +90,12 @@ export default function AllSalesItems({ salesItems }) {
         }
     }, [flash]);
 
+    const safeSalesItems = salesItems?.data || [];
+
     return (
         <div className="bg-white rounded-box p-5">
-            <PageHeader 
-                title="All Sales Items" 
+            <PageHeader
+                title="All Sales Items"
                 description="Comprehensive list of all sold items with detailed information"
             />
 
@@ -93,7 +110,14 @@ export default function AllSalesItems({ salesItems }) {
                             Clear
                         </button>
                         <button
-                            onClick={handleSearch}
+                            onClick={() => {
+                                const queryString = {};
+                                if (filters.search) queryString.search = filters.search;
+                                if (filters.customer) queryString.customer_id = filters.customer;
+                                if (filters.product) queryString.product_id = filters.product;
+                                if (filters.warehouse) queryString.warehouse_id = filters.warehouse;
+                                router.get(route("salesItems.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
+                            }}
                             className="btn btn-primary btn-sm"
                         >
                             <Search size={14} />
@@ -110,8 +134,9 @@ export default function AllSalesItems({ salesItems }) {
                             type="text"
                             className="input input-sm"
                             placeholder="Product name, code..."
-                            value={searchForm.data.search}
-                            onChange={(e) => handleFilterChange("search", e.target.value)}
+                            value={filters.search}
+                            onChange={(e) => handleFilter("search", e.target.value)}
+                            onKeyPress={handleKeyPress}
                         />
                     </fieldset>
 
@@ -122,8 +147,9 @@ export default function AllSalesItems({ salesItems }) {
                             type="text"
                             className="input input-sm"
                             placeholder="Customer name..."
-                            value={searchForm.data.customer_id}
-                            onChange={(e) => handleFilterChange("customer_id", e.target.value)}
+                            value={filters.customer}
+                            onChange={(e) => handleFilter("customer", e.target.value)}
+                            onKeyPress={handleKeyPress}
                         />
                     </fieldset>
 
@@ -134,8 +160,9 @@ export default function AllSalesItems({ salesItems }) {
                             type="text"
                             className="input input-sm"
                             placeholder="Product name..."
-                            value={searchForm.data.product_id}
-                            onChange={(e) => handleFilterChange("product_id", e.target.value)}
+                            value={filters.product}
+                            onChange={(e) => handleFilter("product", e.target.value)}
+                            onKeyPress={handleKeyPress}
                         />
                     </fieldset>
 
@@ -146,8 +173,9 @@ export default function AllSalesItems({ salesItems }) {
                             type="text"
                             className="input input-sm"
                             placeholder="Warehouse name..."
-                            value={searchForm.data.warehouse_id}
-                            onChange={(e) => handleFilterChange("warehouse_id", e.target.value)}
+                            value={filters.warehouse}
+                            onChange={(e) => handleFilter("warehouse", e.target.value)}
+                            onKeyPress={handleKeyPress}
                         />
                     </fieldset>
                 </div>
@@ -155,7 +183,7 @@ export default function AllSalesItems({ salesItems }) {
 
             {/* Sales Items Table */}
             <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
-                {salesItems.data.length > 0 ? (
+                {safeSalesItems.length > 0 ? (
                     <table className="table">
                         <thead className={`${isShadowUser ? 'bg-warning' : 'bg-primary'} text-white`}>
                             <tr>
@@ -173,7 +201,7 @@ export default function AllSalesItems({ salesItems }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {salesItems.data.map((item, index) => (
+                            {safeSalesItems.map((item, index) => (
                                 <>
                                     <tr key={item.id} className="hover:bg-base-200">
                                         <td>
@@ -191,14 +219,17 @@ export default function AllSalesItems({ salesItems }) {
                                         <td>
                                             <div className="max-w-[200px]">
                                                 <div className="font-medium text-sm">
-                                                    {item.product?.name || 'N/A'} ({item.product.product_no})
+                                                    {item.product?.name ?? item.product_name}
                                                 </div>
-                                                {item.variant && (
-                                                    <div className="text-xs text-gray-500">
-                                                        Variant: {item.variant.sku || ''}
-                                                    </div>
-                                                )}
+
+                                                <div className="text-xs text-gray-500">
+                                                    {item.variant
+                                                        ? `Variant: ${item.variant.sku ?? ''}`
+                                                        : item.variant_name
+                                                    }
+                                                </div>
                                             </div>
+
                                         </td>
                                         <td>
                                             <div className="max-w-[150px]">
@@ -227,10 +258,10 @@ export default function AllSalesItems({ salesItems }) {
                                                 {item.sale.discount}%
                                             </div>
                                         </td>
-                                
+
                                         <td>
                                             <div className="badge badge-info badge-sm">
-                                               <strong>{item.sale.type}</strong>
+                                                <strong>{item.sale.type}</strong>
                                             </div>
                                         </td>
                                         <td>
@@ -260,7 +291,7 @@ export default function AllSalesItems({ salesItems }) {
                                             </div>
                                         </td>
                                     </tr>
-                                    
+
                                     {/* Expanded Row Details */}
                                     {expandedRow === index && (
                                         <tr className="bg-base-200">
@@ -268,54 +299,57 @@ export default function AllSalesItems({ salesItems }) {
                                                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Product Details:</strong>
-                                                        <div><strong>Name:</strong> {item.product?.name}</div>
-                                                        <div><strong>Brand:</strong> 
-                                                         {(() => {
-                                                            const variant = item.variant;
-                                                            let attrsText = '';
+                                                        <div><strong>Name:</strong> {item.product?.name || item?.product_name}</div>
+                                                        {item.variant && (
+                                                        <div><strong>Brand:</strong>
+                                                            {(() => {
+                                                                const variant = item.variant;
+                                                                let attrsText = '';
 
-                                                            if (variant.attribute_values) {
-                                                                if (typeof variant.attribute_values === 'object') {
-                                                                attrsText = Object.entries(variant.attribute_values)
-                                                                    .map(([key, value]) => ` ${key}`)
-                                                                    .join(', ');
-                                                                } else {
-                                                                attrsText = variant.attribute_values;
+                                                                if (variant.attribute_values) {
+                                                                    if (typeof variant.attribute_values === 'object') {
+                                                                        attrsText = Object.entries(variant.attribute_values)
+                                                                            .map(([key, value]) => ` ${key}`)
+                                                                            .join(', ');
+                                                                    } else {
+                                                                        attrsText = variant.attribute_values;
+                                                                    }
                                                                 }
-                                                            }
 
-                                                            return (
-                                                                <>
-                                                                {attrsText || 'N/A'} 
-                                                                </>
-                                                            );
+                                                                return (
+                                                                    <>
+                                                                        {attrsText || 'N/A'}
+                                                                    </>
+                                                                );
                                                             })()}<br />
-                                                        </div>
+                                                            </div>
+                                                        )}
+
                                                         <div><strong>Code:</strong> {item.product?.product_no || 'N/A'}</div>
                                                         {item.variant && (
-                                                        <div>
-                                                            <strong>Variant:</strong>{' '}
-                                                            {(() => {
-                                                            const variant = item.variant;
-                                                            let attrsText = '';
+                                                            <div>
+                                                                <strong>Variant:</strong>{' '}
+                                                                {(() => {
+                                                                    const variant = item.variant;
+                                                                    let attrsText = '';
 
-                                                            if (variant.attribute_values) {
-                                                                if (typeof variant.attribute_values === 'object') {
-                                                                attrsText = Object.entries(variant.attribute_values)
-                                                                    .map(([key, value]) => ` ${value}`)
-                                                                    .join(', ');
-                                                                } else {
-                                                                attrsText = variant.attribute_values;
-                                                                }
-                                                            }
+                                                                    if (variant.attribute_values) {
+                                                                        if (typeof variant.attribute_values === 'object') {
+                                                                            attrsText = Object.entries(variant.attribute_values)
+                                                                                .map(([key, value]) => ` ${value}`)
+                                                                                .join(', ');
+                                                                        } else {
+                                                                            attrsText = variant.attribute_values;
+                                                                        }
+                                                                    }
 
-                                                            return (
-                                                                <>
-                                                                {attrsText || 'N/A'} {variant.sku ? `(${variant.sku})` : ''}
-                                                                </>
-                                                            );
-                                                            })()}
-                                                        </div>
+                                                                    return (
+                                                                        <>
+                                                                            {attrsText || 'N/A'} {variant.sku ? `(${variant.sku})` : ''}
+                                                                        </>
+                                                                    );
+                                                                })()}
+                                                            </div>
                                                         )}
 
                                                     </div>
@@ -336,7 +370,6 @@ export default function AllSalesItems({ salesItems }) {
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Additional Info:</strong>
                                                         <div><strong>Warehouse:</strong> {item.warehouse?.name || 'N/A'}</div>
-                                                        {/* <div><strong>Sold By:</strong> {item.sale?.customer?.customer_name || 'N/A'}</div> */}
                                                         <div><strong>Sold By:</strong> System Admin</div>
                                                         <div><strong>Date:</strong> {formatDate(item.created_at)}</div>
                                                     </div>
@@ -362,10 +395,10 @@ export default function AllSalesItems({ salesItems }) {
             </div>
 
             {/* Pagination */}
-            {salesItems.data.length > 0 && (
+            {safeSalesItems.length > 0 && (
                 <div className="flex items-center justify-between mt-4 px-2">
                     <div className="text-sm text-gray-600">
-                        Showing {salesItems.from} to {salesItems.to} of {salesItems.total} entries
+                        Showing {salesItems.from || 0} to {salesItems.to || 0} of {salesItems.total || 0} entries
                     </div>
                     <div className="join">
                         {salesItems.prev_page_url && (
@@ -379,13 +412,12 @@ export default function AllSalesItems({ salesItems }) {
                             </Link>
                         )}
 
-                        {salesItems.links.slice(1, -1).map((link, index) => (
+                        {salesItems.links?.slice(1, -1).map((link, index) => (
                             <Link
                                 key={index}
                                 href={link.url}
-                                className={`join-item btn btn-sm ${
-                                    link.active ? 'btn-primary' : ''
-                                }`}
+                                className={`join-item btn btn-sm ${link.active ? 'btn-primary' : ''
+                                    }`}
                                 preserveScroll
                                 preserveState
                                 dangerouslySetInnerHTML={{ __html: link.label }}
@@ -407,30 +439,30 @@ export default function AllSalesItems({ salesItems }) {
             )}
 
             {/* Summary Stats */}
-            {salesItems.data.length > 0 && (
+            {safeSalesItems.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                     <div className="stat bg-primary/10 rounded-box">
                         <div className="stat-title">Total Items</div>
                         <div className="stat-value text-primary text-lg">
-                            {salesItems.total}
+                            {salesItems.total || 0}
                         </div>
                     </div>
                     <div className="stat bg-success/10 rounded-box">
                         <div className="stat-title">Total Quantity</div>
                         <div className="stat-value text-success text-lg">
-                            {salesItems.data.reduce((sum, item) => sum + parseFloat(item.quantity), 0)}
+                            {safeSalesItems.reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0)}
                         </div>
                     </div>
                     <div className="stat bg-warning/10 rounded-box">
                         <div className="stat-title">Total Sales</div>
                         <div className="stat-value text-warning text-lg">
-                            {salesItems.data.reduce((sum, item) => sum + parseFloat(calculateItemTotal(item)), 0).toFixed(2)} Tk
+                            {safeSalesItems.reduce((sum, item) => sum + parseFloat(calculateItemTotal(item) || 0), 0).toFixed(2)} Tk
                         </div>
                     </div>
                     <div className="stat bg-info/10 rounded-box">
                         <div className="stat-title">Avg. per Item</div>
                         <div className="stat-value text-info text-lg">
-                            {(salesItems.data.reduce((sum, item) => sum + parseFloat(calculateItemTotal(item)), 0) / salesItems.data.length).toFixed(2)} Tk
+                            {(safeSalesItems.reduce((sum, item) => sum + parseFloat(calculateItemTotal(item) || 0), 0) / safeSalesItems.length).toFixed(2)} Tk
                         </div>
                     </div>
                 </div>
