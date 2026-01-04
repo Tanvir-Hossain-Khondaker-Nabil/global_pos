@@ -20,7 +20,6 @@ class SaleItem extends Model
         'status',
         'created_by',
         'stock_id',
-        // ADD THESE NEW FIELDS:
         'item_type',           // Add this
         'product_name',        // Add this
         'brand',               // Add this

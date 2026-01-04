@@ -162,8 +162,7 @@ class SalesController extends Controller
     public function store(Request $request)
     {
 
-        dd($request->all());
-
+        
         $type = $request->input('type', 'pos');
 
         if ($type == 'inventory') {
@@ -183,10 +182,10 @@ class SalesController extends Controller
             'items.*.quantity'      => 'required|integer|min:1',
         ]);
 
-        // If pickup items exist, require supplier
         if ($request->has('pickup_items') && count($request->pickup_items) > 0) {
             $rules['supplier_id'] = 'required|exists:suppliers,id';
         }
+
 
         $request->validate($rules);
 
@@ -239,9 +238,7 @@ class SalesController extends Controller
         }
 
 
-
         $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
-
 
 
         //customer check
@@ -273,10 +270,8 @@ class SalesController extends Controller
                     'is_active' => 1,
                     'created_by' => Auth::id(),
             ])->id;
-
             }
         }
-
 
         try {
             $sale = Sale::create([
@@ -294,13 +289,13 @@ class SalesController extends Controller
                 'shadow_grand_total' => 0,
                 'shadow_paid_amount' =>  0,
                 'shadow_due_amount'  => 0,
+                'account_id' => $account->id,
                 'payment_type'=> $payment_type ?? 'cash',
                 'status'      => $status ?? 'pending',
                 'type'        => $type ?? 'pos',
                 'sale_type' => count($pickup_items) > 0 ? 'both' : 'real',
                 'created_by' => Auth::id(),
             ]);
-
 
 
             $shadowSubTotal = 0;
@@ -326,12 +321,13 @@ class SalesController extends Controller
 
                     $quantity = $item['quantity'] ?? 1;
                     $unitPrice = $item['unit_price'] ?? 0;
-                    $shadowUnitPrice = $unitPrice; 
+                    $shadowUnitPrice = $item['shadow_sell_price'] ?? $unitPrice;
                     $shadowtotalPrice = $quantity * $shadowUnitPrice;
                     $totalPrice = $quantity * $unitPrice;
 
                     // Process FIFO stock deduction
                     $this->fifoOut($product->id, $variant->id, $quantity, $sale->id, $item['stock_id'] ?? null);
+
 
                     // Get warehouse_id from stock
                     $warehouse_id = Stock::where('product_id', $product->id)
@@ -339,6 +335,8 @@ class SalesController extends Controller
                         ->where('quantity', '>', 0)
                         ->orderBy('created_at', 'asc')
                         ->value('warehouse_id');
+
+
 
                     // Create sale item
                     SaleItem::create([
@@ -359,19 +357,22 @@ class SalesController extends Controller
 
                     $shadowSubTotal += $shadowtotalPrice;
                     $regularSubTotal += $totalPrice;
-
                 }
             }
 
+
             // Process pickup items
             if (count($pickup_items) > 0) {
+
+
                 foreach ($pickup_items as $pickupItem) {
                     $pickupQuantity = $pickupItem['quantity'] ?? 1;
                     $pickupUnitPrice = $pickupItem['unit_price'] ?? 0;
                     $pickupSalePrice = $pickupItem['sale_price'] ?? $pickupUnitPrice;
                     $pickupTotalPrice = $pickupItem['total_price'] ?? ($pickupQuantity * $pickupSalePrice);
 
-                        //Create a purchase item with pickup type 
+                    //Create a purchase item with pickup type 
+
 
                     $purchaseItem = PurchaseItem::create([
                         'purchase_id' => null,
@@ -381,10 +382,13 @@ class SalesController extends Controller
                         'supplier_id' => $supplier_id,
                         'quantity' => $pickupQuantity,
                         'unit_price' => $pickupUnitPrice,
-                        'total_cost' => $pickupUnitPrice * $pickupQuantity,
+                        'total_price' => $pickupUnitPrice * $pickupQuantity,
+                        'shadow_unit_price' => $pickupUnitPrice,
+                        'shadow_total_price' => $pickupUnitPrice * $pickupQuantity,
+                        'shadow_sale_price' => $pickupSalePrice,
                         'sale_price' => $pickupSalePrice,
-                        'status' => 'completed',
                         'created_by' => Auth::id(),
+
                         'item_type' => 'pickup',
                         'product_name' => $pickupItem['product_name'] ?? null,
                         'brand' => $pickupItem['brand'] ?? null,
@@ -392,16 +396,18 @@ class SalesController extends Controller
                     ]);
 
 
+
+
                     // Create sale item with pickup type
-                    SaleItem::create([
+                    $saleItem = SaleItem::create([
                         'sale_id' => $sale->id,
                         'product_id' => null,
                         'variant_id' => null,
                         'warehouse_id' => null,
-                        'quantity' => $pickupQuantity,
+                        'stock_id' => null,
+                        'quantity' => $pickupQuantity ?? 0,
                         'unit_price' => $pickupSalePrice ?? 0,
                         'total_price' => $pickupTotalPrice ?? 0,
-                        'stock_id' => null,
                         'shadow_unit_price' => $pickupSalePrice ?? 0,
                         'shadow_total_price' => $pickupTotalPrice ?? 0,
                         'status' => 'completed',
@@ -421,7 +427,6 @@ class SalesController extends Controller
             }
 
 
-
             if (count($regular_items) == 0 && count($pickup_items) == 0) {
                 throw new \Exception('At least one item is required for a sale.');
             }
@@ -437,17 +442,17 @@ class SalesController extends Controller
             $type == 'inventory' ? $shadowPaidAmount = $request->shadow_paid_amount : $shadowPaidAmount = $shadowGrandTotal;
             $shadowDueAmount = $shadowGrandTotal - $shadowPaidAmount;
 
-         
 
              // Update sale with calculated totals
             $sale->update([
                 'sub_total' => $regularSubTotal,
-                'grand_total' => $grandTotal,
+                'grand_total' => $request->grand_amount,
                 'shadow_sub_total' => $shadowSubTotal,
                 'shadow_grand_total' => $shadowGrandTotal,
                 'shadow_due_amount' => $shadowDueAmount,
                 'shadow_paid_amount' => $shadowPaidAmount,
             ]);
+
 
              // Create payment record if paid_amount > 0
             if ($paidAmount > 0) {
@@ -484,7 +489,6 @@ class SalesController extends Controller
 
 
     // payment Clearance
-
     public function storePayment(Request $request, Sale $sale)
     {
         $customerId = $sale->customer_id;
@@ -921,41 +925,44 @@ class SalesController extends Controller
     /**
      * FIFO stock deduction
      */
-    private static function fifoOut($productId, $variantId, $qtyNeeded, $saleId)
+    private static function fifoOut($productId, $variantId, $qtyNeeded, $saleId, $stockId = null)
     {
         $stocks = Stock::where('product_id', $productId)
             ->where('variant_id', $variantId)
             ->where('quantity', '>', 0)
+            ->where(function ($query) use ($stockId) {
+                if ($stockId) {
+                    $query->where('id', $stockId);
+                }
+            })
             ->orderBy('created_at', 'asc')
             ->get();
 
 
-        foreach($stocks as $stock)
-        {
-            if ($qtyNeeded <= 0) break;
+        foreach ($stocks as $stock) {
+            if ($qtyNeeded <= 0)
+                break;
 
             $take = min($stock->quantity, $qtyNeeded);
-
-            // reduce stock
             $stock->decrement('quantity', $take);
 
             // log movement
             StockMovement::create([
-                'warehouse_id'   => $stock->warehouse_id ?? null,
-                'product_id'     => $productId,
-                'variant_id'     => $variantId,
-                'type'           => 'out',
-                'qty'            => $take,
+                'warehouse_id' => $stock->warehouse_id ?? null,
+                'product_id' => $productId,
+                'variant_id' => $variantId,
+                'type' => 'out',
+                'qty' => $take,
                 'reference_type' => Sale::class,
-                'reference_id'   => $saleId,
-                'created_by'     => Auth::id(),
+                'reference_id' => $saleId,
+                'created_by' => Auth::id(),
             ]);
 
             $qtyNeeded -= $take;
         }
 
-        if($qtyNeeded > 0){
-           return back()->withErrors(["Not enough stock for product ID $productId."]);
+        if ($qtyNeeded > 0) {
+            return back()->withErrors(["Not enough stock for product ID $productId."]);
         }
     }
 

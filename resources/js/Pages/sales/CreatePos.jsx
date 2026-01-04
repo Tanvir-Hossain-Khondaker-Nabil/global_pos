@@ -391,10 +391,10 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             return;
         }
 
-        if (!selectedSupplier) {
-            alert("Please select a supplier for pickup item");
-            return;
-        }
+        // if (!selectedSupplier) {
+        //     alert("Please select a supplier for pickup item");
+        //     return;
+        // }
 
         const newItem = {
             id: Date.now(),
@@ -405,9 +405,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             unit_price: Number(pickupUnitPrice),
             sale_price: Number(pickupSalePrice),
             total_price: Number(pickupQuantity) * Number(pickupSalePrice),
-            supplier_id: selectedSupplier.id,
-            supplier_name: selectedSupplier.name,
-            supplier_company: selectedSupplier.company,
+            // supplier_id: selectedSupplier.id,
+            // supplier_name: selectedSupplier.name,
+            // supplier_company: selectedSupplier.company,
         };
 
         setPickupItems([...pickupItems, newItem]);
@@ -551,13 +551,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         }
 
         // Validate pickup items have suppliers
-        if (pickupItems.length > 0) {
-            const itemsWithoutSupplier = pickupItems.filter(item => !item.supplier_id);
-            if (itemsWithoutSupplier.length > 0) {
-                alert("Please ensure all pickup items have a supplier assigned");
-                return;
-            }
-        }
+        // if (pickupItems.length > 0) {
+        //     const itemsWithoutSupplier = pickupItems.filter(item => !item.supplier_id);
+        //     if (itemsWithoutSupplier.length > 0) {
+        //         alert("Please ensure all pickup items have a supplier assigned");
+        //         return;
+        //     }
+        // }
 
         // Validate account selection
         if (!selectedAccount) {
@@ -812,13 +812,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                             </option>
                                         ))}
                                     </select>
-                                    <button
+                                    {/* <button
                                         type="button"
                                         onClick={() => setShowSupplierModal(true)}
                                         className="btn btn-sm btn-outline"
                                     >
                                         <Plus size={14} />
-                                    </button>
+                                    </button> */}
                                 </div>
                                 {selectedSupplier && (
                                     <div className="mt-2 text-sm bg-blue-50 p-2 rounded-box">
@@ -1042,12 +1042,12 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                         <h4 className="font-bold text-gray-900">{item.product_name}</h4>
                                                         <div className="text-sm text-gray-600 mt-1">
                                                             <div className="text-xs">
-                                                                Brand: {item.brand || 'N/A'} | Variant: {item.variant || 'N/A'}
+                                                              <strong>Brand:</strong>  {item.brand || 'N/A'} | <strong>Variant:</strong> {item.variant || 'N/A'}
                                                             </div>
-                                                            <div className="text-xs mt-1">
+                                                            {/* <div className="text-xs mt-1">
                                                                 <strong>Supplier:</strong> {item.supplier_name}
                                                                 {item.supplier_company && ` (${item.supplier_company})`}
-                                                            </div>
+                                                            </div> */}
                                                             <div className="grid grid-cols-4 gap-2 mt-2">
                                                                 <div>
                                                                     <span className="text-xs text-gray-500">Qty:</span>
@@ -1248,45 +1248,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                         </div>
 
                         <div className="space-y-4">
-                            {/* Supplier Selection */}
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Supplier for this item *</span>
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        className="select select-bordered w-full"
-                                        value={selectedSupplier?.id || ""}
-                                        onChange={(e) => {
-                                            const supplier = suppliers.find(s => s.id == e.target.value);
-                                            if (supplier) setSelectedSupplier(supplier);
-                                        }}
-                                        required
-                                    >
-                                        <option value="">Select Supplier</option>
-                                        {suppliers && suppliers.map(s => (
-                                            <option key={s.id} value={s.id}>
-                                                {s.name} {s.company ? `(${s.company})` : ""}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowSupplierModal(true)}
-                                        className="btn btn-outline"
-                                    >
-                                        <Plus size={14} />
-                                    </button>
-                                </div>
-                                {selectedSupplier && (
-                                    <div className="mt-2 text-sm bg-blue-50 p-2 rounded-box">
-                                        <span className="font-bold">{selectedSupplier.name}</span>
-                                        {selectedSupplier.company && (
-                                            <span className="text-gray-600"> ({selectedSupplier.company})</span>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
+                          
 
                             <div className="form-control">
                                 <label className="label">
@@ -1383,7 +1345,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             <button
                                 onClick={addPickupItem}
                                 className="btn btn-primary"
-                                disabled={!selectedSupplier}
                             >
                                 Add Item
                             </button>

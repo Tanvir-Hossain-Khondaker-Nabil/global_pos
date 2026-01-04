@@ -13,6 +13,7 @@ class PurchaseItem extends Model
         'purchase_id',
         'product_id',
         'warehouse_id',
+        'supplier_id',
         'variant_id',
         'quantity',
         'unit_price',
@@ -22,6 +23,12 @@ class PurchaseItem extends Model
         'sale_price',
         'shadow_sale_price',
         'created_by',
+
+        //add new feild
+        'item_type' ,
+        'product_name' ,
+        'brand' ,
+        'variant_name',
     ];
 
     protected $casts = [
@@ -30,6 +37,12 @@ class PurchaseItem extends Model
         'total_price' => 'decimal:2',
         'shadow_total_price' => 'decimal:2' 
     ];
+
+    //supplier relactionship
+    public function supplier()
+    {
+        return $this->belongsTo(Supplier::class);
+    }
 
     public function purchase()
     {

@@ -13,11 +13,12 @@ return new class extends Migration
     {
         Schema::create('purchase_items', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('purchase_id');
-            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('purchase_id')->nullable();
+            $table->unsignedBigInteger('product_id')->nullable();
             $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('variant_id')->nullable();
+            $table->unsignedBigInteger('supplier_id')->nullable();
             $table->integer('quantity')->default(0);
             $table->decimal('unit_price', 10, 2)->default(0);
             $table->decimal('shadow_unit_price', 10, 2)->default(0);
@@ -26,6 +27,11 @@ return new class extends Migration
             $table->decimal('total_price', 10, 2)->default(0);
             $table->decimal('shadow_total_price', 10, 2)->default(0);
             $table->timestamps();
+
+            $table->string('product_name')->nullable(); 
+            $table->string('brand')->nullable(); 
+            $table->string('variant_name')->nullable();
+            $table->string('item_type')->default('real'); 
 
             $table->foreign('purchase_id')->references('id')->on('purchases')->onDelete('cascade');
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');

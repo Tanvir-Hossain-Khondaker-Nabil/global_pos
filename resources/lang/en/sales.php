@@ -48,4 +48,7 @@ return [
     'customer_phone' => 'Customer Phone',
     'size' => 'Size',
     'color' => 'Color',
+    'payment_account' => 'Payment Account',
+    'select_account' => 'Select Account',
+
 ];
