@@ -35,14 +35,14 @@ class LeaveController extends Controller
 
 
         $leaves = $query->orderBy('created_at', 'desc')
-                       ->paginate(20);
+            ->paginate(20);
 
         return Inertia::render('Leave/Index', [
             'leaves' => $leaves,
             'filters' => $request->only(['status', 'type', 'employee_id', 'start_date', 'end_date']),
             'employees' => Employee::where('is_active', true)
                 ->get(['id', 'name', 'employee_id'])
-                ->map(function($emp) {
+                ->map(function ($emp) {
                     return [
                         'id' => $emp->id,
                         'name' => $emp->name,
@@ -70,7 +70,7 @@ class LeaveController extends Controller
     public function create()
     {
         $employee = Auth::user()->employee;
-        
+
         if (!$employee) {
             return redirect()->back()->with('error', 'Employee profile not found');
         }
@@ -111,7 +111,7 @@ class LeaveController extends Controller
         DB::beginTransaction();
         try {
             $employee = Auth::user()->employee;
-            
+
             if (!$employee) {
                 throw new \Exception('Employee profile not found');
             }
@@ -120,7 +120,7 @@ class LeaveController extends Controller
             if (in_array($request->type, ['sick', 'casual', 'earned', 'maternity', 'paternity'])) {
                 $balance_field = $request->type . '_leave_balance';
                 $available_balance = $employee->$balance_field ?? 0;
-                
+
                 if ($available_balance <= 0) {
                     throw new \Exception("Insufficient {$request->type} leave balance");
                 }
@@ -129,7 +129,7 @@ class LeaveController extends Controller
             // Calculate total days excluding Fridays
             $startDate = Carbon::parse($request->start_date);
             $endDate = Carbon::parse($request->end_date);
-            
+
             $totalDays = $this->calculateWorkingDays($startDate, $endDate, $request->is_half_day);
 
             // Check if total days exceed balance for paid leaves
@@ -143,13 +143,13 @@ class LeaveController extends Controller
             $overlappingLeave = Leave::where('employee_id', $employee->id)
                 ->where('status', '!=', 'rejected')
                 ->where('status', '!=', 'cancelled')
-                ->where(function($query) use ($startDate, $endDate) {
+                ->where(function ($query) use ($startDate, $endDate) {
                     $query->whereBetween('start_date', [$startDate, $endDate])
-                          ->orWhereBetween('end_date', [$startDate, $endDate])
-                          ->orWhere(function($q) use ($startDate, $endDate) {
-                              $q->where('start_date', '<=', $startDate)
+                        ->orWhereBetween('end_date', [$startDate, $endDate])
+                        ->orWhere(function ($q) use ($startDate, $endDate) {
+                            $q->where('start_date', '<=', $startDate)
                                 ->where('end_date', '>=', $endDate);
-                          });
+                        });
                 })
                 ->first();
 
@@ -181,7 +181,6 @@ class LeaveController extends Controller
 
             return redirect()->route('leave.index')
                 ->with('success', 'Leave application submitted successfully. It will be reviewed by HR.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()
@@ -217,11 +216,11 @@ class LeaveController extends Controller
             if (in_array($leave->type, ['sick', 'casual', 'earned', 'maternity', 'paternity'])) {
                 $employee = $leave->employee;
                 $balance_field = $leave->type . '_leave_balance';
-                
+
                 if ($employee->$balance_field < $leave->total_days) {
                     throw new \Exception("Employee does not have sufficient {$leave->type} leave balance");
                 }
-                
+
                 $employee->decrement($balance_field, $leave->total_days);
                 $employee->increment('total_leave_taken', $leave->total_days);
                 $employee->save();
@@ -240,7 +239,6 @@ class LeaveController extends Controller
             // $leave->employee->user->notify(new LeaveApproved($leave));
 
             return redirect()->back()->with('success', 'Leave approved successfully');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Error approving leave: ' . $e->getMessage());
@@ -303,7 +301,7 @@ class LeaveController extends Controller
     public function balance(Request $request, $employeeId)
     {
         $employee = Employee::findOrFail($employeeId);
-        
+
         $balance = [
             'sick' => [
                 'total' => 14,
@@ -348,7 +346,7 @@ class LeaveController extends Controller
     {
         // This method can be scheduled monthly to add earned leaves
         $employees = Employee::where('is_active', true)->get();
-        
+
         foreach ($employees as $employee) {
             // Add 1.5 days earned leave per month (18 days per year)
             $employee->increment('earned_leave_balance', 1.5);
@@ -365,26 +363,27 @@ class LeaveController extends Controller
     private function calculateWorkingDays($startDate, $endDate, $isHalfDay = false)
     {
         $days = 0;
-        
+
         for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
             // Skip Fridays (weekend)
             if ($date->dayOfWeek != Carbon::FRIDAY) {
                 $days += 1;
             }
         }
-        
+
         // Adjust for half day
         if ($isHalfDay) {
             $days = $days - 0.5;
         }
-        
+
         return max(0.5, $days); // Minimum half day
     }
 
+    
     public function dashboard()
     {
         $employee = Auth::user()->employee;
-        
+
         if (!$employee) {
             return Inertia::render('Leave/Dashboard', [
                 'error' => 'Employee profile not found'
