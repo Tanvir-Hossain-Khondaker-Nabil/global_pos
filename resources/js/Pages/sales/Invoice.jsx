@@ -1,6 +1,6 @@
 import React from 'react';
 import { usePage } from '@inertiajs/react';
-import { Printer, Download, ArrowLeft, ChevronRight, CheckCircle, Truck, Package2, DollarSign, Calendar, User } from 'lucide-react';
+import { Printer, Download, Mail, ArrowLeft } from 'lucide-react';
 import { Link } from '@inertiajs/react';
 
 export default function Invoice({ sale }) {
@@ -8,31 +8,22 @@ export default function Invoice({ sale }) {
 
     // Format currency
     const formatCurrency = (amount) => {
-        if (!amount) amount = 0;
-        return parseFloat(amount).toFixed(2);
+        return new Intl.NumberFormat('en-BD', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        }).format(amount || 0);
     };
 
-    // Format date
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    };
-
-    // Format date with time
-    const formatDateTime = (dateString) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
+    // Format date for receipt
+    const formatReceiptDate = (date) => {
+        return new Date(date).toLocaleString('en-BD', {
             year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
             hour: '2-digit',
             minute: '2-digit',
             hour12: false
-        });
+        }).replace(',', '');
     };
 
     // Calculate total items
@@ -40,495 +31,408 @@ export default function Invoice({ sale }) {
         return sale.items?.reduce((total, item) => total + (item.quantity || 0), 0) || 0;
     };
 
-    // Get total amount
-    const getTotalAmount = () => {
-        return sale.items?.reduce((total, item) => total + (parseFloat(item.total_price) || 0), 0) || 0;
-    };
-
     // Handle print
     const handlePrint = () => {
-        window.open(route('sales.print', sale.id), '_blank');
+        window.print();
     };
 
     // Handle PDF download
-    const handleDownloadPDF = () => {
-        const printWindow = window.open(route('sales.print', sale.id), '_blank');
-        printWindow.onload = function() {
+    const handleDownloadPDF = async () => {
+        try {
+            const printWindow = window.open('', '_blank');
+            const receiptHTML = generateReceiptHTML();
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Invoice ${sale.invoice_no}</title>
+                    <style>
+                        @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap');
+                        
+                        body { 
+                            font-family: 'Courier New', monospace; 
+                            font-size: 12px; 
+                            margin: 0; 
+                            padding: 8px; 
+                            max-width: 80mm;
+                            background: white;
+                        }
+                        .header { 
+                            text-align: center; 
+                            margin-bottom: 10px; 
+                            border-bottom: 2px solid #000;
+                            padding-bottom: 8px;
+                        }
+                        .company-name { 
+                            font-weight: bold; 
+                            font-size: 16px; 
+                            margin-bottom: 4px;
+                        }
+                        .receipt-info { 
+                            margin: 8px 0; 
+                            padding: 8px 0;
+                            border-bottom: 1px dashed #ccc;
+                        }
+                        .barcode { 
+                            text-align: center; 
+                            margin: 10px 0; 
+                            padding: 8px 0;
+                            border-bottom: 1px dashed #ccc;
+                        }
+                        .barcode-text {
+                            font-family: 'Libre Barcode 128', cursive;
+                            font-size: 32px;
+                            line-height: 1;
+                        }
+                        .items-table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            margin: 10px 0; 
+                        }
+                        .items-table td { 
+                            padding: 3px 0; 
+                            border-bottom: 1px dashed #ccc; 
+                            vertical-align: top;
+                        }
+                        .summary { 
+                            margin-top: 10px; 
+                            padding-top: 10px; 
+                            border-top: 2px solid #000; 
+                        }
+                        .footer { 
+                            text-align: center; 
+                            margin-top: 15px; 
+                            font-size: 10px; 
+                            border-top: 1px dashed #ccc;
+                            padding-top: 8px;
+                        }
+                        .text-right { text-align: right; }
+                        .text-center { text-align: center; }
+                        .text-bold { font-weight: bold; }
+                        .border-top { border-top: 1px dashed #000; }
+                        @media print { 
+                            body { margin: 0; padding: 5px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    ${receiptHTML}
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            
+            // Wait for content to load then print
             setTimeout(() => {
                 printWindow.print();
+                // Optional: close window after print
+                // setTimeout(() => printWindow.close(), 500);
             }, 500);
-        };
-    };
-
-    // Get variant display name
-    const getVariantDisplayName = (variant) => {
-        if (!variant) return 'N/A';
-        
-        const parts = [];
-        if (variant.attribute_values) {
-            if (typeof variant.attribute_values === 'object') {
-                const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => `${value}`)
-                    .join(', ');
-                parts.push(attrs);
-            } else {
-                parts.push(variant.attribute_values);
-            }
-        }
-        
-        return parts.join(', ') || 'N/A';
-    };
-
-    // Get brand name
-    const getBrandName = (variant) => {
-        if (!variant) return 'N/A';
-        
-        const parts = [];
-        if (variant.attribute_values) {
-            if (typeof variant.attribute_values === 'object') {
-                const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => `${key}`)
-                    .join(', ');
-                parts.push(attrs);
-            } else {
-                parts.push(variant.attribute_values);
-            }
-        }
-        
-        return parts.join(', ') || 'N/A';
-    };
-
-    // Get status badge color
-    const getStatusColor = (status) => {
-        switch (status) {
-            case 'completed': return 'bg-green-100 text-green-800';
-            case 'pending': return 'bg-yellow-100 text-yellow-800';
-            case 'cancelled': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            
+        } catch (error) {
+            console.error('Error generating PDF:', error);
+            // Fallback to regular print
+            window.print();
         }
     };
 
-    // Get payment status color
-    const getPaymentStatusColor = (status) => {
-        switch (status) {
-            case 'paid': return 'bg-green-100 text-green-800';
-            case 'partial': return 'bg-blue-100 text-blue-800';
-            case 'unpaid': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
-        }
+    // Generate barcode-like representation
+    const generateBarcode = (text) => {
+        return `*${text}*`;
+    };
+
+    // Generate compact receipt HTML for PDF
+    const generateReceiptHTML = () => {
+        return `
+            <div class="header">
+                <div class="company-name">${sale?.creator?.business?.name}</div>
+                <div>${sale?.creator?.business?.address}</div>
+                <div>Phone: ${sale?.creator?.business?.phone}</div>
+                <div>VAT: ${sale?.creator?.business?.email}</div>
+            </div>
+            
+            <div class="receipt-info">
+                <div><strong>INVOICE: ${sale.invoice_no}</strong></div>
+                <div>Date: ${formatReceiptDate(sale.created_at)}</div>
+                <div>Customer: ${sale.customer?.customer_name || "Walk-in Customer"}</div>
+                ${sale.customer?.phone ? `<div>Phone: ${sale.customer.phone}</div>` : ''}
+            </div>
+
+            <div class="barcode">
+                <div class="barcode-text">${generateBarcode(sale.invoice_no)}</div>
+                <div style="font-size: 10px; margin-top: -5px;">${sale.invoice_no}</div>
+            </div>
+
+            <table class="items-table">
+                <tbody>
+                    ${sale.items?.map(item => `
+                        <tr>
+                            <td>${item.product?.name || item?.product_name} (${item.product?.product_no || item?.brand || 'N/A'})</td>
+                            <td class="text-center">${item.quantity} x ${formatCurrency(item.unit_price)}</td>
+                            <td class="text-right">${formatCurrency(item.total_price)}</td>
+                        </tr>
+                        ${item.variant?.sku ? `<tr><td colspan="3" style="font-size: 10px; padding-left: 10px;">↳ ${item.variant.sku}</td></tr>` : ''}
+                    `).join('')}
+                </tbody>
+            </table>
+
+            <div class="summary">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Sub Total:</span>
+                    <span>${formatCurrency(sale.sub_total)} Tk</span>
+                </div>
+                ${sale.discount > 0 ? `
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Discount:</span>
+                    <span>-${formatCurrency(sale.discount)} Tk</span>
+                </div>
+                ` : ''}
+                ${sale.tax > 0 ? `
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Tax:</span>
+                    <span>${formatCurrency(sale.tax)} Tk</span>
+                </div>
+                ` : ''}
+                <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; margin-top: 5px;">
+                    <span>TOTAL:</span>
+                    <span>${formatCurrency(sale.grand_total)} Tk</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Paid:</span>
+                    <span>${formatCurrency(sale.paid_amount)} Tk</span>
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Due:</span>
+                    <span>${formatCurrency(sale.due_amount)} Tk</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px;">
+                    <span>Payment:</span>
+                    <span class="text-bold">${sale.payment_type || 'Cash'}</span>
+                </div>
+                ${sale.payment_reference ? `
+                <div style="display: flex; justify-content: space-between;">
+                    <span>Reference:</span>
+                    <span>${sale.payment_reference}</span>
+                </div>
+                ` : ''}
+            </div>
+
+            <div class="footer">
+                <div>*** ${getTotalItems()} Items ***</div>
+                <div style="margin-top: 8px;">Thank you for your purchase!</div>
+                <div style="margin-top: 5px;">
+                    <div>This is computer generated receipt</div>
+                    <div>No signature required</div>
+                </div>
+            </div>
+        `;
     };
 
     return (
-        <div className="bg-gray-50 min-h-screen p-4">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm print-preview">
             {/* Header Actions */}
-            <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border border-gray-300">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                    <div>
-                        <div className="bg-red-700 text-white py-1 px-4 text-xs font-bold inline-block mb-2">
-                            SALES INVOICE
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-800">Sales Invoice</h1>
-                        <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                            <span>Invoice: {sale.invoice_no}</span>
-                            <ChevronRight size={12} />
-                            <span>Customer: {sale.customer?.customer_name || 'Walk-in Customer'}</span>
-                            <ChevronRight size={12} />
-                            <span>{formatDate(sale.created_at)}</span>
-                        </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2">
-                        <Link
-                            href={route('sales.index')}
-                            className="btn btn-sm btn-ghost border border-gray-300"
-                        >
-                            <ArrowLeft size={15} className="mr-1" />
-                            Back to Sales
-                        </Link>
-                        <button
-                            onClick={handlePrint}
-                            className="btn btn-sm bg-red-700 hover:bg-red-800 text-white"
-                        >
-                            <Printer size={15} className="mr-1" />
-                            Print Invoice
-                        </button>
-                        <button 
-                            onClick={handleDownloadPDF}
-                            className="btn btn-sm bg-gray-800 hover:bg-gray-900 text-white"
-                        >
-                            <Download size={15} className="mr-1" />
-                            Download PDF
-                        </button>
-                    </div>
+            <div className="flex justify-between items-center p-6 border-b print-hidden">
+                <Link
+                    href={route('sales.index')}
+                    className="btn btn-ghost btn-sm"
+                >
+                    <ArrowLeft size={16} />
+                    Back to Sales
+                </Link>
+                <div className="flex gap-2">
+                    <button
+                        onClick={handlePrint}
+                        className="btn btn-primary btn-sm"
+                    >
+                        <Printer size={16} />
+                        Print Invoice
+                    </button>
+                    <button 
+                        onClick={handleDownloadPDF}
+                        className="btn btn-outline btn-sm"
+                    >
+                        <Download size={16} />
+                        Download PDF
+                    </button>
                 </div>
             </div>
 
-            {/* Invoice Design */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-300">
-                {/* Company Header */}
-                <div className="flex items-center border-b border-black pb-4 mb-4">
-                    <div className="mr-4 flex-shrink-0">
-                        <svg className="h-10 w-10 text-red-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    
-                    <div className="flex-grow">
-                        <h1 className="text-2xl font-extrabold tracking-tight">
-                            SALES INVOICE
-                        </h1>
-                        <p className="text-xs text-gray-600">Official sales invoice document</p>
-                    </div>
-
-                    <div className="w-1/3 flex text-xs text-gray-700">
-                        <div className="w-55 pr-4 border-r border-gray-300">
-                            <p className="font-bold uppercase text-xs">Head Office</p>
-                            <p className="text-xs leading-tight mt-1">{sale?.creator?.business?.address || 'Business Address'}</p>
-                            <p className="font-semibold text-xs mt-1">PH: {sale?.creator?.business?.phone || 'N/A'}</p>
-                            <p className="text-xs mt-1">Email: {sale?.creator?.business?.email || 'N/A'}</p>
-                        </div>
-                        <div className="w-45 pl-4">
-                            <p className="font-bold uppercase text-xs">Dhaka Office</p>
-                            <p className="text-xs leading-tight mt-1">358, Babor Road, Shyamoli, Dhaka</p>
-                            <p className="font-semibold text-xs mt-1">PH: 02-58133544</p>
-                        </div>
-                    </div>
+            {/* Compact Invoice Content */}
+            <div className="p-6 print-p-2 print-max-w-80mm print-mx-auto thermal-receipt">
+                {/* Company Header - Compact */}
+                <div className="text-center print-mb-2 border-b-2 border-black print-border-b-2 print-border-black pb-4 print-pb-2">
+                    <h1 className="text-xl font-bold print-text-lg">{sale?.creator?.business?.name}</h1>
+                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.address}</p>
+                    <p className="text-sm text-gray-600 print-text-xs">Phone: {sale?.creator?.business?.phone}</p>
+                    <p className="text-sm text-gray-600 print-text-xs">Email: {sale?.creator?.business?.email}</p>
                 </div>
-                
-                {/* Invoice Details Grid */}
-                <div className="grid grid-cols-4 gap-4 text-xs py-4 border-b border-gray-200">
-                    <div className="space-y-1">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Bill No.</span>
-                            <span className="font-mono">{sale.invoice_no}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Delivery Date</span>
-                            <span>{formatDate(sale.created_at)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Bill To</span>
-                            <span className="text-right">{sale.customer?.customer_name || 'Walk-in Customer'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Address</span>
-                            <span className="text-right text-xs">{sale.customer?.address || 'N/A'}</span>
-                        </div>
+
+                {/* Receipt Info */}
+                <div className="grid grid-cols-2 gap-4 print-grid-cols-1 print-gap-1 print-mb-2 print-space-y-1 my-4 print-my-2 border-b border-dashed border-gray-300 print-border-b print-border-dashed print-border-gray-300 pb-4 print-pb-2">
+                    <div className="col-span-2 print-col-span-1">
+                        <p className="font-semibold print-text-sm">INVOICE NO:</p>
+                        <p className="text-primary font-mono print-text-sm">{sale.invoice_no}</p>
                     </div>
-                    
-                    <div className="space-y-1">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Invoice No.</span>
-                            <span className="font-mono">{sale.invoice_no}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Project</span>
-                            <span>Sales</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Delivered By</span>
-                            <span>{sale.delivered_by || 'N/A'}</span>
-                        </div>
+                    <div className="col-span-2 print-col-span-1">
+                        <p className="font-semibold print-text-sm">DATE:</p>
+                        <p className="print-text-sm">{formatReceiptDate(sale.created_at)}</p>
                     </div>
-                    
-                    <div className="space-y-1">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Ref No.</span>
-                            <span>{sale.reference_no || sale.id}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Served By</span>
-                            <span>{sale.creator?.name || auth.user?.name || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Terms</span>
-                            <span className={`px-2 py-0.5 rounded text-xs ${getPaymentStatusColor(sale.payment_status)}`}>
-                                {sale.payment_method === 'cash' ? 'Cash' : 'Credit'}
-                            </span>
-                        </div>
-                    </div>
-                    
-                    <div className="space-y-1">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Warehouse</span>
-                            <span>{sale.warehouse?.name || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Code</span>
-                            <span>{sale.warehouse?.code || 'N/A'}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Status</span>
-                            <span className={`px-2 py-0.5 rounded text-xs ${getStatusColor(sale.status)}`}>
-                                {sale.status?.toUpperCase() || 'PENDING'}
-                            </span>
-                        </div>
+                    <div className="col-span-2 print-col-span-1">
+                        <p className="font-semibold print-text-sm">CUSTOMER:</p>
+                        <p className="print-text-sm">{sale.customer?.customer_name || "Walk-in Customer"}</p>
+                        {sale.customer?.phone && (
+                            <p className="text-sm text-gray-600 print-text-xs">Phone: {sale.customer.phone}</p>
+                        )}
                     </div>
                 </div>
 
-                {/* Items Table */}
-                <div className="mt-6">
-                    <div className="flex justify-between items-center mb-2">
-                        <h3 className="text-lg font-bold text-gray-800">
-                            <Package2 className="inline mr-2" size={18} />
-                            Invoice Items ({sale.items?.length || 0})
-                        </h3>
-                        <div className="text-sm text-gray-600">
-                            Total Quantity: <span className="font-bold">{getTotalItems()}</span> units
-                        </div>
+                {/* Barcode */}
+                <div className="text-center print-mb-2 border-b border-dashed border-gray-300 print-border-b print-border-dashed print-border-gray-300 pb-4 print-pb-2">
+                    <div className="font-barcode text-3xl print-text-xl" style={{ fontFamily: "'Libre Barcode 128', cursive" }}>
+                        {generateBarcode(sale.invoice_no)}
                     </div>
-                    
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-xs border border-black">
-                            <thead className="bg-gray-800 text-white">
-                                <tr>
-                                    <th className="w-[3%] p-2 border-r border-gray-600">SL</th>
-                                    <th className="w-[10%] p-2 border-r border-gray-600">Part No.</th>
-                                    <th className="w-[30%] p-2 border-r border-gray-600 text-left">Description</th>
-                                    <th className="w-[10%] p-2 border-r border-gray-600">Model</th>
-                                    <th className="w-[10%] p-2 border-r border-gray-600">Brand</th>
-                                    <th className="w-[5%] p-2 border-r border-gray-600">Qty.</th>
-                                    <th className="w-[10%] p-2 border-r border-gray-600">Pcs.</th>
-                                    <th className="w-[7%] p-2 border-r border-gray-600">Price</th>
-                                    <th className="w-[7%] p-2 border-r border-gray-600">Discount</th>
-                                    <th className="w-[8%] p-2">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {sale.items?.map((item, index) => (
-                                    <tr key={item.id} className="hover:bg-gray-50 border-b border-gray-200">
-                                        <td className="p-2 border-r border-gray-200 text-center">{index + 1}</td>
-                                        <td className="p-2 border-r border-gray-200 text-center font-mono">
-                                            {item.product?.product_no || item.product_id || 'N/A'}
-                                        </td>
-                                        <td className="p-2 border-r border-gray-200 text-left">
-                                            <div className="font-medium">{item.product?.name || 'N/A'}</div>
-                                            {item.variant && (
-                                                <div className="text-xs text-gray-500 mt-0.5">
-                                                    {getVariantDisplayName(item.variant)}
-                                                </div>
+                    <p className="text-xs text-gray-600 print-text-xs mt-1 print-mt-1">{sale.invoice_no}</p>
+                </div>
+
+                {/* Items Table - Compact */}
+                <div className="print-mb-2 my-4 print-my-2">
+                    <table className="w-full text-sm print-text-xs receipt-table">
+                        <thead>
+                            <tr className="border-b-2 border-black">
+                                <th className="text-left pb-1 print-pb-1">ITEM</th>
+                                <th className="text-left pb-1 print-pb-1">Brand</th>
+                                <th className="text-center pb-1 print-pb-1">QTY</th>
+                                <th className="text-right pb-1 print-pb-1">PRICE</th>
+                                <th className="text-right pb-1 print-pb-1">TOTAL</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {sale.items?.map((item, index) => (
+                                <React.Fragment key={item.id}>
+                                    <tr className="border-bottom-dashed">
+                                        <td className="py-1 print-py-1">
+                                            <div>
+                                                <p className="font-medium">{item.product?.name || item?.product_name} 
+                                                    {item.product && (
+                                                        <span> ( {item.product?.product_no ||  ''} )</span>
+                                                    )}
+                                                </p>
+                                              {item.variant && (
+                                                <>
+                                               {(() => {
+                                                    const variant = item.variant;
+                                                    let attrsText = '';
+
+                                                    if (variant.attribute_values) {
+                                                    if (typeof variant.attribute_values === 'object') {
+                                                        attrsText = Object.entries(variant.attribute_values)
+                                                        .map(([key, value]) => `${key}`)
+                                                        .join(', ');
+                                                    } else {
+                                                        attrsText = variant.attribute_values;
+                                                    }
+                                                    }
+
+                                                    return <>{attrsText || 'N/A'}</>;
+                                                })()}<br />
+
+                                                </>
                                             )}
+                                            {item?.brand }
+                                            </div>
                                         </td>
-                                        <td className="p-2 border-r border-gray-200 text-center">
-                                            {getVariantDisplayName(item.variant)}
+                                        <td className="text-left py-1 print-py-1">
+                                            {item.variant && (
+                                                <>
+                                                {(() => {
+                                                    const variant = item.variant;
+                                                    let attrsText = '';
+
+                                                    if (variant.attribute_values) {
+                                                    if (typeof variant.attribute_values === 'object') {
+                                                        attrsText = Object.entries(variant.attribute_values)
+                                                        .map(([key, value]) => `${value}`)
+                                                        .join(', ');
+                                                    } else {
+                                                        attrsText = variant.attribute_values;
+                                                    }
+                                                    }
+
+                                                    return <>{attrsText || 'N/A'}</>;
+                                                })()}
+
+
+                                                <br />
+                                                <span className="text-sm text-gray-500 print:text-xs">
+                                                    {item.variant?.sku || 'No SKU'}
+                                                </span>
+                                                </>
+                                            )}
+
+                                            {item?.variant_name }
                                         </td>
-                                        <td className="p-2 border-r border-gray-200 text-center">
-                                            {getBrandName(item.variant)}
-                                        </td>
-                                        <td className="p-2 border-r border-gray-200 text-center font-bold">
-                                            {item.quantity}
-                                        </td>
-                                        <td className="p-2 border-r border-gray-200 text-center font-mono">
-                                            {formatCurrency(item.unit_price)}
-                                        </td>
-                                        <td className="p-2 border-r border-gray-200 text-right font-mono">
-                                            {formatCurrency(item.unit_price)}
-                                        </td>
-                                        <td className="p-2 border-r border-gray-200 text-right">
-                                            {sale.discount || 0}%
-                                        </td>
-                                        <td className="p-2 text-right font-mono font-bold text-blue-600">
-                                            {formatCurrency(item.total_price)}
-                                        </td>
+                                        <td className="text-center py-1 print-py-1">{item.quantity}</td>
+                                        <td className="text-right py-1 print-py-1">{formatCurrency(item.unit_price)}</td>
+                                        <td className="text-right py-1 print-py-1 font-semibold">{formatCurrency(item.total_price)}</td>
                                     </tr>
-                                ))}
-                                {(!sale.items || sale.items.length === 0) && (
-                                    <tr>
-                                        <td colSpan="10" className="p-4 text-center text-gray-500">
-                                            No items found in this sale
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                            <tfoot className="bg-gray-100 border-t-2 border-gray-300">
-                                <tr>
-                                    <td colSpan="5" className="p-2 text-right font-bold">
-                                        GRAND TOTAL:
-                                    </td>
-                                    <td className="p-2 text-center font-bold">{getTotalItems()}</td>
-                                    <td className="p-2"></td>
-                                    <td className="p-2"></td>
-                                    <td className="p-2"></td>
-                                    <td className="p-2 text-right font-bold text-lg text-blue-600">
-                                        {formatCurrency(sale.grand_total)} Tk
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
                 </div>
 
-                {/* Summary Grid */}
-                <div className="grid grid-cols-4 gap-4 text-xs pt-4 mt-6 border-t border-gray-300">
-                    <div className="space-y-2">
+                {/* Payment Summary - Compact */}
+                <div className="border-t-2 border-black print-border-t-2 print-border-black pt-2 print-pt-2 print-space-y-1">
+                    <div className="space-y-1 print-space-y-1 text-sm print-text-xs">
                         <div className="flex justify-between">
-                            <span className="font-semibold">Sub Total:</span>
+                            <span>Sub Total:</span>
                             <span>{formatCurrency(sale.sub_total)} Tk</span>
                         </div>
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Tax:</span>
-                            <span>{formatCurrency(sale.tax)} Tk</span>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Discount:</span>
-                            <span className="text-red-600">-{formatCurrency(sale.discount)} Tk</span>
-                        </div>
-                        <div className="flex justify-between font-bold">
-                            <span>Grand Total:</span>
-                            <span className="text-green-600">{formatCurrency(sale.grand_total)} Tk</span>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Paid Amount:</span>
-                            <span className="text-blue-600">{formatCurrency(sale.paid_amount)} Tk</span>
+                        {sale.discount > 0 && (
+                            <div className="flex justify-between">
+                                <span>Discount:</span>
+                                <span>-{formatCurrency(sale.discount)} Tk</span>
+                            </div>
+                        )}
+                        {sale.tax > 0 && (
+                            <div className="flex justify-between">
+                                <span>Tax:</span>
+                                <span>+{formatCurrency(sale.tax)} Tk</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between border-t border-dashed border-gray-300 print-border-t print-border-dashed print-border-gray-300 pt-1 print-pt-1 font-bold print-text-sm">
+                            <span>GRAND TOTAL:</span>
+                            <span className="text-primary">{formatCurrency(sale.grand_total)} Tk</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="font-semibold">Due Amount:</span>
-                            <span className="text-orange-600">{formatCurrency(sale.due_amount)} Tk</span>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex justify-between">
-                            <span className="font-semibold">Payment Method:</span>
-                            <span className="font-bold">{sale.payment_method?.toUpperCase() || 'CASH'}</span>
+                            <span>Paid Amount:</span>
+                            <span>{formatCurrency(sale.paid_amount)} Tk</span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="font-semibold">Payment Status:</span>
-                            <span className={`px-2 py-0.5 rounded text-xs ${getPaymentStatusColor(sale.payment_status)}`}>
-                                {sale.payment_status?.toUpperCase() || 'UNPAID'}
-                            </span>
+                            <span>Due Amount:</span>
+                            <span>{formatCurrency(sale.due_amount)} Tk</span>
                         </div>
+                        <div className="flex justify-between border-t border-dashed border-gray-300 print-border-t print-border-dashed print-border-gray-300 pt-1 print-pt-1">
+                            <span>Payment Method:</span>
+                            <span className="font-semibold">{sale.payment_type || 'Cash'}</span>
+                        </div>
+                        {sale.payment_reference && (
+                            <div className="flex justify-between">
+                                <span>Reference:</span>
+                                <span className="font-mono text-xs print-text-xs">{sale.payment_reference}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
-                {/* Footer Sections */}
-                <div className="grid grid-cols-4 gap-4 text-xs pt-6 mt-6 border-t border-black">
-                    <div className="col-span-2">
-                        <p className="font-bold border-b border-dashed border-black w-2/3 text-center mb-2">Checked By</p>
-                        <p className="text-xs text-gray-700">
-                            (Name, seal, time) checked and verified the sale. (All materials checked, verified, and sealed as per company policy.)
-                        </p>
-                    </div>
-                    <div className="text-center">
-                        <p className="font-bold border-b border-dashed border-black w-2/3 mx-auto mb-2">Authorised</p>
-                        <p className="text-xs text-gray-700">(Signature & Seal)</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="font-bold border-b border-dashed border-black w-2/3 mx-auto mb-2">Received</p>
-                        <p className="text-xs text-gray-700">(Signature & Seal)</p>
-                    </div>
-                    <div className="col-span-4 text-right">
-                        <div className="inline-block text-left">
-                            <p className="font-bold border-b border-dashed border-black mb-2">Delivery By</p>
-                            <p className="text-[0.6rem] text-gray-600">Software by TETRA SOFT</p>
-                            <p className="text-[0.6rem] text-gray-600">Phone 01911-387001</p>
-                        </div>
-                    </div>
+                {/* Footer - Compact */}
+                <div className="text-center print-mt-2 mt-4 text-xs print-text-xs text-gray-500 border-t border-dashed border-gray-300 print-border-t print-border-dashed print-border-gray-300 pt-4 print-pt-2">
+                    <p>*** {getTotalItems()} Items ***</p>
+                    <p className="mt-1 print-mt-1">Thank you for your business!</p>
+                    <p className="mt-2 print-mt-1">This is computer generated receipt</p>
+                    <p>No signature required</p>
                 </div>
-
-                {/* Additional Information Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-                    {/* Customer Card */}
-                    <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="bg-blue-100 p-2 rounded">
-                                <User size={16} className="text-blue-600" />
-                            </div>
-                            <h4 className="font-bold text-sm text-blue-700">Customer Information</h4>
-                        </div>
-                        <div className="space-y-2 text-xs">
-                            <div className="flex justify-between">
-                                <span className="text-gray-700">Name:</span>
-                                <span className="font-medium">{sale.customer?.customer_name || 'Walk-in Customer'}</span>
-                            </div>
-                            {sale.customer?.phone && (
-                                <div className="flex justify-between">
-                                    <span className="text-gray-700">Phone:</span>
-                                    <span className="font-medium">{sale.customer.phone}</span>
-                                </div>
-                            )}
-                            {sale.customer?.email && (
-                                <div className="flex justify-between">
-                                    <span className="text-gray-700">Email:</span>
-                                    <span className="font-medium">{sale.customer.email}</span>
-                                </div>
-                            )}
-                            {sale.customer?.address && (
-                                <div className="flex justify-between">
-                                    <span className="text-gray-700">Address:</span>
-                                    <span className="font-medium text-xs">{sale.customer.address}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Sale Information Card */}
-                    <div className="bg-green-50 p-4 rounded border border-green-200">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="bg-green-100 p-2 rounded">
-                                <Calendar size={16} className="text-green-600" />
-                            </div>
-                            <h4 className="font-bold text-sm text-green-700">Sale Information</h4>
-                        </div>
-                        <div className="space-y-2 text-xs">
-                            <div className="flex justify-between">
-                                <span className="text-gray-700">Invoice Date:</span>
-                                <span className="font-medium">{formatDateTime(sale.created_at)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-700">Sold By:</span>
-                                <span className="font-medium">{sale.creator?.name || 'System Admin'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-700">Sale Status:</span>
-                                <span className={`font-medium ${sale.status === 'completed' ? 'text-green-600' : 'text-yellow-600'}`}>
-                                    {sale.status?.toUpperCase() || 'PENDING'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-700">Total Items:</span>
-                                <span className="font-medium">{sale.items?.length || 0}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Warehouse Card */}
-                    <div className="bg-purple-50 p-4 rounded border border-purple-200">
-                        <div className="flex items-center gap-2 mb-3">
-                            <div className="bg-purple-100 p-2 rounded">
-                                <Truck size={16} className="text-purple-600" />
-                            </div>
-                            <h4 className="font-bold text-sm text-purple-700">Warehouse Information</h4>
-                        </div>
-                        <div className="space-y-2 text-xs">
-                            <div className="flex justify-between">
-                                <span className="text-gray-700">Warehouse:</span>
-                                <span className="font-medium">{sale.warehouse?.name || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-gray-700">Code:</span>
-                                <span className="font-medium">{sale.warehouse?.code || 'N/A'}</span>
-                            </div>
-                            {sale.warehouse?.address && (
-                                <div className="flex justify-between">
-                                    <span className="text-gray-700">Address:</span>
-                                    <span className="font-medium text-xs">{sale.warehouse.address}</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Notes Section */}
-                {sale.notes && (
-                    <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
-                        <h4 className="font-bold text-sm mb-2">Additional Notes</h4>
-                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{sale.notes}</p>
-                    </div>
-                )}
             </div>
         </div>
     );
