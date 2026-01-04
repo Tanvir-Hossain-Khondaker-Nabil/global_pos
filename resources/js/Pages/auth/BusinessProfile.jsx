@@ -5,15 +5,33 @@ import { useForm, usePage } from '@inertiajs/react'
 import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Profile() {
-    const { business } = usePage().props
+    const { business, url } = usePage().props
     const { t, locale } = useTranslation()
 
-
     const businessData = business || {};
-
-    console.log('Business Data:', businessData);
     
-    // handle form - updated to match fillable fields
+    // Get the base URL
+    const baseUrl = url || window.location.origin;
+    
+    // Helper function to get image URL
+    const getImageUrl = (path) => {
+        if (!path) return null;
+        
+        // If path already contains http/https, return as is
+        if (path.startsWith('http')) {
+            return path;
+        }
+        
+        // If path starts with storage/, remove it as storage:link handles this
+        if (path.startsWith('storage/')) {
+            return `/${path}`;
+        }
+        
+        // If path is relative, prepend with base URL
+        return `${baseUrl}/storage/${path}`;
+    };
+
+    // handle form
     const { data, setData, errors, processing, post } = useForm({
         name: businessData.name || '',
         email: businessData.email || '',
@@ -28,10 +46,23 @@ export default function Profile() {
 
     const handleUpdate = (e) => {
         e.preventDefault()
+        
+        // Create FormData for file uploads
+        const formData = new FormData();
+        
+        // Append all form data
+        Object.keys(data).forEach(key => {
+            if (data[key] !== null && data[key] !== undefined) {
+                formData.append(key, data[key]);
+            }
+        });
+        
+        // Use Inertia's post method with FormData
         post(route('businessProfile.update'), {
-            _method: 'POST', 
-            ...data,
+            data: formData,
+            _method: 'POST',
             preserveScroll: true,
+            forceFormData: true, // Important for file uploads
         })
     }
 
@@ -44,7 +75,23 @@ export default function Profile() {
     // Clear file input
     const clearFile = (fieldName) => {
         setData(fieldName, null)
+        
+        // Reset file input
+        const fileInput = document.querySelector(`input[name="${fieldName}"]`);
+        if (fileInput) {
+            fileInput.value = '';
+        }
     }
+
+    // Get thumbnail URL
+    const thumbnailUrl = data.thum 
+        ? URL.createObjectURL(data.thum)
+        : getImageUrl(businessData.thum);
+
+    // Get logo URL
+    const logoUrl = data.logo
+        ? URL.createObjectURL(data.logo)
+        : getImageUrl(businessData.logo);
 
     return (
         <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
@@ -77,24 +124,24 @@ export default function Profile() {
                         </label>
                         <div className='flex items-start gap-4'>
                             <div className="avatar">
-                                <div className="ring-primary ring-offset-base-100 w-20 h-20 rounded-lg ring-2 ring-offset-2 flex items-center justify-center overflow-hidden">
-                                    {data.thum ? (
+                                <div className="ring-primary ring-offset-base-100 w-20 h-20 rounded-lg ring-2 ring-offset-2 flex items-center justify-center overflow-hidden bg-gray-100">
+                                    {thumbnailUrl ? (
                                         <div className="relative w-full h-full">
                                             <img 
-                                                src={URL.createObjectURL(data.thum)} 
+                                                src={thumbnailUrl} 
                                                 alt="Thumbnail preview" 
                                                 className="w-full h-full object-cover"
                                             />
-                                            <button 
-                                                type="button"
-                                                onClick={() => clearFile('thum')}
-                                                className="absolute top-1 right-1 btn btn-xs btn-circle btn-error"
-                                            >
-                                                ✕
-                                            </button>
+                                            {data.thum && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => clearFile('thum')}
+                                                    className="absolute top-1 right-1 btn btn-xs btn-circle btn-error"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
                                         </div>
-                                    ) : businessData.thum ? (
-                                        <Image path={`/storage/${businessData.thum}`} className="w-full h-full object-cover" />
                                     ) : (
                                         <span className="text-gray-400">{t('auth.no_image', 'No Image')}</span>
                                     )}
@@ -102,6 +149,7 @@ export default function Profile() {
                             </div>
                             <div className="flex-1">
                                 <input 
+                                    name="thum"
                                     onChange={handleFileChange('thum')} 
                                     type="file" 
                                     accept='image/*' 
@@ -123,23 +171,23 @@ export default function Profile() {
                         <div className='flex items-start gap-4'>
                             <div className="avatar">
                                 <div className="ring-primary ring-offset-base-100 w-20 h-20 rounded-lg ring-2 ring-offset-2 flex items-center justify-center bg-white overflow-hidden">
-                                    {data.logo ? (
+                                    {logoUrl ? (
                                         <div className="relative w-full h-full">
                                             <img 
-                                                src={URL.createObjectURL(data.logo)} 
+                                                src={logoUrl} 
                                                 alt="Logo preview" 
                                                 className="w-full h-full object-contain"
                                             />
-                                            <button 
-                                                type="button"
-                                                onClick={() => clearFile('logo')}
-                                                className="absolute top-1 right-1 btn btn-xs btn-circle btn-error"
-                                            >
-                                                ✕
-                                            </button>
+                                            {data.logo && (
+                                                <button 
+                                                    type="button"
+                                                    onClick={() => clearFile('logo')}
+                                                    className="absolute top-1 right-1 btn btn-xs btn-circle btn-error"
+                                                >
+                                                    ✕
+                                                </button>
+                                            )}
                                         </div>
-                                    ) : businessData.logo ? (
-                                        <Image path={`/storage/${businessData.logo}`} className="w-full h-full object-contain" />
                                     ) : (
                                         <span className="text-gray-400">{t('auth.no_image', 'No Image')}</span>
                                     )}
@@ -147,6 +195,7 @@ export default function Profile() {
                             </div>
                             <div className="flex-1">
                                 <input 
+                                    name="logo"
                                     onChange={handleFileChange('logo')} 
                                     type="file" 
                                     accept='image/*' 
