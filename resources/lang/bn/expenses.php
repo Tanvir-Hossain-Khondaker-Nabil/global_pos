@@ -109,6 +109,9 @@ return [
     'today_summary' => 'আজকের সারসংক্ষেপ',
     'total_spent' => 'মোট ব্যয়',
     'payment_method' => 'পেমেন্ট পদ্ধতি',
-    'select_account' => 'অ্যাকাউন্ট নির্বাচন করুন'
+    'select_account' => 'অ্যাকাউন্ট নির্বাচন করুন',
+    'no_categories_found' => 'কোন ক্যাটাগরি পাওয়া যায়নি।',
+    'no_categories_message' => 'কোন ক্যাটাগরি উপলব্ধ নেই। দয়া করে কিছু যোগ করুন।',
+    'add_first_category' => 'প্রথম ক্যাটাগরি যোগ করুন'
 
 ];

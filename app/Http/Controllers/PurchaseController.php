@@ -164,7 +164,7 @@ class PurchaseController extends Controller
         $request->validated();
 
         $adjustamount = $request->adjust_from_advance ?? false;
-        $payment_type = 'cash'; // Default
+        $payment_type = 'cash'; 
 
         if ($adjustamount == true) {
             $supplier = Supplier::find($request->supplier_id);

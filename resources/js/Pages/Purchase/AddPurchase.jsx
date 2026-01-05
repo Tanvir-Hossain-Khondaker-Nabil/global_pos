@@ -880,7 +880,10 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                             <div className="p-3 font-medium bg-base-200 sticky top-0 z-10">
                                                 <div className="flex justify-between items-center">
                                                     <span className="font-semibold text-sm">
-                                                        {product.name} ({product.brand?.name || t('purchase.uncategorized', 'Uncategorized')})
+                                                        {product.name} 
+                                                        {product?.brand && (
+                                                            <span className="text-xs text-gray-500">({product.brand?.name || ''})</span>
+                                                        )}
                                                     </span>
                                                     <span className="text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
                                                         {product.product_no}

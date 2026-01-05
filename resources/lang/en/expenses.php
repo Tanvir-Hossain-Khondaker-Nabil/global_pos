@@ -108,7 +108,10 @@ return [
     'total_income' => 'Total Income',
     'total_expense' => 'Total Expense',
     'payment_method' => 'Payment Method',
-    'select_account' => 'Select Account'
+    'select_account' => 'Select Account',
+    'no_categories_found' => 'No Categories Found',
+    'no_categories_message' => 'No categories available. Please add some.',
+    'add_first_category' => 'Add First Category'
 
 
 ];
