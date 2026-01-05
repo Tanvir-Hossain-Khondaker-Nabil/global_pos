@@ -80,33 +80,40 @@ class AuthController extends Controller
             'website' => 'nullable|url|max:255',
             'description' => 'nullable|string|max:1000',
             'tax_number' => 'nullable|string|max:50',
-            'thum' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
-            'logo' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'thum' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         try {
             $data = $validated;
 
-            // Handle thumbnail upload
-            if ($request->hasFile('thum')) {
-                $business = BusinessProfile::where('user_id', Auth::id())->first();
-                // Delete old thumbnail if exists
-                if ($business && $business->thum) {
-                    Storage::disk('public')->delete($business->thum);
-                }
-
-                $data['thum'] = $request->file('thum')->store('business/thumbs', 'public');
-            }
+            // Get existing business profile if it exists
+            $business = BusinessProfile::where('user_id', Auth::id())->first();
 
             // Handle logo upload
             if ($request->hasFile('logo')) {
-                $business = BusinessProfile::where('user_id', Auth::id())->first();
                 // Delete old logo if exists
                 if ($business && $business->logo) {
                     Storage::disk('public')->delete($business->logo);
                 }
 
                 $data['logo'] = $request->file('logo')->store('business/logos', 'public');
+            } else {
+                // Keep existing logo if no new file uploaded
+                unset($data['logo']);
+            }
+
+            // Handle thumbnail upload
+            if ($request->hasFile('thum')) {
+                // Delete old thumbnail if exists
+                if ($business && $business->thum) {
+                    Storage::disk('public')->delete($business->thum);
+                }
+
+                $data['thum'] = $request->file('thum')->store('business/thumbs', 'public');
+            } else {
+                // Keep existing thumbnail if no new file uploaded
+                unset($data['thum']);
             }
 
             // Add user_id to data
@@ -121,6 +128,8 @@ class AuthController extends Controller
             // Return success response
             return back()->with('success', 'Business profile updated successfully.');
         } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Business profile update error: ' . $e->getMessage());
 
             return back()->withErrors(['error' => 'Failed to update business profile. Please try again.']);
         }
