@@ -1,7 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Pen, Plus, Trash2, X, Mail, Phone, MapPin, Globe, DollarSign, CheckCircle, XCircle, CreditCard, Wallet, Receipt } from "lucide-react";
+import { 
+    Frown, 
+    Pen, 
+    Plus, 
+    Trash2, 
+    X, 
+    Mail, 
+    Phone, 
+    MapPin, 
+    Globe, 
+    DollarSign, 
+    CheckCircle, 
+    XCircle, 
+    CreditCard, 
+    Wallet, 
+    Receipt,
+    MessageSquare,
+    Smartphone,
+    Send
+} from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -11,13 +30,20 @@ export default function Index({ suppliers, filters }) {
     const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
     const [advanceModel, setAdvanceModel] = useState(false);
+    const [smsTestModel, setSmsTestModel] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
     const [editProcessing, setEditProcessing] = useState(false);
+    const [smsPreview, setSmsPreview] = useState('');
+    const [showSmsPreview, setShowSmsPreview] = useState(false);
+    const [smsTestResult, setSmsTestResult] = useState(null);
+    const [smsTestLoading, setSmsTestLoading] = useState(false);
 
     // Model close handle
     const modelClose = () => {
         supplyForm.reset();
         setModel(false);
+        setShowSmsPreview(false);
+        setSmsPreview('');
     };
 
     // Advance model close handle
@@ -25,6 +51,13 @@ export default function Index({ suppliers, filters }) {
         advanceForm.reset();
         setSelectedSupplier(null);
         setAdvanceModel(false);
+    };
+
+    // SMS Test model close handle
+    const smsTestModelClose = () => {
+        smsTestForm.reset();
+        setSmsTestResult(null);
+        setSmsTestModel(false);
     };
 
     // Handle search
@@ -60,6 +93,7 @@ export default function Index({ suppliers, filters }) {
         advance_amount: 0,
         due_amount: 0,
         is_active: true,
+        send_welcome_sms: true, // New SMS field
     });
 
     // Handle advance payment form
@@ -73,6 +107,67 @@ export default function Index({ suppliers, filters }) {
         is_advance: true,
     });
 
+    // Handle SMS test form
+    const smsTestForm = useForm({
+        phone: "",
+        message: "",
+    });
+
+    // Handle SMS preview
+    const handleSmsPreview = async () => {
+        if (!supplyForm.data.phone || !supplyForm.data.contact_person) {
+            alert(t('supplier.fill_required_fields', 'Please fill phone and contact person first'));
+            return;
+        }
+
+        try {
+            const response = await axios.post(route('sms.preview'), {
+                contact_person: supplyForm.data.contact_person,
+                phone: supplyForm.data.phone,
+                email: supplyForm.data.email,
+                company: supplyForm.data.company || auth.user.company || 'NEXORYN',
+                advance_amount: supplyForm.data.advance_amount,
+            });
+            
+            if (response.data.success) {
+                setSmsPreview(response.data.preview);
+                setShowSmsPreview(true);
+            }
+        } catch (error) {
+            console.error('SMS preview error:', error);
+            alert(t('supplier.sms_preview_error', 'Failed to generate SMS preview'));
+        }
+    };
+
+    // Handle SMS test
+    const handleSmsTest = async (e) => {
+        e.preventDefault();
+        setSmsTestLoading(true);
+        
+        try {
+            const response = await axios.post(route('sms.test'), smsTestForm.data);
+            setSmsTestResult(response.data);
+        } catch (error) {
+            setSmsTestResult({
+                success: false,
+                message: t('supplier.sms_test_error', 'Error: ') + error.message,
+                sandbox: true,
+            });
+        } finally {
+            setSmsTestLoading(false);
+        }
+    };
+
+    // Auto-fill SMS test form when supplier selected
+    useEffect(() => {
+        if (selectedSupplier) {
+            smsTestForm.setData({
+                phone: selectedSupplier.phone,
+                message: `Test SMS for ${selectedSupplier.name} - ${new Date().toLocaleString()}`,
+            });
+        }
+    }, [selectedSupplier]);
+
     const handleAdvancePayment = (supplier) => {
         setSelectedSupplier(supplier);
         advanceForm.setData({
@@ -81,7 +176,7 @@ export default function Index({ suppliers, filters }) {
             payment_type: "cash",
             transaction_id: "",
             notes: "",
-            type: 'supplier' ,
+            type: 'supplier',
             is_advance: true,
         });
         setAdvanceModel(true);
@@ -143,6 +238,7 @@ export default function Index({ suppliers, filters }) {
                 advance_amount: parseFloat(data.advance_amount) || 0,
                 due_amount: parseFloat(data.due_amount) || 0,
                 is_active: Boolean(data.is_active),
+                send_welcome_sms: true, // Default to true for new suppliers
             });
             setModel(true);
         }).finally(() => {
@@ -218,10 +314,20 @@ export default function Index({ suppliers, filters }) {
                         className="input input-sm input-bordered w-64"
                     />
                     <button
-                        onClick={() => setModel(true)}
+                        onClick={() => {
+                            supplyForm.reset();
+                            setModel(true);
+                        }}
                         className="btn btn-primary btn-sm"
                     >
                         <Plus size={15} /> {t('supplier.add_new', 'Add New')}
+                    </button>
+                    <button
+                        onClick={() => setSmsTestModel(true)}
+                        className="btn btn-info btn-sm"
+                        title={t('supplier.test_sms', 'Test SMS')}
+                    >
+                        <MessageSquare size={15} /> SMS Test
                     </button>
                 </div>
             </PageHeader>
@@ -510,7 +616,7 @@ export default function Index({ suppliers, filters }) {
                                     value={supplyForm.data.phone}
                                     onChange={(e) => supplyForm.setData("phone", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder={t('supplier.phone_placeholder', 'Enter phone number')}
+                                    placeholder="+8801XXXXXXXXX"
                                     required
                                 />
                                 {supplyForm.errors.phone && (
@@ -544,7 +650,7 @@ export default function Index({ suppliers, filters }) {
                                     value={supplyForm.data.website}
                                     onChange={(e) => supplyForm.setData("website", e.target.value)}
                                     className="input input-bordered w-full"
-                                    placeholder={t('supplier.website_placeholder', 'https://example.com')}
+                                    placeholder="https://example.com"
                                 />
                                 {supplyForm.errors.website && (
                                     <div className="text-red-500 text-sm mt-1">
@@ -624,6 +730,80 @@ export default function Index({ suppliers, filters }) {
                                 placeholder={t('supplier.description_placeholder', 'Enter description or notes')}
                             />
                         </fieldset>
+
+                        {/* SMS Notification Section */}
+                        {!supplyForm.data.id && (
+                            <div className="border-t border-gray-200 pt-6 mt-6">
+                                <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                    <MessageSquare size={18} className="inline mr-2" />
+                                    {t('supplier.sms_notification', 'SMS Notification')}
+                                </h3>
+                                
+                                <div className="bg-blue-50 p-4 rounded-lg mb-4">
+                                    <label className="flex items-center space-x-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={supplyForm.data.send_welcome_sms}
+                                            onChange={(e) => supplyForm.setData("send_welcome_sms", e.target.checked)}
+                                            className="checkbox checkbox-primary"
+                                        />
+                                        <div>
+                                            <span className="font-medium text-blue-800">
+                                                {t('supplier.send_welcome_sms', 'Send Welcome SMS')}
+                                            </span>
+                                            <p className="text-sm text-blue-600 mt-1">
+                                                {t('supplier.sms_notification_desc', 'A welcome SMS will be sent to the supplier with account details')}
+                                            </p>
+                                            {supplyForm.data.phone && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSmsPreview}
+                                                    className="btn btn-xs btn-outline btn-info mt-2"
+                                                >
+                                                    <MessageSquare size={12} className="mr-1" />
+                                                    {t('supplier.preview_sms', 'Preview SMS')}
+                                                </button>
+                                            )}
+                                        </div>
+                                    </label>
+                                    
+                                    {/* SMS Preview */}
+                                    {showSmsPreview && (
+                                        <div className="mt-4 p-3 bg-white border border-blue-200 rounded-lg">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="font-medium text-blue-800 text-sm">
+                                                    {t('supplier.sms_preview', 'SMS Preview')}:
+                                                </h4>
+                                                <button
+                                                    onClick={() => setShowSmsPreview(false)}
+                                                    className="btn btn-xs btn-ghost"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                            <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
+                                                {smsPreview}
+                                            </div>
+                                            <div className="text-xs text-blue-600 mt-2 flex items-center justify-between">
+                                                <div>
+                                                    <span className="font-medium">
+                                                        {t('supplier.sandbox_mode', 'Sandbox Mode')}: 
+                                                    </span>
+                                                    <span className="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
+                                                        {t('supplier.active', 'Active')}
+                                                    </span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-gray-600">
+                                                        {t('supplier.sms_will_be_logged', 'SMS will be logged in system')}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         <div className="flex gap-3 pt-4">
                             <button
@@ -709,7 +889,7 @@ export default function Index({ suppliers, filters }) {
                                             min="0"
                                             value={advanceForm.data.amount}
                                             onChange={(e) => advanceForm.setData("amount", e.target.value)}
-                                            className="input input-bordered w-full pl-3"
+                                            className="input input-bordered w-full pl-10"
                                             placeholder={t('supplier.amount_placeholder', 'Enter amount')}
                                             required
                                         />
@@ -817,6 +997,170 @@ export default function Index({ suppliers, filters }) {
                             </form>
                         </>
                     )}
+                </div>
+            </dialog>
+
+            {/* SMS Test Modal */}
+            <dialog className={`modal ${smsTestModel ? 'modal-open' : ''}`}>
+                <div className="modal-box max-w-lg">
+                    <div className="flex items-center justify-between border-b border-gray-100 pb-3 mb-6">
+                        <h1 className="text-lg font-semibold text-gray-900">
+                            {t('supplier.sms_test_panel', 'SMS Test Panel')}
+                        </h1>
+                        <button
+                            onClick={smsTestModelClose}
+                            className="btn btn-circle btn-xs btn-ghost"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+
+                    <div className="mb-6">
+                        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                            <div className="flex">
+                                <div className="ml-3">
+                                    <p className="text-sm text-yellow-700">
+                                        <strong>টেস্ট করার পদ্ধতি:</strong>
+                                        <ol className="list-decimal pl-5 mt-2 space-y-1">
+                                            <li>নতুন Supplier যোগ করুন</li>
+                                            <li>"Send Welcome SMS" চেকবক্স টিক দিন</li>
+                                            <li>Supplier সেভ করুন</li>
+                                            <li>Laravel Log চেক করুন: <code>tail -f storage/logs/laravel.log</code></li>
+                                            <li>Log এ SMS ডিটেইলস দেখতে পাবেন</li>
+                                        </ol>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <form onSubmit={handleSmsTest} className="space-y-4">
+                        <fieldset className="fieldset">
+                            <legend className="fieldset-legend">
+                                <Smartphone size={16} className="inline mr-2" />
+                                {t('supplier.phone_number', 'Phone Number')}
+                                <span className="text-red-500 ml-1">*</span>
+                            </legend>
+                            <input
+                                type="tel"
+                                value={smsTestForm.data.phone}
+                                onChange={(e) => smsTestForm.setData("phone", e.target.value)}
+                                className="input input-bordered w-full"
+                                placeholder="+8801XXXXXXXXX"
+                                required
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Bangladeshi format: +8801XXXXXXXXX
+                            </p>
+                        </fieldset>
+
+                        <fieldset className="fieldset">
+                            <legend className="fieldset-legend">
+                                <MessageSquare size={16} className="inline mr-2" />
+                                {t('supplier.message', 'Message')}
+                                <span className="text-red-500 ml-1">*</span>
+                            </legend>
+                            <textarea
+                                value={smsTestForm.data.message}
+                                onChange={(e) => smsTestForm.setData("message", e.target.value)}
+                                className="textarea textarea-bordered w-full"
+                                rows="4"
+                                placeholder={t('supplier.message_placeholder', 'Enter your message here...')}
+                                required
+                            />
+                            <div className="text-xs text-gray-500 mt-1 flex justify-between">
+                                <span>
+                                    {t('supplier.character_count', 'Characters')}: {smsTestForm.data.message.length}
+                                </span>
+                                <span>
+                                    {t('supplier.sms_count', 'SMS Count')}: {Math.ceil(smsTestForm.data.message.length / 160)}
+                                </span>
+                            </div>
+                        </fieldset>
+
+                        <div className="flex items-center justify-between pt-4">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <div className={`badge ${true ? 'badge-warning' : 'badge-success'}`}>
+                                        {true ? t('supplier.sandbox_mode', 'Sandbox') : t('supplier.live_mode', 'Live')}
+                                    </div>
+                                    <span className="text-sm text-gray-600">
+                                        {true 
+                                            ? t('supplier.sms_will_be_logged', 'SMS will be logged')
+                                            : t('supplier.real_sms_will_sent', 'Real SMS will be sent')
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                            <div className="flex gap-2">
+                                <button
+                                    type="submit"
+                                    disabled={smsTestLoading}
+                                    className="btn btn-info"
+                                >
+                                    {smsTestLoading ? (
+                                        <>
+                                            <span className="loading loading-spinner loading-sm"></span>
+                                            {t('supplier.sending', 'Sending...')}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send size={15} className="mr-2" />
+                                            {t('supplier.send_test_sms', 'Send Test SMS')}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+
+                    {/* Test Result Display */}
+                    {smsTestResult && (
+                        <div className={`mt-6 p-4 rounded-lg ${smsTestResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+                            <div className="flex items-start">
+                                {smsTestResult.success ? (
+                                    <CheckCircle className="h-6 w-6 text-green-500 mr-3" />
+                                ) : (
+                                    <XCircle className="h-6 w-6 text-red-500 mr-3" />
+                                )}
+                                <div>
+                                    <h4 className={`font-medium ${smsTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
+                                        {smsTestResult.success 
+                                            ? t('supplier.sms_sent_successfully', 'SMS Sent Successfully!')
+                                            : t('supplier.sms_failed', 'SMS Failed!')
+                                        }
+                                    </h4>
+                                    <p className={`mt-1 text-sm ${smsTestResult.success ? 'text-green-700' : 'text-red-700'}`}>
+                                        {smsTestResult.message}
+                                    </p>
+                                    {smsTestResult.sandbox && (
+                                        <div className="mt-2 p-2 bg-yellow-100 rounded">
+                                            <p className="text-sm text-yellow-800">
+                                                <strong>{t('supplier.sandbox_mode', 'Sandbox Mode')}:</strong> 
+                                                {t('supplier.sms_logged_instead', 'SMS was logged instead of actually sent. Check Laravel log file.')}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Laravel Log Example */}
+                    <div className="mt-6 pt-4 border-t border-gray-200">
+                        <h4 className="font-medium text-gray-900 mb-2 text-sm">
+                            {t('supplier.expected_log_output', 'Expected Log Output')}:
+                        </h4>
+                        <div className="bg-gray-900 text-gray-100 p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                            <div className="text-green-400">[2024-01-01 12:00:00] local.INFO: SMS Sandbox Mode:</div>
+                            <div className="ml-4">
+                                <div className="text-blue-400">"to": "+8801XXXXXXXXX",</div>
+                                <div className="text-blue-400">"message": "Test message...",</div>
+                                <div className="text-blue-400">"provider": "mimsms",</div>
+                                <div className="text-blue-400">"sandbox": true</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </dialog>
         </div>

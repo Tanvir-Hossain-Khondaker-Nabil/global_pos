@@ -9,6 +9,8 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
+use App\Services\SmsService;
+use Illuminate\Support\Facades\Log;
 
 class SupplierController extends Controller
 {
@@ -52,6 +54,7 @@ class SupplierController extends Controller
             'advance_amount' => 'nullable|numeric|min:0',
             'due_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
+            'send_welcome_sms' => 'boolean', // New field for SMS option
         ]);
 
         // Set default values for numeric fields
@@ -60,24 +63,75 @@ class SupplierController extends Controller
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['created_by'] = Auth::id();
 
+        $supplier = Supplier::create($validated);
 
-        $supplier =  Supplier::create($validated);
+        // Send welcome SMS if requested
+        $smsSent = false;
+        $smsError = null;
+
+        if ($request->boolean('send_welcome_sms')) {
+            try {
+                $smsService = new SmsService();
+                $smsResult = $smsService->sendSupplierWelcome($supplier);
+                $smsSent = $smsResult['success'] ?? false;
+
+                if (!$smsResult['success']) {
+                    $smsError = $smsResult['message'] ?? 'Failed to send SMS';
+                }
+
+                Log::info('Supplier Welcome SMS Result:', [
+                    'supplier_id' => $supplier->id,
+                    'phone' => $supplier->phone,
+                    'result' => $smsResult,
+                ]);
+            } catch (\Exception $e) {
+                Log::error('Failed to send welcome SMS: ' . $e->getMessage());
+                $smsError = $e->getMessage();
+            }
+        }
 
         // if advance amount is given, create a payment record
         if ($request->advance_amount && $request->advance_amount > 0) {
-            Payment::create([
-                'supplier_id'    => $supplier->id ?? null,
-                'amount'         => $request->advance_amount ?? 0,
-                'shadow_amount'  => 0,
+            $payment = Payment::create([
+                'supplier_id' => $supplier->id ?? null,
+                'amount' => $request->advance_amount ?? 0,
+                'shadow_amount' => 0,
                 'payment_method' => 'Cash',
-                'txn_ref'        => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
-                'note'           =>'Initial advance amount payment of supplier',
-                'paid_at'        => Carbon::now(),
-                'created_by'     => Auth::id(),
+                'txn_ref' => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
+                'note' => 'Initial advance amount payment of supplier',
+                'paid_at' => Carbon::now(),
+                'created_by' => Auth::id(),
             ]);
+
+            // Send SMS for advance payment if requested
+            if ($request->boolean('send_welcome_sms')) {
+                try {
+                    $smsService = new SmsService();
+                    $advanceMessage = "Dear {$supplier->contact_person}, Advance payment of {$request->advance_amount} has been recorded. Transaction ID: {$payment->txn_ref}";
+
+                    $smsResult = $smsService->sendSms(
+                        $supplier->phone,
+                        $advanceMessage
+                    );
+
+                    Log::info('Advance Payment SMS Result:', [
+                        'payment_id' => $payment->id,
+                        'result' => $smsResult,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error('Failed to send advance payment SMS: ' . $e->getMessage());
+                }
+            }
         }
 
-        return redirect()->back()->with('success', 'Supplier contact added successfully!');
+        $responseMessage = 'Supplier contact added successfully!';
+        if ($smsSent) {
+            $responseMessage .= ' Welcome SMS sent.';
+        } elseif ($smsError) {
+            $responseMessage .= ' (SMS failed: ' . $smsError . ')';
+        }
+
+        return redirect()->back()->with('success', $responseMessage);
     }
 
     // Edit supplier - return data for form
@@ -170,6 +224,79 @@ class SupplierController extends Controller
                 ['name' => 'Suppliers', 'link' => route('supplier.view')],
                 ['name' => $supplier->name, 'link' => '#'],
             ]
+        ]);
+    }
+
+
+    public function getSmsPreview(Request $request)
+    {
+        $request->validate([
+            'contact_person' => 'required|string',
+            'phone' => 'required|string',
+            'email' => 'required|email',
+            'company' => 'nullable|string',
+            'advance_amount' => 'nullable|numeric',
+        ]);
+
+        $fakeSupplier = (object) [
+            'contact_person' => $request->contact_person,
+            'phone' => $request->phone,
+            'email' => $request->email,
+            'company' => $request->company,
+            'advance_amount' => $request->advance_amount ?? 0,
+            'id' => 'TEST001',
+        ];
+
+        $smsService = new SmsService();
+
+        $template = $request->advance_amount > 0
+            ? 'supplier_welcome_with_advance'
+            : 'supplier_welcome';
+
+        $templateConfig = config("sms.templates.{$template}");
+
+        $variables = [
+            'contact_person' => $fakeSupplier->contact_person,
+            'company_name' => $fakeSupplier->company ?: config('app.name'),
+            'email' => $fakeSupplier->email,
+            'phone' => $fakeSupplier->phone,
+            'supplier_id' => $fakeSupplier->id,
+            'advance_amount' => number_format($fakeSupplier->advance_amount, 2),
+            // Remove this line:
+            // 'login_url' => route('supplier.login'),
+        ];
+
+        $message = $templateConfig;
+        foreach ($variables as $key => $value) {
+            $message = str_replace('{' . $key . '}', $value, $message);
+        }
+
+        return response()->json([
+            'success' => true,
+            'preview' => $message,
+            'characters' => strlen($message),
+            'sms_count' => ceil(strlen($message) / 160),
+            'template' => $template,
+            'variables' => $variables,
+        ]);
+    }
+
+    // টেস্ট SMS পাঠানোর জন্য API
+    public function sendTestSms(Request $request)
+    {
+        $request->validate([
+            'phone' => 'required|string',
+            'message' => 'required|string',
+        ]);
+
+        $smsService = new SmsService();
+        $result = $smsService->sendSms($request->phone, $request->message);
+
+        return response()->json([
+            'success' => $result['success'] ?? false,
+            'message' => $result['message'] ?? 'SMS sent',
+            'sandbox' => $result['sandbox'] ?? false,
+            'details' => $result,
         ]);
     }
 }

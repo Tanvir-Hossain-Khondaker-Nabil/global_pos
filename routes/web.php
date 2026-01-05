@@ -1,5 +1,6 @@
 <?php
 
+use Inertia\Inertia;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Artisan;
@@ -17,6 +18,7 @@ use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\AccountController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\PaymentController;
@@ -34,13 +36,12 @@ use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
-use App\Http\Controllers\SalesReturnController;
-use App\Http\Controllers\AccountController;
 
 
 // Guest routes
@@ -124,7 +125,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/sales-items/{id}', 'destroy')->middleware('permission:sales.delete')->name('sales.items.destroy');
     });
 
-        // Sales Return Routes
+    // Sales Return Routes
     Route::get('/return/create', [SalesReturnController::class, 'create'])->middleware('permission:dashboard.view')->name('return.create');
     Route::post('/return/store', [SalesReturnController::class, 'store'])->name('return.store');
     Route::get('/return', [SalesReturnController::class, 'index'])->name('salesReturn.list');
@@ -145,7 +146,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/accounts/{account}/deposit', [AccountController::class, 'deposit'])->name('accounts.deposit');
     Route::post('/accounts/{account}/withdraw', [AccountController::class, 'withdraw'])->name('accounts.withdraw');
     Route::post('/accounts/transfer', [AccountController::class, 'transfer'])->name('accounts.transfer');
-    
+
 
     Route::get('/items/{id}', [SalesController::class, 'showItem'])->middleware('permission:sales.items.view')->name('sales.items.show');
     Route::get('/sales-items', [SalesController::class, 'allSalesItems'])->middleware('permission:sales.view')->name('salesItems.list');
@@ -455,6 +456,14 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:roles.delete')
             ->name('destroy');
     });
+
+    Route::get('/sms-test', function () {
+        return Inertia::render('Sms/Test');
+    })->name('sms.test.page');
+
+    // API রাউট (পূর্বে যোগ করা)
+    Route::post('/sms/test', [SupplierController::class, 'sendTestSms'])->name('sms.test');
+    Route::post('/sms/preview', [SupplierController::class, 'getSmsPreview'])->name('sms.preview');
 
 });
 
