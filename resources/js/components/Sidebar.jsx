@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { baseMenu } from "../Data/Menu";
 import { Link, usePage } from "@inertiajs/react";
-import { X, ChevronDown, ChevronRight } from "lucide-react";
+import { X, ChevronDown, ChevronRight, LayoutDashboard, LogOut } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
 export default function Sidebar({ status, setStatus }) {
@@ -23,10 +23,9 @@ export default function Sidebar({ status, setStatus }) {
         return item.children.some(child => currentRoute === child.active);
     };
 
-    // Translation mapping function
+    // Get translated title
     const getTranslatedTitle = (englishTitle) => {
         const translationMap = {
-            // Existing translations
             'Dashboard': t('auth.dashboard', 'Dashboard'),
             'Add Sale (Inventory)': t('auth.add_sale_inventory', 'Add Sale (Inventory)'),
             'Add Sale (POS)': t('auth.add_sale_pos', 'Add Sale (POS)'),
@@ -55,8 +54,6 @@ export default function Sidebar({ status, setStatus }) {
             'Customer': t('auth.customer', 'Customer'),
             'Companies': t('auth.companies', 'Companies'),
             'Users': t('auth.users', 'Users'),
-            
-            // New HR translations
             'Employees': t('auth.employees', 'Employees'),
             'Attendance': t('auth.attendance', 'Attendance'),
             'Monthly Report': t('auth.monthly_report', 'Monthly Report'),
@@ -73,7 +70,6 @@ export default function Sidebar({ status, setStatus }) {
             'Provident Fund': t('auth.provident_fund', 'Provident Fund'),
             'Overall Summary': t('auth.overall_summary', 'Overall Summary'),
             'Allowances': t('auth.allowances', 'Allowances'),
-
             'Ranks': t('auth.ranks', 'Ranks'),
             'Employee Awards': t('auth.employee_awards', 'Employee Awards'),
             'Award Statistics': t('auth.award_statistics', 'Award Statistics'),
@@ -86,133 +82,173 @@ export default function Sidebar({ status, setStatus }) {
         return translationMap[englishTitle] || englishTitle;
     };
 
+    // Group menu items by category
+    const groupMenuByCategory = () => {
+        const categories = {};
+        
+        baseMenu.forEach(item => {
+            if (item.role === "all" || item.role === auth.role) {
+                const category = item.category || 'General';
+                if (!categories[category]) {
+                    categories[category] = [];
+                }
+                categories[category].push(item);
+            }
+        });
+        
+        return categories;
+    };
+
+    const menuCategories = groupMenuByCategory();
+
     return (
-        <div
-            className={`min-w-[280px] bg-white h-screen z-20 shadow-md lg:shadow-0 print:hidden fixed lg:static overflow-auto ${
-                status ? "left-0" : "-left-full"
-            } duration-300 top-0 ${locale === 'bn' ? 'bangla-font' : ''}`}
+        <aside 
+            id="sidebar" 
+            className={`w-72 fixed h-full z-50 transition-transform duration-300 ${
+                status ? 'translate-x-0' : '-translate-x-full'
+            } lg:translate-x-0 shadow-2xl`}
+            style={{background: 'linear-gradient(180deg, #1e4d2b 0%, #35a952 100%)'}}
         >
-            {/* Logo Section - Fixed */}
-            <div className="h-[80px] flex items-center justify-between lg:justify-start px-4 border-b border-gray-100">
-                <div className="flex items-center gap-3">
-                    {/* Logo Image - Properly sized */}
-                    <div className="flex items-center justify-center">
-                        <img 
-                            src="https://i.ibb.co.com/DHPRjDkT/Whats-App-Image-2025-12-11-at-2-57-24-PM-1.jpg" 
-                            className="h-12 w-auto object-contain" 
-                            alt="M/s. Motor" 
-                        />
+            <div className="p-8 h-full flex flex-col">
+                {/* Logo */}
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="bg-white p-1.5 rounded-xl shadow-lg">
+                        <LayoutDashboard className="w-6 h-6 text-[#1e4d2b]" />
                     </div>
-                    
-                    {/* Company Name */}
-                    <div className="flex flex-col">
-                        <span className="font-bold text-lg text-gray-800">
-                            M/s. Motor
-                        </span>
-                        <span className="text-xs text-gray-500">
-                            Cycle Enterprise
-                        </span>
-                    </div>
+                    <h1 className="font-bold text-lg uppercase tracking-tight text-white">
+                        Wiki Pos
+                    </h1>
+                    <button 
+                        onClick={() => setStatus(false)} 
+                        className="lg:hidden text-white ml-auto"
+                    >
+                        <X size={24} />
+                    </button>
                 </div>
+
+                {/* Active Dashboard link */}
+                {currentRoute === 'dashboard' && (
+                    <div className="bg-white/20 backdrop-blur-md text-white rounded-xl px-4 py-3 flex items-center gap-3 font-bold text-xs uppercase tracking-wider mb-6 border border-white/10">
+                        <LayoutDashboard className="w-4 h-4" /> DASHBOARD
+                    </div>
+                )}
                 
-                {/* Close Button (Mobile) */}
-                <button
-                    className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                    onClick={() => setStatus(!status)}
-                >
-                    <X size={20} className="text-gray-600" />
-                </button>
-            </div>
+                {/* Navigation Menu */}
+                <nav className="flex-1 overflow-y-auto no-scrollbar space-y-6 text-sm font-medium pr-2 sidebar-scroll">
+                    {Object.entries(menuCategories).map(([category, items]) => (
+                        <div key={category}>
+                            <p className="text-[10px] uppercase text-white/50 font-bold px-3 mb-2 tracking-widest">
+                                {category}
+                            </p>
+                            <ul className="space-y-1">
+                                {items.map((item, index) => {
+                                    const isActive = currentRoute === item.active || hasActiveChild(item);
+                                    const translatedTitle = getTranslatedTitle(item.title);
+                                    const hasChildren = item.children && item.children.length > 0;
+                                    const isSubmenuOpen = openSubmenus[`${category}-${index}`];
 
-            {/* Menu */}
-            <div className="py-4 overflow-y-auto h-[calc(100vh-80px)]">
-                <ul>
-                    {baseMenu.map((item, index) => {
-                        if (item.role === "all" || item.role === auth.role) {
-                            const isActive = currentRoute === item.active || hasActiveChild(item);
-                            const translatedTitle = getTranslatedTitle(item.title);
-                            const hasChildren = item.children && item.children.length > 0;
-                            const isSubmenuOpen = openSubmenus[index];
-
-                            return (
-                                <li key={index} className="mb-1">
-                                    {hasChildren ? (
-                                        <>
-                                            <button
-                                                onClick={() => toggleSubmenu(index)}
-                                                className={`flex items-center justify-between w-full px-4 py-3 mx-2 rounded-lg duration-300 transition-colors 
-                                                    ${isActive
-                                                        ? "bg-primary/10 text-primary font-semibold"
-                                                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                    if (hasChildren) {
+                                        return (
+                                            <li key={index}>
+                                                <button
+                                                    onClick={() => toggleSubmenu(`${category}-${index}`)}
+                                                    className={`flex items-center justify-between w-full px-4 py-2.5 rounded-xl transition-all group text-white ${
+                                                        isActive
+                                                            ? "bg-white/20 backdrop-blur-md border border-white/10"
+                                                            : "hover:bg-white/10"
                                                     }`}
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-gray-500">
-                                                        {item.icon}
-                                                    </span>
-                                                    <span className={`${locale === 'bn' ? 'text-sm leading-relaxed' : 'text-sm'}`}>
-                                                        {translatedTitle}
-                                                    </span>
-                                                </div>
-                                                {isSubmenuOpen ? (
-                                                    <ChevronDown size={16} className="text-gray-400" />
-                                                ) : (
-                                                    <ChevronRight size={16} className="text-gray-400" />
-                                                )}
-                                            </button>
-                                            
-                                            {/* Submenu */}
-                                            {isSubmenuOpen && (
-                                                <ul className="ml-10 pl-2">
-                                                    {item.children.map((child, childIndex) => {
-                                                        const isChildActive = currentRoute === child.active;
-                                                        const translatedChildTitle = getTranslatedTitle(child.title);
-                                                        
-                                                        return (
-                                                            <li key={childIndex}>
-                                                                <Link
-                                                                    href={child.route}
-                                                                    className={`flex items-center gap-3 px-4 py-2 mx-2 rounded-lg duration-300 transition-colors text-sm
-                                                                        ${isChildActive
-                                                                            ? "bg-primary/10 text-primary font-medium"
-                                                                            : "text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <span className="opacity-70 group-hover:opacity-100">
+                                                            {item.icon}
+                                                        </span>
+                                                        <span className={`${locale === 'bn' ? 'text-sm leading-relaxed' : ''}`}>
+                                                            {translatedTitle}
+                                                        </span>
+                                                    </div>
+                                                    {isSubmenuOpen ? (
+                                                        <ChevronDown size={16} className="text-white/50" />
+                                                    ) : (
+                                                        <ChevronRight size={16} className="text-white/50" />
+                                                    )}
+                                                </button>
+                                                
+                                                {/* Submenu */}
+                                                {isSubmenuOpen && (
+                                                    <ul className="ml-10 mt-1 space-y-1">
+                                                        {item.children.map((child, childIndex) => {
+                                                            const isChildActive = currentRoute === child.active;
+                                                            const translatedChildTitle = getTranslatedTitle(child.title);
+                                                            
+                                                            return (
+                                                                <li key={childIndex}>
+                                                                    <Link
+                                                                        href={child.route}
+                                                                        className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-all text-sm ${
+                                                                            isChildActive
+                                                                                ? "bg-white/10 text-white font-medium"
+                                                                                : "text-white/70 hover:text-white hover:bg-white/5"
                                                                         }`}
-                                                                >
-                                                                    <span className="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                                                    <span className={`${locale === 'bn' ? 'text-xs leading-relaxed' : ''}`}>
-                                                                        {translatedChildTitle}
-                                                                    </span>
-                                                                </Link>
-                                                            </li>
-                                                        );
-                                                    })}
-                                                </ul>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <Link
-                                            href={item.route}
-                                            className={`flex items-center gap-3 px-4 py-3 mx-2 rounded-lg duration-300 transition-colors 
-                                                ${isActive
-                                                    ? "bg-primary/10 text-primary font-semibold"
-                                                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                                                                    >
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-white/30"></span>
+                                                                        <span className={`${locale === 'bn' ? 'text-xs leading-relaxed' : ''}`}>
+                                                                            {translatedChildTitle}
+                                                                        </span>
+                                                                    </Link>
+                                                                </li>
+                                                            );
+                                                        })}
+                                                    </ul>
+                                                )}
+                                            </li>
+                                        );
+                                    }
+
+                                    return (
+                                        <li key={index}>
+                                            <Link
+                                                href={item.route}
+                                                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group text-white ${
+                                                    isActive
+                                                        ? "bg-white/20 backdrop-blur-md border border-white/10"
+                                                        : "hover:bg-white/10"
                                                 }`}
-                                        >
-                                            <span className="text-gray-500">
-                                                {item.icon}
-                                            </span>
-                                            <span className={`${locale === 'bn' ? 'text-sm leading-relaxed' : 'text-sm'}`}>
-                                                {translatedTitle}
-                                            </span>
-                                        </Link>
-                                    )}
-                                </li>
-                            );
-                        }
-                        return null;
-                    })}
-                </ul>
+                                            >
+                                                <span className="opacity-70 group-hover:opacity-100">
+                                                    {item.icon}
+                                                </span>
+                                                <span className={`${locale === 'bn' ? 'text-sm leading-relaxed' : ''}`}>
+                                                    {translatedTitle}
+                                                </span>
+                                            </Link>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                            <hr className="border-white/10 my-4 mx-2" />
+                        </div>
+                    ))}
+                </nav>
+
+                {/* Footer */}
+                <div className="mt-auto pt-6 border-t border-white/10 text-center">
+                    <p className="text-[11px] text-white/60 mb-2">
+                        Logged in as {auth.role || 'Administrator'}
+                    </p>
+                    <Link
+                        href={route("logout")}
+                        onClick={(e) => {
+                            if (!confirm("Are you sure you want to logout?")) {
+                                e.preventDefault();
+                            }
+                        }}
+                        className="w-full text-xs font-bold border border-white/20 rounded-xl px-4 py-2.5 hover:bg-white/10 transition-colors flex items-center justify-center gap-2 text-white"
+                    >
+                        <LogOut size={16} />
+                        LOGOUT
+                    </Link>
+                </div>
             </div>
-        </div>
+        </aside>
     );
 }
