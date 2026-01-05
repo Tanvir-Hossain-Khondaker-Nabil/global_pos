@@ -27,6 +27,8 @@ class Purchase extends Model
         'user_type',
         'created_by',
         'payment_type',
+        'is_pickup_sale_purchase',
+        'pickup_sale_id'
     ];
 
     // protected $casts = [
@@ -101,6 +103,11 @@ class Purchase extends Model
         return $this->belongsTo(Variant::class);
     }
 
+    //payments relationship
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
 
     public function scopeFilter($query, $filters)
     {

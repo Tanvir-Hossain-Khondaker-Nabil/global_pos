@@ -97,8 +97,8 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                                     <td className="font-mono">{warehouse.code}</td>
                                     <td>
                                         <div className="text-sm">
-                                            <div>{warehouse.phone}</div>
-                                            <div className="text-gray-500">{warehouse.email}</div>
+                                            <div>{warehouse.phone || 'Contact with System Admin'}</div>
+                                            <div className="text-gray-500">{warehouse.email || ''}</div>
                                         </div>
                                     </td>
                                     <td className="max-w-xs truncate">{warehouse.address}</td>

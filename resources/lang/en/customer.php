@@ -61,6 +61,30 @@ return [
     'sales' => 'Total Sales',
     'update_customer' => 'Update Customer',
     'add_customer' => 'Add Customer',
+    'financial_status' => 'Financial Status',
+    'command' => 'Actions',
+    'new_customer' => 'New Customer',
+    'basic_information' => 'Basic Information',
+    'financial_information' => 'Financial Information',
+    'default_payment_account' => 'Default Payment Account',
+    'active_customer' => 'Active Customer',
+    'inactive_customer' => 'Inactive Customer',
+    'enter_full_address' => 'Enter Full Address',
+    'cancel' => 'Cancel',
+    'create_customer' => 'Create Customer',
+    'enter_phone_number' => 'Enter Phone Number',
+    'enter_customer_name' => 'Enter Customer Name',
+    'select_default_account' => 'Select Default Account',
+    'payment_account' => 'Payment Account',
+    'select_account' => 'Select Account',
+    'full' => 'Full',
+    'readonly_for_editing' => 'Readonly for Editing',
+    'not_selected' => 'Not Selected',
+    'amount_to_pay' => 'Amount to Pay',
+    'payment_date' => 'Payment Date',
+    'payment_summary' => 'Payment Summary',
+    'payment_reference' => 'Payment Reference',
+    'optional' => 'Optional Notes',
 
     // Buttons
     'edit' => 'Edit',
@@ -81,4 +105,5 @@ return [
 
     // Required field
     'required_field' => '*',
+    'all_status' => 'All Status'
 ];

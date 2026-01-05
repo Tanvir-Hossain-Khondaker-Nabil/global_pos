@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SupplierStore;
 use App\Models\Payment;
 use App\Models\Supplier;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,7 @@ use Illuminate\Support\Str;
 use Carbon\Carbon;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\Log;
+use App\Models\Account;
 
 class SupplierController extends Controller
 {
@@ -36,11 +38,14 @@ class SupplierController extends Controller
         return Inertia::render('Supplier/Index', [
             'suppliers' => $suppliers,
             'filters' => $filters,
+            'accounts' => Account::where('is_active',true)->get(),
         ]);
     }
 
+
+
     // Store new supplier
-    public function store(Request $request)
+    public function store(SupplierStore $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -62,6 +67,7 @@ class SupplierController extends Controller
         $validated['due_amount'] = $validated['due_amount'] ?? 0;
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['created_by'] = Auth::id();
+        $account = Account::find($request->input('account_id'));
 
         $supplier = Supplier::create($validated);
 
@@ -94,7 +100,7 @@ class SupplierController extends Controller
         if ($request->advance_amount && $request->advance_amount > 0) {
             $payment = Payment::create([
                 'supplier_id' => $supplier->id ?? null,
-                'amount' => $request->advance_amount ?? 0,
+                'amount' => -$request->advance_amount ?? 0,
                 'shadow_amount' => 0,
                 'payment_method' => 'Cash',
                 'txn_ref' => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
@@ -134,6 +140,8 @@ class SupplierController extends Controller
         return redirect()->back()->with('success', $responseMessage);
     }
 
+
+
     // Edit supplier - return data for form
     public function edit($id)
     {
@@ -143,6 +151,7 @@ class SupplierController extends Controller
             'data' => $supplier
         ]);
     }
+    
 
     // Update supplier
     public function update(Request $request, $id)

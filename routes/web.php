@@ -237,9 +237,14 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase/create', [PurchaseController::class, 'create'])->middleware('permission:purchase.create')->name('purchase.create');
     Route::post('/purchase/store', [PurchaseController::class, 'store'])->middleware('permission:purchase.create')->name('purchase.store');
     Route::get('/purchase/{id}', [PurchaseController::class, 'show'])->middleware('permission:purchase.show')->name('purchase.show');
-    Route::patch('/purchase/{id}/payment', [PurchaseController::class, 'updatePayment'])->middleware('permission:purchase.update_payment')->name('purchase.updatePayment');
+    // Route::patch('/purchase/{id}/payment', [PurchaseController::class, 'updatePayment'])->middleware('permission:purchase.update_payment')->name('purchase.updatePayment');
     Route::patch('/purchase/{id}/approve', [PurchaseController::class, 'approve'])->middleware('permission:purchase.approve')->name('purchase.approve');
+    Route::get('/purchase/{id}/edit', [PurchaseController::class, 'edit'])->middleware('permission:purchase.edit')->name('purchase.edit');
+    Route::put('/purchase/{id}', [PurchaseController::class, 'update'])->middleware('permission:purchase.edit')->name('purchase.update');
     Route::delete('/purchase/{id}', [PurchaseController::class, 'destroy'])->middleware('permission:purchase.delete')->name('purchase.destroy');
+    Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
+
+    
 
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 

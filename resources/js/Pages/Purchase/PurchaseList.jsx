@@ -1,11 +1,11 @@
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Eye, Plus, Trash2, Frown, Calendar, User, Warehouse, DollarSign, Package, Shield, Search, Filter, X, Edit, CheckCircle, Clock, AlertCircle, RefreshCw } from "lucide-react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { Eye, Plus, Trash2, Frown, Calendar, User, Warehouse, Edit, DollarSign, Package, Shield, Search, X, RefreshCw, CreditCard, CheckCircle, AlertCircle, Receipt } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
-export default function PurchaseList({ purchases, filters, isShadowUser }) {
+export default function PurchaseList({ purchases, filters, isShadowUser, accounts }) {
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
 
@@ -15,422 +15,583 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
         date: filters?.date || "",
     });
 
+    // Modal states
     const [showPaymentModal, setShowPaymentModal] = useState(false);
-    const [showApproveModal, setShowApproveModal] = useState(false);
     const [selectedPurchase, setSelectedPurchase] = useState(null);
-    const [paymentData, setPaymentData] = useState({
-        paid_amount: 0,
-        shadow_paid_amount: 0,
-        payment_status: 'unpaid',
-        shadow_payment_status: 'unpaid'
-    });
-    const [approveData, setApproveData] = useState({
-        items: [],
-        notes: ''
-    });
-
-    // Update local filters when props change
-    useEffect(() => {
-        setLocalFilters({
-            search: filters?.search || "",
-            status: filters?.status || "",
-            date: filters?.date || "",
-        });
-    }, [filters]);
+    const [paymentAmount, setPaymentAmount] = useState(0);
+    const [paymentMethod, setPaymentMethod] = useState("");
+    const [paymentNotes, setPaymentNotes] = useState("");
+    const [processingPayment, setProcessingPayment] = useState(false);
+    const [paymentErrors, setPaymentErrors] = useState({});
 
     const handleFilter = (field, value) => {
-        const newFilters = {
-            ...localFilters,
-            [field]: value
-        };
+        const newFilters = { ...localFilters, [field]: value };
         setLocalFilters(newFilters);
-
-        // Remove empty filters
         const queryString = {};
         if (newFilters.search) queryString.search = newFilters.search;
         if (newFilters.status) queryString.status = newFilters.status;
         if (newFilters.date) queryString.date = newFilters.date;
-
-        router.get(route("purchase.list"), queryString, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        router.get(route("purchase.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
     };
 
     const clearFilters = () => {
-        setLocalFilters({
-            search: "",
-            status: "",
-            date: "",
-        });
-        router.get(route("purchase.list"), {}, {
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        });
+        setLocalFilters({ search: "", status: "", date: "" });
+        router.get(route("purchase.list"), {}, { replace: true });
     };
 
     const handleDelete = (id) => {
-        if (confirm("Are you sure you want to delete this purchase? This will reverse the stock.")) {
+        if (confirm("Permanently wipe record and reverse stock?")) {
             router.delete(route("purchase.destroy", id));
         }
     };
 
-    // Add this function to handle Return button click
-    const handleCreateReturn = (purchaseId) => {
-        router.visit(route('purchase-return.create', { purchase_id: purchaseId }));
-    };
-
-    // ... rest of your existing Payment and Approve modal functions ...
-
-    const formatDate = (date) => {
-        return new Date(date).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-IN');
-    };
-
+    // Format currency
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat(locale === 'bn' ? 'bn-BD' : 'en-IN', {
+        const num = parseFloat(amount) || 0;
+        return new Intl.NumberFormat('en-IN', {
             style: 'currency',
-            currency: 'BDT'
-        }).format(amount || 0);
+            currency: 'BDT',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
     };
 
-    const hasActiveFilters = localFilters.search || localFilters.status || localFilters.date;
-
-    // Check if purchase is from shadow user and needs approval
-    const isPendingApproval = (purchase) => {
-        return purchase.user_type === 'shadow' && purchase.status === 'pending';
-    };
-
-    // Check if user can approve purchases (general users only)
-    const canApprovePurchases = !isShadowUser && auth?.role === 'admin';
-
-    // Get display amounts based on user type
+    // Get display amounts for a purchase
     const getDisplayAmounts = (purchase) => {
+        // Get real amounts from database
+        const total = parseFloat(purchase.grand_total) || 0;
+        const paid = parseFloat(purchase.paid_amount) || 0;
+        const due = parseFloat(purchase.due_amount) || 0;
+        const paymentStatus = purchase.payment_status || 'unpaid';
+        
+        // For shadow users, use shadow amounts if available
         if (isShadowUser) {
+            const shadowTotal = parseFloat(purchase.shadow_total_amount) || total;
+            const shadowPaid = parseFloat(purchase.shadow_paid_amount) || paid;
+            const shadowDue = parseFloat(purchase.shadow_due_amount) || due;
+            const shadowPaymentStatus = purchase.shadow_payment_status || paymentStatus;
+            
             return {
-                total: purchase.shadow_total_amount || purchase.grand_total || 0,
-                paid: purchase.shadow_paid_amount || purchase.paid_amount || 0,
-                due: purchase.shadow_due_amount || purchase.due_amount || 0,
-                payment_status: purchase.shadow_payment_status || purchase.payment_status || 'unpaid'
+                total: shadowTotal,
+                paid: shadowPaid,
+                due: shadowDue,
+                payment_status: shadowPaymentStatus
             };
         }
+        
+        // For real users, calculate due if it seems wrong
+        const calculatedDue = Math.max(0, total - paid);
+        
         return {
-            total: purchase.grand_total || purchase.total_amount || 0,
-            paid: purchase.paid_amount || 0,
-            due: purchase.due_amount || 0,
-            payment_status: purchase.payment_status || 'unpaid'
+            total: total,
+            paid: paid,
+            due: due > 0 ? due : calculatedDue, // Use stored due or calculate
+            payment_status: paymentStatus
         };
     };
 
-    // Safe data access
+    // Calculate payment status based on amounts
+    const calculatePaymentStatus = (total, paid) => {
+        if (paid <= 0) return 'unpaid';
+        if (paid >= total) return 'paid';
+        return 'partial';
+    };
+
+    // Open payment modal
+    const openPaymentModal = (purchase) => {
+        const amounts = getDisplayAmounts(purchase);
+        setSelectedPurchase(purchase);
+        setPaymentAmount(Math.max(0, amounts.due)); // Ensure positive value
+        setPaymentMethod("");
+        setPaymentNotes("");
+        setPaymentErrors({});
+        setShowPaymentModal(true);
+    };
+
+    // Close payment modal
+    const closePaymentModal = () => {
+        setShowPaymentModal(false);
+        setSelectedPurchase(null);
+        setPaymentAmount(0);
+        setPaymentMethod("");
+        setPaymentNotes("");
+        setProcessingPayment(false);
+        setPaymentErrors({});
+    };
+
+    // Handle payment submission
+    const handlePaymentSubmit = async (e) => {
+        e.preventDefault();
+
+        if (!selectedPurchase) return;
+
+        const amounts = getDisplayAmounts(selectedPurchase);
+
+        // Validation
+        const errors = {};
+        const amount = parseFloat(paymentAmount) || 0;
+        
+        if (amount <= 0) {
+            errors.paymentAmount = "Payment amount must be greater than 0";
+        }
+        
+        if (amount > amounts.due) {
+            errors.paymentAmount = `Payment amount cannot exceed due amount of ${formatCurrency(amounts.due)}`;
+        }
+        
+        if (!paymentMethod) {
+            errors.paymentMethod = "Please select a payment method";
+        }
+
+        // Check account balance if account is selected
+        if (paymentMethod) {
+            const selectedAccount = accounts.find(acc => acc.id == paymentMethod);
+            if (selectedAccount) {
+                if (selectedAccount.current_balance < amount) {
+                    alert(`Insufficient balance in ${selectedAccount.name}. Available: ৳${formatCurrency(selectedAccount.current_balance)}. 
+                    Deposit more funds to this account before proceeding.`);
+                    return;
+                }
+            }
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setPaymentErrors(errors);
+            return;
+        }
+
+        setProcessingPayment(true);
+
+        try {
+            // Prepare payment data with account_id
+            const paymentData = {
+                payment_amount: amount,
+                account_id: paymentMethod, // This is the selected account_id
+                notes: paymentNotes,
+            };
+
+            // Submit payment via Inertia
+            router.post(route('purchase.updatePayment', selectedPurchase.id), paymentData, {
+                preserveScroll: true,
+                onSuccess: () => {
+                    closePaymentModal();
+                    router.reload({ only: ['purchases'] });
+                },
+                onError: (errors) => {
+                    setPaymentErrors(errors);
+                    setProcessingPayment(false);
+                }
+            });
+
+        } catch (error) {
+            console.error("Payment error:", error);
+            setPaymentErrors({ submit: "An error occurred while processing payment" });
+            setProcessingPayment(false);
+        }
+    };
+
+    // Set payment to full amount
+    const setFullPayment = () => {
+        if (selectedPurchase) {
+            const amounts = getDisplayAmounts(selectedPurchase);
+            setPaymentAmount(Math.max(0, amounts.due));
+        }
+    };
+
+    // Set payment to partial amount (50% of due)
+    const setHalfPayment = () => {
+        if (selectedPurchase) {
+            const amounts = getDisplayAmounts(selectedPurchase);
+            const halfAmount = Math.max(0, amounts.due * 0.5);
+            setPaymentAmount(Math.round(halfAmount * 100) / 100); // Round to 2 decimals
+        }
+    };
+
+    // Format date properly
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric'
+            });
+        } catch (e) {
+            return dateString;
+        }
+    };
+
+    // Format account balance for display
+    const formatAccountBalance = (balance) => {
+        const num = parseFloat(balance) || 0;
+        return new Intl.NumberFormat('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
+    };
+
     const safePurchases = purchases?.data || [];
-    const safePagination = purchases || {};
 
     return (
         <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
-            <PageHeader
-                title={t('purchase.purchase_management', 'Purchase Management')}
-                subtitle={isShadowUser ? t('purchase.view_purchase_data', 'View purchase data') : t('purchase.manage_purchases', 'Manage your product purchases')}
-            >
-                <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-                    <div className="flex gap-2">
-                        <div className="relative">
-                            <Search size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                            <input
-                                type="search"
-                                onChange={(e) => handleFilter('search', e.target.value)}
-                                value={localFilters.search}
-                                style={{ padding: '0 0 0 20px', width: '150px' }}
-                                placeholder={t('purchase.search_purchases', 'Search purchases...')}
-                                className="input input-sm input-bordered pl-9"
-                            />
+            {/* Payment Modal - Positioned at the top */}
+            {showPaymentModal && selectedPurchase && (
+                <div className="fixed inset-0 bg-[#3333333d] bg-opacity-50 flex items-start justify-center z-50 p-4 overflow-y-auto">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mt-20">
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                                    <Receipt className="text-red-600" size={20} />
+                                    Clear Payment
+                                </h3>
+                                <button
+                                    onClick={closePaymentModal}
+                                    className="btn btn-ghost btn-circle btn-sm"
+                                    disabled={processingPayment}
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="text-center">
+                                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Total</div>
+                                        <div className="text-lg font-black text-gray-900">
+                                            {formatCurrency(getDisplayAmounts(selectedPurchase).total)}
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Due</div>
+                                        <div className="text-lg font-black text-red-600">
+                                            {formatCurrency(getDisplayAmounts(selectedPurchase).due)}
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-4 pt-4 border-t border-gray-200 text-xs">
+                                    <div className="flex justify-between mb-1">
+                                        <span className="text-gray-600">Purchase #:</span>
+                                        <span className="font-bold">{selectedPurchase.purchase_no}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-600">Supplier:</span>
+                                        <span className="font-bold">{selectedPurchase.supplier?.name || 'N/A'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form onSubmit={handlePaymentSubmit}>
+                                <div className="space-y-4">
+                                    {/* Payment Method Selection - At the top as requested */}
+                                    <div className="form-control">
+                                        <label className="label py-0">
+                                            <span className="label-text font-bold text-gray-700">Select Payment Method *</span>
+                                        </label>
+                                        <select
+                                            name="account_id"
+                                            value={paymentMethod}
+                                            onChange={(e) => setPaymentMethod(e.target.value)}
+                                            className="select select-bordered w-full"
+                                            disabled={processingPayment}
+                                            required
+                                        >
+                                            <option value="">Select Payment Method</option>
+                                            {accounts && accounts.map((account) => (
+                                                <option key={account.id} value={account.id}>
+                                                    {account.name} ({formatAccountBalance(account.current_balance)} tk)
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {paymentErrors.paymentMethod && (
+                                            <div className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} />
+                                                {paymentErrors.paymentMethod}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="form-control">
+                                        <label className="label py-0">
+                                            <span className="label-text font-bold text-gray-700">Payment Amount *</span>
+                                        </label>
+                                        <div className="flex gap-2 mb-2">
+                                            <button
+                                                type="button"
+                                                onClick={setHalfPayment}
+                                                className="btn btn-sm btn-outline flex-1"
+                                                disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
+                                            >
+                                                50%
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={setFullPayment}
+                                                className="btn btn-sm btn-outline btn-primary flex-1"
+                                                disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
+                                            >
+                                                Full
+                                            </button>
+                                        </div>
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">৳</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0.01"
+                                                max={getDisplayAmounts(selectedPurchase).due}
+                                                value={paymentAmount}
+                                                onChange={(e) => {
+                                                    const value = parseFloat(e.target.value) || 0;
+                                                    setPaymentAmount(value);
+                                                }}
+                                                className="input input-bordered w-full pl-8 font-mono"
+                                                disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
+                                                required
+                                            />
+                                        </div>
+                                        {paymentErrors.paymentAmount && (
+                                            <div className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                                                <AlertCircle size={12} />
+                                                {paymentErrors.paymentAmount}
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <div className="form-control">
+                                        <label className="label py-0">
+                                            <span className="label-text font-bold text-gray-700">Notes (Optional)</span>
+                                        </label>
+                                        <textarea
+                                            name="notes"
+                                            value={paymentNotes}
+                                            onChange={(e) => setPaymentNotes(e.target.value)}
+                                            className="textarea textarea-bordered w-full"
+                                            rows="2"
+                                            placeholder="Payment reference or notes..."
+                                            disabled={processingPayment}
+                                        />
+                                    </div>
+                                    
+                                    {paymentErrors.submit && (
+                                        <div className="alert alert-error text-sm p-3">
+                                            <AlertCircle size={16} />
+                                            <span>{paymentErrors.submit}</span>
+                                        </div>
+                                    )}
+                                    
+                                    <div className="flex gap-3 pt-4">
+                                        <button
+                                            type="button"
+                                            onClick={closePaymentModal}
+                                            className="btn btn-ghost flex-1"
+                                            disabled={processingPayment}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            className="btn btn-primary flex-1"
+                                            disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
+                                        >
+                                            {processingPayment ? (
+                                                <>
+                                                    <span className="loading loading-spinner loading-sm"></span>
+                                                    Processing...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle size={18} />
+                                                    Complete Payment
+                                                </>
+                                            )}
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
                         </div>
-                        <select
-                            onChange={(e) => handleFilter('status', e.target.value)}
-                            value={localFilters.status}
-                            className="select select-sm select-bordered"
-                        >
-                            <option value="">{t('purchase.all_status', 'All Status')}</option>
-                            <option value="pending">{t('purchase.pending', 'Pending')}</option>
-                            <option value="completed">{t('purchase.completed', 'Completed')}</option>
-                            <option value="cancelled">{t('purchase.cancelled', 'Cancelled')}</option>
-                        </select>
-                        <input
-                            type="date"
-                            onChange={(e) => handleFilter('date', e.target.value)}
-                            value={localFilters.date}
-                            className="input input-sm input-bordered"
-                        />
-                        {hasActiveFilters && (
-                            <button
-                                onClick={clearFilters}
-                                className="btn btn-sm btn-ghost"
-                                title={t('purchase.clear_filters', 'Clear all filters')}
-                            >
-                                <X size={14} />
-                            </button>
-                        )}
                     </div>
-                        <Link
-                            href={route("purchase.create")}
-                            className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
-                        >
-                            <Plus size={15} />
-                            {t('purchase.new_purchase', 'New Purchase')}
-                        </Link>
+                </div>
+            )}
+
+            <PageHeader
+                title={t('purchase.purchase_management', 'Purchase Archive')}
+                subtitle={t('purchase.manage_purchases', 'Inbound inventory tracking index')}
+            >
+                <div className="flex flex-wrap gap-2 items-center">
+                    <div className="relative">
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <input 
+                            type="search" 
+                            onChange={(e) => handleFilter('search', e.target.value)} 
+                            value={localFilters.search} 
+                            placeholder="ID or Number..." 
+                            className="input input-sm input-bordered rounded-lg pl-8 font-bold" 
+                        />
+                    </div>
+                    <select 
+                        onChange={(e) => handleFilter('status', e.target.value)} 
+                        value={localFilters.status} 
+                        className="select select-sm select-bordered rounded-lg font-bold"
+                    >
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <Link 
+                        href={route("purchase.create")} 
+                        className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${isShadowUser ? 'bg-amber-500 text-black hover:bg-amber-600' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                    >
+                        <Plus size={15} /> {t('purchase.new_purchase', 'New Entry')}
+                    </Link>
                 </div>
             </PageHeader>
 
-            {/* Active Filters Display */}
-            {hasActiveFilters && (
-                <div className="mb-4 p-3 bg-base-200 rounded-box">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Filter size={14} className="text-gray-500" />
-                        <span className="font-medium">{t('purchase.active_filters', 'Active Filters')}:</span>
-                        {localFilters.search && (
-                            <span className="badge badge-outline">
-                                {t('purchase.search', 'Search')}: "{localFilters.search}"
-                            </span>
-                        )}
-                        {localFilters.status && (
-                            <span className="badge badge-outline">
-                                {t('purchase.status', 'Status')}: {t(`purchase.${localFilters.status}`, localFilters.status)}
-                            </span>
-                        )}
-                        {localFilters.date && (
-                            <span className="badge badge-outline">
-                                {t('purchase.date', 'Date')}: {localFilters.date}
-                            </span>
-                        )}
-                        <button
-                            onClick={clearFilters}
-                            className="btn btn-xs btn-ghost ml-auto"
-                        >
-                            {t('purchase.clear_all', 'Clear All')}
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-gray-100">
                 {safePurchases.length > 0 ? (
-                    <table className="table table-auto w-full">
-                        <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
+                    <table className="table w-full">
+                        <thead className={`text-white uppercase text-[10px] tracking-widest ${isShadowUser ? 'bg-amber-500' : 'bg-gray-900'}`}>
                             <tr>
-                                <th className="bg-opacity-20">#</th>
-                                <th>{t('purchase.purchase_details', 'Purchase Details')}</th>
-                                <th>{t('purchase.supplier_warehouse', 'Supplier & Warehouse')}</th>
-                                {/* <th>{t('purchase.items_amount', 'Items & Amount')}</th> */}
-                                <th>{t('purchase.payment_status', 'Payment Status')}</th>
-                                <th>{t('purchase.actions', 'Actions')}</th>
+                                <th className="py-4">#</th>
+                                <th>Details</th>
+                                <th>Supplier & Warehouse</th>
+                                <th>Financial Status</th>
+                                <th className="text-right">Command</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody className="font-bold text-sm text-gray-700 italic-last-child">
                             {safePurchases.map((purchase, index) => {
-                                const displayAmounts = getDisplayAmounts(purchase);
+                                const amounts = getDisplayAmounts(purchase);
+                                
+                                // Recalculate for display to ensure consistency
+                                const displayTotal = parseFloat(purchase.grand_total) || 0;
+                                const displayPaid = parseFloat(purchase.paid_amount) || 0;
+                                const displayDue = Math.max(0, displayTotal - displayPaid);
+                                const displayPaymentStatus = calculatePaymentStatus(displayTotal, displayPaid);
+                                
+                                const hasDueAmount = displayDue > 0;
+                                const isPaid = displayPaymentStatus === 'paid';
+                                const isPartial = displayPaymentStatus === 'partial';
+
                                 return (
-                                <tr key={purchase.id} className="hover:bg-base-100">
-                                    <th className="bg-base-200">{index + 1}</th>
-                                    <td>
-                                        <div className="space-y-1">
-                                            <div className="font-mono font-bold flex items-center gap-2">
-                                                {t('purchase.purchase_number', 'Purchase #')}{purchase.purchase_no}
-                                                {isPendingApproval(purchase) && (
-                                                    <span className="badge badge-warning badge-sm">
-                                                        <Clock size={12} /> {t('purchase.pending_approval', 'Pending')}
-                                                    </span>
-                                                )}
-                                                {purchase.user_type === 'shadow' && (
-                                                    <Shield size={14} className="text-warning" />
-                                                )}
-                                            </div>
-                                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                                                <Calendar size={14} />
-                                                {formatDate(purchase.purchase_date)}
-                                            </div>
-                                            {purchase.user_type === 'shadow' && (
-                                                <div className="text-xs text-warning flex items-center gap-1">
-                                                    <Shield size={12} />
-                                                    {t('purchase.shadow_purchase', 'Shadow Purchase')}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                <User size={14} className="text-blue-600" />
-                                                <div>
-                                                    <div className="font-medium">{purchase.supplier?.name || 'N/A'}</div>
-                                                    <div className="text-xs text-gray-500">{purchase.supplier?.company || ''}</div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Warehouse size={14} className="text-green-600" />
-                                                <div>
-                                                    <div className="font-medium">{purchase.warehouse?.name || 'N/A'}</div>
-                                                    <div className="text-xs text-gray-500">{purchase.warehouse?.code || ''}</div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    {/* <td>
-                                        <div className="space-y-2">
-                                            <div className="flex items-center gap-2">
-                                                <Package size={14} className="text-purple-600" />
-                                                <span className="font-medium">
-                                                    {purchase.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0} {t('purchase.units', 'units')}
-                                                </span>
-                                                <span className="text-sm text-gray-500">
-                                                    ({purchase.items?.length || 0} {t('purchase.items', 'items')})
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <DollarSign size={14} className={isShadowUser ? "text-warning" : "text-green-600"} />
-                                                <span className="font-bold">
-                                                    {formatCurrency(displayAmounts.total)}
-                                                </span>
-                                            </div>
-                                            {purchase.user_type === 'shadow' && purchase.status === 'pending' && (
-                                                <div className="text-xs text-warning">
-                                                    {t('purchase.needs_approval', 'Needs Approval')}
-                                                </div>
-                                            )}
-                                            {!isShadowUser && purchase.user_type === 'shadow' && (
-                                                <div className="text-xs text-blue-600">
-                                                    {t('purchase.shadow_total', 'Shadow Total')}: {formatCurrency(purchase.shadow_total_amount)}
-                                                </div>
-                                            )}
-                                        </div>
-                                    </td> */}
-                                    <td>
-                                        <div className="flex flex-col gap-1">
-                                            <span className={`badge badge-${purchase.status_color || 'neutral'} badge-sm`}>
-                                                {t(`purchase.${purchase.status}`, purchase.status)}
+                                    <tr key={purchase.id} className="hover:bg-gray-50 border-b border-gray-50 transition-colors">
+                                        <td className="text-gray-400 font-mono text-xs">{index + 1}</td>
+                                        <td>
+                                            <p className="font-black text-gray-900 font-mono uppercase tracking-tighter leading-none mb-1">
+                                                #{purchase.purchase_no}
+                                            </p>
+                                            <span className="text-[10px] flex items-center gap-1 text-gray-400 font-black uppercase tracking-widest">
+                                                <Calendar size={10} /> {formatDate(purchase.purchase_date)}
                                             </span>
-                                            <div className="text-xs space-y-1">
-                                                <div className="flex justify-between">
-                                                    <span>{t('purchase.paid_status', 'Paid')}:</span>
-                                                    <span className="text-green-600">
-                                                        {formatCurrency(displayAmounts.paid)}
-                                                    </span>
+                                        </td>
+                                        <td>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center gap-2 text-gray-900 uppercase text-xs">
+                                                    <User size={12} className="text-red-600" />
+                                                    {purchase.supplier?.name || 'N/A'}
                                                 </div>
-                                                {displayAmounts.due > 0 && (
-                                                    <div className="flex justify-between">
-                                                        <span>{t('purchase.due_amount', 'Due')}:</span>
-                                                        <span className="text-orange-600">
-                                                            {formatCurrency(displayAmounts.due)}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                <div className={`badge badge-xs ${displayAmounts.payment_status === 'paid' ? 'badge-success' :
-                                                        displayAmounts.payment_status === 'partial' ? 'badge-warning' : 'badge-error'
-                                                    }`}>
-                                                    {t(`purchase.${displayAmounts.payment_status}`, displayAmounts.payment_status)}
+                                                <div className="flex items-center gap-2 text-gray-400 uppercase text-[10px] font-black">
+                                                    <Warehouse size={12} className="text-gray-400" />
+                                                    {purchase.warehouse?.name || 'N/A'}
                                                 </div>
                                             </div>
-                                             {!isShadowUser && purchase.shadow_payment_status && (
-                                                <div className="text-xs text-blue-600 mt-1">
-                                                    <div className="flex justify-between">
-                                                        <span>{t('purchase.shadow', 'Shadow')}:</span>
-                                                        <span className={`badge badge-xs ${purchase.shadow_payment_status === 'paid' ? 'badge-success' :
-                                                                purchase.shadow_payment_status === 'partial' ? 'badge-warning' : 'badge-error'
-                                                            }`}>
-                                                            {t(`purchase.${purchase.shadow_payment_status}`, purchase.shadow_payment_status)}
-                                                        </span>
-                                                    </div>
+                                        </td>
+                                        <td>
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-600">Total:</span>
+                                                    <span className="font-mono text-xs font-black text-gray-900">
+                                                        {formatCurrency(displayTotal)}
+                                                    </span>
                                                 </div>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="flex flex-col gap-1">
-                                            <Link
-                                                href={route("purchase.show", purchase.id)}
-                                                className="btn btn-xs btn-info btn-outline"
-                                            >
-                                                <Eye size={12} /> {t('purchase.details', 'Details')}
-                                            </Link>
-
-                                            {/* Add Return Button */}
-                                            {purchase.status === 'completed' && (
-                                                <button
-                                                    onClick={() => handleCreateReturn(purchase.id)}
-                                                    className="btn btn-xs btn-warning btn-outline"
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-600">Paid:</span>
+                                                    <span className={`font-mono text-xs font-black ${displayPaid > 0 ? 'text-green-600' : 'text-gray-500'}`}>
+                                                        {formatCurrency(displayPaid)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-600">Due:</span>
+                                                    <span className={`font-mono text-xs font-black ${displayDue > 0 ? 'text-red-600' : 'text-gray-500'}`}>
+                                                        {formatCurrency(displayDue)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex gap-1 items-center mt-1">
+                                                    <span className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${isPaid ? 'bg-green-100 text-green-700' : isPartial ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-600'}`}>
+                                                        {displayPaymentStatus}
+                                                    </span>
+                                                    <span className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${purchase.status === 'completed' ? 'bg-blue-100 text-blue-700' : purchase.status === 'pending' ? 'bg-gray-100 text-gray-600' : 'bg-red-100 text-red-400'}`}>
+                                                        {purchase.status}
+                                                    </span>
+                                                </div>
+                                                
+                                                {hasDueAmount && (
+                                                    <div className="mt-2">
+                                                        <button
+                                                            onClick={() => openPaymentModal(purchase)}
+                                                            className="btn btn-xs btn-primary w-full flex items-center justify-center gap-1"
+                                                        >
+                                                            <CreditCard size={12} />
+                                                            Pay Now
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="text-right">
+                                            <div className="flex justify-end gap-1">
+                                                <Link 
+                                                    href={route("purchase.show", purchase.id)} 
+                                                    className="btn btn-ghost btn-square btn-xs hover:bg-gray-900 hover:text-white"
+                                                    title="View Details"
                                                 >
-                                                    <RefreshCw size={12} /> {t('purchase.return', 'Return')}
-                                                </button>
-                                            )}
-
-                                            {auth?.role === "admin" && purchase.status !== 'cancelled' && (
-                                                <button
-                                                    onClick={() => openPaymentModal(purchase)}
-                                                    className="btn btn-xs btn-warning btn-outline"
+                                                    <Eye size={16} />
+                                                </Link>
+                                                
+                                                {purchase.status === 'completed' && (
+                                                    <button 
+                                                        onClick={() => router.visit(route('purchase-return.create', { purchase_id: purchase.id }))} 
+                                                        className="btn btn-ghost btn-square btn-xs text-red-600 hover:bg-red-600 hover:text-white"
+                                                        title="Create Return"
+                                                    >
+                                                        <RefreshCw size={14} />
+                                                    </button>
+                                                )}
+                                                
+                                                <Link 
+                                                    href={route("purchase.edit", purchase.id)} 
+                                                    className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600"
+                                                    title="Edit Purchase"
                                                 >
-                                                    <Edit size={12} /> {t('purchase.payment', 'Payment')}
-                                                </button>
-                                            )}
-
-                                            {canApprovePurchases && isPendingApproval(purchase) && (
-                                                <button
-                                                    onClick={() => openApproveModal(purchase)}
-                                                    className="btn btn-xs btn-success btn-outline"
-                                                >
-                                                    <CheckCircle size={12} /> {t('purchase.approve', 'Approve')}
-                                                </button>
-                                            )}
-
-                                            {auth?.role === "admin" && purchase.status !== 'cancelled' && (
-                                                <button
-                                                    onClick={() => handleDelete(purchase.id)}
-                                                    className="btn btn-xs btn-error btn-outline"
-                                                >
-                                                    <Trash2 size={12} /> {t('purchase.delete', 'Delete')}
-                                                </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            )})}
+                                                    <Edit size={16} />
+                                                </Link>
+                                                
+                                                {auth?.role === "admin" && (
+                                                    <button 
+                                                        onClick={() => handleDelete(purchase.id)} 
+                                                        className="btn btn-ghost btn-square btn-xs text-red-400 hover:bg-red-600 hover:text-white"
+                                                        title="Delete Purchase"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 ) : (
-                    <div className="border border-gray-200 rounded-box px-5 py-16 flex flex-col justify-center items-center gap-3">
-                        <Frown size={40} className="text-gray-400" />
-                        <h1 className="text-gray-500 text-lg font-medium">
-                            {hasActiveFilters ? t('purchase.no_matching_purchases', 'No purchases match your filters') :
-                                isShadowUser ? t('purchase.no_purchases_found', 'No purchases found!') : t('purchase.no_purchases_found', 'No purchases found!')}
-                        </h1>
-                        <p className="text-gray-400 text-sm">
-                            {hasActiveFilters ? t('purchase.adjust_search_criteria', 'Try adjusting your search criteria') :
-                                isShadowUser ? t('purchase.create_first_purchase', 'Get started by creating your first purchase') :
-                                    t('purchase.create_first_purchase', 'Get started by creating your first purchase')}
-                        </p>
-                        <div className="flex gap-2 mt-2">
-                            {hasActiveFilters && (
-                                <button
-                                    onClick={clearFilters}
-                                    className="btn btn-sm btn-ghost"
-                                >
-                                    {t('purchase.clear_filters', 'Clear Filters')}
-                                </button>
-                            )}
-                                <Link
-                                    href={route("purchase.create")}
-                                    className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
-                                >
-                                    <Plus size={15} />
-                                    {t('purchase.new_purchase', 'Create Purchase')}
-                                </Link>
-                        </div>
+                    <div className="py-20 text-center text-gray-400 flex flex-col items-center gap-3">
+                        <Frown size={40} className="text-gray-200" />
+                        <span className="font-black uppercase tracking-widest text-xs">No records found</span>
                     </div>
                 )}
             </div>
-
-            {safePurchases.length > 0 && (
-                <Pagination data={safePagination} />
-            )}
+            <Pagination data={purchases} />
         </div>
     );
 }

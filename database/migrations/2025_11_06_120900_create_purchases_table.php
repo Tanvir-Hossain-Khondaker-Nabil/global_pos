@@ -16,7 +16,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('supplier_id');
             $table->unsignedBigInteger('warehouse_id');
             $table->date('purchase_date');
-            $table->decimal('grand_total', 12, 2)->default(0);
+            $table->decimal('grand_total', 12, 2);
             $table->decimal('shadow_grand_total', 12, 2)->default(0);
             $table->decimal('paid_amount', 12, 2)->default(0);
             $table->decimal('shadow_paid_amount', 12, 2)->default(0);
@@ -28,12 +28,16 @@ return new class extends Migration {
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->enum('user_type', ['shadow', 'general'])->default('general');
-            $table->enum('payment_type', ['cash', 'card' ,'mobile_banking','advance_adjustment'])->default('cash');
+            $table->enum('payment_type', ['cash', 'bank' ,'mobile_banking','advance_adjustment'])->default('cash');
             $table->timestamps();
 
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+
+            $table->boolean('is_pickup_sale_purchase')->default(false); 
+            $table->unsignedBigInteger('pickup_sale_id')->nullable(); 
+            $table->foreign('pickup_sale_id')->references('id')->on('sales');
         });
     }
 
