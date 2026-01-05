@@ -31,7 +31,6 @@ import {
     TagIcon
 } from "lucide-react";
 
-// Common menu - Keep original English titles
 const baseMenu = [
     {
         title: "Dashboard",
@@ -76,6 +75,13 @@ const baseMenu = [
         role: "all",
     },
     {
+        title: "All Sales Return",
+        icon: <BadgeCent size={16} />,
+        route: route("salesReturn.list"),
+        active: "salesReturn.list",
+        role: "all",
+    },
+    {
         title: "Purchase",
         icon: <Receipt size={16} />,
         route: route("purchase.list"),
@@ -89,13 +95,13 @@ const baseMenu = [
         active: "purchase.create",
         role: "all",
     },
-    // {
-    //     title: "All Purchase Items",
-    //     icon: <ArrowRightLeft size={16} />,
-    //     route: route("purchase.items"),
-    //     active: "purchase.items",
-    //     role: "all",
-    // },
+    {
+        title: "All Purchase Items",
+        icon: <ArrowRightLeft size={16} />,
+        route: route("purchase.items"),
+        active: "purchase.items",
+        role: "all",
+    },
     {
         title: "Purchase Return",
         icon: <Receipt size={16} />,
@@ -173,34 +179,34 @@ const baseMenu = [
         active: "expenses.list",
         role: "all",
     },
-    // {
-    //     title: "Plan",
-    //     icon: <Barcode size={16} />,
-    //     route: route("plans.index"),
-    //     active: "plans.index",
-    //     role: "all",
-    // },
-    // {
-    //     title: "Plan Modules",
-    //     icon: <Barcode size={16} />,
-    //     route: route("modules.index"),
-    //     active: "modules.index",
-    //     role: "all",
-    // },
-    // {
-    //     title: "Subscriptions",
-    //     icon: <Barcode size={16} />,
-    //     route: route("subscriptions.index"),
-    //     active: "subscriptions.index",
-    //     role: "all",
-    // },
-    // {
-    //     title: "Subscriptions Payments",
-    //     icon: <DollarSign size={16} />,
-    //     route: route("subscriptions.payments"),
-    //     active: "subscriptions.payments",
-    //     role: "all",
-    // },
+    {
+        title: "Plan",
+        icon: <Barcode size={16} />,
+        route: route("plans.index"),
+        active: "plans.index",
+        role: "all",
+    },
+    {
+        title: "Plan Modules",
+        icon: <Barcode size={16} />,
+        route: route("modules.index"),
+        active: "modules.index",
+        role: "all",
+    },
+    {
+        title: "Subscriptions",
+        icon: <Barcode size={16} />,
+        route: route("subscriptions.index"),
+        active: "subscriptions.index",
+        role: "all",
+    },
+    {
+        title: "Subscriptions Payments",
+        icon: <DollarSign size={16} />,
+        route: route("subscriptions.payments"),
+        active: "subscriptions.payments",
+        role: "all",
+    },
     {
         title: "Transactions",
         icon: <DollarSign size={16} />,
