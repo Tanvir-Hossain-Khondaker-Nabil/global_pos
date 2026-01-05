@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\CustomerStore;
+use App\Models\Account;
 use App\Models\Customer;
 use App\Models\Payment;
 use Illuminate\Http\Request;
@@ -32,6 +34,7 @@ class CustomerController extends Controller
 
         return Inertia::render("Customers", [
             'filters' => $request->only('search'),
+            'accounts' => Account::where('is_active',true)->get(),
             'customers' => $query->paginate(10)
                 ->withQueryString()
                 ->through(fn($customer) => [
@@ -49,16 +52,11 @@ class CustomerController extends Controller
     }
 
     // store
-    public function store(Request $request)
+    public function store(CustomerStore $request)
     {
-        $request->validate([
-            'customer_name' => 'required|string|max:255',
-            'phone' => 'required|string|max:20',
-            'address' => 'nullable|string',
-            'advance_amount' => 'nullable|numeric|min:0',
-            'due_amount' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean'
-        ]);
+
+        $request->validated();
+        $account = Account::find($request->input('account_id'));
 
         try {
            $customer =   Customer::create([
@@ -72,17 +70,23 @@ class CustomerController extends Controller
             ]);
 
             // if advance amount is given, create a payment record
-            if ($request->advance_amount && $request->advance_amount > 0) {
-               Payment::create([
-                    'customer_id'    => $customer->id ?? null,
-                    'amount'         => $request->advance_amount ?? 0,
-                    'shadow_amount'  => 0,
-                    'payment_method' => 'Cash',
-                    'txn_ref'        => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
-                    'note'           =>'Initial advance amount payment of customer',
-                    'paid_at'        => Carbon::now(),
-                    'created_by'     => Auth::id(),
-                ]);
+            if ($account) {
+                if ($request->advance_amount && $request->advance_amount > 0) {
+
+                    $account->updateBalance($request->advance_amount,'deposit');
+                    
+                    Payment::create([
+                        'customer_id'    => $customer->id ?? null,
+                        'amount'         => $request->advance_amount ?? 0,
+                        'shadow_amount'  => 0,
+                        'payment_method' => $account->type ?? 'Cash',
+                        'txn_ref'        => $request->input('transaction_id') ?? ('ADB-' . Str::random(10)),
+                        'note'           =>'Initial advance amount payment of customer',
+                        'paid_at'        => Carbon::now(),
+                        'created_by'     => Auth::id(),
+                        'status'         => 'completed'
+                    ]);
+                }
             }
 
             return redirect()->back()->with('success', 'New customer added successfully');
@@ -91,7 +95,6 @@ class CustomerController extends Controller
             return redirect()->back()->with('error', 'Server error: ' . $th->getMessage());
         }
     }
-
 
 
     // delete customer

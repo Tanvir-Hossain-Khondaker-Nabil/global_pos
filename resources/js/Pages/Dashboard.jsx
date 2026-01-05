@@ -332,7 +332,9 @@ export default function Dashboard({
                         <div className="mt-4 flex items-center gap-2">
                             <span className={`text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold ${stat.change >= 0 ? 'text-white' : 'text-red-100'
                                 }`}>
-                                {stat.change >= 0 ? '+' : ''}{stat.change.toFixed(1)}%
+                                {Number(stat.change || 0) >= 0 ? '+' : ''}
+                                {Number(stat.change || 0).toFixed(1)}%
+
                             </span>
                             <span className="text-[9px] opacity-70">
                                 {stat.description}
