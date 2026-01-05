@@ -213,7 +213,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                         <td>
                                             <div className="max-w-[200px]">
                                                 <div className="font-medium text-sm">
-                                                    {item.product?.name || 'N/A'} 
+                                                    {item.product?.name || item?.product_name} 
                                                     {item.product?.product_no && ` (${item.product.product_no})`}
                                                 </div>
                                                 {item.variant && (
@@ -222,6 +222,8 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                         {item.variant?.sku && ` (${item.variant.sku})`}
                                                     </div>
                                                 )}
+                                                    {item?.variant_name} 
+
                                             </div>
                                         </td>
                                         <td>
@@ -297,8 +299,8 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Product Details</strong>
                                                         <div className="mt-2 space-y-1">
-                                                            <div><strong>Name:</strong> {item.product?.name || 'N/A'}</div>
-                                                            <div><strong>Code:</strong> {item.product?.product_no || 'N/A'}</div>
+                                                            <div><strong>Name:</strong> {item.product?.name || item.product_name}</div>
+                                                            <div><strong>Code:</strong> {item.product?.product_no || item.product_name}</div>
                                                             {item.product?.category && (
                                                                 <div><strong>Category:</strong> {item.product.category.name || 'N/A'}</div>
                                                             )}
@@ -316,10 +318,10 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Purchase Details</strong>
                                                         <div className="mt-2 space-y-1">
-                                                            <div><strong>Purchase ID:</strong> {item.purchase_id}</div>
-                                                            <div><strong>Status:</strong> {item.purchase?.status || 'N/A'}</div>
-                                                            <div><strong>Supplier:</strong> {item.purchase?.supplier?.name || 'N/A'}</div>
-                                                            <div><strong>Payment Status:</strong> {item.purchase?.payment_status || 'N/A'}</div>
+                                                            <div><strong>Purchase ID:</strong> {item.purchase_id || 0}</div>
+                                                            <div><strong>Status:</strong> {item.purchase?.status || 'Completed'}</div>
+                                                            <div><strong>Supplier:</strong> {item.purchase?.supplier?.name || item?.supplier?.name || 'N/A'}</div>
+                                                            <div><strong>Payment Status:</strong> {item.purchase?.payment_status || 'Paid'}</div>
                                                         </div>
                                                     </div>
                                                     <div>

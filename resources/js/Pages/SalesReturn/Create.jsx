@@ -282,7 +282,7 @@ export default function AddSalesReturn({
         // For sales returns, we use sale prices
         const defaultUnitPrice = parseFloat(variant.unit_cost || variant.purchase_price || 0);
         const defaultShadowUnitPrice = parseFloat(variant.shadow_unit_cost || variant.shadow_purchase_price || 0);
-        const defaultSalePrice = parseFloat(variant.selling_price || variant.sale_price || defaultUnitPrice * 1.2);
+        const defaultSalePrice = parseFloat(variant.selling_price || variant?.stock?.sale_price);
         const defaultShadowSalePrice = parseFloat(variant.shadow_selling_price || variant.shadow_sale_price || defaultShadowUnitPrice * 1.2);
 
         if (existingProduct) {
@@ -750,11 +750,11 @@ export default function AddSalesReturn({
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div className="flex-1">
                                                             <h4 className="font-medium text-bold">{item.product_name}({item.product_code})</h4>
-                                                            <p className="text-sm text-gray-600">Variant : {item.variant_name}</p>
-                                                            <p className="text-sm text-gray-600">Brand : {item?.brand_name}</p>
+                                                            <p className="text-sm text-gray-600"> <strong>Variant</strong> : {item.variant_name}</p>
+                                                            <p className="text-sm text-gray-600"> <strong>Brand</strong> : {item?.brand_name}</p>
                                                             <p className="text-xs text-gray-500 text-bold">
-                                                                {t('sales_return.available_stock', 'Available for Return')}: {item.max_quantity} |
-                                                                {t('sales_return.sold', 'Sold')}: {item.sale_quantity}
+                                                               <strong>{t('sales_return.available_stock', 'Available for Return')}:</strong> {item.max_quantity} |
+                                                                <strong>{t('sales_return.sold', 'Sold')}:</strong> {item.sale_quantity}
                                                             </p>
                                                         </div>
                                                     </div>
@@ -913,7 +913,7 @@ export default function AddSalesReturn({
                                                                                 {getVariantDisplayName(variant)}
                                                                             </div>
                                                                             <div className="text-xs text-gray-500 mt-1">
-                                                                                Sale Price: ৳{formatCurrency(variant.selling_price || variant.sale_price || 0)}
+                                                                                Sale Price: ৳{formatCurrency( variant?.stock?.sale_price || 0)}
                                                                             </div>
                                                                         </div>
                                                                         <Plus size={16} className="text-warning" />

@@ -7,21 +7,23 @@ use Illuminate\Database\Eloquent\Model;
 
 class SalesReturn extends Model
 {
-      protected $fillable = [
-        'sale_id',
-        'customer_id',
-        'refunded_amount',
-        'shadow_refunded_amount',
-        'return_type',
-        'status',
-        'return_date',
-        'reason',
-        'notes',
-        'created_by',
-        'replacement_total',
-        'shadow_replacement_total',
+     protected $fillable = [
+        'sales_return_id',
+        'sale_item_id',
+        'product_id',
+        'variant_id',
+        'warehouse_id',
+        'unit_price',
+        'shadow_unit_price',
+        'sale_price',
+        'shadow_sale_price',
+        'total_price',
+        'shadow_total_price',
+        'return_quantity',
+        'reassaon',
         'type',
-        'return_quantity'
+        'status',
+        'created_by',
     ];
 
 
