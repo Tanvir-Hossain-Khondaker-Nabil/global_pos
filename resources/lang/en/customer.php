@@ -105,4 +105,5 @@ return [
 
     // Required field
     'required_field' => '*',
+    'all_status' => 'All Status'
 ];

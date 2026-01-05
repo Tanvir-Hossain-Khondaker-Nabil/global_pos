@@ -14,7 +14,8 @@ class Expense extends Model
         'amount', 
         'created_by',
         'sh_amount', 
-        'category_id'
+        'category_id',
+        'payment_id'
     ];
 
 
@@ -32,5 +33,10 @@ class Expense extends Model
     public function category()
     {
         return $this->belongsTo(ExpenseCategory::class, 'category_id');
+    }
+
+    public function payments()  
+    {
+        return $this->hasMany(Payment::class, 'expense_id');
     }
 }

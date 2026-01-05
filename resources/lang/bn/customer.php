@@ -106,7 +106,8 @@ return [
     'payment_reference' => 'পেমেন্ট রেফারেন্স',
     'full' => 'পূর্ণ',
     'readonly_for_editing' => 'সম্পাদনার জন্য শুধুমাত্র পড়া',
-    
+    'all_status' => 'সব অবস্থা'
+
 
 
 ];
