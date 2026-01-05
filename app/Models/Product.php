@@ -45,7 +45,7 @@ class Product extends Model
 
     public function variants()
     {
-        return $this->hasMany(Variant::class);
+        return $this->hasMany(Variant::class)->with('stock');
     }
 
     public function brand()

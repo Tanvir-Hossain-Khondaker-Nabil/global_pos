@@ -86,7 +86,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
     };
 
     const getVariantText = () => {
-        if (!purchaseItem.variant) return 'N/A';
+        if (!purchaseItem.variant) return purchaseItem.variant_name;
         
         const variant = purchaseItem.variant;
         let attrsText = '';
@@ -101,7 +101,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
             }
         }
         
-        return attrsText || 'N/A';
+        return attrsText  ;
     };
 
     const getBrandText = () => {
@@ -337,24 +337,23 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="label font-semibold">Product Name</label>
-                                        <p className="text-lg">{purchaseItem.product?.name || 'N/A'}</p>
+                                        <p className="text-lg">{purchaseItem.product?.name || purchaseItem?.product_name}</p>
                                     </div>
                                     <div>
                                         <label className="label font-semibold">Product Code</label>
-                                        <p className="text-lg">{purchaseItem.product?.product_no || 'N/A'}</p>
+                                        <p className="text-lg">{purchaseItem.product?.product_no || purchaseItem?.product_name}</p>
                                     </div>
                                     <div>
                                         <label className="label font-semibold">Variant</label>
                                         <p>{getVariantText()}</p>
                                         <span className="text-sm text-gray-500">
-                                            {purchaseItem.variant?.sku ? `SKU: ${purchaseItem.variant.sku}` : 'No SKU'}
+                                            {purchaseItem.variant?.sku ? `SKU: ${purchaseItem.variant.sku}` :  'No Sku'}
                                         </span>
                                     </div>
                                     <div>
                                         <label className="label font-semibold">Batch Number</label>
                                         <p className="text-lg">
-                                            {purchaseItem.batch_number || 
-                                             <span className="text-gray-400">Not specified</span>}
+                                            {purchaseItem.batch_number || <span className="text-gray-400">Not specified</span>}
                                         </p>
                                     </div>
                                 </div>
@@ -429,26 +428,34 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                                 <div className="space-y-3">
                                     <div>
                                         <label className="label font-semibold">Name</label>
-                                        <p>{purchaseItem.purchase?.supplier?.name || 'N/A'}</p>
+                                        <p>{purchaseItem.purchase?.supplier?.name || purchaseItem?.supplier?.name || purchaseItem?.supplier_id}</p>
                                     </div>
-                                    {purchaseItem.purchase?.supplier?.phone && (
-                                        <div>
-                                            <label className="label font-semibold">Phone</label>
-                                            <p>{purchaseItem.purchase.supplier.phone}</p>
-                                        </div>
-                                    )}
-                                    {purchaseItem.purchase?.supplier?.email && (
-                                        <div>
-                                            <label className="label font-semibold">Email</label>
-                                            <p className="text-sm">{purchaseItem.purchase.supplier.email}</p>
-                                        </div>
-                                    )}
-                                    {purchaseItem.purchase?.supplier?.address && (
-                                        <div>
-                                            <label className="label font-semibold">Address</label>
-                                            <p className="text-sm">{purchaseItem.purchase.supplier.address}</p>
-                                        </div>
-                                    )}
+                                   <div>
+                                        <label className="label font-semibold">Phone</label>
+                                        <p>
+                                            {purchaseItem.purchase?.supplier?.phone
+                                                ? purchaseItem.purchase.supplier.phone
+                                                : purchaseItem?.supplier?.phone || 'N/A'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label className="label font-semibold">Email</label>
+                                        <p>
+                                            {purchaseItem.purchase?.supplier?.email
+                                                ? purchaseItem.purchase.supplier.email
+                                                : purchaseItem?.supplier?.email || 'N/A'}
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="label font-semibold">Address</label>
+                                        <p>
+                                            {purchaseItem.purchase?.supplier?.address
+                                                ? purchaseItem.purchase.supplier.address
+                                                : purchaseItem?.supplier?.address || 'N/A'}
+                                        </p>
+                                    </div>
+                         
                                 </div>
                             </div>
                         </div>
@@ -470,12 +477,12 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                                     </div>
                                     <div>
                                         <label className="label font-semibold">Purchase Invoice</label>
-                                        <p className="font-mono">{purchaseItem.purchase?.purchase_no || 'N/A'}</p>
+                                        <p className="font-mono">{purchaseItem.purchase?.purchase_no || ('pickup-' + purchaseItem.id)}</p>
                                     </div>
                                     <div>
                                         <label className="label font-semibold">Payment Status</label>
                                         <span className={`badge rounded  ${getPaymentStatusBadge(purchaseItem.purchase?.payment_status)}`}>
-                                             { purchaseItem.purchase?.payment_status || 'N/A'}
+                                             { purchaseItem.purchase?.payment_status || 'Paid'}
                                         </span>
                                     </div>
                                     <div>
@@ -587,7 +594,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                             </div>
                             <div className="print-text-center">
                                 <p className="print-text-xs print-font-medium print-text-gray-700">Invoice</p>
-                                <p className="print-text-sm print-font-bold print-text-green-700">{purchaseItem.purchase?.purchase_no || 'N/A'}</p>
+                                <p className="print-text-sm print-font-bold print-text-green-700">{purchaseItem.purchase?.purchase_no || ('pickup-' + purchaseItem.id)}</p>
                             </div>
                             <div className="print-text-center">
                                 <p className="print-text-xs print-font-medium print-text-gray-700">Date</p>
@@ -610,7 +617,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                                 <div className="print-mt-2">
                                     <span className="badge badge-success">Purchase Item</span>
                                     <span className={`badge ${getPaymentStatusBadge(purchaseItem.purchase?.payment_status)} print-ml-2`}>
-                                        {purchaseItem.purchase?.payment_status || 'pending'}
+                                        {purchaseItem.purchase?.payment_status || 'Paid'}
                                     </span>
                                 </div>
                             </div>
@@ -620,17 +627,22 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                             <h3 className="print-text-sm print-font-semibold print-mb-2 print-text-gray-800">FROM</h3>
                             <div className="print-space-y-1">
                                 <p className="print-text-base print-font-bold print-text-gray-900">
-                                    {purchaseItem.purchase?.supplier?.name || 'Supplier'}
+                                    {purchaseItem.purchase?.supplier?.name || purchaseItem?.supplier?.name || purchaseItem?.supplier_id}
                                 </p>
                                 {purchaseItem.purchase?.supplier?.phone && (
-                                    <p className="print-text-xs print-text-gray-700"> {purchaseItem.purchase.supplier.phone}</p>
+                                    <p className="print-text-xs print-text-gray-700"> {purchaseItem.purchase.supplier.phone || 'N/A'}</p>
                                 )}
+                                <p className="print-text-xs print-text-gray-700"> { purchaseItem?.supplier?.phone || ''}</p>
+
                                 {purchaseItem.purchase?.supplier?.email && (
-                                    <p className="print-text-xs print-text-gray-700"> {purchaseItem.purchase.supplier.email}</p>
+                                    <p className="print-text-xs print-text-gray-700"> {purchaseItem?.supplier?.email || 'N/A'}</p>
                                 )}
+                                <p className="print-text-xs print-text-gray-700"> { purchaseItem?.supplier?.email || ''}</p>
+
                                 {purchaseItem.purchase?.supplier?.address && (
-                                    <p className="print-text-xs print-text-gray-700"> {purchaseItem.purchase.supplier.address}</p>
+                                    <p className="print-text-xs print-text-gray-700"> {purchaseItem.purchase.supplier.address   || 'N/A'}</p>
                                 )}
+                                    <p className="print-text-xs print-text-gray-700"> { purchaseItem?.supplier?.address || 'N/A'}</p>
                                 <div className="divider print-my-2"></div>
                                 <p className="print-text-xs print-text-gray-600">Generated: {formatDate(new Date().toISOString())}</p>
                             </div>
@@ -647,11 +659,11 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                                 <div className="print-space-y-2">
                                     <div className="print-flex print-justify-between">
                                         <span className="print-text-xs print-text-gray-600">Name:</span>
-                                        <span className="print-text-xs print-font-medium">{purchaseItem.product?.name || 'N/A'}</span>
+                                        <span className="print-text-xs print-font-medium">{purchaseItem.product?.name || purchaseItem.product_name}</span>
                                     </div>
                                     <div className="print-flex print-justify-between">
                                         <span className="print-text-xs print-text-gray-600">Code:</span>
-                                        <span className="print-text-xs print-font-medium">{purchaseItem.product?.product_no || 'N/A'}</span>
+                                        <span className="print-text-xs print-font-medium">{purchaseItem.product?.product_no || purchaseItem.product_name}</span>
                                     </div>
                                     <div className="print-flex print-justify-between">
                                         <span className="print-text-xs print-text-gray-600">Variant:</span>
@@ -659,7 +671,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                                     </div>
                                     <div className="print-flex print-justify-between">
                                         <span className="print-text-xs print-text-gray-600">Batch:</span>
-                                        <span className="print-text-xs print-font-medium">{purchaseItem.batch_number || 'N/A'}</span>
+                                        <span className="print-text-xs print-font-medium">{purchaseItem.purchase?.stock?.batch_no || 'pickup-' + purchaseItem.id}</span>
                                     </div>
                                 </div>
                             </div>

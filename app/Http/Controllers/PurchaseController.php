@@ -84,7 +84,7 @@ class PurchaseController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse'])
+        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse', 'supplier'])
             ->when($request->filled('product_id'), function ($query) use ($request) {
                 $query->where('product_id', $request->product_id);
             })
@@ -103,7 +103,6 @@ class PurchaseController extends Controller
             });
         }
 
-
         return Inertia::render('Purchase/PurchaseItemsList', [
             'purchaseItems' => $purchaseItems,
             'filters' => $request->only(['product_id', 'date_from', 'date_to']),
@@ -121,7 +120,7 @@ class PurchaseController extends Controller
         $isShadowUser = $user->type === 'shadow';
 
 
-        $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse'])
+        $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse','supplier'])
             ->findOrFail($id);
 
         if($isShadowUser){

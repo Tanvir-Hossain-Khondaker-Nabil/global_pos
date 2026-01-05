@@ -41,12 +41,12 @@ class PurchaseItem extends Model
     //supplier relactionship
     public function supplier()
     {
-        return $this->belongsTo(Supplier::class);
+        return $this->belongsTo(Supplier::class,'supplier_id');
     }
 
     public function purchase()
     {
-        return $this->belongsTo(Purchase::class)->with(['warehouse','creator','supplier']);
+        return $this->belongsTo(Purchase::class)->with(['warehouse','creator','supplier','stock']);
     }
 
     public function product()
