@@ -79,6 +79,7 @@ class SalesController extends Controller
 
         return Inertia::render($render, [
             'sales' => $sales,
+            'accounts' => Account::where('is_active',true)->get(),
             'isShadowUser' => $isShadowUser,
             'filters' => [
                 'search' => $search,
@@ -445,8 +446,10 @@ class SalesController extends Controller
                 'grand_total' => $request->grand_amount,
                 'shadow_sub_total' => $shadowSubTotal,
                 'shadow_grand_total' => $shadowGrandTotal,
-                'shadow_due_amount' => $shadowDueAmount,
-                'shadow_paid_amount' => $shadowPaidAmount,
+                'shadow_due_amount' => 0,
+                'shadow_paid_amount' => $shadowGrandTotal,
+                // 'shadow_due_amount' => $shadowDueAmount,
+                // 'shadow_paid_amount' => $shadowPaidAmount,
             ]);
 
 
@@ -484,33 +487,62 @@ class SalesController extends Controller
     }
 
 
-    // payment Clearance
+    // payment Clearance - UPDATED WITH ACCOUNT SUPPORT
     public function storePayment(Request $request, Sale $sale)
     {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'account_id' => 'required|exists:accounts,id',
+        ]);
+
         $customerId = $sale->customer_id;
+        $account = Account::find($request->account_id);
 
+        if (!$account || !$account->is_active) {
+            return back()->withErrors(['error' => 'Selected account is not active or not found.']);
+        }
 
-        Payment::create([
-            'sale_id' => $sale->id,
-            'customer_id' => $customerId,
-            'amount' => $request->amount,
-            'shadow_amount' => $request->shadow_paid_amount ?? 0,
-            'payment_method' => $request->payment_method,
-            'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
-            'note' => $request->notes ?? 'sales due payment clearance',
-            'paid_at' => Carbon::now(),
-            'created_by' => Auth::id(),
-            'status' => 'completed',
-        ]);
+        DB::beginTransaction();
 
-        $sale->update([
-            'paid_amount' => $sale->paid_amount + $request->amount,
-            'shadow_paid_amount' => $sale->shadow_paid_amount + $request->shadow_paid_amount ,
-            'due_amount' => 0,
-            'shadow_due_amount' => 0,
-            'status' => 'paid',
-        ]);
+        try {
+            // Create payment record
+           Payment::create([
+                'sale_id' => $sale->id,
+                'account_id' => $request->account_id,
+                'customer_id' => $customerId,
+                'amount' => $request->amount,
+                'shadow_amount' => $request->shadow_paid_amount ?? 0,
+                'payment_method' => $request->payment_method ?? $account->type,
+                'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+                'note' => $request->notes ?? 'sales due payment clearance',
+                'paid_at' => $request->payment_date ?? Carbon::now(),
+                'created_by' => Auth::id(),
+                'status' => 'completed',
+            ]);
 
+            // Update sale amounts
+            $newPaidAmount = $sale->paid_amount + $request->amount;
+            $newDueAmount = max(0, $sale->due_amount - $request->amount);
+
+            $sale->update([
+                'paid_amount' => $newPaidAmount ?? 0,
+                'shadow_paid_amount' => $sale->shadow_paid_amount + ($request->shadow_paid_amount ?? 0),
+                'due_amount' => $newDueAmount ?? 0,
+                'shadow_due_amount' => max(0, $sale->shadow_due_amount - ($request->shadow_paid_amount ?? 0)),
+                'status' => $newDueAmount <= 0.01 ? 'paid' : 'partial',
+            ]);
+
+            // Update account balance (credit for income from sale)
+            $account->updateBalance($request->amount, 'credit');
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Payment recorded successfully!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Payment failed: ' . $e->getMessage()]);
+        }
     }
 
 
