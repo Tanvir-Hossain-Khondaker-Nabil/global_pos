@@ -110,7 +110,7 @@ export default function SalesList({ sales, filters, salesdata }) {
                         className="input input-sm"
                     />
                     <Link
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                         href={route("sales.add")}
                     >
                         <Plus size={13} />
@@ -123,7 +123,7 @@ export default function SalesList({ sales, filters, salesdata }) {
                 <div className="overflow-x-auto">
                     {sales.data.length > 0 ? (
                         <table className="table table-auto w-full">
-                            <thead className="bg-primary text-white">
+                            <thead className="bg-[#1e4d2b] text-white text-white">
                                 <tr>
                                     <th>Sales ID</th>
                                     <th>Customer</th>
@@ -373,7 +373,7 @@ export default function SalesList({ sales, filters, salesdata }) {
                     </div>
 
                     <div>
-                        <div className="bg-primary/20 rounded-box py-2 mb-3 px-2">
+                        <div className="bg-[#1e4d2b] text-white/20 rounded-box py-2 mb-3 px-2">
                             <h1 className="font-xl text-center font-bold text-neutral">
                                 {DueForm.data?.amount} Tk
                             </h1>
@@ -408,7 +408,7 @@ export default function SalesList({ sales, filters, salesdata }) {
                                 <button
                                     type="button"
                                     onClick={handleAddSystem}
-                                    className="btn btn-primary btn-square"
+                                    className="btn bg-[#1e4d2b] text-white btn-square"
                                 >
                                     <Plus size={12} />
                                 </button>
@@ -469,7 +469,7 @@ export default function SalesList({ sales, filters, salesdata }) {
 
                         <button
                             onClick={handleDueCollactForm}
-                            className="btn btn-primary w-full mt-4"
+                            className="btn bg-[#1e4d2b] text-white w-full mt-4"
                         >
                             Collect Due
                         </button>

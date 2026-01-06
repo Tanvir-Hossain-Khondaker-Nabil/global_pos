@@ -57,7 +57,7 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                         />
                             <Link
                                 href={route("warehouse.create")}
-                                className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
+                                className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'bg-[#1e4d2b] text-white'}`}
                             >
                                 <Plus size={15} /> 
                                 {t('warehouse.add_warehouse', 'Add New Warehouse')}
@@ -69,7 +69,7 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
             <div className="overflow-x-auto">
                 {warehouses.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
+                        <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-[#1e4d2b] text-white text-primary-content"}>
                             <tr>
                                 <th className="bg-opacity-20">#</th>
                                 <th>{t('warehouse.name', 'Name')}</th>
@@ -159,7 +159,7 @@ export default function WarehouseList({ warehouses, filters, isShadowUser }) {
                         </p>
                             <Link
                                 href={route("warehouse.create")}
-                                className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'} mt-2`}
+                                className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'bg-[#1e4d2b] text-white'} mt-2`}
                             >
                                 <Plus size={15} /> 
                                 {t('warehouse.add_warehouse', 'Add New Warehouse')}

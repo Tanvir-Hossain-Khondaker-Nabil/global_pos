@@ -49,7 +49,7 @@ export default function Barcode({ code: severCode, product: allProduct }) {
                     className="input"
                 />
                 {code && code !== "" && (
-                    <button onClick={findProduct} className="btn btn-primary">
+                    <button onClick={findProduct} className="btn bg-[#1e4d2b] text-white">
                         {t('barcode.find_product', 'Find Product')}
                     </button>
                 )}
@@ -118,7 +118,7 @@ export default function Barcode({ code: severCode, product: allProduct }) {
             <button
                 onClick={() => window.print()}
                 disabled={!selectedSize || !barcode}
-                className="mt-4 btn btn-primary print:hidden"
+                className="mt-4 btn bg-[#1e4d2b] text-white print:hidden"
             >
                 <Printer size={13} /> {t('barcode.print_sticker', 'Print Sticker')}
             </button>

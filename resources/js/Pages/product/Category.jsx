@@ -79,7 +79,7 @@ export default function Category({ category, filters }) {
                     />
                         <button
                             onClick={() => setModel(!model)}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('category.add_new', 'Add New')}
                         </button>
@@ -89,7 +89,7 @@ export default function Category({ category, filters }) {
             <div className="overflow-x-auto">
                 {category.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th></th>
                                 <th>{t('category.name', 'Name')}</th>
@@ -162,7 +162,7 @@ export default function Category({ category, filters }) {
                         </h1>
                         <button
                             onClick={() => setModel(!model)}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('category.add_new', 'Add New')}
                         </button>
@@ -213,7 +213,7 @@ export default function Category({ category, filters }) {
                         </fieldset>
                         <button
                             disabled={userForm.processing}
-                            className="btn btn-primary"
+                            className="btn bg-[#1e4d2b] text-white"
                             type="submit"
                         >
                             {userForm.data.id 

@@ -229,7 +229,7 @@ export default function Index({
         </div>
         <button 
           onClick={() => setModel(true)}
-          className="btn bg-[#1e4d2b] hover:bg-red-600 text-white border-none rounded-xl px-8 font-black uppercase text-xs tracking-widest shadow-xl"
+          className="btn bg-[#1e4d2b] text-white hover:bg-red-600 text-white border-none rounded-xl px-8 font-black uppercase text-xs tracking-widest shadow-xl"
         >
           <SafeIcon 
             icon={icons.Plus} 
@@ -242,7 +242,7 @@ export default function Index({
       {/* Main Content Card */}
       <div className="bg-white rounded-2xl border-4 border-gray-900 shadow-2xl overflow-hidden mb-10">
         {/* Card Header */}
-        <div className="bg-[#1e4d2b] p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="bg-[#1e4d2b] text-white p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex items-center gap-2">
             <SafeIcon 
               icon={icons.Tag} 
@@ -349,7 +349,7 @@ export default function Index({
           {categories.length > 0 ? (
             <div className="overflow-x-auto rounded-2xl border border-gray-200">
               <table className="table w-full">
-                <thead className="bg-[#1e4d2b] text-white">
+                <thead className="bg-[#1e4d2b] text-white text-white">
                   <tr>
                     <th className="font-black uppercase text-xs tracking-widest px-6 py-4">#</th>
                     <th className="font-black uppercase text-xs tracking-widest px-6 py-4">
@@ -423,7 +423,7 @@ export default function Index({
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className="badge bg-[#1e4d2b] rounded text-white  text-xs  uppercase px-2 py-5">
+                        <span className="badge bg-[#1e4d2b] text-white rounded text-white  text-xs  uppercase px-2 py-5">
                           {formatDate(category.created_at)}
                         </span>
                       </td>
@@ -502,7 +502,7 @@ export default function Index({
               </p>
               <button
                 onClick={() => setModel(true)}
-                className="btn bg-[#1e4d2b] hover:bg-red-600 text-white border-none rounded-xl px-8 font-black uppercase text-xs tracking-widest shadow-xl mt-4"
+                className="btn bg-[#1e4d2b] text-white hover:bg-red-600 text-white border-none rounded-xl px-8 font-black uppercase text-xs tracking-widest shadow-xl mt-4"
               >
                 <SafeIcon 
                   icon={icons.Plus} 
@@ -655,7 +655,7 @@ export default function Index({
       {/* Add Category Modal */}
       <dialog className="modal" open={model}>
         <div className="modal-box max-w-2xl rounded-2xl border-4 border-gray-900 p-0 overflow-auto shadow-2xl">
-          <div className="bg-[#1e4d2b] p-6 flex justify-between items-center">
+          <div className="bg-[#1e4d2b] text-white p-6 flex justify-between items-center">
             <h2 className="text-white text-sm font-black uppercase tracking-[0.2em] flex items-center gap-2">
               <SafeIcon 
                 icon={icons.Plus} 
@@ -727,7 +727,7 @@ export default function Index({
               </button>
               <button
                 disabled={createProcessing}
-                className="btn bg-[#1e4d2b] hover:bg-red-600 text-white border-none rounded-xl font-black uppercase text-[10px] tracking-widest px-8 shadow-xl"
+                className="btn bg-[#1e4d2b] text-white hover:bg-red-600 text-white border-none rounded-xl font-black uppercase text-[10px] tracking-widest px-8 shadow-xl"
                 type="submit"
               >
                 {createProcessing ? (

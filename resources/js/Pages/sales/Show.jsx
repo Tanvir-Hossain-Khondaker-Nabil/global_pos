@@ -80,7 +80,7 @@ export default function SaleShow({ sale }) {
                     <div className="flex items-center gap-2 flex-wrap print:hidden">
                         <button
                             onClick={handlePrint}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Printer size={16} />
                             Print
@@ -119,7 +119,7 @@ export default function SaleShow({ sale }) {
                         </p>
                     </div>
                     <div className="text-right">
-                        <div className="bg-primary text-white px-4 py-2 rounded">
+                        <div className="bg-[#1e4d2b] text-white text-white px-4 py-2 rounded">
                             <h2 className="text-lg font-bold">SALES REPORT</h2>
                             <p className="text-sm opacity-90">
                                 Date: {formatDateOnly(sale.created_at)}
@@ -233,7 +233,7 @@ export default function SaleShow({ sale }) {
                     </div>
                     <div className="overflow-x-auto">
                         <table className="table table-auto w-full print:text-sm">
-                            <thead className="bg-primary text-white print:bg-gray-800">
+                            <thead className="bg-[#1e4d2b] text-white text-white print:bg-gray-800">
                                 <tr>
                                     <th className="text-left p-2 print:p-1">Product</th>
                                     <th className="text-left p-2 print:p-1">Brand</th>
@@ -468,7 +468,7 @@ export default function SaleShow({ sale }) {
                     }
                     
                     /* Sales Report Title Styling */
-                    .bg-primary {
+                    .bg-[#1e4d2b] text-white {
                         background-color: #4a5568 !important; /* Dark gray for better print visibility */
                         color: white !important;
                         padding: 8px 12px !important;

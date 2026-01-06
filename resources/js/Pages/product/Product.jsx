@@ -122,7 +122,7 @@ export default function Product({ product, filters }) {
                     />
                     <button
                         onClick={() => router.visit(route("product.add"))}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Plus size={15} /> {t('product.add_new', 'Add New')}
                     </button>
@@ -132,7 +132,7 @@ export default function Product({ product, filters }) {
             <div className="overflow-x-auto">
                 {product.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th></th>
                                 <th>{t('product.product_code', 'Product Code')}</th>
@@ -231,7 +231,7 @@ export default function Product({ product, filters }) {
                                                                 key={variant.id}
                                                                 className={`border p-2 rounded text-xs ${
                                                                     hasAttributes 
-                                                                        ? 'border-primary bg-primary/5' 
+                                                                        ? 'border-primary bg-[#1e4d2b] text-white/5' 
                                                                         : 'border-dashed border-neutral'
                                                                 }`}
                                                             >
@@ -319,7 +319,7 @@ export default function Product({ product, filters }) {
                         </h1>
                         <button
                             onClick={() => router.visit(route("product.add"))}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('product.add_new_product', 'Add new product')}
                         </button>

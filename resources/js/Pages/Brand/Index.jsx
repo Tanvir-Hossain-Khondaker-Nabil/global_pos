@@ -134,7 +134,7 @@ export default function Index({ brands, filters }) {
                     </div>
                     <Link
                         href={route("brands.create")}
-                        className="btn btn-primary btn-sm gap-2"
+                        className="btn bg-[#1e4d2b] text-white btn-sm gap-2"
                     >
                         <Plus size={16} />
                         <span>{t('brand.add_new', 'Add New')}</span>
@@ -266,7 +266,7 @@ export default function Index({ brands, filters }) {
                         </div>
                             <a
                                 href={route("brands.create")}
-                                className="btn btn-primary btn-sm gap-2"
+                                className="btn bg-[#1e4d2b] text-white btn-sm gap-2"
                             >
                                 <Plus size={16} />
                                 <span>{t('brand.add_new_brand', 'Add New Brand')}</span>

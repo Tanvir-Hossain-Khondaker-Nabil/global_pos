@@ -243,7 +243,7 @@ export default function Invoice({ sale }) {
                 <div className="flex gap-2">
                     <button
                         onClick={handlePrint}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Printer size={16} />
                         Print Invoice

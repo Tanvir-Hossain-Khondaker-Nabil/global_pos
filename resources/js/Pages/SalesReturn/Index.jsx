@@ -119,7 +119,7 @@ export default function SalesReturnIndex({
                     <button onClick={() => router.visit(route("sales.index"))} className="btn btn-sm btn-ghost">
                         {t('sales_return.back_to_sales', 'Back to Sales')}
                     </button>
-                    <button onClick={() => router.visit(route("return.create"))} className="btn btn-sm btn-primary">
+                    <button onClick={() => router.visit(route("return.create"))} className="btn btn-sm bg-[#1e4d2b] text-white">
                         <RefreshCw size={14} className="mr-1" />
                         {t('sales_return.create_new', 'Create Return')}
                     </button>

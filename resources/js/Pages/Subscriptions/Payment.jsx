@@ -145,7 +145,7 @@ export default function Payments({ subscription }) {
                     </button>
                     <Link
                         href={route("subscriptions.index")}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <CreditCard size={15} /> {t('payments.view_subscriptions', 'View Subscriptions')}
                     </Link>
@@ -225,7 +225,7 @@ export default function Payments({ subscription }) {
             <div className="overflow-x-auto">
                 {subscription.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th className="text-center">{t('payments.sl', 'SL')}</th>
                                 <th>{t('payments.transaction_details', 'Transaction Details')}</th>
@@ -325,7 +325,7 @@ export default function Payments({ subscription }) {
                                         <div className="flex items-center gap-2 justify-center">
                                             <Link
                                                 href={`/subscriptions_payments/view/${payment.id}`}
-                                                className="btn btn-primary btn-xs"
+                                                className="btn bg-[#1e4d2b] text-white btn-xs"
                                             >
                                                 <Eye size={12} /> {t('payments.view', 'View')}
                                             </Link>
@@ -360,7 +360,7 @@ export default function Payments({ subscription }) {
                         </p>
                         <Link
                             href={route("subscriptions.index")}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <CreditCard size={15} /> {t('payments.view_subscriptions', 'View Subscriptions')}
                         </Link>
@@ -393,7 +393,7 @@ export default function Payments({ subscription }) {
                                 <Link
                                     key={index}
                                     href={link.url}
-                                    className={`join-item btn btn-sm ${link.active ? 'btn-primary' : ''}`}
+                                    className={`join-item btn btn-sm ${link.active ? 'bg-[#1e4d2b] text-white' : ''}`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />
                             ))}

@@ -73,7 +73,7 @@ export default function Security() {
                 <button
                     type="submit"
                     disabled={processing}
-                    className="btn btn-primary mt-3"
+                    className="btn bg-[#1e4d2b] text-white mt-3"
                 >
                     {processing ? 'Updating...' : t('auth.update_security', 'Update Security')}
                 </button>

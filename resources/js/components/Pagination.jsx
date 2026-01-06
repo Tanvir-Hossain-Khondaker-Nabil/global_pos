@@ -67,7 +67,7 @@ export default function Pagination({ data }) {
                             preserveScroll
                             preserveState
                             className={`join-item btn btn-sm ${
-                                page === currentPage ? "btn-primary" : ""
+                                page === currentPage ? "bg-[#1e4d2b] text-white" : ""
                             }`}
                         >
                             {page}

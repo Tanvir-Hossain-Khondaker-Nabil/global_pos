@@ -312,7 +312,7 @@ export default function Sales({
             <PageHeader title="Add sales" />
 
             {/* Scanner Alert */}
-            <div className="bg-primary/10 text-primary p-4 rounded-box flex items-center space-x-2 mb-2">
+            <div className="bg-[#1e4d2b] text-white/10 text-primary p-4 rounded-box flex items-center space-x-2 mb-2">
                 <Check size={14} />
                 <p className="font-medium text-sm">
                     Barcode scanner detected ✅ Connect and start adding
@@ -369,7 +369,7 @@ export default function Sales({
                                 className={`btn btn-square ${
                                     SalesForm.data.customer
                                         ? "btn-error"
-                                        : "btn-primary"
+                                        : "bg-[#1e4d2b] text-white"
                                 } mb-1`}
                             >
                                 {SalesForm.data.customer ? (
@@ -517,7 +517,7 @@ export default function Sales({
                 >
                     {cart.length > 0 ? (
                         <table className="table">
-                            <thead className="bg-primary text-white">
+                            <thead className="bg-[#1e4d2b] text-white text-white">
                                 <tr>
                                     <th>Product</th>
                                     <th>Gross Price</th>
@@ -630,7 +630,7 @@ export default function Sales({
 
                 {/* old product */}
                 {exchangedata !== null && (
-                    <div className="mt-5 border border-gray-200 rounded-box p-5 bg-primary/5">
+                    <div className="mt-5 border border-gray-200 rounded-box p-5 bg-[#1e4d2b] text-white/5">
                         <h1 className="text-neutral text-sm mb-2 font-bold">
                             Old Products
                         </h1>
@@ -721,7 +721,7 @@ export default function Sales({
                 )}
 
                 {/* grand */}
-                <div className="bg-primary/5 flex items-center justify-center mt-5 py-4">
+                <div className="bg-[#1e4d2b] text-white/5 flex items-center justify-center mt-5 py-4">
                     <span className="text-lg font-bold text-primary">
                         Grand total: {grandTotal.toFixed(2)} Tk
                     </span>
@@ -779,7 +779,7 @@ export default function Sales({
                     {!cartEdit && (
                         <button
                             onClick={handleCashModel}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <DollarSign size={10} />{" "}
                             {exchangedata &&
@@ -892,7 +892,7 @@ export default function Sales({
                     </div>
 
                     <div>
-                        <div className="bg-primary/20 rounded-box py-2 mb-3 px-2">
+                        <div className="bg-[#1e4d2b] text-white/20 rounded-box py-2 mb-3 px-2">
                             <h1 className="font-xl text-center font-bold text-neutral">
                                 {(() => {
                                     let amount = 0;
@@ -946,7 +946,7 @@ export default function Sales({
                                 <button
                                     type="button"
                                     onClick={handleAddSystem}
-                                    className="btn btn-primary btn-square"
+                                    className="btn bg-[#1e4d2b] text-white btn-square"
                                 >
                                     <Plus size={12} />
                                 </button>
@@ -1007,7 +1007,7 @@ export default function Sales({
 
                         <button
                             onClick={handleSalesForm}
-                            className="btn btn-primary w-full mt-4"
+                            className="btn bg-[#1e4d2b] text-white w-full mt-4"
                         >
                             Sales Done
                         </button>

@@ -122,7 +122,7 @@ export default function PaymentIndex({ payments, filters, isShadowUser }) {
                         />
                         <button
                             onClick={handleFilter}
-                            className="btn btn-sm bg-[#1e4d2b] hover:bg-red-600 text-white border-none rounded-lg"
+                            className="btn btn-sm bg-[#1e4d2b] text-white hover:bg-red-600 text-white border-none rounded-lg"
                         >
                             <Search size={14} />
                         </button>
@@ -138,7 +138,7 @@ export default function PaymentIndex({ payments, filters, isShadowUser }) {
 
             {/* Industrial Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                <div className="bg-[#1e4d2b] rounded-2xl p-4 shadow-xl border-b-4 border-red-600 text-white">
+                <div className="bg-[#1e4d2b] text-white rounded-2xl p-4 shadow-xl border-b-4 border-red-600 text-white">
                     <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">{t('payment.total_amount', 'Total Volume')}</p>
                     <p className="text-xl font-black font-mono">৳{formatCurrency(totals.totalAmount)}</p>
                 </div>
@@ -164,7 +164,7 @@ export default function PaymentIndex({ payments, filters, isShadowUser }) {
                 <div className="overflow-x-auto rounded-xl border border-gray-100 shadow-sm">
                     {payments.data.length > 0 ? (
                         <table className="table w-full border-separate border-spacing-0">
-                            <thead className="bg-[#1e4d2b] text-white uppercase text-[10px] tracking-widest">
+                            <thead className="bg-[#1e4d2b] text-white text-white uppercase text-[10px] tracking-widest">
                                 <tr>
                                     <th className="py-4">Reference</th>
                                     <th>Entity (Customer/Supplier)</th>
@@ -235,7 +235,7 @@ export default function PaymentIndex({ payments, filters, isShadowUser }) {
                                                 <div className="flex justify-end gap-1">
                                                     <Link
                                                         href={route("payments.show", { payment: payment.id })}
-                                                        className="btn btn-ghost btn-square btn-xs hover:bg-[#1e4d2b] hover:text-white"
+                                                        className="btn btn-ghost btn-square btn-xs hover:bg-[#1e4d2b] text-white hover:text-white"
                                                     >
                                                         <Eye size={14} />
                                                     </Link>

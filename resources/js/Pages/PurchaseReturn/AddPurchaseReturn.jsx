@@ -574,7 +574,7 @@ export default function AddPurchaseReturn({
                                 <div className="grid grid-cols-2 gap-2">
                                     <label className={`card card-compact cursor-pointer ${
                                         returnType === 'money_back' 
-                                            ? 'bg-primary/10 border border-primary' 
+                                            ? 'bg-[#1e4d2b] text-white/10 border border-primary' 
                                             : 'bg-base-100 border border-base-300'
                                     }`}>
                                         <div className="card-body p-3">
@@ -1109,7 +1109,7 @@ export default function AddPurchaseReturn({
                         <div className="flex gap-3">
                             <button
                                 type="submit"
-                                className={`btn btn-lg ${returnType === 'product_replacement' ? 'btn-warning' : 'btn-primary'}`}
+                                className={`btn btn-lg ${returnType === 'product_replacement' ? 'btn-warning' : 'bg-[#1e4d2b] text-white'}`}
                                 disabled={form.processing}
                             >
                                 {form.processing ? (

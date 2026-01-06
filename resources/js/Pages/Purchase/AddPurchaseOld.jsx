@@ -1215,7 +1215,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
                                                     {usePartialPayment && (
                                                         <div className="flex items-center gap-2">
-                                                            <div className="w-2 h-2 rounded-full bg-primary"></div>
+                                                            <div className="w-2 h-2 rounded-full bg-[#1e4d2b] text-white"></div>
                                                             <span>{t('purchase.partial_payment_enabled', 'Partial Payment Enabled')}</span>
                                                         </div>
                                                     )}
@@ -1261,7 +1261,7 @@ export default function AddPurchase({ suppliers, warehouses, products, isShadowU
                 <div className="flex gap-3 mt-6">
                     <button
                         type="submit"
-                        className={`btn ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
+                        className={`btn ${isShadowUser ? 'btn-warning' : 'bg-[#1e4d2b] text-white'}`}
                         disabled={form.processing || selectedItems.length === 0}
                     >
                         {form.processing ? (

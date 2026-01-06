@@ -1139,7 +1139,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                 <div className="flex gap-3 mt-6">
                     <button
                         type="submit"
-                        className="btn btn-primary"
+                        className="btn bg-[#1e4d2b] text-white"
                         disabled={form.processing || (selectedItems.length === 0 && pickupItems.length === 0)}
                     >
                         {form.processing ? "Creating Sale..." : "Create Sale"}
@@ -1264,7 +1264,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             </button>
                             <button
                                 onClick={addPickupItem}
-                                className="btn btn-primary"
+                                className="btn bg-[#1e4d2b] text-white"
                             >
                                 Add Item
                             </button>
@@ -1337,7 +1337,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             </button>
                             <button
                                 onClick={createNewSupplier}
-                                className="btn btn-primary"
+                                className="btn bg-[#1e4d2b] text-white"
                             >
                                 Create Supplier
                             </button>

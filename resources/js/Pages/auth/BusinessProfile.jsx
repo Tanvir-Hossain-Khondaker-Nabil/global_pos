@@ -321,7 +321,7 @@ export default function Profile() {
                     <button 
                         disabled={processing} 
                         type='submit' 
-                        className='btn btn-primary min-w-32'
+                        className='btn bg-[#1e4d2b] text-white min-w-32'
                     >
                         {processing ? (
                             <span className="flex items-center gap-2">

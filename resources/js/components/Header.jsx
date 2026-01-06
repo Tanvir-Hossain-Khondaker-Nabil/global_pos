@@ -118,7 +118,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                             <li>
                                 <button
                                     onClick={handleToggleUserType}
-                                    className={`btn btn-sm ${isShadowUser ? 'bg-[#1e4d2b] text-white' : 'bg-amber-500 text-white'} gap-2`}
+                                    className={`btn btn-sm ${isShadowUser ? 'bg-[#1e4d2b] text-white text-white' : 'bg-amber-500 text-white'} gap-2`}
                                     title={`Switch to ${isShadowUser ? 'Shadow' : 'General'} mode`}
                                 >
                                     <Shield size={16} />

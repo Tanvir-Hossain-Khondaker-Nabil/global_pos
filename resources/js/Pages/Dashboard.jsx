@@ -427,7 +427,7 @@ export default function Dashboard({
                         </h3>
                         <div className="flex gap-4">
                             <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                <span className="w-2 h-2 rounded-full bg-[#1e4d2b]"></span> Revenue
+                                <span className="w-2 h-2 rounded-full bg-[#1e4d2b] text-white"></span> Revenue
                             </span>
                             <span className="flex items-center gap-1.5 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
                                 <span className="w-2 h-2 rounded-full bg-[#35a952]"></span> Orders
@@ -480,14 +480,14 @@ export default function Dashboard({
                                         style={{ width: `${100 / salesChartData.length}%` }}
                                     >
                                         <div
-                                            className="absolute bottom-0 w-1 bg-[#1e4d2b] opacity-20 rounded-t"
+                                            className="absolute bottom-0 w-1 bg-[#1e4d2b] text-white opacity-20 rounded-t"
                                             style={{
                                                 height: `${Math.max(heightPercent * 0.6, 10)}%`,
                                                 bottom: '24px'
                                             }}
                                         ></div>
                                         <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="bg-[#1e4d2b] text-white text-[10px] px-2 py-1 rounded">
+                                            <div className="bg-[#1e4d2b] text-white text-white text-[10px] px-2 py-1 rounded">
                                                 {formatShortCurrency(data.value)}
                                             </div>
                                         </div>
@@ -501,7 +501,7 @@ export default function Dashboard({
                     <div className="mt-10 flex items-center justify-between text-xs">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-[#1e4d2b]"></div>
+                                <div className="w-3 h-3 rounded-full bg-[#1e4d2b] text-white"></div>
                                 <span className="text-slate-600">
                                     Today: <strong className="text-[#1e4d2b]">৳{formatCurrency(todaySales)}</strong>
                                 </span>
@@ -588,7 +588,7 @@ export default function Dashboard({
                         {/* Legend - Show actual order counts */}
                         <div className="space-y-4 w-full sm:w-auto">
                             <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 rounded-full bg-[#1e4d2b]"></div>
+                                <div className="w-3 h-3 rounded-full bg-[#1e4d2b] text-white"></div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase leading-none mb-1">
                                         Completed
@@ -643,7 +643,7 @@ export default function Dashboard({
                     return (
                         <div 
                             key={index}
-                            className="bg-[#1e4d2b] p-6 rounded-3xl text-white relative h-36 flex flex-col justify-between overflow-hidden"
+                            className="bg-[#1e4d2b] text-white p-6 rounded-3xl text-white relative h-36 flex flex-col justify-between overflow-hidden"
                             style={{ backgroundColor: bgColor }}
                         >
                             <div className="z-10">

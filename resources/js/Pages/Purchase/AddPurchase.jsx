@@ -555,7 +555,7 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
                                                     setProductSearch("");
                                                     setShowDropdown(true);
                                                 }}
-                                                className={`btn btn-xs rounded-lg ${selectedBrand === brand ? 'bg-[#1e4d2b] text-white' : 'bg-gray-100 text-gray-700'}`}
+                                                className={`btn btn-xs rounded-lg ${selectedBrand === brand ? 'bg-[#1e4d2b] text-white text-white' : 'bg-gray-100 text-gray-700'}`}
                                             >
                                                 {brand}
                                             </button>
@@ -578,7 +578,7 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
 
                         {/* Payment Info Card */}
                         {!isShadowUser && (
-                            <div className="card card-compact bg-[#1e4d2b] border border-gray-800 rounded-2xl text-white shadow-lg">
+                            <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl text-white shadow-lg">
                                 <div className="card-body">
                                     <div className="flex justify-between items-center mb-2">
                                         <h3 className="card-title text-sm font-black uppercase text-red-500 flex items-center gap-2">

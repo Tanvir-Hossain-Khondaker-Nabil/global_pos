@@ -133,7 +133,7 @@ export default function Index({ modules, filters }) {
                     />
                         <button
                             onClick={() => setModel(true)}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('module.add_new', 'Add New')}
                         </button>
@@ -143,7 +143,7 @@ export default function Index({ modules, filters }) {
             <div className="overflow-x-auto">
                 {modules.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th className="w-12">#</th>
                                 <th>{t('module.name', 'Name')}</th>
@@ -234,7 +234,7 @@ export default function Index({ modules, filters }) {
                         </div>
                             <button
                                 onClick={() => setModel(true)}
-                                className="btn btn-primary btn-sm"
+                                className="btn bg-[#1e4d2b] text-white btn-sm"
                             >
                                 <Plus size={15} /> {t('module.add_new_module', 'Add New Module')}
                             </button>
@@ -335,7 +335,7 @@ export default function Index({ modules, filters }) {
                             <button
                                 type="submit"
                                 disabled={moduleForm.processing}
-                                className="btn btn-primary flex-1"
+                                className="btn bg-[#1e4d2b] text-white flex-1"
                             >
                                 {moduleForm.processing 
                                     ? t('module.processing', 'Processing...')

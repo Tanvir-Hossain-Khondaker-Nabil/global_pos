@@ -435,7 +435,7 @@ export default function SaleEdit({ sale }) {
                     
                     <button
                         type="submit"
-                        className="btn btn-primary"
+                        className="btn bg-[#1e4d2b] text-white"
                         disabled={processing}
                     >
                         {processing ? (

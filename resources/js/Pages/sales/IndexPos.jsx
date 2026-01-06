@@ -142,14 +142,14 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
 
                     <button
                         onClick={handleFilter}
-                        className="btn btn-sm btn-primary join-item"
+                        className="btn btn-sm bg-[#1e4d2b] text-white join-item"
                     >
                         <Search size={16} />
                         Search
                     </button>
                     
                     <Link
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                         href={route("sales.add")}
                     >
                         <Plus size={16} />
@@ -162,7 +162,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                 <div className="overflow-x-auto">
                     {sales.data.length > 0 ? (
                         <table className="table table-auto w-full">
-                            <thead className={`${isShadowUser ? 'bg-warning' : 'bg-primary'} text-white`}>
+                            <thead className={`${isShadowUser ? 'bg-warning' : 'bg-[#1e4d2b] text-white'} text-white`}>
                                 <tr>
                                     <th>Invoice No</th>
                                     <th>Customer</th>
@@ -308,7 +308,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                             </p>
                             {!hasActiveFilters && (
                                 <Link
-                                    className="btn btn-primary btn-sm mt-2"
+                                    className="btn bg-[#1e4d2b] text-white btn-sm mt-2"
                                     href={route("sales.create")}
                                 >
                                     <Plus size={16} />

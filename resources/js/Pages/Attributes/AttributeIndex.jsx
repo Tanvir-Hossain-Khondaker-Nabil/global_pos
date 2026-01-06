@@ -140,7 +140,7 @@ export default function AttributeIndex({ attributes }) {
                 </div>
                 <button
                     onClick={handleCreate}
-                    className="btn btn-primary"
+                    className="btn bg-[#1e4d2b] text-white"
                 >
                     <Plus size={16} className="mr-2" />
                     {t('attributes.create_attribute', 'Create Attribute')}
@@ -250,7 +250,7 @@ export default function AttributeIndex({ attributes }) {
                         <div className="flex gap-2">
                             <button
                                 type="submit"
-                                className="btn btn-primary"
+                                className="btn bg-[#1e4d2b] text-white"
                                 disabled={attributeForm.processing}
                             >
                                 <Save size={16} className="mr-2" />
@@ -288,7 +288,7 @@ export default function AttributeIndex({ attributes }) {
                             <div className="flex gap-1">
                                 <button
                                     onClick={() => handleEdit(attribute)}
-                                    className="btn btn-sm btn-outline btn-primary"
+                                    className="btn btn-sm btn-outline bg-[#1e4d2b] text-white"
                                 >
                                     <Edit size={14} />
                                 </button>
@@ -344,7 +344,7 @@ export default function AttributeIndex({ attributes }) {
                                         />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button type="submit" className="btn btn-sm btn-primary flex-1">
+                                        <button type="submit" className="btn btn-sm bg-[#1e4d2b] text-white flex-1">
                                             <Plus size={12} className="mr-1" />
                                             {t('attributes.add', 'Add')}
                                         </button>
@@ -388,7 +388,7 @@ export default function AttributeIndex({ attributes }) {
                     </p>
                     <button
                         onClick={handleCreate}
-                        className="btn btn-primary"
+                        className="btn bg-[#1e4d2b] text-white"
                     >
                         <Plus size={16} className="mr-2" />
                         {t('attributes.create_attribute', 'Create Attribute')}

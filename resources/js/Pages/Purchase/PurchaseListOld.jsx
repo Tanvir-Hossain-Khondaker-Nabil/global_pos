@@ -174,7 +174,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                     </div>
                         <Link
                             href={route("purchase.create")}
-                            className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
+                            className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'bg-[#1e4d2b] text-white'}`}
                         >
                             <Plus size={15} />
                             {t('purchase.new_purchase', 'New Purchase')}
@@ -216,7 +216,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
             <div className="overflow-x-auto">
                 {safePurchases.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
+                        <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-[#1e4d2b] text-white text-primary-content"}>
                             <tr>
                                 <th className="bg-opacity-20">#</th>
                                 <th>{t('purchase.purchase_details', 'Purchase Details')}</th>
@@ -418,7 +418,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
                             )}
                                 <Link
                                     href={route("purchase.create")}
-                                    className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'btn-primary'}`}
+                                    className={`btn btn-sm ${isShadowUser ? 'btn-warning' : 'bg-[#1e4d2b] text-white'}`}
                                 >
                                     <Plus size={15} />
                                     {t('purchase.new_purchase', 'Create Purchase')}

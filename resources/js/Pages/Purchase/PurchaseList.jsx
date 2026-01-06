@@ -328,7 +328,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                                             <button
                                                 type="button"
                                                 onClick={setFullPayment}
-                                                className="btn btn-sm btn-outline btn-primary flex-1"
+                                                className="btn btn-sm btn-outline bg-[#1e4d2b] text-white flex-1"
                                                 disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
                                             >
                                                 Full
@@ -392,7 +392,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                                         </button>
                                         <button
                                             type="submit"
-                                            className="btn btn-primary flex-1"
+                                            className="btn bg-[#1e4d2b] text-white flex-1"
                                             disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
                                         >
                                             {processingPayment ? (
@@ -452,7 +452,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <div className="overflow-x-auto rounded-xl border border-gray-100">
                 {safePurchases.length > 0 ? (
                     <table className="table w-full">
-                        <thead className={`text-white uppercase text-[10px] tracking-widest ${isShadowUser ? 'bg-amber-500' : 'bg-[#1e4d2b]'}`}>
+                        <thead className={`text-white uppercase text-[10px] tracking-widest ${isShadowUser ? 'bg-amber-500' : 'bg-[#1e4d2b] text-white'}`}>
                             <tr>
                                 <th className="py-4">#</th>
                                 <th>Details</th>
@@ -531,7 +531,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                                                     <div className="mt-2">
                                                         <button
                                                             onClick={() => openPaymentModal(purchase)}
-                                                            className="btn btn-xs btn-primary w-full flex items-center justify-center gap-1"
+                                                            className="btn btn-xs bg-[#1e4d2b] text-white w-full flex items-center justify-center gap-1"
                                                         >
                                                             <CreditCard size={12} />
                                                             Pay Now
@@ -544,7 +544,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                                             <div className="flex justify-end gap-1">
                                                 <Link 
                                                     href={route("purchase.show", purchase.id)} 
-                                                    className="btn btn-ghost btn-square btn-xs hover:bg-[#1e4d2b] hover:text-white"
+                                                    className="btn btn-ghost btn-square btn-xs hover:bg-[#1e4d2b] text-white hover:text-white"
                                                     title="View Details"
                                                 >
                                                     <Eye size={16} />

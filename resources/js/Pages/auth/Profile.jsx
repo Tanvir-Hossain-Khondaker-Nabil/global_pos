@@ -90,7 +90,7 @@ export default function Profile() {
                 <button 
                     disabled={processing} 
                     type='submit' 
-                    className='btn btn-primary'
+                    className='btn bg-[#1e4d2b] text-white'
                 >
                     {processing ? 'Saving...' : t('auth.save_changes', 'Save Changes')}
                 </button>

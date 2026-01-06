@@ -65,7 +65,7 @@ function Login() {
                 <button 
                     type='submit' 
                     disabled={processing} 
-                    className="btn btn-primary w-full mt-4"
+                    className="btn bg-[#1e4d2b] text-white w-full mt-4"
                 >
                     {processing ? t('auth.logging_in', 'Logging in...') : t('auth.login_button', 'Login')}
                 </button>

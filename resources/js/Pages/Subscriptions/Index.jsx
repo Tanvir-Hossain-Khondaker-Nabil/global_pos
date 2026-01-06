@@ -118,7 +118,7 @@ export default function Index({ subscriptions }) {
                 <div className="flex items-center gap-2">
                     <Link
                         href={route("subscriptions.create")}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Plus size={15} /> {t('subscription.create_subscription', 'Create New Subscription')}
                     </Link>
@@ -180,7 +180,7 @@ export default function Index({ subscriptions }) {
             <div className="overflow-x-auto">
                 {subscriptions.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th className="text-center">{t('subscription.sl', 'SL')}</th>
                                 <th>{t('subscription.user', 'User')}</th>
@@ -273,7 +273,7 @@ export default function Index({ subscriptions }) {
                                         <div className="flex items-center gap-2 justify-center">
                                             <Link
                                                 href={route("subscriptions.show", subscription.id)}
-                                                className="btn btn-primary btn-xs"
+                                                className="btn bg-[#1e4d2b] text-white btn-xs"
                                             >
                                                 <Eye size={12} /> {t('subscription.view', 'View')}
                                             </Link>
@@ -318,7 +318,7 @@ export default function Index({ subscriptions }) {
                         </p>
                         <Link
                             href={route("subscriptions.create")}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('subscription.create_subscription', 'Create New Subscription')}
                         </Link>
@@ -351,7 +351,7 @@ export default function Index({ subscriptions }) {
                                 <Link
                                     key={index}
                                     href={link.url}
-                                    className={`join-item btn btn-sm ${link.active ? 'btn-primary' : ''}`}
+                                    className={`join-item btn btn-sm ${link.active ? 'bg-[#1e4d2b] text-white' : ''}`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />
                             ))}

@@ -63,7 +63,7 @@ export default function PaymentShow({ payment, business, isShadowUser }) {
             card: { 
                 icon: CreditCard, 
                 color: "text-primary",
-                bgColor: "bg-primary/10",
+                bgColor: "bg-[#1e4d2b] text-white/10",
                 label: t('payment.card', 'Card')
             },
             bank: { 

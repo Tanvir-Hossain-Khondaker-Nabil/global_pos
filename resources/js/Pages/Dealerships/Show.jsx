@@ -363,7 +363,7 @@ export default function DealershipShow({ delership }) {
                                         href={`/storage/${delership.contract_file}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="btn btn-primary btn-xs"
+                                        className="btn bg-[#1e4d2b] text-white btn-xs"
                                     >
                                         <FileText size={12} /> View Contract
                                     </a>
@@ -417,7 +417,7 @@ export default function DealershipShow({ delership }) {
                                         href={`/storage/${delership.agreement_doc}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="btn btn-primary btn-xs"
+                                        className="btn bg-[#1e4d2b] text-white btn-xs"
                                     >
                                         <Download size={12} /> Download
                                     </a>
@@ -432,7 +432,7 @@ export default function DealershipShow({ delership }) {
                                         href={`/storage/${delership.bank_guarantee_doc}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="btn btn-primary btn-xs"
+                                        className="btn bg-[#1e4d2b] text-white btn-xs"
                                     >
                                         <Download size={12} /> Download
                                     </a>
@@ -447,7 +447,7 @@ export default function DealershipShow({ delership }) {
                                         href={`/storage/${delership.trade_license_doc}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="btn btn-primary btn-xs"
+                                        className="btn bg-[#1e4d2b] text-white btn-xs"
                                     >
                                         <Download size={12} /> Download
                                     </a>
@@ -462,7 +462,7 @@ export default function DealershipShow({ delership }) {
                                         href={`/storage/${delership.nid_doc}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="btn btn-primary btn-xs"
+                                        className="btn bg-[#1e4d2b] text-white btn-xs"
                                     >
                                         <Download size={12} /> Download
                                     </a>
@@ -477,7 +477,7 @@ export default function DealershipShow({ delership }) {
                                         href={`/storage/${delership.tax_clearance_doc}`} 
                                         target="_blank" 
                                         rel="noopener noreferrer"
-                                        className="btn btn-primary btn-xs"
+                                        className="btn bg-[#1e4d2b] text-white btn-xs"
                                     >
                                         <Download size={12} /> Download
                                     </a>

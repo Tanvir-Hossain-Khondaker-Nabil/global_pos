@@ -144,7 +144,7 @@ export default function AddWarehouse({ warehouse }) {
                 <div className="flex gap-3 mt-6">
                     <button
                         type="submit"
-                        className="btn btn-primary"
+                        className="btn bg-[#1e4d2b] text-white"
                         disabled={form.processing}
                     >
                         {form.processing 

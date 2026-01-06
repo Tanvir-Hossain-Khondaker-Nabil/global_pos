@@ -118,7 +118,7 @@ export default function AllSalesItems({ salesItems }) {
                                 if (filters.warehouse) queryString.warehouse_id = filters.warehouse;
                                 router.get(route("salesItems.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
                             }}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Search size={14} />
                             Search
@@ -185,7 +185,7 @@ export default function AllSalesItems({ salesItems }) {
             <div className="overflow-x-auto rounded-box border border-base-content/5 bg-base-100">
                 {safeSalesItems.length > 0 ? (
                     <table className="table">
-                        <thead className={`${isShadowUser ? 'bg-warning' : 'bg-primary'} text-white`}>
+                        <thead className={`${isShadowUser ? 'bg-warning' : 'bg-[#1e4d2b] text-white'} text-white`}>
                             <tr>
                                 <th className="w-8"></th>
                                 <th>Product</th>
@@ -416,7 +416,7 @@ export default function AllSalesItems({ salesItems }) {
                             <Link
                                 key={index}
                                 href={link.url}
-                                className={`join-item btn btn-sm ${link.active ? 'btn-primary' : ''
+                                className={`join-item btn btn-sm ${link.active ? 'bg-[#1e4d2b] text-white' : ''
                                     }`}
                                 preserveScroll
                                 preserveState
@@ -441,7 +441,7 @@ export default function AllSalesItems({ salesItems }) {
             {/* Summary Stats */}
             {safeSalesItems.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                    <div className="stat bg-primary/10 rounded-box">
+                    <div className="stat bg-[#1e4d2b] text-white/10 rounded-box">
                         <div className="stat-title">Total Items</div>
                         <div className="stat-value text-primary text-lg">
                             {salesItems.total || 0}

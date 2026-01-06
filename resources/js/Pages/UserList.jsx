@@ -91,7 +91,7 @@ export default function UserList({ users, filters }) {
                     />
                     <button
                         onClick={() => setModel(!model)}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Plus size={15} /> {t('user.add_new', 'Add new')}
                     </button>
@@ -101,7 +101,7 @@ export default function UserList({ users, filters }) {
             <div className="overflow-x-auto">
                 {users.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th></th>
                                 <th>{t('user.user', 'User')}</th>
@@ -186,7 +186,7 @@ export default function UserList({ users, filters }) {
                         </h1>
                         <button
                             onClick={() => setModel(!model)}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('user.add_new', 'Add new')}
                         </button>
@@ -331,7 +331,7 @@ export default function UserList({ users, filters }) {
                         </fieldset>
                         <button
                             disabled={userForm.processing}
-                            className="btn btn-primary"
+                            className="btn bg-[#1e4d2b] text-white"
                             type="submit"
                         >
                             {userForm.processing ? t('user.saving', 'Saving...') : t('user.add_now', 'Add now')}

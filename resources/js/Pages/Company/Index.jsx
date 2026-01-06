@@ -179,7 +179,7 @@ export default function Index({ companies, filters }) {
                     />
                         <button
                             onClick={() => setModel(true)}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('company.add_new', 'Add New')}
                         </button>
@@ -189,7 +189,7 @@ export default function Index({ companies, filters }) {
             <div className="overflow-x-auto">
                 {hasCompanies ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th className="w-12">#</th>
                                 <th>{t('company.company_details', 'Company Details')}</th>
@@ -307,7 +307,7 @@ export default function Index({ companies, filters }) {
                         </div>
                             <button
                                 onClick={() => setModel(true)}
-                                className="btn btn-primary btn-sm"
+                                className="btn bg-[#1e4d2b] text-white btn-sm"
                             >
                                 <Plus size={15} /> {t('company.add_new_company', 'Add New Company')}
                             </button>
@@ -515,7 +515,7 @@ export default function Index({ companies, filters }) {
                             <button
                                 type="submit"
                                 disabled={companyForm.processing}
-                                className="btn btn-primary flex-1"
+                                className="btn bg-[#1e4d2b] text-white flex-1"
                             >
                                 {companyForm.processing ? 
                                     t('company.processing', 'Processing...') : 

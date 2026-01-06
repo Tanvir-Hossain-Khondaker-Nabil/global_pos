@@ -449,7 +449,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                         {t('product.product_type', 'Product Type')} *
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className={`card cursor-pointer border-2 ${productType === 'regular' ? 'border-primary bg-primary/5' : 'border-base-300 hover:border-primary/50'}`}>
+                        <label className={`card cursor-pointer border-2 ${productType === 'regular' ? 'border-primary bg-[#1e4d2b] text-white/5' : 'border-base-300 hover:border-primary/50'}`}>
                             <div className="card-body p-4">
                                 <div className="flex items-start">
                                     <input
@@ -720,7 +720,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                         </h3>
                         <button
                             type="button"
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                             onClick={() => setShowAttributeSelector(!showAttributeSelector)}
                         >
                             {showAttributeSelector ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -770,7 +770,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                                 </div>
                                 <button
                                     type="button"
-                                    className="btn btn-primary btn-sm"
+                                    className="btn bg-[#1e4d2b] text-white btn-sm"
                                     onClick={applyAttributeSelection}
                                 >
                                     {t('product.apply_attributes', 'Apply Attributes')}
@@ -941,7 +941,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                         </div>
 
                         <button
-                            className={`btn ${productType === 'in_house' ? 'btn-warning' : 'btn-primary'}`}
+                            className={`btn ${productType === 'in_house' ? 'btn-warning' : 'bg-[#1e4d2b] text-white'}`}
                             type="submit"
                             disabled={productForm.processing}
                         >

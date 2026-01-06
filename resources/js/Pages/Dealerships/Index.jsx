@@ -132,7 +132,7 @@ export default function Index({ dellerships, filters }) {
                 <div className="flex items-center gap-2">
                     <Link
                         href={route("dealerships.create")}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Plus size={15} /> Add New Dealership
                     </Link>
@@ -175,7 +175,7 @@ export default function Index({ dellerships, filters }) {
             <div className="overflow-x-auto">
                 {dellerships.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th className="text-center">SL</th>
                                 <th>Dealership Info</th>
@@ -353,7 +353,7 @@ export default function Index({ dellerships, filters }) {
                                         <div className="flex items-center gap-2 justify-center">
                                             <Link
                                                 href={route("dealerships.show", dealership.id)}
-                                                className="btn btn-primary btn-xs"
+                                                className="btn bg-[#1e4d2b] text-white btn-xs"
                                             >
                                                 <Eye size={12} />
                                             </Link>
@@ -390,7 +390,7 @@ export default function Index({ dellerships, filters }) {
                         </p>
                         <Link
                             href={route("dealerships.create")}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> Add New Dealership
                         </Link>
@@ -422,7 +422,7 @@ export default function Index({ dellerships, filters }) {
                                 <Link
                                     key={index}
                                     href={link.url}
-                                    className={`join-item btn btn-sm ${link.active ? 'btn-primary' : ''}`}
+                                    className={`join-item btn btn-sm ${link.active ? 'bg-[#1e4d2b] text-white' : ''}`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />
                             ))}

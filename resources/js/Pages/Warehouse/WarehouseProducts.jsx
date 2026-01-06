@@ -195,7 +195,7 @@ export default function WarehouseProducts({ warehouse, products, isShadowUser })
                                     {/* Variants Table */}
                                     <div className="p-4">
                                         <table className="table table-auto w-full">
-                                            <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-primary text-primary-content"}>
+                                            <thead className={isShadowUser ? "bg-warning text-warning-content" : "bg-[#1e4d2b] text-white text-primary-content"}>
                                                 <tr>
                                                     <th className="bg-opacity-20">{t('warehouse.variant', 'Variant')}</th>
                                                     <th className="bg-opacity-20">{t('warehouse.sku', 'SKU')}</th>

@@ -373,7 +373,7 @@ export default function InvoiceComponent({
                 <div className="flex items-center gap-2 justify-center print:hidden mt-3">
                     <button
                         onClick={handlePrint}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Printer size={13} /> Print Now
                     </button>

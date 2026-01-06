@@ -92,7 +92,7 @@ export default function Index({ plans }) {
                 <div className="flex items-center gap-2">
                     <Link
                         href={route("plans.create")}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Plus size={15} /> {t('plan.create_new_plan', 'Create New Plan')}
                     </Link>
@@ -151,7 +151,7 @@ export default function Index({ plans }) {
             <div className="overflow-x-auto">
                 {plans.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th className="text-center">{t('plan.sl', 'SL')}</th>
                                 <th>{t('plan.plan_name', 'Plan Name')}</th>
@@ -257,7 +257,7 @@ export default function Index({ plans }) {
                                             </Link>
                                             <Link
                                                 href={route("plans.show", plan.id)}
-                                                className="btn btn-primary btn-xs"
+                                                className="btn bg-[#1e4d2b] text-white btn-xs"
                                             >
                                                 <Eye size={12} /> {t('plan.view', 'View')}
                                             </Link>
@@ -294,7 +294,7 @@ export default function Index({ plans }) {
                         </p>
                         <Link
                             href={route("plans.create")}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('plan.create_new_plan', 'Create New Plan')}
                         </Link>
@@ -331,7 +331,7 @@ export default function Index({ plans }) {
                                 <Link
                                     key={index}
                                     href={link.url}
-                                    className={`join-item btn btn-sm ${link.active ? 'btn-primary' : ''}`}
+                                    className={`join-item btn btn-sm ${link.active ? 'bg-[#1e4d2b] text-white' : ''}`}
                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                 />
                             ))}

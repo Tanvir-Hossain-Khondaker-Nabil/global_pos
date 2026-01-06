@@ -64,7 +64,7 @@ export default function Index({ extracashdata, query }) {
                     />
                     <button
                         onClick={() => setModel(!model)}
-                        className="btn btn-primary btn-sm"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
                     >
                         <Plus size={15} /> {t('extra_cash.add_new', 'Add new')}
                     </button>
@@ -74,7 +74,7 @@ export default function Index({ extracashdata, query }) {
             <div className="overflow-x-auto">
                 {extracashdata.data.length > 0 ? (
                     <table className="table table-auto w-full">
-                        <thead className="bg-primary text-white">
+                        <thead className="bg-[#1e4d2b] text-white text-white">
                             <tr>
                                 <th></th>
                                 <th>{t('extra_cash.created_by', 'Created by')}</th>
@@ -130,7 +130,7 @@ export default function Index({ extracashdata, query }) {
                         </h1>
                         <button
                             onClick={() => setModel(!model)}
-                            className="btn btn-primary btn-sm"
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Plus size={15} /> {t('extra_cash.add_new', 'Add new')}
                         </button>
@@ -194,7 +194,7 @@ export default function Index({ extracashdata, query }) {
 
                         <button
                             disabled={processing}
-                            className="btn btn-sm btn-primary"
+                            className="btn btn-sm bg-[#1e4d2b] text-white"
                             type="submit"
                         >
                             {processing ? t('common.processing', 'Processing...') : t('extra_cash.add_now', 'Add now')}

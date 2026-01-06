@@ -337,7 +337,7 @@ export default function PurchaseReturnList({
                     {row.status === 'approved' && (
                         <button
                             onClick={() => handleComplete(row.id)}
-                            className={`btn btn-xs btn-outline ${row.return_type === 'money_back' ? 'btn-primary' : 'btn-warning'}`}
+                            className={`btn btn-xs btn-outline ${row.return_type === 'money_back' ? 'bg-[#1e4d2b] text-white' : 'btn-warning'}`}
                             title={`Complete ${row.return_type === 'money_back' ? 'Refund' : 'Replacement'}`}
                         >
                             {row.return_type === 'money_back' ? (
@@ -465,7 +465,7 @@ export default function PurchaseReturnList({
                     {row.status === 'approved' && (
                         <button
                             onClick={() => handleComplete(row.id)}
-                            className={`btn btn-sm ${row.return_type === 'money_back' ? 'btn-primary' : 'btn-warning'}`}
+                            className={`btn btn-sm ${row.return_type === 'money_back' ? 'bg-[#1e4d2b] text-white' : 'btn-warning'}`}
                         >
                             {row.return_type === 'money_back' ? (
                                 <>
@@ -542,7 +542,7 @@ export default function PurchaseReturnList({
                     </button>
                     <button
                         onClick={() => router.visit(route("purchase-return.create"))}
-                        className="btn btn-sm btn-primary"
+                        className="btn btn-sm bg-[#1e4d2b] text-white"
                     >
                         <RefreshCw size={14} className="mr-1" />
                         {t('purchase_return.create_new', 'Create Return')}
@@ -679,7 +679,7 @@ export default function PurchaseReturnList({
                     </div>
                 </div>
 
-                <div className="card card-compact bg-primary/10 border border-primary">
+                <div className="card card-compact bg-[#1e4d2b] text-white/10 border border-primary">
                     <div className="card-body">
                         <div className="flex items-center justify-between">
                             <div>
@@ -783,7 +783,7 @@ export default function PurchaseReturnList({
                             </p>
                             <button
                                 onClick={() => router.visit(route("purchase-return.create"))}
-                                className="btn btn-primary"
+                                className="btn bg-[#1e4d2b] text-white"
                             >
                                 <RefreshCw size={16} className="mr-2" />
                                 {t('purchase_return.create_first_return', 'Create Your First Return')}
@@ -803,7 +803,7 @@ export default function PurchaseReturnList({
                                                 router.get(link.url, {}, { preserveState: true });
                                             }
                                         }}
-                                        className={`join-item btn btn-sm ${link.active ? 'btn-primary' : ''} ${!link.url ? 'btn-disabled' : ''}`}
+                                        className={`join-item btn btn-sm ${link.active ? 'bg-[#1e4d2b] text-white' : ''} ${!link.url ? 'btn-disabled' : ''}`}
                                         dangerouslySetInnerHTML={{ __html: link.label }}
                                     />
                                 ))}
