@@ -276,6 +276,15 @@ const baseMenu = [
         category: "Finance"
     },
     {
+        title: "Accounts",
+        icon: "dollar-sign",
+        route: "accounts.index",
+        routeParams: null,
+        active: "accounts.index",
+        role: "all",
+        category: "Finance"
+    },
+    {
         title: "Ledgers",
         icon: "box",
         route: "ledgers.index",

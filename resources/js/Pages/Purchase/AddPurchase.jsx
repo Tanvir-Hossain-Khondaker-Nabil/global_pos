@@ -45,6 +45,19 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
         }
     }, [products]);
 
+    // Helper function to format variant display name
+    const formatVariantName = (variant) => {
+        if (!variant.attribute_values || Object.keys(variant.attribute_values).length === 0) {
+            return 'Default';
+        }
+        
+        // Combine all attributes
+        return Object.entries(variant.attribute_values)
+            .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+            .map(([key, value]) => `${key}: ${value}`)
+            .join(', ');
+    };
+
     // Get account icon
     const getAccountIcon = (type) => {
         switch (type) {
@@ -208,12 +221,16 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
             let filtered = products;
             
             if (selectedBrand) {
-                filtered = filtered.filter(product => 
-                    product.brand?.name === selectedBrand ||
-                    (product.variants && product.variants.some(variant => 
-                        variant.attribute_values && Object.keys(variant.attribute_values).includes(selectedBrand)
-                    ))
-                );
+                filtered = filtered.filter(product => {
+                    // Check if product brand matches
+                    if (product.brand?.name === selectedBrand) return true;
+                    
+                    // Check if any variant has the selected brand as an attribute
+                    return product.variants?.some(variant => 
+                        variant.attribute_values && 
+                        Object.keys(variant.attribute_values).includes(selectedBrand)
+                    );
+                });
             }
             
             filtered = filtered.filter(product =>
@@ -225,12 +242,16 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
             setFilteredProducts(filtered);
             setShowDropdown(true);
         } else if (selectedBrand) {
-            const filtered = products.filter(product => 
-                product.brand?.name === selectedBrand ||
-                (product.variants && product.variants.some(variant => 
-                    variant.attribute_values && Object.keys(variant.attribute_values).includes(selectedBrand)
-                ))
-            );
+            const filtered = products.filter(product => {
+                // Check if product brand matches
+                if (product.brand?.name === selectedBrand) return true;
+                
+                // Check if any variant has the selected brand as an attribute
+                return product.variants?.some(variant => 
+                    variant.attribute_values && 
+                    Object.keys(variant.attribute_values).includes(selectedBrand)
+                );
+            });
             setFilteredProducts(filtered);
             setShowDropdown(true);
         } else {
@@ -249,11 +270,25 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const addItem = (product, variant, specificBrand = null, specificValue = null) => {
+    const addItem = (product, variant) => {
+        const hasAttributes = variant.attribute_values && Object.keys(variant.attribute_values).length > 0;
+        
+        // Create a unique identifier that includes all attributes
+        let variantIdentifier = '';
+        if (hasAttributes) {
+            // Sort attributes to maintain consistency
+            const sortedAttributes = Object.entries(variant.attribute_values || {})
+                .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
+            variantIdentifier = sortedAttributes.map(([key, value]) => `${key}:${value}`).join('|');
+        } else {
+            variantIdentifier = 'default';
+        }
+        
+        // Find existing item
         const existingItemIndex = selectedItems.findIndex(item => 
             item.product_id === product.id && 
             item.variant_id === variant.id && 
-            item.selected_brand === specificBrand
+            item.variant_identifier === variantIdentifier
         );
 
         if (existingItemIndex !== -1) {
@@ -265,24 +300,29 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
         } else {
             const unitCost = variant.unit_cost || 0;
             
-            let variantDisplayName = 'Default';
-            if (specificValue) {
-                variantDisplayName = specificValue.toLowerCase() === 'default' ? 'Default' : specificValue;
-            } else if (variant.sku) {
-                variantDisplayName = variant.sku;
+            // Create display name for variant
+            let variantDisplayName = formatVariantName(variant);
+            let brandName = product.brand?.name || 'Unknown';
+            
+            // Determine brand from attributes if specified
+            if (selectedBrand && variant.attribute_values && variant.attribute_values[selectedBrand]) {
+                brandName = selectedBrand;
             }
 
             setSelectedItems([...selectedItems, {
                 product_id: product.id, 
                 variant_id: variant.id, 
                 product_name: product.name,
-                brand_name: specificBrand || product.brand?.name || 'Unknown',
-                variant_name: variantDisplayName, 
-                selected_brand: specificBrand, 
+                brand_name: brandName,
+                variant_name: variantDisplayName,
+                variant_identifier: variantIdentifier,
+                selected_brand: selectedBrand, 
                 quantity: 1, 
                 unit_price: unitCost,
                 sale_price: variant.selling_price || 0, 
-                total_price: unitCost * 1
+                total_price: unitCost * 1,
+                // Store all attributes for reference
+                attributes: variant.attribute_values || {}
             }]);
         }
         
@@ -382,7 +422,26 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
             }
         }
         
+        // Prepare items with proper structure
+        const itemsToSubmit = selectedItems.map(item => ({
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            sale_price: item.sale_price,
+            total_price: item.total_price,
+            attributes: item.attributes || {}
+        }));
+
+        const submitData = {
+            ...form.data,
+            items: itemsToSubmit,
+            paid_amount: paidAmount,
+            payment_status: paymentStatus
+        };
+
         form.post(route("purchase.store"), {
+            data: submitData,
             preserveScroll: true,
             onSuccess: () => {
                 router.visit(route("purchase.list"));
@@ -531,7 +590,7 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
                         </div>
 
                         {/* Brand Filter Section */}
-                        {brands.length > 0 && (
+                        {/* {brands.length > 0 && (
                             <div className="card card-compact bg-white border border-gray-200 rounded-2xl">
                                 <div className="card-body">
                                     <h3 className="card-title text-sm font-black uppercase text-gray-900 flex items-center gap-2">
@@ -555,7 +614,7 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
                                                     setProductSearch("");
                                                     setShowDropdown(true);
                                                 }}
-                                                className={`btn btn-xs rounded-lg ${selectedBrand === brand ? 'bg-[#1e4d2b] text-white text-white' : 'bg-gray-100 text-gray-700'}`}
+                                                className={`btn btn-xs rounded-lg ${selectedBrand === brand ? 'bg-[#1e4d2b] text-white' : 'bg-gray-100 text-gray-700'}`}
                                             >
                                                 {brand}
                                             </button>
@@ -574,11 +633,11 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
                                     )}
                                 </div>
                             </div>
-                        )}
+                        )} */}
 
                         {/* Payment Info Card */}
                         {!isShadowUser && (
-                            <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl text-white shadow-lg">
+                            <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl shadow-lg">
                                 <div className="card-body">
                                     <div className="flex justify-between items-center mb-2">
                                         <h3 className="card-title text-sm font-black uppercase text-red-500 flex items-center gap-2">
@@ -738,44 +797,55 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
                                     {filteredProducts.map(product => (
                                         <div key={product.id} className="border-b border-gray-100 last:border-0">
                                             <div className="bg-gray-100 px-4 py-1.5 text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                                                {product.name}
+                                                {product.name} ({product.product_no})
+                                                {product.brand?.name && (
+                                                    <span className="ml-2 text-red-600">Brand: {product.brand.name}</span>
+                                                )}
                                             </div>
+                                            
                                             {product.variants?.map(variant => {
-                                                const hasAttributes = variant.attribute_values && Object.keys(variant.attribute_values).length > 0;
-                                                
-                                                if (hasAttributes) {
-                                                    return Object.entries(variant.attribute_values).map(([attrKey, attrValue]) => {
-                                                        if (selectedBrand && attrKey !== selectedBrand) return null;
-
-                                                        return (
-                                                            <div 
-                                                                key={`${variant.id}-${attrKey}`} 
-                                                                className="p-3 hover:bg-red-50 cursor-pointer flex justify-between items-center transition-colors border-b border-dashed border-gray-100 last:border-none" 
-                                                                onClick={() => addItem(product, variant, attrKey, attrValue)}
-                                                            >
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-bold text-xs text-gray-800">{attrKey}</span>
-                                                                    <span className="text-[10px] text-gray-500">
-                                                                        {attrValue === 'default' ? 'Default' : attrValue}
-                                                                        {variant.sku && ` • SKU: ${variant.sku}`}
-                                                                    </span>
-                                                                </div>
-                                                                <span className="font-mono text-xs font-black text-gray-900">
-                                                                    ৳{formatCurrency(variant.unit_cost)}
-                                                                </span>
-                                                            </div>
-                                                        );
-                                                    });
-                                                } else {
-                                                    if (selectedBrand && product.brand?.name !== selectedBrand) return null;
+                                                // Check if this variant matches brand filter
+                                                const variantMatchesBrand = () => {
+                                                    if (!selectedBrand) return true;
                                                     
-                                                    return (
-                                                        <div key={variant.id} className="p-3 hover:bg-red-50 cursor-pointer flex justify-between items-center transition-colors" onClick={() => addItem(product, variant)}>
-                                                            <span className="font-bold text-xs">Default</span>
-                                                            <span className="font-mono text-xs font-black text-gray-900">৳{formatCurrency(variant.unit_cost)}</span>
+                                                    // Check if any attribute key matches the brand
+                                                    const attributeKeys = Object.keys(variant.attribute_values || {});
+                                                    return attributeKeys.includes(selectedBrand) || 
+                                                           product.brand?.name === selectedBrand;
+                                                };
+                                                
+                                                if (!variantMatchesBrand()) return null;
+                                                
+                                                const variantName = formatVariantName(variant);
+                                                
+                                                return (
+                                                    <div 
+                                                        key={variant.id} 
+                                                        className="p-3 hover:bg-red-50 cursor-pointer flex justify-between items-center transition-colors border-b border-dashed border-gray-100 last:border-none" 
+                                                        onClick={() => addItem(product, variant)}
+                                                    >
+                                                        <div className="flex flex-col">
+                                                            <span className="font-bold text-xs text-gray-800">
+                                                                {variantName}
+                                                            </span>
+                                                            {variant.sku && (
+                                                                <span className="text-[10px] text-gray-500 mt-1">
+                                                                    SKU: {variant.sku}
+                                                                </span>
+                                                            )}
                                                         </div>
-                                                    );
-                                                }
+                                                        <div className="text-right">
+                                                            <div className="font-mono text-xs font-black text-gray-900">
+                                                                ৳{formatCurrency(variant.unit_cost)}
+                                                            </div>
+                                                            {variant.attribute_values && Object.keys(variant.attribute_values).length > 0 && (
+                                                                <div className="text-[10px] text-gray-500 mt-1">
+                                                                    {Object.keys(variant.attribute_values).length} attributes
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
                                             })}
                                         </div>
                                     ))}
@@ -806,8 +876,29 @@ export default function AddPurchase({ suppliers, warehouses, products, accounts,
                                                             {item.product_name}
                                                         </h4>
                                                         <p className="text-[10px] text-red-600 font-black uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded w-fit mt-1">
-                                                            {item.brand_name}: {item.variant_name}
+                                                            {item.brand_name}
                                                         </p>
+                                                        
+                                                        {/* Display variant name */}
+                                                        <p className="text-xs text-gray-700 font-medium mt-2">
+                                                            {item.variant_name}
+                                                        </p>
+                                                        
+                                                        {/* Display individual attributes as tags */}
+                                                        {item.attributes && Object.keys(item.attributes).length > 0 && (
+                                                            <div className="mt-2">
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {Object.entries(item.attributes).map(([key, value], idx) => (
+                                                                        <span 
+                                                                            key={idx} 
+                                                                            className="text-[9px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded"
+                                                                        >
+                                                                            <span className="font-bold">{key}:</span> {value}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <button 
                                                         type="button" 
