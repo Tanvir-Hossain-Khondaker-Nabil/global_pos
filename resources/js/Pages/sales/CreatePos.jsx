@@ -36,6 +36,15 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const [newSupplierCompany, setNewSupplierCompany] = useState("");
     const [newSupplierPhone, setNewSupplierPhone] = useState("");
 
+    // Enhanced product search states
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+    const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+    const [showVariantDropdown, setShowVariantDropdown] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedBrand, setSelectedBrand] = useState(null);
+    const [availableBrands, setAvailableBrands] = useState([]);
+    const [availableVariants, setAvailableVariants] = useState([]);
+
     console.log("Customers:", customers);
     console.log("Product Stocks:", productstocks);
 
@@ -295,53 +304,198 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         });
     }, [selectedItems, pickupItems, vatRate, discountRate, paidAmount, shadowPaidAmount, usePartialPayment, adjustFromAdvance, selectedSupplier, selectedAccount, calculateRealSubTotal, calculatePickupSubTotal, calculateTotalSubTotal, calculateGrandTotal, calculateDueAmount]);
 
-    const getVariantDisplayName = (variant) => {
-        const parts = [];
+    // Enhanced product search functions
+    const getBrandsForProduct = (productId) => {
+        if (!productstocks || !productId) return [];
 
-        if (variant.attribute_values) {
-            if (typeof variant.attribute_values === 'object') {
-                const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => ` ${value}`)
-                    .join(', ');
-                parts.push(` ${attrs}`);
-            } else {
-                parts.push(`Attribute: ${variant.attribute_values}`);
-            }
-        }
+        const brandSet = new Set();
 
-        if (variant.sku) parts.push(`Sku: ${variant.sku}`);
-        return parts.join(', ') || 'Default Variant';
+        productstocks
+            .filter(stock => stock.product?.id === productId && stock.quantity > 0)
+            .forEach(stock => {
+                const variant = stock.variant;
+                if (variant && variant.attribute_values) {
+                    if (typeof variant.attribute_values === 'object') {
+                        Object.keys(variant.attribute_values).forEach(key => {
+                            brandSet.add(key);
+                        });
+                    }
+                }
+            });
+
+        return Array.from(brandSet).sort();
     };
 
-    const getBrandName = (variant) => {
-        const parts = [];
+    const getVariantsForBrand = (productId, brandName) => {
+        if (!productstocks || !productId) return [];
 
-        if (variant.attribute_values) {
-            if (typeof variant.attribute_values === 'object') {
-                const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => `${key}`)
-                    .join(', ');
-                parts.push(` ${attrs}`);
-            } else {
-                parts.push(`Attribute: ${variant.attribute_values}`);
-            }
+        const variants = [];
+
+        productstocks
+            .filter(stock => stock.product?.id === productId && stock.quantity > 0)
+            .forEach(stock => {
+                const variant = stock.variant;
+                if (variant && variant.attribute_values) {
+                    if (typeof variant.attribute_values === 'object') {
+                        if (!brandName || variant.attribute_values[brandName]) {
+                            const existingVariant = variants.find(v => v.variant?.id === variant.id);
+                            if (!existingVariant) {
+                                variants.push({
+                                    variant: variant,
+                                    stocks: [stock],
+                                    totalQuantity: Number(stock.quantity) || 0,
+                                    batch_no: stock.batch_no,
+                                    sale_price: stock.sale_price,
+                                    shadow_sale_price: stock.shadow_sale_price
+                                });
+                            } else {
+                                existingVariant.stocks.push(stock);
+                                existingVariant.totalQuantity += Number(stock.quantity) || 0;
+                            }
+                        }
+                    }
+                }
+            });
+
+        return variants.sort((a, b) => b.totalQuantity - a.totalQuantity);
+    };
+
+    // Handle product selection
+    const handleProductSelect = (product) => {
+        setSelectedProduct(product);
+        setSelectedBrand(null);
+        setAvailableVariants([]);
+
+        const brands = getBrandsForProduct(product.id);
+        setAvailableBrands(brands);
+
+        if (brands.length > 0) {
+            setShowBrandDropdown(true);
+            setShowProductDropdown(false);
+            setProductSearch(product.name);
+        } else {
+            const variants = getVariantsForBrand(product.id, '');
+            setAvailableVariants(variants);
+            setShowVariantDropdown(true);
+            setShowProductDropdown(false);
+        }
+    };
+
+    // Handle brand selection
+    const handleBrandSelect = (brand) => {
+        setSelectedBrand(brand);
+
+        const variants = getVariantsForBrand(selectedProduct.id, brand);
+        setAvailableVariants(variants);
+
+        setShowBrandDropdown(false);
+        setShowVariantDropdown(true);
+        setProductSearch(`${selectedProduct.name} - ${brand}`);
+    };
+
+    // Handle variant selection and add to cart
+    const handleVariantSelect = (variantWithStocks) => {
+        const { variant, stocks, totalQuantity, batch_no, sale_price, shadow_sale_price } = variantWithStocks;
+
+        const availableStock = stocks.find(s => s.quantity > 0) || stocks[0];
+
+        if (!availableStock) return;
+
+        const salePrice = Number(sale_price) || Number(availableStock.sale_price) || 0;
+        const shadowSalePrice = Number(shadow_sale_price) || Number(availableStock.shadow_sale_price) || 0;
+
+        const itemKey = `${selectedProduct.id}-${variant.id}-${availableStock.batch_no || 'default'}`;
+
+        const existingItem = selectedItems.find(
+            item => item.uniqueKey === itemKey
+        );
+
+        if (existingItem) {
+            setSelectedItems(selectedItems.map(item =>
+                item.uniqueKey === itemKey
+                    ? {
+                        ...item,
+                        quantity: item.quantity + 1,
+                        total_price: (item.quantity + 1) * item.unit_price
+                    }
+                    : item
+            ));
+        } else {
+            setSelectedItems([
+                ...selectedItems,
+                {
+                    uniqueKey: itemKey,
+                    product_id: selectedProduct.id,
+                    variant_id: variant.id,
+                    batch_no: availableStock.batch_no,
+                    product_name: selectedProduct.name,
+                    variant_name: selectedBrand
+                        ? variant.attribute_values?.[selectedBrand] || 'Default'
+                        : Object.values(variant.attribute_values || {})[0] || 'Default',
+                    variant_attribute: selectedBrand || Object.keys(variant.attribute_values || {})[0] || 'Default',
+                    product_code: selectedProduct.product_no || '',
+                    quantity: 1,
+                    stockQuantity: totalQuantity,
+                    stockId: availableStock.id,
+                    unit_price: salePrice,
+                    sell_price: salePrice,
+                    total_price: salePrice,
+                    shadow_sell_price: shadowSalePrice,
+                }
+            ]);
         }
 
-        return parts.join(', ') || 'Default Variant';
+        resetSelectionFlow();
+    };
+
+    // Reset the selection flow
+    const resetSelectionFlow = () => {
+        setSelectedProduct(null);
+        setSelectedBrand(null);
+        setAvailableBrands([]);
+        setAvailableVariants([]);
+        setShowProductDropdown(false);
+        setShowBrandDropdown(false);
+        setShowVariantDropdown(false);
+        setProductSearch("");
+    };
+
+    // Go back to product selection
+    const goBackToProducts = () => {
+        setSelectedProduct(null);
+        setSelectedBrand(null);
+        setAvailableBrands([]);
+        setAvailableVariants([]);
+        setShowBrandDropdown(false);
+        setShowVariantDropdown(false);
+        setShowProductDropdown(true);
+        setProductSearch("");
+    };
+
+    // Go back to brand selection
+    const goBackToBrands = () => {
+        setSelectedBrand(null);
+        setAvailableVariants([]);
+        setShowVariantDropdown(false);
+        setShowBrandDropdown(true);
     };
 
     // Filter products based on search
     useEffect(() => {
-        if (productSearch) {
-            const filtered = productstocks.filter(productstock =>
-                productstock.product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                productstock.product.product_no?.toLowerCase().includes(productSearch.toLowerCase())
-            );
-            setFilteredProducts(filtered);
-        } else {
-            setFilteredProducts(productstocks.slice(0, 10));
+        if (!productSearch.trim()) {
+            setFilteredProducts(allProducts);
+            return;
         }
-    }, [productSearch, productstocks]);
+
+        const searchTerm = productSearch.toLowerCase();
+        const filtered = allProducts.filter(product =>
+            product.name.toLowerCase().includes(searchTerm) ||
+            product.product_no?.toLowerCase().includes(searchTerm) ||
+            product.code?.toLowerCase().includes(searchTerm)
+        );
+
+        setFilteredProducts(filtered);
+    }, [productSearch, allProducts]);
 
     const addItem = (productstock, variant) => {
         const variantId = variant?.id || 0;
@@ -367,8 +521,16 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     variant_id: variantId,
                     product_name: productstock.product.name,
                     product_code: productstock.product.product_no || '',
-                    model_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
-                    variant_name: variant ? getBrandName(variant) : 'Default Variant',
+                    model_name: variant && variant.attribute_values ? 
+                        (typeof variant.attribute_values === 'object' ? 
+                            Object.values(variant.attribute_values).join(', ') : 
+                            variant.attribute_values) : 
+                        'Default Variant',
+                    variant_name: variant && variant.attribute_values ? 
+                        (typeof variant.attribute_values === 'object' ? 
+                            Object.keys(variant.attribute_values).join(', ') : 
+                            'Default Variant') : 
+                        'Default Variant',
                     quantity: 1,
                     stockQuantity: Number(productstock.quantity) || 0,
                     stockId: productstock.id,
@@ -391,11 +553,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             return;
         }
 
-        // if (!selectedSupplier) {
-        //     alert("Please select a supplier for pickup item");
-        //     return;
-        // }
-
         const newItem = {
             id: Date.now(),
             product_name: pickupProductName,
@@ -405,9 +562,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             unit_price: Number(pickupUnitPrice),
             sale_price: Number(pickupSalePrice),
             total_price: Number(pickupQuantity) * Number(pickupSalePrice),
-            // supplier_id: selectedSupplier.id,
-            // supplier_name: selectedSupplier.name,
-            // supplier_company: selectedSupplier.company,
         };
 
         setPickupItems([...pickupItems, newItem]);
@@ -549,15 +703,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             alert("Please provide customer name and phone number");
             return;
         }
-
-        // Validate pickup items have suppliers
-        // if (pickupItems.length > 0) {
-        //     const itemsWithoutSupplier = pickupItems.filter(item => !item.supplier_id);
-        //     if (itemsWithoutSupplier.length > 0) {
-        //         alert("Please ensure all pickup items have a supplier assigned");
-        //         return;
-        //     }
-        // }
 
         // Validate account selection
         if (!selectedAccount) {
@@ -858,7 +1003,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                         </div>
                     </div>
 
-                    {/* Product Selection */}
+                    {/* Product Selection - UPDATED with enhanced search */}
                     <div className="lg:col-span-2">
                         {/* Header with both sale types */}
                         <div className="flex justify-between items-center mb-4">
@@ -870,53 +1015,212 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             </div>
                         </div>
 
-                        {/* Stock Products Section */}
+                        {/* Stock Products Section - ENHANCED SEARCH */}
                         <div className="mb-6">
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-bold text-gray-700">Stock Products</h4>
+                                <button
+                                    type="button"
+                                    className="btn btn-xs btn-outline"
+                                    onClick={() => {
+                                        setProductSearch("");
+                                        setShowProductDropdown(!showProductDropdown);
+                                    }}
+                                >
+                                    <Search size={12} className="mr-1" /> Search Stock
+                                </button>
+                            </div>
+
+                            {/* Enhanced Product Search */}
                             <div className="form-control mb-4 relative">
-                                <label className="label">
-                                    <span className="label-text">Add Stock Products</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full pr-10"
-                                    value={productSearch}
-                                    onChange={(e) => setProductSearch(e.target.value)}
-                                    placeholder="Search products by name or SKU..."
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        className="input input-bordered w-full pr-10"
+                                        value={productSearch}
+                                        onChange={(e) => {
+                                            setProductSearch(e.target.value);
+                                            if (e.target.value.trim() || allProducts.length > 0) {
+                                                setShowProductDropdown(true);
+                                            }
+                                        }}
+                                        onClick={() => {
+                                            if (allProducts.length > 0) {
+                                                setShowProductDropdown(true);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            setTimeout(() => {
+                                                setShowProductDropdown(false);
+                                            }, 200);
+                                        }}
+                                        placeholder="Search products by name or SKU..."
+                                    />
+                                    <Search size={18} className="absolute right-3 top-3.5 text-gray-400" />
 
-                                {/* Product Search Results */}
-                                {productSearch && filteredProducts.length > 0 && (
-                                    <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
-                                        {filteredProducts.map(filteredProduct => {
-                                            const brand = filteredProduct.variant?.attribute_values
-                                                ? Object.entries(filteredProduct.variant.attribute_values)
-                                                    .map(([key, value]) => `${key}`)
-                                                    .join(', ')
-                                                : null;
+                                    {productSearch && (
+                                        <button
+                                            type="button"
+                                            onClick={resetSelectionFlow}
+                                            className="absolute right-10 top-3 text-gray-400 hover:text-error"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
+                                </div>
 
-                                            const attributes = filteredProduct.variant?.attribute_values
-                                                ? Object.entries(filteredProduct.variant.attribute_values)
-                                                    .map(([key, value]) => `${value}`)
-                                                    .join(', ')
-                                                : null;
+                                {/* Product Dropdown */}
+                                {showProductDropdown && filteredProducts.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="bg-gray-100 p-2 sticky top-0 z-10">
+                                            <div className="flex justify-between items-center">
+                                                <h3 className="text-sm font-semibold text-gray-700">
+                                                    Select Product ({filteredProducts.length})
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowProductDropdown(false)}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {filteredProducts.map((product) => (
+                                            <div
+                                                key={product.id}
+                                                className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => handleProductSelect(product)}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{product.name}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span>Code: {product.product_no || 'N/A'}</span>
+                                                                <span>•</span>
+                                                                <span>Stock: {product.totalStock}</span>
+                                                                <span>•</span>
+                                                                <span>Variants: {product.variantsCount}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-primary text-xs font-medium">Select →</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Brand Dropdown */}
+                                {showBrandDropdown && availableBrands.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="bg-gray-100 p-2 sticky top-0 z-10">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={goBackToProducts}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    ← Back
+                                                </button>
+                                                <h3 className="text-sm font-semibold text-gray-700 flex-1">
+                                                    Select Brand for {selectedProduct?.name}
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowBrandDropdown(false)}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {availableBrands.map((brand, index) => (
+                                            <div
+                                                key={index}
+                                                className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => handleBrandSelect(brand)}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{brand}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            Click to view variants
+                                                        </div>
+                                                    </div>
+                                                    <span className="text-primary text-xs font-medium">Select →</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Variant Dropdown */}
+                                {showVariantDropdown && availableVariants.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="bg-gray-100 p-2 sticky top-0 z-10">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={selectedBrand ? goBackToBrands : goBackToProducts}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    ← Back
+                                                </button>
+                                                <h3 className="text-sm font-semibold text-gray-700 flex-1">
+                                                    {selectedBrand
+                                                        ? `Select ${selectedBrand} Variant`
+                                                        : `Select Variant for ${selectedProduct?.name}`}
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowVariantDropdown(false)}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {availableVariants.map((variantWithStocks, index) => {
+                                            const { variant, stocks, totalQuantity, sale_price, shadow_sale_price } = variantWithStocks;
+
+                                            const displayName = selectedBrand
+                                                ? variant.attribute_values?.[selectedBrand] || 'Default'
+                                                : Object.values(variant.attribute_values || {})[0] || 'Default';
+
+                                            const salePrice = Number(sale_price) || 0;
+                                            const shadowPrice = Number(shadow_sale_price) || 0;
 
                                             return (
                                                 <div
-                                                    key={filteredProduct.product.id}
+                                                    key={variant.id}
                                                     className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
-                                                    onClick={() => addItem(filteredProduct, filteredProduct.variant)}
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={() => handleVariantSelect(variantWithStocks)}
                                                 >
-                                                    <div className="flex flex-col">
-                                                        <div className="flex justify-between items-center">
-                                                            <span>{filteredProduct.product.name} ({filteredProduct.variant.sku})</span>
-                                                            <Plus size={14} className="text-primary" />
-                                                        </div>
-                                                        {attributes && (
-                                                            <div className="text-sm text-gray-500 mt-1">
-                                                                <span> <strong>Variant: </strong>{brand} || </span>
-                                                                {attributes && <span> <strong>Model: </strong>{attributes}  </span>} || <span> <strong>Batch No: </strong>{filteredProduct.batch_no}  </span>
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex-1">
+                                                            <div className="font-medium">{displayName}</div>
+                                                            <div className="text-xs text-gray-500 mt-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span>Stock: {totalQuantity}</span>
+                                                                    <span>•</span>
+                                                                    <span>SKU: {variant.sku || 'N/A'}</span>
+                                                                    <span>•</span>
+                                                                    <span>Price: {formatWithSymbol(salePrice)}</span>
+                                                                    {shadowPrice > 0 && (
+                                                                        <>
+                                                                            <span>•</span>
+                                                                            <span>Shadow: {formatWithSymbol(shadowPrice)}</span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        )}
+                                                        </div>
+                                                        <Plus size={16} className="text-primary" />
                                                     </div>
                                                 </div>
                                             );
@@ -934,9 +1238,15 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="flex-1">
                                                     <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
-                                                    <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name}</p>
-                                                    <p className="text-sm text-gray-600"><strong>Model: </strong> {item.model_name}</p>
-                                                    <p className="text-sm text-gray-600"> <strong>Available Stock:</strong> {item.stockQuantity} | <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
+                                                    <p className="text-sm text-gray-600">
+                                                        <strong>Variant: </strong> Attribute: {item.variant_attribute} | Value: {item.variant_name}
+                                                    </p>
+                                                    <p className="text-sm text-gray-600">
+                                                        <strong>Batch No:</strong> {item?.batch_no}
+                                                    </p>
+                                                    <p className="text-sm text-gray-600">
+                                                        <strong>Available Stock:</strong> {item.stockQuantity} | <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}
+                                                    </p>
                                                 </div>
                                                 <button
                                                     type="button"
@@ -974,7 +1284,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                         required
                                                     />
                                                 </div>
-                                                <div className="form-control">
+                                                <div className="form-control hidden">
                                                     <label className="label"><span className="label-text">Sh Unit Price (৳) *</span></label>
                                                     <input
                                                         type="number"
@@ -995,7 +1305,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                         readOnly
                                                     />
                                                 </div>
-                                                <div className="form-control">
+                                                <div className="form-control hidden">
                                                     <label className="label"><span className="label-text">Sh Total Price (৳)</span></label>
                                                     <input
                                                         type="number"
@@ -1044,10 +1354,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                             <div className="text-xs">
                                                               <strong>Brand:</strong>  {item.brand || 'N/A'} | <strong>Variant:</strong> {item.variant || 'N/A'}
                                                             </div>
-                                                            {/* <div className="text-xs mt-1">
-                                                                <strong>Supplier:</strong> {item.supplier_name}
-                                                                {item.supplier_company && ` (${item.supplier_company})`}
-                                                            </div> */}
                                                             <div className="grid grid-cols-4 gap-2 mt-2">
                                                                 <div>
                                                                     <span className="text-xs text-gray-500">Qty:</span>
@@ -1174,7 +1480,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                     </div>
 
                                     {/* Shadow Paid Amount */}
-                                    <div className="flex justify-between items-center mb-2">
+                                    <div className="flex justify-between items-center mb-2 hidden">
                                         <div className="flex items-center gap-2">
                                             <span>Sh Paid Amount:</span>
                                             <input
@@ -1248,8 +1554,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                         </div>
 
                         <div className="space-y-4">
-                          
-
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">Product Name *</span>
