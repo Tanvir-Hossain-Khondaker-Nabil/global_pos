@@ -128,7 +128,7 @@ export default function AccountIndex({ accounts, filters, totalBalance }) {
                         </div>
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={handleFilter} className="btn btn-sm bg-gray-900 text-white">
+                        <button onClick={handleFilter} className="btn btn-sm bg-[#1e4d2b] text-white">
                             <Search size={14} />
                             {t('account.filter', 'Filter')}
                         </button>

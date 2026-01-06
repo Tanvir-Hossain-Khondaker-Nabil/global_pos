@@ -391,7 +391,7 @@ export default function Customers({ customers, filters, accounts }) {
                                             <button
                                                 type="button"
                                                 onClick={handleFullPayment}
-                                                className="btn btn-xs btn-primary bg-gray-900 border-gray-900 hover:bg-black hover:border-black"
+                                                className="btn btn-xs btn-primary bg-[#1e4d2b] border-gray-900 hover:bg-black hover:border-black"
                                                 disabled={processingPayment}
                                             >
                                                 {t('customer.full', 'Full')}
@@ -678,7 +678,7 @@ export default function Customers({ customers, filters, accounts }) {
                             customerForm.reset();
                             setModel(true);
                         }}
-                        className="h-8 px-3 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-gray-900 text-white rounded-md hover:bg-black"
+                        className="h-8 px-3 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-[#1e4d2b] text-white rounded-md hover:bg-black"
                     >
                         <Plus size={14} />
                         {t('customer.add_customer', 'Add Customer')}
@@ -688,7 +688,7 @@ export default function Customers({ customers, filters, accounts }) {
 
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-gray-900 text-white rounded-xl p-4">
+                <div className="bg-[#1e4d2b] text-white rounded-xl p-4">
                     <p className="text-xs uppercase tracking-widest font-bold text-gray-300 mb-2">{t('customer.total_customers', 'Total Customers')}</p>
                     <div className="flex items-center justify-between">
                         <p className="text-2xl font-black">{customers.total}</p>
@@ -728,7 +728,7 @@ export default function Customers({ customers, filters, accounts }) {
             <div className="overflow-x-auto rounded-xl border border-gray-100">
                 {customers.data.length > 0 ? (
                     <table className="table w-full">
-                        <thead className="bg-gray-900 text-white uppercase text-[10px] tracking-widest">
+                        <thead className="bg-[#1e4d2b] text-white uppercase text-[10px] tracking-widest">
                             <tr>
                                 <th className="py-4">#</th>
                                 <th>{t('customer.contact_info', 'Contact Info')}</th>
@@ -855,7 +855,7 @@ export default function Customers({ customers, filters, accounts }) {
                         </span>
                         <button
                             onClick={() => setModel(true)}
-                            className="h-8 px-3 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-gray-900 text-white rounded-md hover:bg-black mt-2"
+                            className="h-8 px-3 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-[#1e4d2b] text-white rounded-md hover:bg-black mt-2"
                         >
                             <Plus size={14} />
                             {t('customer.add_first_customer', 'Add Your First Customer')}
@@ -878,7 +878,7 @@ export default function Customers({ customers, filters, accounts }) {
                     <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-gray-900 rounded-lg">
+                                <div className="p-2 bg-[#1e4d2b] rounded-lg">
                                     <User size={20} className="text-white" />
                                 </div>
                                 <div>

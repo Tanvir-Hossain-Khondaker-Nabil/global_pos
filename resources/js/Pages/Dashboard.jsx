@@ -487,7 +487,7 @@ export default function Dashboard({
                                             }}
                                         ></div>
                                         <div className="absolute -top-6 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="bg-gray-900 text-white text-[10px] px-2 py-1 rounded">
+                                            <div className="bg-[#1e4d2b] text-white text-[10px] px-2 py-1 rounded">
                                                 {formatShortCurrency(data.value)}
                                             </div>
                                         </div>

@@ -585,7 +585,7 @@ export default function SaleItemShow({ saleItem }) {
                         </button>
                         <button
                             onClick={handleDownload}
-                            className="btn btn-sm bg-gray-800 hover:bg-gray-900 text-white"
+                            className="btn btn-sm bg-gray-800 hover:bg-[#1e4d2b] text-white"
                             disabled={isPrinting}
                         >
                             <Download size={15} className="mr-1" />

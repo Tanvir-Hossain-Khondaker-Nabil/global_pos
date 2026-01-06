@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { baseMenu } from "../Data/Menu";
 import { Link, usePage } from "@inertiajs/react";
-import { 
-    X, 
-    ChevronDown, 
-    LayoutDashboard, 
+import {
+    X,
+    ChevronDown,
+    LayoutDashboard,
     LogOut,
     User,
     Settings,
@@ -24,11 +23,378 @@ import {
     HelpCircle,
     Search,
     Menu,
-    ChevronRight
+    ChevronRight,
+    ArrowRightLeft,
+    BadgeCent,
+    BaggageClaim,
+    BanknoteArrowUp,
+    Barcode,
+    Box,
+    ShoppingBag,
+    ShoppingBasket,
+    UserPlus,
+    WalletMinimal,
+    Warehouse,
+    Receipt,
+    Trophy,
+    TrendingUp,
+    Gift,
+    Star,
+    BadgeDollarSign,
+    Clock,
+    Plane,
+    BoxIcon,
+    TagIcon
 } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
-// Icon mapping for common menu items
+// Base menu data with proper route parameters
+const baseMenu = [
+    {
+        title: "Dashboard",
+        icon: "home",
+        route: "home",
+        routeParams: null,
+        active: "home",
+        role: "all",
+        category: "Main"
+    },
+    {
+        title: "Add Sale (Inventory)",
+        icon: "baggage-claim",
+        route: "sales.create",
+        routeParams: null,
+        active: "sales.create",
+        role: "all",
+        category: "Sales"
+    },
+    {
+        title: "Add Sale (POS)",
+        icon: "baggage-claim",
+        route: "sales.add",
+        routeParams: null,
+        active: "sales.add",
+        role: "all",
+        category: "Sales"
+    },
+    {
+        title: "All Orders (Inventory)",
+        icon: "badge-cent",
+        route: "sales.index",
+        routeParams: null,
+        active: "sales.index",
+        role: "all",
+        category: "Sales"
+    },
+    {
+        title: "All Orders (POS)",
+        icon: "badge-cent",
+        route: "salesPos.index",
+        routeParams: { pos: 'pos' }, // Fix: Added required parameter
+        active: "salesPos.index",
+        role: "all",
+        category: "Sales"
+    },
+    {
+        title: "All Sales Items",
+        icon: "badge-cent",
+        route: "salesItems.list",
+        routeParams: null,
+        active: "salesItems.list",
+        role: "all",
+        category: "Sales"
+    },
+    {
+        title: "All Sales Return",
+        icon: "badge-cent",
+        route: "salesReturn.list",
+        routeParams: null,
+        active: "salesReturn.list",
+        role: "all",
+        category: "Sales"
+    },
+    {
+        title: "Purchase",
+        icon: "receipt",
+        route: "purchase.list",
+        routeParams: null,
+        active: "purchase.list",
+        role: "all",
+        category: "Purchase"
+    },
+    {
+        title: "Add Purchase",
+        icon: "arrow-right-left",
+        route: "purchase.create",
+        routeParams: null,
+        active: "purchase.create",
+        role: "all",
+        category: "Purchase"
+    },
+    {
+        title: "All Purchase Items",
+        icon: "arrow-right-left",
+        route: "purchase.items",
+        routeParams: null,
+        active: "purchase.items",
+        role: "all",
+        category: "Purchase"
+    },
+    {
+        title: "Purchase Return",
+        icon: "receipt",
+        route: "purchase-return.list",
+        routeParams: null,
+        active: "purchase-return.list",
+        role: "all",
+        category: "Purchase"
+    },
+    {
+        title: "Add Purchase Return",
+        icon: "arrow-right-left",
+        route: "purchase-return.create",
+        routeParams: null,
+        active: "purchase-return.create",
+        role: "all",
+        category: "Purchase"
+    },
+    {
+        title: "Warehouse",
+        icon: "warehouse",
+        route: "warehouse.list",
+        routeParams: null,
+        active: "warehouse.list",
+        role: "all",
+        category: "Inventory"
+    },
+    {
+        title: "Supplier",
+        icon: "shopping-basket",
+        route: "supplier.view",
+        routeParams: null,
+        active: "supplier.view",
+        role: "all",
+        category: "Inventory"
+    },
+    {
+        title: "Brand",
+        icon: "shopping-basket",
+        route: "attributes.index",
+        routeParams: null,
+        active: "attributes.index",
+        role: "all",
+        category: "Inventory"
+    },
+    {
+        title: "Products",
+        icon: "shopping-basket",
+        route: "product.list",
+        routeParams: null,
+        active: "product.list",
+        role: "all",
+        category: "Inventory"
+    },
+    {
+        title: "Add Products",
+        icon: "shopping-bag",
+        route: "product.add",
+        routeParams: null,
+        active: "product.add",
+        role: "all",
+        category: "Inventory"
+    },
+    {
+        title: "Categories",
+        icon: "box",
+        route: "category.view",
+        routeParams: null,
+        active: "category.view",
+        role: "all",
+        category: "Inventory"
+    },
+    {
+        title: "Extra cash",
+        icon: "banknote-arrow-up",
+        route: "extra.cash.all",
+        routeParams: null,
+        active: "extra.cash.all",
+        role: "all",
+        category: "Finance"
+    },
+    {
+        title: "Expense",
+        icon: "wallet-minimal",
+        route: "expenses.list",
+        routeParams: null,
+        active: "expenses.list",
+        role: "all",
+        category: "Finance"
+    },
+    {
+        title: "Plan",
+        icon: "barcode",
+        route: "plans.index",
+        routeParams: null,
+        active: "plans.index",
+        role: "all",
+        category: "Subscriptions"
+    },
+    {
+        title: "Plan Modules",
+        icon: "barcode",
+        route: "modules.index",
+        routeParams: null,
+        active: "modules.index",
+        role: "all",
+        category: "Subscriptions"
+    },
+    {
+        title: "Subscriptions",
+        icon: "barcode",
+        route: "subscriptions.index",
+        routeParams: null,
+        active: "subscriptions.index",
+        role: "all",
+        category: "Subscriptions"
+    },
+    {
+        title: "Subscriptions Payments",
+        icon: "dollar-sign",
+        route: "subscriptions.payments",
+        routeParams: null,
+        active: "subscriptions.payments",
+        role: "all",
+        category: "Subscriptions"
+    },
+    {
+        title: "Transactions",
+        icon: "dollar-sign",
+        route: "payments.index",
+        routeParams: null,
+        active: "payments.index",
+        role: "all",
+        category: "Finance"
+    },
+    {
+        title: "Ledgers",
+        icon: "box",
+        route: "ledgers.index",
+        routeParams: null,
+        active: "ledgers.index",
+        role: "all",
+        category: "Finance"
+    },
+    {
+        title: "Dealerships",
+        icon: "box",
+        route: "dealerships.index",
+        routeParams: null,
+        active: "dealerships.index",
+        role: "all",
+        category: "Partners"
+    },
+    {
+        title: "Customer",
+        icon: "user-plus",
+        route: "customer.index",
+        routeParams: null,
+        active: "customer.index",
+        role: "all",
+        category: "CRM"
+    },
+    {
+        title: "Companies",
+        icon: "user-plus",
+        route: "companies.index",
+        routeParams: null,
+        active: "companies.index",
+        role: "all",
+        category: "CRM"
+    },
+    {
+        title: "Users",
+        icon: "user",
+        route: "userlist.view",
+        routeParams: null,
+        active: "userlist.view",
+        role: "all",
+        category: "Admin"
+    },
+    {
+        title: "Roles",
+        icon: "user",
+        route: "roles.index",
+        routeParams: null,
+        active: "roles.index",
+        role: "all",
+        category: "Admin"
+    },
+    {
+        title: "Employees",
+        icon: "users",
+        route: "employees.index",
+        routeParams: null,
+        active: "employees.index",
+        role: "all",
+        category: "HR"
+    },
+    {
+        title: "Attendance",
+        icon: "calendar",
+        route: "attendance.index",
+        routeParams: null,
+        active: "attendance.index",
+        role: "all",
+        category: "HR"
+    },
+    {
+        title: "Salary",
+        icon: "credit-card",
+        route: "salary.index",
+        routeParams: null,
+        active: "salary.index",
+        role: "all",
+        category: "HR"
+    },
+    {
+        title: "Provident Fund",
+        icon: "shield",
+        route: "provident-fund.index",
+        routeParams: null,
+        active: "provident-fund.index",
+        role: "all",
+        category: "HR"
+    },
+    {
+        title: "Allowances",
+        icon: "trending-up",
+        route: "allowances.index",
+        routeParams: null,
+        active: "allowances.index",
+        role: "all",
+        category: "HR"
+    },
+    {
+        title: "Ranks",
+        icon: "star",
+        route: "ranks.index",
+        routeParams: null,
+        active: "ranks.index",
+        role: "all",
+        category: "HR"
+    },
+    {
+        title: "Bonus",
+        icon: "gift",
+        route: "bonus.index",
+        routeParams: null,
+        active: "bonus.index",
+        role: "all",
+        category: "HR"
+    }
+];
+
+// Icon mapping for menu items
 const iconComponents = {
     'dashboard': LayoutDashboard,
     'user': User,
@@ -46,7 +412,28 @@ const iconComponents = {
     'award': Award,
     'shield': Shield,
     'bell': Bell,
-    'help-circle': HelpCircle
+    'help-circle': HelpCircle,
+    'arrow-right-left': ArrowRightLeft,
+    'badge-cent': BadgeCent,
+    'baggage-claim': BaggageClaim,
+    'banknote-arrow-up': BanknoteArrowUp,
+    'barcode': Barcode,
+    'box': Box,
+    'shopping-bag': ShoppingBag,
+    'shopping-basket': ShoppingBasket,
+    'user-plus': UserPlus,
+    'wallet-minimal': WalletMinimal,
+    'warehouse': Warehouse,
+    'receipt': Receipt,
+    'trophy': Trophy,
+    'trending-up': TrendingUp,
+    'gift': Gift,
+    'star': Star,
+    'badge-dollar-sign': BadgeDollarSign,
+    'clock': Clock,
+    'plane': Plane,
+    'box-icon': BoxIcon,
+    'tag-icon': TagIcon
 };
 
 export default function Sidebar({ status, setStatus }) {
@@ -54,7 +441,6 @@ export default function Sidebar({ status, setStatus }) {
     const { t, locale } = useTranslation();
     const [openMenus, setOpenMenus] = useState({});
     const [searchQuery, setSearchQuery] = useState("");
-    const [activeMenu, setActiveMenu] = useState(null);
     const sidebarRef = useRef(null);
 
     // Get icon component
@@ -134,6 +520,19 @@ export default function Sidebar({ status, setStatus }) {
         };
         
         return translationMap[englishTitle] || englishTitle;
+    };
+
+    // Get route URL with parameters
+    const getRouteUrl = (item) => {
+        try {
+            if (item.routeParams) {
+                return route(item.route, item.routeParams);
+            }
+            return route(item.route);
+        } catch (error) {
+            console.error(`Route error for ${item.route}:`, error);
+            return '#';
+        }
     };
 
     // Group menu items by category
@@ -312,7 +711,7 @@ export default function Sidebar({ status, setStatus }) {
                                                             </button>
                                                         ) : (
                                                             <Link
-                                                                href={item.route}
+                                                                href={getRouteUrl(item)}
                                                                 className="flex items-center gap-3 px-4 py-3 group"
                                                             >
                                                                 <span className={`transition-transform duration-200 ${
@@ -340,7 +739,7 @@ export default function Sidebar({ status, setStatus }) {
                                                                 return (
                                                                     <Link
                                                                         key={childIndex}
-                                                                        href={child.route}
+                                                                        href={getRouteUrl(child)}
                                                                         className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm group relative ${
                                                                             isChildActive
                                                                                 ? "bg-gradient-to-r from-[#35a952]/20 to-[#35a952]/10 text-white"

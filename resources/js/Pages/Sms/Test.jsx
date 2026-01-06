@@ -157,7 +157,7 @@ export default function SmsTest({ auth }) {
                             {/* Laravel Log Example */}
                             <div className="mt-10">
                                 <h4 className="font-medium text-gray-900 mb-3">Expected Log Output:</h4>
-                                <div className="bg-gray-900 text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
+                                <div className="bg-[#1e4d2b] text-gray-100 p-4 rounded-lg font-mono text-sm overflow-x-auto">
                                     <div className="text-green-400">[2024-01-01 12:00:00] local.INFO: SMS Sandbox Mode:</div>
                                     <div className="ml-4">
                                         <div className="text-blue-400">"to": "+8801XXXXXXXXX",</div>

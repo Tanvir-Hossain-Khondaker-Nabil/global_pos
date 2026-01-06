@@ -452,7 +452,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <div className="overflow-x-auto rounded-xl border border-gray-100">
                 {safePurchases.length > 0 ? (
                     <table className="table w-full">
-                        <thead className={`text-white uppercase text-[10px] tracking-widest ${isShadowUser ? 'bg-amber-500' : 'bg-gray-900'}`}>
+                        <thead className={`text-white uppercase text-[10px] tracking-widest ${isShadowUser ? 'bg-amber-500' : 'bg-[#1e4d2b]'}`}>
                             <tr>
                                 <th className="py-4">#</th>
                                 <th>Details</th>
@@ -544,7 +544,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                                             <div className="flex justify-end gap-1">
                                                 <Link 
                                                     href={route("purchase.show", purchase.id)} 
-                                                    className="btn btn-ghost btn-square btn-xs hover:bg-gray-900 hover:text-white"
+                                                    className="btn btn-ghost btn-square btn-xs hover:bg-[#1e4d2b] hover:text-white"
                                                     title="View Details"
                                                 >
                                                     <Eye size={16} />
