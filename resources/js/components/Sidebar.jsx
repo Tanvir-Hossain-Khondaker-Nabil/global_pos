@@ -626,7 +626,7 @@ export default function Sidebar({ status, setStatus }) {
                     {/* Search Bar */}
                     <div className="mb-6 relative">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50 w-4 h-4" />
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white w-4 h-4" />
                             <input
                                 type="text"
                                 placeholder={locale === 'bn' ? 'মেনু সার্চ করুন...' : 'Search menu...'}
@@ -637,7 +637,7 @@ export default function Sidebar({ status, setStatus }) {
                             {searchQuery && (
                                 <button
                                     onClick={() => setSearchQuery("")}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white/50 hover:text-white"
+                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white hover:text-white"
                                 >
                                     <X size={16} />
                                 </button>
@@ -661,7 +661,7 @@ export default function Sidebar({ status, setStatus }) {
 
                             return (
                                 <div key={category} className="space-y-2">
-                                    <p className="text-[10px] uppercase text-white/50 font-bold px-3 mb-1 tracking-widest">
+                                    <p className="text-[10px] uppercase text-white font-bold px-3 mb-1 tracking-widest">
                                         {category}
                                     </p>
                                     
@@ -702,7 +702,7 @@ export default function Sidebar({ status, setStatus }) {
                                                                     {hasChildren && (
                                                                         <ChevronRight 
                                                                             size={16} 
-                                                                            className={`text-white/50 transition-transform duration-200 ${
+                                                                            className={`text-white transition-transform duration-200 ${
                                                                                 isMenuOpen ? 'rotate-90' : ''
                                                                             }`} 
                                                                         />
@@ -776,7 +776,7 @@ export default function Sidebar({ status, setStatus }) {
                         {searchQuery && Object.values(menuCategories).every(items => filterMenuItems(items).length === 0) && (
                             <div className="text-center py-8">
                                 <Search className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                                <p className="text-white/50 text-sm">
+                                <p className="text-white text-sm">
                                     {locale === 'bn' ? 'কোন মেনু পাওয়া যায়নি' : 'No menu items found'}
                                 </p>
                                 <p className="text-white/30 text-xs mt-1">
@@ -797,7 +797,7 @@ export default function Sidebar({ status, setStatus }) {
                                 <p className="text-white text-sm font-medium truncate">
                                     {auth.user?.name || 'User'}
                                 </p>
-                                <p className="text-white/50 text-xs truncate">
+                                <p className="text-white text-xs truncate">
                                     {auth.role || 'Administrator'}
                                 </p>
                             </div>

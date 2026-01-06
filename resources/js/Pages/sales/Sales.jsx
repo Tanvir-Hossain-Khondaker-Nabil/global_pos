@@ -630,7 +630,7 @@ export default function Sales({
 
                 {/* old product */}
                 {exchangedata !== null && (
-                    <div className="mt-5 border border-gray-200 rounded-box p-5 bg-[#1e4d2b] text-white/5">
+                    <div className="mt-5 border border-gray-200 rounded-box p-5 bg-[#1e4d2b] text-white">
                         <h1 className="text-neutral text-sm mb-2 font-bold">
                             Old Products
                         </h1>
@@ -721,7 +721,7 @@ export default function Sales({
                 )}
 
                 {/* grand */}
-                <div className="bg-[#1e4d2b] text-white/5 flex items-center justify-center mt-5 py-4">
+                <div className="bg-[#1e4d2b] text-white flex items-center justify-center mt-5 py-4">
                     <span className="text-lg font-bold text-primary">
                         Grand total: {grandTotal.toFixed(2)} Tk
                     </span>

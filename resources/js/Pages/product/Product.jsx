@@ -231,7 +231,7 @@ export default function Product({ product, filters }) {
                                                                 key={variant.id}
                                                                 className={`border p-2 rounded text-xs ${
                                                                     hasAttributes 
-                                                                        ? 'border-primary bg-[#1e4d2b] text-white/5' 
+                                                                        ? 'border-primary bg-[#1e4d2b] text-white' 
                                                                         : 'border-dashed border-neutral'
                                                                 }`}
                                                             >
@@ -241,7 +241,7 @@ export default function Product({ product, filters }) {
                                                                             {formatVariantDisplay(variant)}
                                                                         </div>
                                                                         
-                                                                        <div className="flex gap-4 mt-1 text-xs text-gray-600">
+                                                                        <div className="flex gap-4 mt-1 text-xs text-white">
                                                                             <span>
                                                                                 {t('product.stock', 'Stock')}: {variantStock}
                                                                             </span>

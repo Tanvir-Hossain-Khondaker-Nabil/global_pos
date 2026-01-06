@@ -81,7 +81,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
     // Generate variants based on selected attribute combinations
     const generateVariants = () => {
         // Filter out empty selections
-        const validSelections = selectedAttributes.filter(attr => 
+        const validSelections = selectedAttributes.filter(attr =>
             attr.values && attr.values.length > 0
         );
 
@@ -94,32 +94,36 @@ export default function AddProduct({ category, update, brand, attributes }) {
             return;
         }
 
-        // Generate separate variants for each selection
-        const newVariants = [];
-        
+        // Generate all possible combinations
+        let combinations = [{}];
+
         validSelections.forEach(attr => {
-            attr.values.forEach(valueObj => {
-                const attributeValues = {};
-                attributeValues[attr.attributeCode] = valueObj.value;
-                
-                newVariants.push({
-                    id: null,
-                    attribute_values: attributeValues,
+            const newCombinations = [];
+
+            combinations.forEach(combination => {
+                attr.values.forEach(valueObj => {
+                    newCombinations.push({
+                        ...combination,
+                        [attr.attributeCode]: valueObj.value
+                    });
                 });
             });
+
+            combinations = newCombinations;
         });
 
-        // Remove duplicates (same attribute combinations)
-        const uniqueVariants = Array.from(
-            new Map(
-                newVariants.map(variant => [
-                    JSON.stringify(variant.attribute_values),
-                    variant
-                ])
-            ).values()
-        );
+        // Convert combinations to variants
+        const newVariants = combinations.map(combination => ({
+            id: null,
+            attribute_values: combination
+        }));
 
-        setVariants(uniqueVariants);
+        // If we get no combinations (shouldn't happen), create one empty variant
+        if (newVariants.length === 0) {
+            setVariants([{ id: null, attribute_values: {} }]);
+        } else {
+            setVariants(newVariants);
+        }
     };
 
     // Handle attribute selection
@@ -127,7 +131,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
         setSelectedAttributes(prev => {
             // Find if this attribute is already selected
             const attributeIndex = prev.findIndex(attr => attr.attributeCode === attributeCode);
-            
+
             if (checked) {
                 if (attributeIndex >= 0) {
                     // Add value to existing attribute
@@ -155,7 +159,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                     updated[attributeIndex].values = updated[attributeIndex].values.filter(
                         v => v.value !== value.value
                     );
-                    
+
                     // Remove attribute if no values left
                     if (updated[attributeIndex].values.length === 0) {
                         updated.splice(attributeIndex, 1);
@@ -396,7 +400,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                     Object.entries(variant.attribute_values || {}).forEach(([attrCode, value]) => {
                         const attrName = availableAttributes.find(attr => attr.code === attrCode)?.name || attrCode;
                         const existingAttrIndex = selectedAttrs.findIndex(attr => attr.attributeCode === attrCode);
-                        
+
                         if (existingAttrIndex >= 0) {
                             if (!selectedAttrs[existingAttrIndex].values.some(v => v.value === value)) {
                                 selectedAttrs[existingAttrIndex].values.push({
@@ -449,7 +453,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                         {t('product.product_type', 'Product Type')} *
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <label className={`card cursor-pointer border-2 ${productType === 'regular' ? 'border-primary bg-[#1e4d2b] text-white/5' : 'border-base-300 hover:border-primary/50'}`}>
+                        <label className={`card cursor-pointer border-2 ${productType === 'regular' ? 'border-primary bg-[#1e4d2b] text-white' : 'border-base-300 hover:border-primary/50'}`}>
                             <div className="card-body p-4">
                                 <div className="flex items-start">
                                     <input
@@ -465,7 +469,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                                             <Package size={20} className="text-primary" />
                                             <h4 className="font-semibold">{t('product.regular_product', 'Regular Product')}</h4>
                                         </div>
-                                        <p className="text-sm text-gray-500 mt-2">
+                                        <p className="text-sm text-gray-300 mt-2">
                                             {t('product.regular_desc', 'Purchase from supplier, needs stock management through purchase orders')}
                                         </p>
                                     </div>
