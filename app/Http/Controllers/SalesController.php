@@ -161,20 +161,14 @@ class SalesController extends Controller
      */
     public function store(Request $request)
     {
-
         
         $type = $request->input('type', 'pos');
+        $rules = [
+            'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'required_without:customer_id|string|max:255',
+            'phone'         => 'required_without:customer_id|string|max:20',
+        ];
 
-        if ($type == 'inventory') {
-            $rules = [
-                'customer_id' => 'required|exists:customers,id',
-            ];
-        } else {
-            $rules = [
-                'customer_name'  => 'nullable|string|max:255',
-                'phone' => 'nullable|string|max:20',
-            ];
-        }
 
         $rules = array_merge($rules, [
             'items'                 => 'required|array|min:1',
@@ -188,6 +182,7 @@ class SalesController extends Controller
 
 
         $request->validate($rules);
+
 
         DB::beginTransaction();
 
@@ -218,6 +213,7 @@ class SalesController extends Controller
         }
 
 
+
         // Handle advance adjustment
         $payment_type = $account->type;
 
@@ -241,37 +237,37 @@ class SalesController extends Controller
         $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
 
 
-        //customer check
+        // status add
         if($type == 'inventory') {
-            $customerId = $request->customer_id;
-
             if($request->paid_amount == $request->grand_amount){
                 $status = 'paid' ;
             } else {
                 $status = 'pending' ;
             }
-
         } else {
-            $existingCustomer = Customer::where('phone', $request->phone)
-                                    ->orWhere('customer_name', $request->customer_name)
-                                    ->first();
-            
             $status = 'paid' ;
-            
-            if ($existingCustomer) {
-                $customerId = $existingCustomer->id;
-            } else {
-
-                $customerId = Customer::create([
-                    'customer_name' => $request->customer_name ?? 'Walk-in Customer',
-                    'phone'         => $request->phone ?? null,
-                    'advance_amount' => 0,
-                    'due_amount' => 0,
-                    'is_active' => 1,
-                    'created_by' => Auth::id(),
-            ])->id;
-            }
         }
+
+
+        // check customer exists or not
+        $existingCustomer = Customer::where('phone', $request->phone)
+                                ->orWhere('customer_name', $request->customer_name)
+                                ->first();
+        if ($existingCustomer) {
+            $customerId = $existingCustomer->id;
+        } else {
+
+            $customerId = Customer::create([
+                'customer_name' => $request->customer_name ?? 'Walk-in Customer',
+                'phone'         => $request->phone ?? null,
+                'advance_amount' => 0,
+                'due_amount' => 0,
+                'is_active' => 1,
+                'created_by' => Auth::id(),
+        ])->id;
+        }
+
+
 
         try {
             $sale = Sale::create([

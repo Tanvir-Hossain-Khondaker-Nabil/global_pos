@@ -18,10 +18,12 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const [paymentStatus, setPaymentStatus] = useState('unpaid'); // Added from second file
     const [manualPaymentOverride, setManualPaymentOverride] = useState(false); // Added from second file
 
-    // New state variables for customer info and payment options
+    // Updated state variables for customer info and payment options (with new customer option)
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [usePartialPayment, setUsePartialPayment] = useState(false);
     const [adjustFromAdvance, setAdjustFromAdvance] = useState(false);
+    const [customerNameInput, setCustomerNameInput] = useState("");
+    const [customerPhoneInput, setCustomerPhoneInput] = useState("");
     const [availableAdvance, setAvailableAdvance] = useState(0);
 
     // Pickup sale states
@@ -133,29 +135,76 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         );
     }, [productstocks]);
 
-    // Calculate available advance when customer changes
-    useEffect(() => {
-        if (selectedCustomer) {
-            const advance = parseFloat(selectedCustomer.advance_amount) || 0;
-            const due = parseFloat(selectedCustomer.due_amount) || 0;
-            setAvailableAdvance(advance - due);
-        } else {
-            setAvailableAdvance(0);
-        }
-    }, [selectedCustomer]);
-
-    // Handle customer selection
+    // Handle customer selection (UPDATED with new customer option)
     const handleCustomerSelect = (customerId) => {
-        form.setData("customer_id", customerId);
-        const customer = customers.find(c => c.id === parseInt(customerId));
-        setSelectedCustomer(customer || null);
-        
-        // Reset payment status when customer changes
-        if (!customerId) {
+        if (customerId === "new") {
+            // Clear selected customer for new customer
+            setSelectedCustomer(null);
+            setCustomerNameInput("");
+            setCustomerPhoneInput("");
+            setAvailableAdvance(0);
+            form.setData({
+                ...form.data,
+                customer_id: "",
+                customer_name: "",
+                phone: "",
+            });
+            
+            // Reset payment status for new customer
             setPaymentStatus('unpaid');
             setPaidAmount(0);
             setAdjustFromAdvance(false);
             setManualPaymentOverride(false);
+        } else {
+            form.setData("customer_id", customerId);
+            const customer = customers.find(c => c.id === parseInt(customerId));
+            setSelectedCustomer(customer || null);
+            
+            if (customer) {
+                setCustomerNameInput(customer.customer_name);
+                setCustomerPhoneInput(customer.phone);
+                const advance = parseFloat(customer.advance_amount) || 0;
+                const due = parseFloat(customer.due_amount) || 0;
+                setAvailableAdvance(advance - due);
+                form.setData({
+                    ...form.data,
+                    customer_id: customer.id,
+                    customer_name: customer.customer_name,
+                    phone: customer.phone,
+                });
+            }
+            
+            // Reset payment status when customer changes
+            if (!customerId) {
+                setPaymentStatus('unpaid');
+                setPaidAmount(0);
+                setAdjustFromAdvance(false);
+                setManualPaymentOverride(false);
+            }
+        }
+    };
+
+    // Handle manual customer name input
+    const handleCustomerNameChange = (value) => {
+        setCustomerNameInput(value);
+        form.setData("customer_name", value);
+        // If user types in name field, treat as new customer
+        if (value && selectedCustomer && value !== selectedCustomer.customer_name) {
+            setSelectedCustomer(null);
+            form.setData("customer_id", "");
+            setAvailableAdvance(0);
+        }
+    };
+
+    // Handle manual customer phone input
+    const handleCustomerPhoneChange = (value) => {
+        setCustomerPhoneInput(value);
+        form.setData("phone", value);
+        // If user types in phone field, treat as new customer
+        if (value && selectedCustomer && value !== selectedCustomer.phone) {
+            setSelectedCustomer(null);
+            form.setData("customer_id", "");
+            setAvailableAdvance(0);
         }
     };
 
@@ -234,6 +283,8 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
     const form = useForm({
         customer_id: "",
+        customer_name: "",
+        phone: "",
         sale_date: new Date().toISOString().split('T')[0],
         notes: "",
         items: [],
@@ -313,8 +364,10 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             supplier_id: selectedSupplier ? selectedSupplier.id : null,
             payment_status: paymentStatus, // Added from second file
             account_id: selectedAccount, // Added from second file
+            customer_name: customerNameInput, // Added customer name
+            phone: customerPhoneInput, // Added phone
         });
-    }, [selectedItems, pickupItems, vatRate, discountRate, paidAmount, shadowPaidAmount, usePartialPayment, adjustFromAdvance, availableAdvance, selectedSupplier, selectedAccount, paymentStatus, calculateRealSubTotal, calculatePickupSubTotal, calculateTotalSubTotal, calculateGrandTotal, calculateDueAmount]);
+    }, [selectedItems, pickupItems, vatRate, discountRate, paidAmount, shadowPaidAmount, usePartialPayment, adjustFromAdvance, availableAdvance, selectedSupplier, selectedAccount, paymentStatus, customerNameInput, customerPhoneInput, calculateRealSubTotal, calculatePickupSubTotal, calculateTotalSubTotal, calculateGrandTotal, calculateDueAmount]);
 
 
     const getVariantDisplayName = (variant) => {
@@ -762,6 +815,12 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             return;
         }
 
+        // Validate customer information
+        if (!form.data.customer_name || !form.data.phone) {
+            alert("Please provide customer name and phone number");
+            return;
+        }
+
         // Validate account selection
         if (!selectedAccount) {
             alert("Please select a payment account");
@@ -817,24 +876,22 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             <form onSubmit={submit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div className="lg:col-span-1 space-y-4">
+                        {/* UPDATED CUSTOMER SECTION */}
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Customer *</span>
+                                <span className="label-text">Select Customer *</span>
                             </label>
                             <select
                                 className="select select-bordered"
-                                value={form.data.customer_id}
+                                value={selectedCustomer ? selectedCustomer.id : ""}
                                 onChange={(e) => handleCustomerSelect(e.target.value)}
-                                required
                             >
-                                <option value="">Select Customer</option>
+                                <option value="">Select Existing Customer</option>
+                                <option value="new">+ New Customer</option>
                                 {customers.map(c => (
-                                    <option key={c.id} value={c.id}>{c.customer_name}</option>
+                                    <option key={c.id} value={c.id}>{c.customer_name} ({c.phone})</option>
                                 ))}
                             </select>
-                            {form.errors.customer_id && (
-                                <div className="text-error text-sm mt-1">{form.errors.customer_id}</div>
-                            )}
                         </div>
 
                         {/* Customer Information Display */}
@@ -864,15 +921,17 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                             <span className="line-clamp-2">{selectedCustomer.address}</span>
                                         </div>
                                     )}
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <DollarSign size={12} className="text-green-500" />
-                                        <span>
-                                            <span className="font-medium">Available Advance:</span>
-                                            <span className="ml-1 font-bold text-green-600">
-                                                ৳{formatCurrency(availableAdvance)}
+                                    {availableAdvance > 0 && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <DollarSign size={12} className="text-green-500" />
+                                            <span>
+                                                <span className="font-medium">Available Advance:</span>
+                                                <span className="ml-1 font-bold text-green-600">
+                                                    ৳{formatCurrency(availableAdvance)}
+                                                </span>
                                             </span>
-                                        </span>
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Payment Options - UPDATED with second file features */}
@@ -946,6 +1005,85 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             </div>
                         )}
 
+                        {/* Customer Name Input */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Customer Name *</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="input input-bordered"
+                                value={customerNameInput}
+                                onChange={(e) => handleCustomerNameChange(e.target.value)}
+                                required
+                            />
+                            {form.errors.customer_name && (
+                                <div className="text-error text-sm mt-1">{form.errors.customer_name}</div>
+                            )}
+                        </div>
+
+                        {/* Customer Phone Input */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Customer Phone *</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="input input-bordered"
+                                value={customerPhoneInput}
+                                onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+                                required
+                            />
+                            {form.errors.phone && (
+                                <div className="text-error text-sm mt-1">{form.errors.phone}</div>
+                            )}
+                        </div>
+
+                        {/* Payment Account Selection */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text font-bold">Payment Account *</span>
+                            </label>
+                            <select
+                                className="select select-bordered w-full"
+                                value={selectedAccount}
+                                onChange={(e) => handleAccountSelect(e.target.value)}
+                                required
+                            >
+                                <option value="">Select Account</option>
+                                {accounts && accounts.map(account => (
+                                    <option key={account.id} value={account.id}>
+                                        <div className="flex items-center gap-2">
+                                            {getAccountIcon(account.type)}
+                                            <span>{account.name}</span>
+                                            <span className="text-xs text-gray-500">
+                                                (Balance: {formatWithSymbol(account.current_balance)})
+                                            </span>
+                                        </div>
+                                    </option>
+                                ))}
+                            </select>
+                            {selectedAccount && (
+                                <div className="mt-2 text-xs">
+                                    {(() => {
+                                        const account = accounts.find(a => a.id == selectedAccount);
+                                        if (account) {
+                                            return (
+                                                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-box">
+                                                    {getAccountIcon(account.type)}
+                                                    <span className="font-bold">{account.name}</span>
+                                                    <span className="ml-auto font-mono">
+                                                        {formatWithSymbol(account.current_balance)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                </div>
+                            )}
+                        </div>
+
                         {/* Supplier Selection for Pickup Sale */}
                         {pickupItems.length > 0 && (
                             <div className="form-control">
@@ -999,51 +1137,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                 onChange={(e) => form.setData("sale_date", e.target.value)}
                                 required
                             />
-                        </div>
-
-                        {/* Payment Account Selection from second file */}
-                        <div className="form-control">
-                            <label className="label">
-                                <span className="label-text font-bold">Payment Account *</span>
-                            </label>
-                            <select
-                                className="select select-bordered w-full"
-                                value={selectedAccount}
-                                onChange={(e) => handleAccountSelect(e.target.value)}
-                                required
-                            >
-                                <option value="">Select Account</option>
-                                {accounts && accounts.map(account => (
-                                    <option key={account.id} value={account.id}>
-                                        <div className="flex items-center gap-2">
-                                            {getAccountIcon(account.type)}
-                                            <span>{account.name}</span>
-                                            <span className="text-xs text-gray-500">
-                                                (Balance: {formatWithSymbol(account.current_balance)})
-                                            </span>
-                                        </div>
-                                    </option>
-                                ))}
-                            </select>
-                            {selectedAccount && (
-                                <div className="mt-2 text-xs">
-                                    {(() => {
-                                        const account = accounts.find(a => a.id == selectedAccount);
-                                        if (account) {
-                                            return (
-                                                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-box">
-                                                    {getAccountIcon(account.type)}
-                                                    <span className="font-bold">{account.name}</span>
-                                                    <span className="ml-auto font-mono">
-                                                        {formatWithSymbol(account.current_balance)}
-                                                    </span>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
-                                </div>
-                            )}
                         </div>
 
                         <div className="form-control">
@@ -1539,7 +1632,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                 className="input input-bordered input-sm w-32"
                                                 value={paidAmount}
                                                 onChange={handleManualPaymentInput}
-                                                disabled={!manualPaymentOverride && !usePartialPayment && !adjustFromAdvance}
+                                                // disabled={!manualPaymentOverride && !usePartialPayment && !adjustFromAdvance}
                                             />
                                         </div>
                                         <span>{formatWithSymbol(paidAmount)}</span>
