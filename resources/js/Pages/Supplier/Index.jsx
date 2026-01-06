@@ -1,7 +1,13 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Calendar, User, Mail, Phone, MapPin, Globe, DollarSign, CheckCircle, AlertCircle, CreditCard, History, Package, Shield, RefreshCw, Landmark, Wallet, Smartphone, Building, Users, TrendingUp, TrendingDown, FileText, ArrowUpRight, Info, ChevronRight } from "lucide-react";
+import {
+    Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Calendar, User,
+    Mail, Phone, MapPin, Globe, DollarSign, CheckCircle, AlertCircle,
+    CreditCard, History, Package, Shield, RefreshCw, Landmark, Wallet,
+    Smartphone, Building, Users, TrendingUp, TrendingDown, FileText,
+    ArrowUpRight, Info, ChevronRight, MessageSquare, Send
+} from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -320,6 +326,42 @@ export default function Index({ suppliers, filters, accounts }) {
     };
 
     const selectedAccount = getAccountDetails();
+
+    // SMS Test form
+    const smsTestForm = useForm({
+        phone: "",
+        message: "Test SMS from supplier management system",
+    });
+
+    // Handle SMS test submission
+    const handleSmsTest = (e) => {
+        e.preventDefault();
+
+        setSmsTestLoading(true);
+        setSmsTestResult(null);
+
+        axios.post(route('supplier.send-test-sms'), smsTestForm.data())
+            .then((response) => {
+                setSmsTestResult({
+                    success: response.data.success,
+                    message: response.data.message,
+                    sandbox: response.data.sandbox || false,
+                });
+                if (response.data.success) {
+                    smsTestForm.reset();
+                }
+            })
+            .catch((error) => {
+                console.error('SMS test error:', error);
+                setSmsTestResult({
+                    success: false,
+                    message: error.response?.data?.message || 'Failed to send test SMS',
+                });
+            })
+            .finally(() => {
+                setSmsTestLoading(false);
+            });
+    };
 
     return (
         <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
@@ -1389,7 +1431,7 @@ export default function Index({ suppliers, filters, accounts }) {
                                         {true ? t('supplier.sandbox_mode', 'Sandbox') : t('supplier.live_mode', 'Live')}
                                     </div>
                                     <span className="text-sm text-gray-600">
-                                        {true 
+                                        {true
                                             ? t('supplier.sms_will_be_logged', 'SMS will be logged')
                                             : t('supplier.real_sms_will_sent', 'Real SMS will be sent')
                                         }
@@ -1429,7 +1471,7 @@ export default function Index({ suppliers, filters, accounts }) {
                                 )}
                                 <div>
                                     <h4 className={`font-medium ${smsTestResult.success ? 'text-green-800' : 'text-red-800'}`}>
-                                        {smsTestResult.success 
+                                        {smsTestResult.success
                                             ? t('supplier.sms_sent_successfully', 'SMS Sent Successfully!')
                                             : t('supplier.sms_failed', 'SMS Failed!')
                                         }
@@ -1440,7 +1482,7 @@ export default function Index({ suppliers, filters, accounts }) {
                                     {smsTestResult.sandbox && (
                                         <div className="mt-2 p-2 bg-yellow-100 rounded">
                                             <p className="text-sm text-yellow-800">
-                                                <strong>{t('supplier.sandbox_mode', 'Sandbox Mode')}:</strong> 
+                                                <strong>{t('supplier.sandbox_mode', 'Sandbox Mode')}:</strong>
                                                 {t('supplier.sms_logged_instead', 'SMS was logged instead of actually sent. Check Laravel log file.')}
                                             </p>
                                         </div>

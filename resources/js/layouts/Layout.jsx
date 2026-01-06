@@ -57,7 +57,7 @@ export default function Layout({ children }) {
             {/* Notepad Modal */}
             {noteOpen && (
                 <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+                    <div className="overflow-auto bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col">
                         <div className="p-4 border-b flex justify-between items-center">
                             <h3 className="font-semibold text-lg">Notepad</h3>
                             <button 
@@ -74,7 +74,7 @@ export default function Layout({ children }) {
                             <textarea
                                 value={noteContent}
                                 onChange={(e) => setNoteContent(e.target.value)}
-                                className="w-full h-full min-h-[300px] p-3 border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                                className="w-full h-full min-h-[300px] p-3 border rounded-lg resize-none focus:outline-none"
                                 placeholder="Type your notes here..."
                                 autoFocus
                             />
