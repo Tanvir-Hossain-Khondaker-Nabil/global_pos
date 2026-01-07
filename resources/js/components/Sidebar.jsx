@@ -178,7 +178,7 @@ const baseMenu = [
         category: "Inventory"
     },
     {
-        title: "Brand",
+        title: "Attribute",
         icon: "shopping-basket",
         route: "attributes.index",
         routeParams: null,

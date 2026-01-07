@@ -16,7 +16,7 @@ return [
     'product_code' => 'পণ্য কোড',
     'product_name' => 'পণ্যের নাম',
     'category' => 'বিভাগ',
-    'attributes' => 'ব্র্যান্ড',
+    'attributes' => 'বৈশিষ্ট্য',
     'total_stock' => 'মোট স্টক',
     'variants' => 'ভেরিয়েন্ট',
     'actions' => 'কার্যক্রম',
@@ -24,8 +24,8 @@ return [
     // Product details
     'default_variant' => 'ডিফল্ট ভেরিয়েন্ট',
     'units' => 'ইউনিট',
-    'attribute' => 'ব্র্যান্ড',
-    'attributes_plural' => 'ব্র্যান্ডসমূহ',
+    'attribute' => 'বৈশিষ্ট্য',
+    'attributes_plural' => 'বৈশিষ্ট্যসমূহ',
     'stock' => 'স্টক',
     'price' => 'দাম',
     'description' => 'বিবরণ',
@@ -49,25 +49,21 @@ return [
     'enter_product_code' => 'পণ্য কোড লিখুন',
     'enter_description' => 'পণ্যের বিবরণ লিখুন',
 
-    // Brand field
-    'brand' => 'ব্র্যান্ড',
-    'pick_brand' => '--একটি ব্র্যান্ড নির্বাচন করুন--',
-
     // Attributes section
-    'product_attributes' => 'পণ্যের ব্র্যান্ড',
-    'select_attributes' => 'ব্র্যান্ড নির্বাচন করুন',
-    'hide_attributes' => 'ব্র্যান্ড লুকান',
-    'select_attribute_values' => 'ব্র্যান্ডর মান নির্বাচন করুন',
-    'selected_attributes' => 'নির্বাচিত ব্র্যান্ড',
-    'apply_attributes' => 'ব্র্যান্ড প্রয়োগ করুন',
+    'product_attributes' => 'পণ্যের বৈশিষ্ট্য',
+    'select_attributes' => 'বৈশিষ্ট্য নির্বাচন করুন',
+    'hide_attributes' => 'বৈশিষ্ট্য লুকান',
+    'select_attribute_values' => 'বৈশিষ্ট্যর মান নির্বাচন করুন',
+    'selected_attributes' => 'নির্বাচিত বৈশিষ্ট্য',
+    'apply_attributes' => 'বৈশিষ্ট্য প্রয়োগ করুন',
     'selected_count' => 'নির্বাচিত',
-    'attributes' => 'ব্র্যান্ড',
+    'attributes' => 'বৈশিষ্ট্য',
 
     // Variants section
     'product_variants' => 'পণ্যের ভেরিয়েন্ট',
     'variant' => 'ভেরিয়েন্ট',
-    'no_attributes_selected' => 'কোনো ব্র্যান্ড নির্বাচন করা হয়নি',
-    'variant_attributes' => 'ভেরিয়েন্ট ব্র্যান্ড',
+    'no_attributes_selected' => 'কোনো বৈশিষ্ট্য নির্বাচন করা হয়নি',
+    'variant_attributes' => 'ভেরিয়েন্ট বৈশিষ্ট্য',
     'delete_variant' => 'ভেরিয়েন্ট মুছুন',
     'variant_pricing' => 'ভেরিয়েন্ট মূল্য নির্ধারণ',
     'add_variant' => 'ভেরিয়েন্ট যোগ করুন',
@@ -82,11 +78,10 @@ return [
     'product_name_required' => 'পণ্যের নাম প্রয়োজন',
     'category_required' => 'বিভাগ প্রয়োজন',
     'product_code_required' => 'পণ্য কোড প্রয়োজন',
-    'variants_required' => 'কমপক্ষে একটি ভেরিয়েন্টে ব্র্যান্ড নির্বাচন করতে হবে',
-    'variant_attributes_required' => 'এই ভেরিয়েন্টের জন্য ব্র্যান্ড নির্বাচন করুন',
+    'variants_required' => 'কমপক্ষে একটি ভেরিয়েন্টে বৈশিষ্ট্য নির্বাচন করতে হবে',
+    'variant_attributes_required' => 'এই ভেরিয়েন্টের জন্য বৈশিষ্ট্য নির্বাচন করুন',
     'fix_validation_errors' => 'দয়া করে বৈধতা ত্রুটিগুলি ঠিক করুন',
     'something_went_wrong' => 'কিছু ভুল হয়েছে। দয়া করে আবার চেষ্টা করুন!',
-    'duplicate_variants' => 'ডুপ্লিকেট ব্র্যান্ড কম্বিনেশন পাওয়া গেছে',
 
     // Success messages
     'product_added_success' => 'পণ্য সফলভাবে যোগ করা হয়েছে!',
@@ -119,10 +114,4 @@ return [
     'sale_price_required' => 'বিক্রয় মূল্য প্রয়োজন',
     'shadow_sale_price_required' => 'শ্যাডো বিক্রয় মূল্য প্রয়োজন',
     'initial_stock_invalid' => 'প্রারম্ভিক স্টক নেতিবাচক হতে পারে না',
-
-    // New keys for variant attribute management
-    'edit_attributes' => 'ব্র্যান্ড সম্পাদনা করুন',
-    'select_attributes_for' => 'এর জন্য ব্র্যান্ড নির্বাচন করুন',
-    'clear_attributes' => 'ব্র্যান্ড সাফ করুন',
-    'done' => 'সম্পন্ন',
 ];

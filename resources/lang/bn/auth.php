@@ -82,4 +82,44 @@ return [
     'new_password' => 'নতুন পাসওয়ার্ড',
     'confirm_password' => 'পাসওয়ার্ড নিশ্চিত করুন',
     'update_security' => 'নিরাপত্তা আপডেট করুন',
+
+    // =============== SIDEBAR TRANSLATIONS ===============
+    'outlet' => 'আউটলেট',
+    'outlet_management' => 'আউটলেট ব্যবস্থাপনা',
+    'outlet_menu_only' => 'শুধুমাত্র আউটলেট মেনু',
+    'login_to_see_full_menu' => 'সম্পূর্ণ মেনু দেখতে আউটলেটে লগইন করুন',
+    'select_an_outlet' => 'আউটলেট নির্বাচন করুন',
+    'select_outlet' => 'আউটলেট নির্বাচন করুন',
+    'active_outlet' => 'সক্রিয় আউটলেট',
+    'online' => 'অনলাইন',
+    'switch_outlet' => 'আউটলেট পরিবর্তন করুন',
+    'logout_from_outlet' => 'আউটলেট থেকে লগআউট',
+    'change_outlet' => 'আউটলেট পরিবর্তন করুন',
+    
+    // Menu Categories
+    'main' => 'প্রধান',
+    'sales' => 'বিক্রয়',
+    'purchase' => 'ক্রয়',
+    'inventory' => 'ইনভেন্টরি',
+    'finance' => 'আর্থিক',
+    'subscriptions' => 'সাবস্ক্রিপশন',
+    'partners' => 'পার্টনার',
+    'crm' => 'সিআরএম',
+    'admin' => 'এডমিন',
+    'hr' => 'এইচআর',
+    'outlets' => 'আউটলেট',
+    
+    // Other sidebar items
+    'accounts' => 'অ্যাকাউন্ট',
+    'all_purchase_items' => 'সমস্ত ক্রয় আইটেম',
+    'brand' => 'ব্র্যান্ড',
+    'roles' => 'ভূমিকা',
+    'sms' => 'এসএমএস',
+    'search_menu' => 'মেনু সার্চ করুন...',
+    'no_menu_items_found' => 'কোন মেনু আইটেম পাওয়া যায়নি',
+    'try_different_keyword' => 'অন্য কীওয়ার্ড দিয়ে চেষ্টা করুন',
+    
+    // Logout
+    'logout' => 'লগআউট',
+    'logout_confirmation' => 'আপনি কি লগআউট করতে চান?',
 ];

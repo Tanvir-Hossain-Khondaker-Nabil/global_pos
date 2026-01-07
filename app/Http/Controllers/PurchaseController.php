@@ -18,13 +18,14 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
+use DNS1D;
 
 class PurchaseController extends Controller
 {
-
-    // Show purchase list
+    // Show purchase list with stocks and barcodes
     public function index(Request $request)
     {
         $user = Auth::user();
@@ -43,6 +44,10 @@ class PurchaseController extends Controller
                     ->orWhereHas('warehouse', function ($q) use ($request) {
                         $q->where('name', 'like', '%' . $request->search . '%')
                             ->orWhere('code', 'like', '%' . $request->search . '%');
+                    })
+                    ->orWhereHas('items.stock', function ($q) use ($request) {
+                        $q->where('barcode', 'like', '%' . $request->search . '%')
+                            ->orWhere('batch_no', 'like', '%' . $request->search . '%');
                     });
             });
         }
@@ -57,11 +62,65 @@ class PurchaseController extends Controller
 
         $purchases = $query->paginate(10)->withQueryString();
 
-        if ($isShadowUser) {
-            $purchases->getCollection()->transform(function ($purchase) {
-                return $this->transformToShadowData($purchase);
-            });
-        }
+        // প্রতিটি purchase-এর জন্য stock এবং barcode ডেটা যোগ করুন
+        $purchases->getCollection()->transform(function ($purchase) use ($isShadowUser) {
+            // Purchase ট্রান্সফর্ম
+            if ($isShadowUser) {
+                $purchase = $this->transformToShadowData($purchase);
+            }
+            
+            // Purchase items-এ stock ডেটা যোগ করুন
+            if ($purchase->items) {
+                $purchase->items->transform(function ($item) {
+                    // এই purchase item-এর সাথে সম্পর্কিত stock খুঁজুন
+                    $stock = Stock::where('product_id', $item->product_id)
+                        ->where('variant_id', $item->variant_id)
+                        ->where(function ($q) use ($item) {
+                            // Batch number match: PO-{item_id}-xxxx
+                            $q->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
+                              ->orWhere('batch_no', 'LIKE', 'PO' . '-' . $item->id . '-%');
+                        })
+                        ->first();
+                    
+                    if ($stock) {
+                        $item->stock = [
+                            'id' => $stock->id,
+                            'batch_no' => $stock->batch_no,
+                            'barcode' => $stock->barcode,
+                            'barcode_path' => $stock->barcode_path,
+                            'quantity' => $stock->quantity,
+                            'created_at' => $stock->created_at,
+                            'has_barcode' => !empty($stock->barcode)
+                        ];
+                    } else {
+                        $item->stock = null;
+                    }
+                    
+                    return $item;
+                });
+                
+                // Purchase-এর জন্য সব barcode সংগ্রহ করুন
+                $barcodes = [];
+                $hasBarcode = false;
+                
+                foreach ($purchase->items as $item) {
+                    if ($item->stock && $item->stock['barcode']) {
+                        $barcodes[] = [
+                            'barcode' => $item->stock['barcode'],
+                            'product_name' => $item->product->name,
+                            'quantity' => $item->stock['quantity']
+                        ];
+                        $hasBarcode = true;
+                    }
+                }
+                
+                $purchase->barcodes = $barcodes;
+                $purchase->has_barcode = $hasBarcode;
+                $purchase->barcode_count = count($barcodes);
+            }
+            
+            return $purchase;
+        });
 
         return Inertia::render('Purchase/PurchaseList', [
             'filters' => $request->only(['search', 'status', 'date']),
@@ -71,64 +130,6 @@ class PurchaseController extends Controller
         ]);
     }
 
-
-    // Get all purchase items
-    public function allPurchasesItems(Request $request)
-    {
-        $user = Auth::user();
-        $isShadowUser = $user->type === 'shadow';
-
-        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse'])
-            ->when($request->filled('product_id'), function ($query) use ($request) {
-                $query->where('product_id', $request->product_id);
-            })
-            ->when($request->filled('date_from') && $request->filled('date_to'), function ($query) use ($request) {
-                $query->whereHas('purchase', function ($q) use ($request) {
-                    $q->whereBetween('purchase_date', [$request->date_from, $request->date_to]);
-                });
-            })
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
-
-        if ($isShadowUser) {
-            $purchaseItems->getCollection()->transform(function ($purchaseItem) {
-                return $this->transformToShadowItemData($purchaseItem);
-            });
-        }
-
-        return Inertia::render('Purchase/PurchaseItemsList', [
-            'purchaseItems' => $purchaseItems,
-            'filters' => $request->only(['product_id', 'date_from', 'date_to']),
-            'isShadowUser' => $isShadowUser,
-        ]);
-    }
-
-
-    //show purchase items
-    public function showPurchasesItem($id)
-    {
-        $user = Auth::user();
-        $isShadowUser = $user->type === 'shadow';
-
-        $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse'])
-            ->findOrFail($id);
-
-        if ($isShadowUser) {
-            $purchaseItem = $this->transformToShadowItemData($purchaseItem);
-        }
-
-        $business = BusinessProfile::where('user_id', $user->id)->first();
-
-        return Inertia::render('Purchase/PurchaseItemShow', [
-            'purchaseItem' => $purchaseItem,
-            'isShadowUser' => $isShadowUser,
-            'business' => $business,
-        ]);
-    }
-
-
-    // Show create form
     public function create()
     {
         $user = Auth::user();
@@ -143,8 +144,7 @@ class PurchaseController extends Controller
         ]);
     }
 
-
-    // Store purchase
+    // Store purchase with barcode generation
     public function store(PurchaseRequestStore $request)
     {
         $user = Auth::user();
@@ -169,7 +169,6 @@ class PurchaseController extends Controller
         }
 
         $adjustamount = $request->adjust_from_advance ?? false;
-
 
         if ($adjustamount == true) {
             $supplier = Supplier::find($request->supplier_id);
@@ -197,7 +196,7 @@ class PurchaseController extends Controller
             $shadowPaidAmount = $request->shadow_paid_amount ?? 0;
             $dueAmount = $totalAmount - $paidAmount;
 
-            // Create purchase (NO account_id here)
+            // Create purchase
             $purchase = Purchase::create([
                 'purchase_no' => $purchaseNo,
                 'supplier_id' => $request->supplier_id,
@@ -211,7 +210,7 @@ class PurchaseController extends Controller
                 'status' => 'completed',
                 'created_by' => $user->id,
                 'user_type' => $user->type,
-                'payment_type' => $payment_type
+                'payment_type' => $payment_type ?? 'cash'
             ]);
 
             // Create purchase items and update stock
@@ -237,8 +236,11 @@ class PurchaseController extends Controller
                     'warehouse_id' => $request->warehouse_id
                 ]);
 
-                // Update or create stock
-                Stock::create([
+                // Generate batch number
+                $batchNo = 'PO-' . $purchaseItem->id . '-' . Str::upper(Str::random(4));
+                
+                // Create stock
+                $stock = Stock::create([
                     'warehouse_id' => $request->warehouse_id,
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
@@ -247,8 +249,13 @@ class PurchaseController extends Controller
                     'sale_price' => $isShadowUser ? 0 : $salePrice,
                     'user_type' => $user->type,
                     'created_by' => $user->id,
-                    'batch_no' => 'PO' . '-' . $purchaseItem->id . '-' . Str::upper(Str::random(4)),
+                    'batch_no' => $batchNo,
                 ]);
+
+                // Generate barcode for stock
+                if (!$isShadowUser) {
+                    $this->generateStockBarcode($stock, $purchaseItem);
+                }
             }
 
             if ($paidAmount > 0) {
@@ -258,7 +265,7 @@ class PurchaseController extends Controller
                         throw new \Exception("Insufficient balance in account: {$account->name}");
                     }
 
-                    // Deduct amount from account - this should handle negative internally
+                    // Deduct amount from account
                     $account->updateBalance($paidAmount, 'withdraw');
                 }
 
@@ -287,8 +294,253 @@ class PurchaseController extends Controller
         }
     }
 
+    // Generate barcode for stock
+    private function generateStockBarcode($stock, $purchaseItem = null)
+    {
+        try {
+            // Generate unique barcode
+            $barcode = 'STK-' . str_pad($stock->id, 6, '0', STR_PAD_LEFT) . '-' . now()->format('YmdHis');
+            
+            // Generate barcode image
+            $barcodePNG = DNS1D::getBarcodePNG($barcode, 'C128', 2, 60);
+            $imageData = base64_decode($barcodePNG);
+            
+            // Save to storage
+            $directory = 'public/barcodes/' . date('Y/m/d');
+            Storage::makeDirectory($directory);
+            
+            $filename = 'barcode_' . $stock->id . '_' . time() . '.png';
+            $path = $directory . '/' . $filename;
+            
+            Storage::put($path, $imageData);
+            
+            // Update stock with barcode
+            $stock->update([
+                'barcode' => $barcode,
+                'barcode_path' => $path
+            ]);
+            
+            // Log barcode generation
+            Log::info('Barcode generated for stock', [
+                'stock_id' => $stock->id,
+                'barcode' => $barcode,
+                'purchase_item_id' => $purchaseItem ? $purchaseItem->id : null,
+                'batch_no' => $stock->batch_no
+            ]);
+            
+            return $barcode;
+            
+        } catch (\Exception $e) {
+            Log::error('Barcode generation failed for stock: ' . $stock->id, [
+                'error' => $e->getMessage()
+            ]);
+            return null;
+        }
+    }
 
-    // show purchase function
+    // Generate barcode for purchase item
+    public function generatePurchaseItemBarcode($purchaseId, $itemId)
+    {
+        try {
+            $purchaseItem = PurchaseItem::where('purchase_id', $purchaseId)
+                ->where('id', $itemId)
+                ->firstOrFail();
+            
+            // Find associated stock
+            $stock = Stock::where('product_id', $purchaseItem->product_id)
+                ->where('variant_id', $purchaseItem->variant_id)
+                ->where('batch_no', 'LIKE', 'PO-' . $purchaseItem->id . '-%')
+                ->first();
+            
+            if (!$stock) {
+                // Create stock if not exists
+                $stock = Stock::create([
+                    'warehouse_id' => $purchaseItem->warehouse_id,
+                    'product_id' => $purchaseItem->product_id,
+                    'variant_id' => $purchaseItem->variant_id,
+                    'quantity' => $purchaseItem->quantity,
+                    'purchase_price' => $purchaseItem->unit_price,
+                    'sale_price' => $purchaseItem->sale_price,
+                    'user_type' => $purchaseItem->user_type,
+                    'created_by' => $purchaseItem->created_by,
+                    'batch_no' => 'PO-' . $purchaseItem->id . '-' . Str::upper(Str::random(4)),
+                ]);
+            }
+            
+            // Generate barcode if not exists
+            if (empty($stock->barcode)) {
+                $barcode = $this->generateStockBarcode($stock, $purchaseItem);
+                
+                return redirect()->back()->with('success', 'Barcode generated successfully: ' . $barcode);
+            } else {
+                return redirect()->back()->with('info', 'Barcode already exists: ' . $stock->barcode);
+            }
+            
+        } catch (\Exception $e) {
+            Log::error('Barcode generation failed for purchase item: ' . $itemId, [
+                'error' => $e->getMessage()
+            ]);
+            return redirect()->back()->with('error', 'Failed to generate barcode: ' . $e->getMessage());
+        }
+    }
+
+    // Generate barcodes for all items in a purchase
+    public function generatePurchaseBarcodes($purchaseId)
+    {
+        try {
+            $purchase = Purchase::with('items')->findOrFail($purchaseId);
+            $generatedCount = 0;
+            
+            foreach ($purchase->items as $item) {
+                // Find or create stock
+                $stock = Stock::where('product_id', $item->product_id)
+                    ->where('variant_id', $item->variant_id)
+                    ->where(function ($q) use ($item) {
+                        $q->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
+                          ->orWhere('batch_no', 'LIKE', 'PO' . '-' . $item->id . '-%');
+                    })
+                    ->first();
+                
+                if (!$stock) {
+                    $stock = Stock::create([
+                        'warehouse_id' => $item->warehouse_id,
+                        'product_id' => $item->product_id,
+                        'variant_id' => $item->variant_id,
+                        'quantity' => $item->quantity,
+                        'purchase_price' => $item->unit_price,
+                        'sale_price' => $item->sale_price,
+                        'user_type' => $item->user_type,
+                        'created_by' => $item->created_by,
+                        'batch_no' => 'PO-' . $item->id . '-' . Str::upper(Str::random(4)),
+                    ]);
+                }
+                
+                // Generate barcode if not exists
+                if (empty($stock->barcode)) {
+                    $this->generateStockBarcode($stock, $item);
+                    $generatedCount++;
+                }
+            }
+            
+            return redirect()->back()->with('success', "Generated barcodes for {$generatedCount} items");
+            
+        } catch (\Exception $e) {
+            Log::error('Bulk barcode generation failed for purchase: ' . $purchaseId, [
+                'error' => $e->getMessage()
+            ]);
+            return redirect()->back()->with('error', 'Failed to generate barcodes: ' . $e->getMessage());
+        }
+    }
+
+    // Print barcode for purchase item
+    public function printItemBarcode($purchaseId, $itemId)
+    {
+        try {
+            $purchaseItem = PurchaseItem::with(['product', 'variant', 'purchase'])
+                ->where('purchase_id', $purchaseId)
+                ->where('id', $itemId)
+                ->firstOrFail();
+            
+            $stock = Stock::where('product_id', $purchaseItem->product_id)
+                ->where('variant_id', $purchaseItem->variant_id)
+                ->where('batch_no', 'LIKE', 'PO-' . $purchaseItem->id . '-%')
+                ->first();
+            
+            // Generate barcode if not exists
+            if (!$stock || empty($stock->barcode)) {
+                if (!$stock) {
+                    $stock = Stock::create([
+                        'warehouse_id' => $purchaseItem->warehouse_id,
+                        'product_id' => $purchaseItem->product_id,
+                        'variant_id' => $purchaseItem->variant_id,
+                        'quantity' => $purchaseItem->quantity,
+                        'purchase_price' => $purchaseItem->unit_price,
+                        'sale_price' => $purchaseItem->sale_price,
+                        'user_type' => $purchaseItem->user_type,
+                        'created_by' => $purchaseItem->created_by,
+                        'batch_no' => 'PO-' . $purchaseItem->id . '-' . Str::upper(Str::random(4)),
+                    ]);
+                }
+                
+                $this->generateStockBarcode($stock, $purchaseItem);
+                $stock->refresh();
+            }
+            
+            $business = BusinessProfile::where('user_id', auth()->id())->first();
+            
+            return Inertia::render('Purchase/BarcodePrint', [
+                'purchaseItem' => $purchaseItem,
+                'stock' => $stock,
+                'business' => $business,
+                'barcode_svg' => DNS1D::getBarcodeSVG($stock->barcode, 'C128', 2, 60)
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Barcode print failed for item: ' . $itemId, [
+                'error' => $e->getMessage()
+            ]);
+            return redirect()->back()->with('error', 'Failed to print barcode: ' . $e->getMessage());
+        }
+    }
+
+    // Print all barcodes for a purchase
+    public function printPurchaseBarcodes($purchaseId)
+    {
+        try {
+            $purchase = Purchase::with(['items.product', 'items.variant', 'supplier', 'warehouse'])->findOrFail($purchaseId);
+            
+            $itemsWithBarcodes = [];
+            
+            foreach ($purchase->items as $item) {
+                $stock = Stock::where('product_id', $item->product_id)
+                    ->where('variant_id', $item->variant_id)
+                    ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
+                    ->first();
+                
+                // Generate barcode if not exists
+                if (!$stock || empty($stock->barcode)) {
+                    if (!$stock) {
+                        $stock = Stock::create([
+                            'warehouse_id' => $item->warehouse_id,
+                            'product_id' => $item->product_id,
+                            'variant_id' => $item->variant_id,
+                            'quantity' => $item->quantity,
+                            'purchase_price' => $item->unit_price,
+                            'sale_price' => $item->sale_price,
+                            'user_type' => $item->user_type,
+                            'created_by' => $item->created_by,
+                            'batch_no' => 'PO-' . $item->id . '-' . Str::upper(Str::random(4)),
+                        ]);
+                    }
+                    
+                    $this->generateStockBarcode($stock, $item);
+                    $stock->refresh();
+                }
+                
+                $itemsWithBarcodes[] = [
+                    'item' => $item,
+                    'stock' => $stock,
+                    'barcode_svg' => DNS1D::getBarcodeSVG($stock->barcode, 'C128', 2, 60)
+                ];
+            }
+            
+            $business = BusinessProfile::where('user_id', auth()->id())->first();
+            
+            return Inertia::render('Purchase/BulkBarcodePrint', [
+                'purchase' => $purchase,
+                'items' => $itemsWithBarcodes,
+                'business' => $business
+            ]);
+            
+        } catch (\Exception $e) {
+            Log::error('Bulk barcode print failed for purchase: ' . $purchaseId, [
+                'error' => $e->getMessage()
+            ]);
+            return redirect()->back()->with('error', 'Failed to print barcodes: ' . $e->getMessage());
+        }
+    }
+
+    // Show purchase with barcode details
     public function show($id)
     {
         $user = Auth::user();
@@ -300,11 +552,43 @@ class PurchaseController extends Controller
             'items.product',
             'items.product.brand',
             'items.variant',
+            'items.stock',
             'payments.account' 
         ])->findOrFail($id);
 
         if ($isShadowUser) {
             $purchase = $this->transformToShadowData($purchase);
+        }
+
+        // প্রতিটি item-এর জন্য stock ডেটা যোগ করুন
+        if ($purchase->items) {
+            $purchase->items->transform(function ($item) {
+                // এই item-এর সাথে সম্পর্কিত stock খুঁজুন
+                $stock = Stock::where('product_id', $item->product_id)
+                    ->where('variant_id', $item->variant_id)
+                    ->where(function ($q) use ($item) {
+                        $q->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
+                          ->orWhere('batch_no', 'LIKE', 'PO' . '-' . $item->id . '-%');
+                    })
+                    ->first();
+                
+                if ($stock) {
+                    $item->stock_details = $stock;
+                }
+                
+                return $item;
+            });
+            
+            // Barcode statistics
+            $purchase->barcode_stats = [
+                'total_items' => $purchase->items->count(),
+                'items_with_barcode' => $purchase->items->filter(function ($item) {
+                    return $item->stock_details && !empty($item->stock_details->barcode);
+                })->count(),
+                'items_without_barcode' => $purchase->items->filter(function ($item) {
+                    return !$item->stock_details || empty($item->stock_details->barcode);
+                })->count(),
+            ];
         }
 
         return Inertia::render('Purchase/PurchaseShow', [
@@ -471,7 +755,7 @@ class PurchaseController extends Controller
                 if ($stock) {
                     $stock->increment('quantity', $item['quantity']);
                 } else {
-                    Stock::create([
+                    $stock = Stock::create([
                         'warehouse_id' => $request->warehouse_id,
                         'product_id' => $item['product_id'],
                         'variant_id' => $item['variant_id'],
@@ -480,8 +764,11 @@ class PurchaseController extends Controller
                         'sale_price' => $isShadowUser ? 0 : $salePrice,
                         'user_type' => $user->type,
                         'created_by' => $user->id,
-                        'batch_no' => 'PO-' . $purchaseItem->id . '-' . Str::upper(Str::random(4)),
+                        'batch_no' => 'PO' . '-' . $purchaseItem->id . '-' . Str::upper(Str::random(4)),
                     ]);
+
+                    // Generate barcode for the stock
+                    $this->generateStockBarcode($stock);
                 }
             }
 
@@ -558,24 +845,6 @@ class PurchaseController extends Controller
 
 
 
-    //private functions
-    private function transformToShadowData($purchase)
-    {
-        $purchase->grand_total = $purchase->shadow_grand_total;
-        $purchase->paid_amount = $purchase->shadow_paid_amount;
-        $purchase->due_amount = $purchase->shadow_due_amount;
-
-        if ($purchase->items) {
-            $purchase->items->transform(function ($item) {
-                $item->unit_price = $item->shadow_unit_price;
-                $item->sale_price = $item->shadow_sale_price;
-                $item->total_price = $item->shadow_total_price;
-                return $item;
-            });
-        }
-
-        return $purchase;
-    }
 
     private function transformToShadowItemData($purchase)
     {
@@ -763,5 +1032,22 @@ class PurchaseController extends Controller
             DB::rollBack();
             return redirect()->back()->with('error', 'Error approving purchase: ' . $e->getMessage());
         }
+    }
+private function transformToShadowData($purchase)
+    {
+        $purchase->grand_total = $purchase->shadow_grand_total;
+        $purchase->paid_amount = $purchase->shadow_paid_amount;
+        $purchase->due_amount = $purchase->shadow_due_amount;
+
+        if ($purchase->items) {
+            $purchase->items->transform(function ($item) {
+                $item->unit_price = $item->shadow_unit_price;
+                $item->sale_price = $item->shadow_sale_price;
+                $item->total_price = $item->shadow_total_price;
+                return $item;
+            });
+        }
+
+        return $purchase;
     }
 }

@@ -98,4 +98,44 @@ return [
     'new_password' => 'New Password',
     'confirm_password' => 'Confirm Password',
     'update_security' => 'Update Security',
+
+    // =============== SIDEBAR TRANSLATIONS ===============
+    'outlet' => 'Outlet',
+    'outlet_management' => 'Outlet Management',
+    'outlet_menu_only' => 'Outlet Menu Only',
+    'login_to_see_full_menu' => 'Login to an outlet to see full menu',
+    'select_an_outlet' => 'Select an Outlet',
+    'select_outlet' => 'Select Outlet',
+    'active_outlet' => 'Active Outlet',
+    'online' => 'Online',
+    'switch_outlet' => 'Switch Outlet',
+    'logout_from_outlet' => 'Logout from Outlet',
+    'change_outlet' => 'Change Outlet',
+    
+    // Menu Categories
+    'main' => 'Main',
+    'sales' => 'Sales',
+    'purchase' => 'Purchase',
+    'inventory' => 'Inventory',
+    'finance' => 'Finance',
+    'subscriptions' => 'Subscriptions',
+    'partners' => 'Partners',
+    'crm' => 'CRM',
+    'admin' => 'Admin',
+    'hr' => 'HR',
+    'outlets' => 'Outlets',
+    
+    // Other sidebar items
+    'accounts' => 'Accounts',
+    'all_purchase_items' => 'All Purchase Items',
+    'brand' => 'Brand',
+    'roles' => 'Roles',
+    'sms' => 'SMS',
+    'search_menu' => 'Search menu...',
+    'no_menu_items_found' => 'No menu items found',
+    'try_different_keyword' => 'Try a different keyword',
+    
+    // Logout
+    'logout' => 'LOGOUT',
+    'logout_confirmation' => 'Are you sure you want to logout?',
 ];

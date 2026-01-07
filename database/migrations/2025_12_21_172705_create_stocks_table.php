@@ -24,6 +24,8 @@ return new class extends Migration
             $table->decimal('shadow_sale_price', 10, 2)->default(0);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->string('batch_no')->nullable();
+            $table->string('barcode')->nullable();
+            $table->string('barcode_path')->nullable();
             $table->timestamps();
 
             $table->index(['warehouse_id', 'product_id', 'variant_id', 'batch_no']);

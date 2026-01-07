@@ -160,10 +160,10 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                     </div>
                 )}
                 
-                <div className="hidden sm:flex items-center gap-2 text-[10px] lg:text-xs font-bold uppercase tracking-wider text-slate-400">
+                {/* <div className="hidden sm:flex items-center gap-2 text-[10px] lg:text-xs font-bold uppercase tracking-wider text-slate-400">
                     <Home size={14} />
                     Dashboard / <span className="text-[#1e4d2b]">Overview</span>
-                </div>
+                </div> */}
                 
                 {/* Language Switcher */}
                 <div className="flex items-center">
