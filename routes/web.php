@@ -43,6 +43,7 @@ use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\OutletController;
 
 
 // Guest routes
@@ -59,6 +60,20 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('home');
+
+
+        // Outlet Routes
+    Route::resource('outlets', OutletController::class)->except(['create', 'edit']);
+
+    // Additional routes
+    Route::post('outlets/{outlet}/toggle-status', [OutletController::class, 'toggleStatus'])
+        ->name('outlets.toggleStatus');
+    Route::post('outlets/{outlet}/set-as-main', [OutletController::class, 'setAsMain'])
+        ->name('outlets.setAsMain');
+    Route::get('outlets/{outlet}/edit', [OutletController::class, 'edit'])
+        ->name('outlets.edit');
+    Route::post('outlets/generate-code', [OutletController::class, 'generateCode'])
+        ->name('outlets.generateCode');
 
     // users managment
     Route::controller(UserController::class)->prefix('users')->group(function () {
@@ -166,6 +181,10 @@ Route::middleware('auth')->group(function () {
         'update' => 'modules.update',
         'destroy' => 'modules.destroy',
     ])->middleware('permission:modules.view|modules.create|modules.edit|modules.delete');
+
+
+
+
 
     // sales list
     Route::controller(SalesListController::class)->group(function () {

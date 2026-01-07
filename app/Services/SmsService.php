@@ -14,77 +14,58 @@ class SmsService
 
     public function __construct($gatewayId = null)
     {
+        // Use provided gateway ID or get the primary gateway for authenticated user
         if ($gatewayId) {
-            // Get specific gateway
             $this->gateway = SmsTemplate::find($gatewayId);
-            
-            // Check if user owns this gateway
-            if ($this->gateway && $this->gateway->created_by !== Auth::id()) {
-                throw new \Exception('আপনি এই SMS Gateway ব্যবহার করার অনুমতি পাননি।');
-            }
         } else {
-            // Get current user's gateway
-            $this->gateway = $this->getUserGateway();
+            $this->gateway = $this->getUserPrimaryGateway();
         }
 
-        if (!$this->gateway) {
-            throw new \Exception('কোনো SMS Gateway কনফিগার করা নেই।');
+        if (!$this->gateway || !$this->gateway->is_configured) {
+            throw new \Exception('No configured SMS gateway found');
         }
-
-        if (!$this->gateway->is_active) {
-            throw new \Exception('SMS Gatewayটি নিষ্ক্রিয় অবস্থায় আছে।');
-        }
-
-        if (!$this->gateway->is_configured) {
-            throw new \Exception('SMS Gatewayটির কনফিগারেশন অসম্পূর্ণ।');
-        }
-
-        // Set configuration
-        $this->config = [
-            'api_key' => $this->gateway->api_key,
-            'api_secret' => $this->gateway->api_secret,
-            'sender_id' => $this->gateway->sender_id,
-            'api_url' => $this->gateway->api_url,
-        ];
     }
 
-    protected function getUserGateway()
+    protected function getUserPrimaryGateway()
     {
+        // Get the primary gateway for current user
         $user = Auth::user();
 
         if (!$user) {
-            throw new \Exception('অনুমোদিত ইউজার পাওয়া যায়নি।');
+            return SmsTemplate::active()->configured()->first();
         }
 
-        // Get only the user's own gateway
-        return SmsTemplate::where('created_by', $user->id)
-            ->active()
-            ->configured()
-            ->first();
+        // You can implement user-specific gateway selection here
+        // For example, if each user can have their own gateway preference
+
+        return SmsTemplate::active()->configured()->first();
     }
 
     public function sendSms($to, $message, $template = null, $variables = [])
     {
+        if (!$this->gateway) {
+            return [
+                'success' => false,
+                'message' => 'No SMS gateway configured',
+            ];
+        }
+
+        if ($template && $templateConfig = $this->getTemplate($template)) {
+            $message = $this->parseTemplate($templateConfig, $variables);
+        }
+
+        $to = preg_replace('/[^0-9]/', '', $to);
+
+        // Log for debugging (can be disabled in production)
+        Log::info('SMS Request:', [
+            'gateway_id' => $this->gateway->id,
+            'gateway_name' => $this->gateway->name,
+            'to' => $to,
+            'message' => $message,
+            'sender_id' => $this->config['sender_id'],
+        ]);
+
         try {
-            if ($template) {
-                $templateConfig = $this->getTemplate($template);
-                if ($templateConfig) {
-                    $message = $this->parseTemplate($templateConfig, $variables);
-                }
-            }
-
-            // Clean phone number
-            $to = preg_replace('/[^0-9]/', '', $to);
-
-            Log::info('SMS Request:', [
-                'gateway_id' => $this->gateway->id,
-                'gateway_name' => $this->gateway->name,
-                'to' => $to,
-                'message' => $message,
-                'sender_id' => $this->config['sender_id'],
-                'user_id' => Auth::id(),
-            ]);
-
             $response = $this->sendViaApi($to, $message);
 
             // Update gateway balance if returned in response
@@ -97,7 +78,6 @@ class SmsService
             Log::error('SMS sending failed: ' . $e->getMessage(), [
                 'gateway_id' => $this->gateway->id,
                 'gateway_name' => $this->gateway->name,
-                'user_id' => Auth::id(),
                 'error' => $e->getMessage(),
             ]);
 
@@ -112,6 +92,8 @@ class SmsService
     protected function sendViaApi($to, $message)
     {
         $url = $this->config['api_url'];
+
+        // Determine which API to use based on URL pattern
         $provider = $this->detectProvider($url);
 
         switch ($provider) {
@@ -130,7 +112,7 @@ class SmsService
 
     protected function sendViaMimsms($to, $message)
     {
-        $response = Http::timeout(30)->post($this->config['api_url'], [
+        $response = Http::post($this->config['api_url'], [
             'api_key' => $this->config['api_key'],
             'sender_id' => $this->config['sender_id'],
             'mobile_number' => $to,
@@ -140,17 +122,17 @@ class SmsService
         if ($response->successful()) {
             $data = $response->json();
 
-            if (isset($data['status']) && $data['status'] === 'success') {
+            if ($data['status'] === 'success') {
                 return [
                     'success' => true,
                     'message_id' => $data['message_id'] ?? null,
-                    'message' => 'SMS সফলভাবে পাঠানো হয়েছে (MIMSMS)',
+                    'message' => 'SMS sent successfully via MIMSMS',
                     'gateway' => $this->gateway->name,
                 ];
             } else {
                 return [
                     'success' => false,
-                    'message' => $data['message'] ?? 'SMS পাঠানো ব্যর্থ হয়েছে',
+                    'message' => $data['message'] ?? 'Failed to send SMS',
                     'gateway' => $this->gateway->name,
                 ];
             }
@@ -158,7 +140,7 @@ class SmsService
 
         return [
             'success' => false,
-            'message' => 'HTTP রিকোয়েস্ট ব্যর্থ',
+            'message' => 'HTTP request failed',
             'gateway' => $this->gateway->name,
             'status' => $response->status(),
         ];
@@ -166,28 +148,27 @@ class SmsService
 
     protected function sendViaTwilio($to, $message)
     {
-        $response = Http::timeout(30)->withBasicAuth(
+        $response = Http::withBasicAuth(
             $this->config['api_key'],
             $this->config['api_secret']
         )->post($this->config['api_url'], [
-            'To' => $to,
-            'From' => $this->config['sender_id'],
-            'Body' => $message,
-        ]);
+                    'To' => $to,
+                    'From' => $this->config['sender_id'],
+                    'Body' => $message,
+                ]);
 
         if ($response->successful()) {
-            $data = $response->json();
             return [
                 'success' => true,
-                'message_id' => $data['sid'] ?? null,
-                'message' => 'SMS সফলভাবে পাঠানো হয়েছে (Twilio)',
+                'message_id' => $response['sid'] ?? null,
+                'message' => 'SMS sent successfully via Twilio',
                 'gateway' => $this->gateway->name,
             ];
         }
 
         return [
             'success' => false,
-            'message' => 'Twilio এর মাধ্যমে পাঠানো ব্যর্থ',
+            'message' => 'Failed to send via Twilio',
             'gateway' => $this->gateway->name,
             'error' => $response->body(),
         ];
@@ -195,7 +176,7 @@ class SmsService
 
     protected function sendViaNexmo($to, $message)
     {
-        $response = Http::timeout(30)->post($this->config['api_url'], [
+        $response = Http::post($this->config['api_url'], [
             'api_key' => $this->config['api_key'],
             'api_secret' => $this->config['api_secret'],
             'to' => $to,
@@ -206,11 +187,11 @@ class SmsService
         if ($response->successful()) {
             $data = $response->json();
 
-            if (isset($data['messages'][0]['status']) && $data['messages'][0]['status'] == '0') {
+            if ($data['messages'][0]['status'] == '0') {
                 return [
                     'success' => true,
                     'message_id' => $data['messages'][0]['message-id'] ?? null,
-                    'message' => 'SMS সফলভাবে পাঠানো হয়েছে (Vonage/Nexmo)',
+                    'message' => 'SMS sent successfully via Vonage/Nexmo',
                     'gateway' => $this->gateway->name,
                 ];
             }
@@ -218,35 +199,35 @@ class SmsService
 
         return [
             'success' => false,
-            'message' => 'Vonage/Nexmo এর মাধ্যমে পাঠানো ব্যর্থ',
+            'message' => 'Failed to send via Vonage/Nexmo',
             'gateway' => $this->gateway->name,
         ];
     }
 
     protected function sendViaClickSend($to, $message)
     {
-        $response = Http::timeout(30)->withBasicAuth(
+        $response = Http::withBasicAuth(
             $this->config['api_key'],
             ''
         )->post($this->config['api_url'], [
-            'messages' => [
-                [
-                    'source' => 'php',
-                    'from' => $this->config['sender_id'],
-                    'to' => $to,
-                    'body' => $message,
-                ]
-            ]
-        ]);
+                    'messages' => [
+                        [
+                            'source' => 'php',
+                            'from' => $this->config['sender_id'],
+                            'to' => $to,
+                            'body' => $message,
+                        ]
+                    ]
+                ]);
 
         if ($response->successful()) {
             $data = $response->json();
 
-            if (isset($data['response_code']) && $data['response_code'] == 'SUCCESS') {
+            if ($data['response_code'] == 'SUCCESS') {
                 return [
                     'success' => true,
                     'message_id' => $data['data']['messages'][0]['message_id'] ?? null,
-                    'message' => 'SMS সফলভাবে পাঠানো হয়েছে (ClickSend)',
+                    'message' => 'SMS sent successfully via ClickSend',
                     'gateway' => $this->gateway->name,
                 ];
             }
@@ -254,32 +235,32 @@ class SmsService
 
         return [
             'success' => false,
-            'message' => 'ClickSend এর মাধ্যমে পাঠানো ব্যর্থ',
+            'message' => 'Failed to send via ClickSend',
             'gateway' => $this->gateway->name,
         ];
     }
 
     protected function sendViaGenericApi($to, $message)
     {
-        $response = Http::timeout(30)->post($this->config['api_url'], [
+        // Generic API call for custom providers
+        $response = Http::post($this->config['api_url'], [
             'to' => $to,
             'message' => $message,
             'sender' => $this->config['sender_id'],
             'api_key' => $this->config['api_key'],
-            'api_secret' => $this->config['api_secret'] ?? null,
         ]);
 
         if ($response->successful()) {
             return [
                 'success' => true,
-                'message' => 'SMS সফলভাবে পাঠানো হয়েছে (কাস্টম Gateway)',
+                'message' => 'SMS sent successfully via custom gateway',
                 'gateway' => $this->gateway->name,
             ];
         }
 
         return [
             'success' => false,
-            'message' => 'কাস্টম Gateway এর মাধ্যমে পাঠানো ব্যর্থ',
+            'message' => 'Failed to send via custom gateway',
             'gateway' => $this->gateway->name,
         ];
     }
@@ -288,18 +269,26 @@ class SmsService
     {
         $url = strtolower($url);
 
-        if (strpos($url, 'twilio') !== false) return 'twilio';
-        if (strpos($url, 'nexmo') !== false) return 'nexmo';
-        if (strpos($url, 'vonage') !== false) return 'nexmo';
-        if (strpos($url, 'clicksend') !== false) return 'clicksend';
-        if (strpos($url, 'mimsms') !== false) return 'mimsms';
+        if (strpos($url, 'twilio') !== false)
+            return 'twilio';
+        if (strpos($url, 'nexmo') !== false)
+            return 'nexmo';
+        if (strpos($url, 'vonage') !== false)
+            return 'nexmo';
+        if (strpos($url, 'clicksend') !== false)
+            return 'clicksend';
+        if (strpos($url, 'mimsms') !== false)
+            return 'mimsms';
 
         return 'generic';
     }
 
     protected function getTemplate($templateName)
     {
+        // You can store templates in database or config
+        // For now, using config, but you can modify to use database
         $templates = config('sms.templates', []);
+
         return $templates[$templateName] ?? null;
     }
 
@@ -316,21 +305,12 @@ class SmsService
         try {
             if ($gatewayId) {
                 $gateway = SmsTemplate::find($gatewayId);
-                if (!$gateway) {
+                if (!$gateway || !$gateway->is_configured) {
                     return [
                         'success' => false,
-                        'message' => 'Gateway পাওয়া যায়নি',
+                        'message' => 'Gateway not found or not configured',
                     ];
                 }
-                
-                // Check ownership
-                if ($gateway->created_by !== Auth::id()) {
-                    return [
-                        'success' => false,
-                        'message' => 'আপনি এই Gateway টেস্ট করার অনুমতি পাননি',
-                    ];
-                }
-                
                 $this->gateway = $gateway;
                 $this->config = [
                     'api_key' => $gateway->api_key,
@@ -345,15 +325,15 @@ class SmsService
 
             return [
                 'success' => true,
-                'message' => 'কানেকশন সফল',
+                'message' => 'Connection successful',
                 'balance' => $balance,
                 'gateway' => $this->gateway->name,
             ];
         } catch (\Exception $e) {
             return [
                 'success' => false,
-                'message' => 'কানেকশন ব্যর্থ: ' . $e->getMessage(),
-                'gateway' => $this->gateway->name ?? 'অজানা',
+                'message' => 'Connection failed: ' . $e->getMessage(),
+                'gateway' => $this->gateway->name ?? 'Unknown',
             ];
         }
     }
@@ -368,45 +348,45 @@ class SmsService
             case 'twilio':
                 return $this->getTwilioBalance();
             default:
-                return 'এই প্রোভাইডারের জন্য ব্যালেন্স চেক উপলব্ধ নয়';
+                return 'Balance check not available for this provider';
         }
     }
 
     protected function getMimsmsBalance()
     {
         try {
-            $response = Http::timeout(30)->post('https://api.mimsms.com/api/v1/balance', [
+            $response = Http::post('https://api.mimsms.com/api/v1/balance', [
                 'api_key' => $this->config['api_key'],
             ]);
 
             if ($response->successful()) {
                 $data = $response->json();
-                return $data['balance'] ?? 'অজানা';
+                return $data['balance'] ?? 'Unknown';
             }
         } catch (\Exception $e) {
-            Log::error('MIMSMS ব্যালেন্স চেক ব্যর্থ: ' . $e->getMessage());
+            Log::error('Failed to get MIMSMS balance: ' . $e->getMessage());
         }
 
-        return 'ব্যালেন্স ফেচ করতে ব্যর্থ';
+        return 'Unable to fetch balance';
     }
 
     protected function getTwilioBalance()
     {
         try {
-            $response = Http::timeout(30)->withBasicAuth(
+            $response = Http::withBasicAuth(
                 $this->config['api_key'],
                 $this->config['api_secret']
             )->get("https://api.twilio.com/2010-04-01/Accounts/{$this->config['api_key']}/Balance.json");
 
             if ($response->successful()) {
                 $data = $response->json();
-                return ($data['balance'] ?? '0') . ' ' . ($data['currency'] ?? 'USD');
+                return $data['balance'] . ' ' . $data['currency'] ?? 'Unknown';
             }
         } catch (\Exception $e) {
-            Log::error('Twilio ব্যালেন্স চেক ব্যর্থ: ' . $e->getMessage());
+            Log::error('Failed to get Twilio balance: ' . $e->getMessage());
         }
 
-        return 'ব্যালেন্স ফেচ করতে ব্যর্থ';
+        return 'Unable to fetch balance';
     }
 
     public function sendSupplierWelcome($supplier, $loginUrl = null)
@@ -450,9 +430,6 @@ class SmsService
                 'success' => $result['success'],
                 'message' => $result['message'],
             ];
-            
-            // Add small delay to avoid rate limiting
-            usleep(100000); // 100ms delay
         }
 
         return $results;

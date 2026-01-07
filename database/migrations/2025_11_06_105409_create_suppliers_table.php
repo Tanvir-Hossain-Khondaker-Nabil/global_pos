@@ -24,6 +24,7 @@ return new class extends Migration {
             $table->string('website')->nullable();
             $table->boolean('is_active')->default(true);
             $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('dealership_id')->nullable();
             $table->timestamps();
         });
     }

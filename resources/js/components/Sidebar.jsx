@@ -410,6 +410,16 @@ const baseMenu = [
         active: "sms-templates.index",
         role: "all",
         category: "HR"
+    },
+
+    {
+        title: "Outlet",
+        icon: "gift",
+        route: "outlets.index",
+        routeParams: null,
+        active: "outlets.index",
+        role: "all",
+        category: "HR"
     }
 ];
 

@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Account;
+use App\Models\DillerShip;
 
 class SupplierController extends Controller
 {
@@ -21,7 +22,7 @@ class SupplierController extends Controller
     {
         $filters = $request->only('search');
 
-        $suppliers = Supplier::with('purchases')->when($filters['search'] ?? null, function ($query, $search) {
+        $suppliers = Supplier::with(['purchases','dealership'])->when($filters['search'] ?? null, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('contact_person', 'like', "%{$search}%")
@@ -38,6 +39,7 @@ class SupplierController extends Controller
         return Inertia::render('Supplier/Index', [
             'suppliers' => $suppliers,
             'filters' => $filters,
+            'dealerships' => DillerShip::all(),
             'accounts' => Account::where('is_active',true)->get(),
         ]);
     }
@@ -47,27 +49,15 @@ class SupplierController extends Controller
     // Store new supplier
     public function store(SupplierStore $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'contact_person' => 'required|string|max:255',
-            'email' => 'required|email',
-            'phone' => 'required|string|max:20',
-            'company' => 'nullable|string|max:255',
-            'address' => 'nullable|string',
-            'website' => 'nullable|url',
-            'advance_amount' => 'nullable|numeric|min:0',
-            'due_amount' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean',
-            'send_welcome_sms' => 'boolean',
-        ]);
+        $validated = $request->validated();
 
-        $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
-        $validated['due_amount'] = $validated['due_amount'] ?? 0;
-        $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['created_by'] = Auth::id();
-        
         $account = Account::find($request->input('account_id'));
+        $dealership = DillerShip::find($request->input('dealership_id'));
+
+        if ($dealership) {
+            $validated['dealership_id'] = $dealership->id;
+        }
 
         $supplier = Supplier::create($validated);
 
@@ -77,25 +67,21 @@ class SupplierController extends Controller
 
         if ($request->boolean('send_welcome_sms')) {
             try {
-                // Get user's own SMS gateway
                 $smsService = new SmsService();
                 $smsResult = $smsService->sendSupplierWelcome($supplier);
                 $smsSent = $smsResult['success'] ?? false;
 
                 if (!$smsResult['success']) {
-                    $smsError = $smsResult['message'] ?? 'SMS পাঠানো ব্যর্থ হয়েছে';
+                    $smsError = $smsResult['message'] ?? 'Failed to send SMS';
                 }
 
-                Log::info('সাপ্লায়ার ওয়েলকাম SMS রেজাল্ট:', [
+                Log::info('Supplier Welcome SMS Result:', [
                     'supplier_id' => $supplier->id,
                     'phone' => $supplier->phone,
-                    'user_id' => Auth::id(),
                     'result' => $smsResult,
                 ]);
             } catch (\Exception $e) {
-                Log::error('ওয়েলকাম SMS পাঠানো ব্যর্থ: ' . $e->getMessage(), [
-                    'user_id' => Auth::id(),
-                ]);
+                Log::error('Failed to send welcome SMS: ' . $e->getMessage());
                 $smsError = $e->getMessage();
             }
         }
@@ -108,7 +94,7 @@ class SupplierController extends Controller
                 'shadow_amount' => 0,
                 'payment_method' => 'Cash',
                 'txn_ref' => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
-                'note' => 'সাপ্লায়ারের প্রাথমিক অ্যাডভ্যান্স পেমেন্ট',
+                'note' => 'Initial advance amount payment of supplier',
                 'paid_at' => Carbon::now(),
                 'created_by' => Auth::id(),
             ]);
@@ -117,26 +103,28 @@ class SupplierController extends Controller
             if ($request->boolean('send_welcome_sms')) {
                 try {
                     $smsService = new SmsService();
-                    $advanceResult = $smsService->sendSupplierAdvanceNotification($supplier, $payment);
+                    $advanceMessage = "Dear {$supplier->contact_person}, Advance payment of {$request->advance_amount} has been recorded. Transaction ID: {$payment->txn_ref}";
 
-                    Log::info('অ্যাডভ্যান্স পেমেন্ট SMS রেজাল্ট:', [
+                    $smsResult = $smsService->sendSms(
+                        $supplier->phone,
+                        $advanceMessage
+                    );
+
+                    Log::info('Advance Payment SMS Result:', [
                         'payment_id' => $payment->id,
-                        'result' => $advanceResult,
-                        'user_id' => Auth::id(),
+                        'result' => $smsResult,
                     ]);
                 } catch (\Exception $e) {
-                    Log::error('অ্যাডভ্যান্স পেমেন্ট SMS পাঠানো ব্যর্থ: ' . $e->getMessage(), [
-                        'user_id' => Auth::id(),
-                    ]);
+                    Log::error('Failed to send advance payment SMS: ' . $e->getMessage());
                 }
             }
         }
 
-        $responseMessage = 'সাপ্লায়ার কন্টাক্ট সফলভাবে যোগ করা হয়েছে!';
+        $responseMessage = 'Supplier contact added successfully!';
         if ($smsSent) {
-            $responseMessage .= ' ওয়েলকাম SMS পাঠানো হয়েছে।';
+            $responseMessage .= ' Welcome SMS sent.';
         } elseif ($smsError) {
-            $responseMessage .= ' (SMS ব্যর্থ: ' . $smsError . ')';
+            $responseMessage .= ' (SMS failed: ' . $smsError . ')';
         }
 
         return redirect()->back()->with('success', $responseMessage);
@@ -172,12 +160,15 @@ class SupplierController extends Controller
             'advance_amount' => 'nullable|numeric|min:0',
             'due_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
+            'dealership_id' => 'nullable|exists:diller_ships,id'
         ]);
 
-        // Set default values for numeric fields if not provided
-        $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
-        $validated['due_amount'] = $validated['due_amount'] ?? 0;
-        $validated['is_active'] = $validated['is_active'] ?? true;
+
+        $dealership = DillerShip::find($request->input('dealership_id'));
+
+        if ($dealership) {
+            $validated['dealership_id'] = $dealership->id;
+        }
 
         $supplier->update($validated);
 
@@ -201,7 +192,7 @@ class SupplierController extends Controller
 
     public function show($id)
     {
-        $supplier = Supplier::with([
+        $supplier = Supplier::with(['dealership',
             'purchases' => function ($query) {
                 $query->with([
                     'items.product',

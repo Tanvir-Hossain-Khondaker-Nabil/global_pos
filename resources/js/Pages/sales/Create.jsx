@@ -1,6 +1,6 @@
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
-import { ArrowLeft, Plus, Trash2, Search, User, Phone, Mail, MapPin,Wallet, DollarSign, ShoppingBag, Store, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Search, User, Phone, Mail, MapPin, Wallet, DollarSign, ShoppingBag, Store, X, CreditCard, Landmark, Smartphone, Package, Tag, ChevronRight, Calendar, CheckCircle, AlertCircle, Building, Filter, Hash, Box, Layers, Warehouse } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -15,11 +15,15 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const [paidAmount, setPaidAmount] = useState(0);
     const [shadowPaidAmount, setShadowPaidAmount] = useState(0);
     const [selectedAccount, setSelectedAccount] = useState('');
+    const [paymentStatus, setPaymentStatus] = useState('unpaid'); // Added from second file
+    const [manualPaymentOverride, setManualPaymentOverride] = useState(false); // Added from second file
 
-    // New state variables for customer info and payment options
+    // Updated state variables for customer info and payment options (with new customer option)
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [usePartialPayment, setUsePartialPayment] = useState(false);
     const [adjustFromAdvance, setAdjustFromAdvance] = useState(false);
+    const [customerNameInput, setCustomerNameInput] = useState("");
+    const [customerPhoneInput, setCustomerPhoneInput] = useState("");
     const [availableAdvance, setAvailableAdvance] = useState(0);
 
     // Pickup sale states
@@ -36,6 +40,15 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const [newSupplierCompany, setNewSupplierCompany] = useState("");
     const [newSupplierPhone, setNewSupplierPhone] = useState("");
 
+    // Product selection states from second file
+    const [showProductDropdown, setShowProductDropdown] = useState(false);
+    const [showBrandDropdown, setShowBrandDropdown] = useState(false);
+    const [showVariantDropdown, setShowVariantDropdown] = useState(false);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const [selectedBrand, setSelectedBrand] = useState(null);
+    const [availableBrands, setAvailableBrands] = useState([]);
+    const [availableVariants, setAvailableVariants] = useState([]);
+
     console.log("Customers:", customers);
     console.log("Product Stocks:", productstocks);
 
@@ -48,7 +61,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         }, 0);
     }, [selectedItems]);
 
-
     const calculatePickupSubTotal = useCallback(() => {
         if (!pickupItems || pickupItems.length === 0) return 0;
         return pickupItems.reduce((total, item) => {
@@ -56,23 +68,19 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         }, 0);
     }, [pickupItems]);
 
-
     const calculateTotalSubTotal = useCallback(() => {
         return calculateRealSubTotal() + calculatePickupSubTotal();
     }, [calculateRealSubTotal, calculatePickupSubTotal]);
-
 
     const calculateVatAmount = useCallback(() => {
         const subtotal = calculateTotalSubTotal();
         return (subtotal * (Number(vatRate) || 0)) / 100;
     }, [calculateTotalSubTotal, vatRate]);
 
-
     const calculateDiscountAmount = useCallback(() => {
         const subtotal = calculateTotalSubTotal();
         return (subtotal * (Number(discountRate) || 0)) / 100;
     }, [calculateTotalSubTotal, discountRate]);
-
 
     const calculateGrandTotal = useCallback(() => {
         const subtotal = calculateTotalSubTotal();
@@ -81,14 +89,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         return subtotal + vatAmount - discountAmount;
     }, [calculateTotalSubTotal, calculateVatAmount, calculateDiscountAmount]);
 
-    
     const calculateDueAmount = useCallback(() => {
         const grandTotal = calculateGrandTotal();
         const paid = Number(paidAmount) || 0;
         return Math.max(0, grandTotal - paid);
     }, [calculateGrandTotal, paidAmount]);
 
-        // Get account icon
+    // Get account icon from second file
     const getAccountIcon = (type) => {
         switch (type) {
             case 'cash': return <Wallet size={14} className="text-green-600" />;
@@ -128,43 +135,143 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         );
     }, [productstocks]);
 
-    // Calculate available advance when customer changes
-    useEffect(() => {
-        if (selectedCustomer) {
-            const advance = parseFloat(selectedCustomer.advance_amount) || 0;
-            const due = parseFloat(selectedCustomer.due_amount) || 0;
-            setAvailableAdvance(advance - due);
+    // Handle customer selection (UPDATED with new customer option)
+    const handleCustomerSelect = (customerId) => {
+        if (customerId === "new") {
+            // Clear selected customer for new customer
+            setSelectedCustomer(null);
+            setCustomerNameInput("");
+            setCustomerPhoneInput("");
+            setAvailableAdvance(0);
+            form.setData({
+                ...form.data,
+                customer_id: "",
+                customer_name: "",
+                phone: "",
+            });
+            
+            // Reset payment status for new customer
+            setPaymentStatus('unpaid');
+            setPaidAmount(0);
+            setAdjustFromAdvance(false);
+            setManualPaymentOverride(false);
         } else {
+            form.setData("customer_id", customerId);
+            const customer = customers.find(c => c.id === parseInt(customerId));
+            setSelectedCustomer(customer || null);
+            
+            if (customer) {
+                setCustomerNameInput(customer.customer_name);
+                setCustomerPhoneInput(customer.phone);
+                const advance = parseFloat(customer.advance_amount) || 0;
+                const due = parseFloat(customer.due_amount) || 0;
+                setAvailableAdvance(advance - due);
+                form.setData({
+                    ...form.data,
+                    customer_id: customer.id,
+                    customer_name: customer.customer_name,
+                    phone: customer.phone,
+                });
+            }
+            
+            // Reset payment status when customer changes
+            if (!customerId) {
+                setPaymentStatus('unpaid');
+                setPaidAmount(0);
+                setAdjustFromAdvance(false);
+                setManualPaymentOverride(false);
+            }
+        }
+    };
+
+    // Handle manual customer name input
+    const handleCustomerNameChange = (value) => {
+        setCustomerNameInput(value);
+        form.setData("customer_name", value);
+        // If user types in name field, treat as new customer
+        if (value && selectedCustomer && value !== selectedCustomer.customer_name) {
+            setSelectedCustomer(null);
+            form.setData("customer_id", "");
             setAvailableAdvance(0);
         }
-    }, [selectedCustomer]);
+    };
 
-    // Handle customer selection
-    const handleCustomerSelect = (customerId) => {
-        form.setData("customer_id", customerId);
-        const customer = customers.find(c => c.id === parseInt(customerId));
-        setSelectedCustomer(customer || null);
+    // Handle manual customer phone input
+    const handleCustomerPhoneChange = (value) => {
+        setCustomerPhoneInput(value);
+        form.setData("phone", value);
+        // If user types in phone field, treat as new customer
+        if (value && selectedCustomer && value !== selectedCustomer.phone) {
+            setSelectedCustomer(null);
+            form.setData("customer_id", "");
+            setAvailableAdvance(0);
+        }
+    };
+
+    // Handle payment status change from second file
+    const handlePaymentStatusChange = (status) => {
+        setPaymentStatus(status);
+        const grandTotal = calculateGrandTotal();
+
+        if (status === 'paid') {
+            setPaidAmount(grandTotal);
+            setManualPaymentOverride(false);
+            setAdjustFromAdvance(false);
+        } else if (status === 'unpaid') {
+            setPaidAmount(0);
+            setManualPaymentOverride(false);
+            setAdjustFromAdvance(false);
+        } else if (status === 'partial') {
+            setManualPaymentOverride(true);
+            setAdjustFromAdvance(false);
+        }
     };
 
     // Handle adjust from advance checkbox
     useEffect(() => {
-        if (adjustFromAdvance && availableAdvance > 0) {
+        if (adjustFromAdvance && availableAdvance > 0 && !manualPaymentOverride) {
             const grandTotal = calculateGrandTotal();
             const maxAdjustable = Math.min(availableAdvance, grandTotal);
 
-            // Set the paid amount to the adjustable amount
-            setPaidAmount(prev => {
-                const newPaid = Math.min(prev + maxAdjustable, grandTotal);
-                return newPaid;
-            });
-        } else if (!adjustFromAdvance) {
-            // Remove the advance adjustment
-            const grandTotal = calculateGrandTotal();
-            const currentPaid = parseFloat(paidAmount) || 0;
-            const adjustedPaid = Math.max(0, currentPaid - Math.min(availableAdvance, grandTotal));
-            setPaidAmount(adjustedPaid);
+            if (paidAmount == 0 || paidAmount > grandTotal) {
+                const autoPaidAmount = Math.min(maxAdjustable, grandTotal);
+                setPaidAmount(autoPaidAmount);
+                if (autoPaidAmount >= grandTotal) {
+                    setPaymentStatus('paid');
+                } else if (autoPaidAmount > 0) {
+                    setPaymentStatus('partial');
+                } else {
+                    setPaymentStatus('unpaid');
+                }
+            }
         }
-    }, [adjustFromAdvance, availableAdvance, calculateGrandTotal]);
+    }, [adjustFromAdvance, availableAdvance, calculateGrandTotal, manualPaymentOverride, paidAmount]);
+
+    // Handle manual payment input from second file
+    const handleManualPaymentInput = (e) => {
+        const value = parseFloat(e.target.value) || 0;
+        const grandTotal = calculateGrandTotal();
+        setPaidAmount(value);
+        if (value === 0) {
+            setPaymentStatus('unpaid');
+        } else if (value >= grandTotal) {
+            setPaymentStatus('paid');
+        } else {
+            setPaymentStatus('partial');
+        }
+    };
+
+    const enableManualPaymentOverride = () => {
+        setManualPaymentOverride(true);
+        setAdjustFromAdvance(false);
+    };
+
+    const disableManualPaymentOverride = () => {
+        setManualPaymentOverride(false);
+        const grandTotal = calculateGrandTotal();
+        setPaidAmount(grandTotal);
+        setPaymentStatus('paid');
+    };
 
     // Handle partial payment checkbox
     useEffect(() => {
@@ -176,6 +283,8 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
     const form = useForm({
         customer_id: "",
+        customer_name: "",
+        phone: "",
         sale_date: new Date().toISOString().split('T')[0],
         notes: "",
         items: [],
@@ -191,8 +300,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         advance_adjustment: 0,
         pickup_items: [],
         supplier_id: null,
+        payment_status: 'unpaid', // Added from second file
+        account_id: 0, // Added from second file
     });
-
 
     // Update form data when any of the dependencies change
     useEffect(() => {
@@ -252,8 +362,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             adjust_from_advance: adjustFromAdvance,
             advance_adjustment: advanceAdjustment,
             supplier_id: selectedSupplier ? selectedSupplier.id : null,
+            payment_status: paymentStatus, // Added from second file
+            account_id: selectedAccount, // Added from second file
+            customer_name: customerNameInput, // Added customer name
+            phone: customerPhoneInput, // Added phone
         });
-    }, [selectedItems, pickupItems, vatRate, discountRate, paidAmount, shadowPaidAmount, usePartialPayment, adjustFromAdvance, availableAdvance, selectedSupplier, calculateRealSubTotal, calculatePickupSubTotal, calculateTotalSubTotal, calculateGrandTotal, calculateDueAmount]);
+    }, [selectedItems, pickupItems, vatRate, discountRate, paidAmount, shadowPaidAmount, usePartialPayment, adjustFromAdvance, availableAdvance, selectedSupplier, selectedAccount, paymentStatus, customerNameInput, customerPhoneInput, calculateRealSubTotal, calculatePickupSubTotal, calculateTotalSubTotal, calculateGrandTotal, calculateDueAmount]);
+
 
     const getVariantDisplayName = (variant) => {
         const parts = [];
@@ -261,7 +376,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         if (variant.attribute_values) {
             if (typeof variant.attribute_values === 'object') {
                 const attrs = Object.entries(variant.attribute_values)
-                    .map(([key, value]) => ` ${value}`)
+                    .map(([key, value]) => ` ${key}`)
                     .join(', ');
                 parts.push(` ${attrs}`);
             } else {
@@ -272,6 +387,24 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         if (variant.sku) parts.push(`Sku: ${variant.sku}`);
         return parts.join(', ') || 'Default Variant';
     };
+
+    const getVariant = (variant) => {
+         const parts = [];
+
+        if (variant.attribute_values) {
+            if (typeof variant.attribute_values === 'object') {
+                const attrs = Object.entries(variant.attribute_values)
+                    .map(([key, value]) => `${key}`)
+                    .join(', ');
+                parts.push(` ${attrs}`);
+            } else {
+                parts.push(`Attribute: ${variant.attribute_values}`);
+            }
+        }
+
+        return parts.join(', ') || 'Default Variant';
+    };
+
 
     const getBrandName = (variant) => {
         const parts = [];
@@ -290,28 +423,209 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         return parts.join(', ') || 'Default Variant';
     };
 
-    
     // Handle account selection
     const handleAccountSelect = (accountId) => {
         const id = accountId ? parseInt(accountId) : "";
         setSelectedAccount(id);
         form.setData("account_id", id);
     };
-    
 
     // Filter products based on search
     useEffect(() => {
-        if (productSearch) {
-            const filtered = productstocks.filter(productstock =>
-                productstock.product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                productstock.product.product_no?.toLowerCase().includes(productSearch.toLowerCase())
-            );
-            setFilteredProducts(filtered);
-        } else {
-            setFilteredProducts(productstocks.slice(0, 10));
+        if (!productSearch.trim()) {
+            setFilteredProducts(allProducts);
+            return;
         }
-    }, [productSearch, productstocks]);
 
+        const searchTerm = productSearch.toLowerCase();
+        const filtered = allProducts.filter(product =>
+            product.name.toLowerCase().includes(searchTerm) ||
+            product.product_no?.toLowerCase().includes(searchTerm) ||
+            product.code?.toLowerCase().includes(searchTerm)
+        );
+
+        setFilteredProducts(filtered);
+    }, [productSearch, allProducts]);
+
+    // Get brands for selected product from second file
+    const getBrandsForProduct = (productId) => {
+        if (!productstocks || !productId) return [];
+
+        const brandSet = new Set();
+
+        productstocks
+            .filter(stock => stock.product?.id === productId && stock.quantity > 0)
+            .forEach(stock => {
+                const variant = stock.variant;
+                if (variant && variant.attribute_values) {
+                    if (typeof variant.attribute_values === 'object') {
+                        Object.keys(variant.attribute_values).forEach(key => {
+                            brandSet.add(key);
+                        });
+                    }
+                }
+            });
+
+        return Array.from(brandSet).sort();
+    };
+
+    // Get variants for selected brand from second file
+    const getVariantsForBrand = (productId, brandName) => {
+        if (!productstocks || !productId) return [];
+
+        const variants = [];
+
+        productstocks
+            .filter(stock => stock.product?.id === productId && stock.quantity > 0)
+            .forEach(stock => {
+                const variant = stock.variant;
+                if (variant && variant.attribute_values) {
+                    if (typeof variant.attribute_values === 'object') {
+                        if (!brandName || variant.attribute_values[brandName]) {
+                            const existingVariant = variants.find(v => v.variant?.id === variant.id);
+                            if (!existingVariant) {
+                                variants.push({
+                                    variant: variant,
+                                    stocks: [stock],
+                                    totalQuantity: Number(stock.quantity) || 0,
+                                    batch_no: stock.batch_no,
+                                    sale_price: stock.sale_price,
+                                    shadow_sale_price: stock.shadow_sale_price // Added shadow price
+                                });
+                            } else {
+                                existingVariant.stocks.push(stock);
+                                existingVariant.totalQuantity += Number(stock.quantity) || 0;
+                            }
+                        }
+                    }
+                }
+            });
+
+        return variants.sort((a, b) => b.totalQuantity - a.totalQuantity);
+    };
+
+    // Handle product selection from second file
+    const handleProductSelect = (product) => {
+        setSelectedProduct(product);
+        setSelectedBrand(null);
+        setAvailableVariants([]);
+
+        const brands = getBrandsForProduct(product.id);
+        setAvailableBrands(brands);
+
+        if (brands.length > 0) {
+            setShowBrandDropdown(true);
+            setShowProductDropdown(false);
+            setProductSearch(product.name);
+        } else {
+            const variants = getVariantsForBrand(product.id, '');
+            setAvailableVariants(variants);
+            setShowVariantDropdown(true);
+            setShowProductDropdown(false);
+        }
+    };
+
+    // Handle brand selection from second file
+    const handleBrandSelect = (brand) => {
+        setSelectedBrand(brand);
+
+        const variants = getVariantsForBrand(selectedProduct.id, brand);
+        setAvailableVariants(variants);
+
+        setShowBrandDropdown(false);
+        setShowVariantDropdown(true);
+        setProductSearch(`${selectedProduct.name} - ${brand}`);
+    };
+
+    // Handle variant selection and add to cart from second file
+    const handleVariantSelect = (variantWithStocks) => {
+        const { variant, stocks, totalQuantity, batch_no, sale_price, shadow_sale_price } = variantWithStocks;
+
+        const availableStock = stocks.find(s => s.quantity > 0) || stocks[0];
+
+        if (!availableStock) return;
+
+        const salePrice = Number(sale_price) || Number(availableStock.sale_price) || 0;
+        const shadowSalePrice = Number(shadow_sale_price) || Number(availableStock.shadow_sale_price) || 0;
+
+        const itemKey = `${selectedProduct.id}-${variant.id}-${availableStock.batch_no || 'default'}`;
+
+        const existingItem = selectedItems.find(
+            item => item.uniqueKey === itemKey
+        );
+
+        if (existingItem) {
+            setSelectedItems(selectedItems.map(item =>
+                item.uniqueKey === itemKey
+                    ? {
+                        ...item,
+                        quantity: item.quantity + 1,
+                        total_price: (item.quantity + 1) * item.unit_price
+                    }
+                    : item
+            ));
+        } else {
+            setSelectedItems([
+                ...selectedItems,
+                {
+                    uniqueKey: itemKey,
+                    product_id: selectedProduct.id,
+                    variant_id: variant.id,
+                    batch_no: availableStock.batch_no,
+                    product_name: selectedProduct.name,
+                    variant_attribute: selectedBrand || Object.keys(variant.attribute_values || {})[0] || 'Default',
+                    product_code: selectedProduct.product_no || '',
+                    variant_value: selectedBrand
+                        ? variant.attribute_values?.[selectedBrand] || 'Default'
+                        : Object.values(variant.attribute_values || {})[0] || 'Default',
+                    quantity: 1,
+                    sku: variant.sku || 'Default SKU',
+                    stockQuantity: totalQuantity,
+                    stockId: availableStock.id,
+                    unit_price: salePrice,
+                    sell_price: salePrice,
+                    total_price: salePrice,
+                    shadow_sell_price: shadowSalePrice, 
+                }
+            ]);
+        }
+
+        resetSelectionFlow();
+    };
+
+    // Reset the selection flow from second file
+    const resetSelectionFlow = () => {
+        setSelectedProduct(null);
+        setSelectedBrand(null);
+        setAvailableBrands([]);
+        setAvailableVariants([]);
+        setShowProductDropdown(false);
+        setShowBrandDropdown(false);
+        setShowVariantDropdown(false);
+        setProductSearch("");
+    };
+
+    // Go back to product selection from second file
+    const goBackToProducts = () => {
+        setSelectedProduct(null);
+        setSelectedBrand(null);
+        setAvailableBrands([]);
+        setAvailableVariants([]);
+        setShowBrandDropdown(false);
+        setShowVariantDropdown(false);
+        setShowProductDropdown(true);
+        setProductSearch("");
+    };
+
+    // Go back to brand selection from second file
+    const goBackToBrands = () => {
+        setSelectedBrand(null);
+        setAvailableVariants([]);
+        setShowVariantDropdown(false);
+        setShowBrandDropdown(true);
+    };
+
+    // Original addItem function (kept for compatibility)
     const addItem = (productstock, variant) => {
         const variantId = variant?.id || 0;
 
@@ -335,9 +649,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     product_id: productstock.product.id,
                     variant_id: variantId,
                     product_name: productstock.product.name,
-                    variant_name: variant ? getBrandName(variant) : 'Default Brand',
+                    variant_name: variant ? getVariant(variant) : 'Default Brand',
                     product_code: productstock.product.product_no || '',
-                    model_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
+                    modal_name: variant ? getVariantDisplayName(variant) : 'Default Variant',
                     quantity: 1,
                     stockQuantity: Number(productstock.quantity) || 0,
                     stockId: productstock.id,
@@ -360,11 +674,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             return;
         }
 
-        // if (!selectedSupplier) {
-        //     alert("Please select a supplier for pickup item");
-        //     return;
-        // }
-
         const newItem = {
             id: Date.now(),
             product_name: pickupProductName,
@@ -374,9 +683,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             unit_price: Number(pickupUnitPrice),
             sale_price: Number(pickupSalePrice),
             total_price: Number(pickupQuantity) * Number(pickupSalePrice),
-            // supplier_id: selectedSupplier.id,
-            // supplier_name: selectedSupplier.name,
-            // supplier_company: selectedSupplier.company,
         };
 
         setPickupItems([...pickupItems, newItem]);
@@ -471,10 +777,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         }
     };
 
-    // console.log("Selected Items:", selectedItems);
-    // console.log("Pickup Items:", pickupItems);
-    // console.log("Form Data:", form.data);
-
     // Safe number formatting function
     const formatCurrency = (value) => {
         const numValue = Number(value) || 0;
@@ -513,14 +815,23 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             return;
         }
 
-        // Validate pickup items have suppliers
-        // if (pickupItems.length > 0) {
-        //     const itemsWithoutSupplier = pickupItems.filter(item => !item.supplier_id);
-        //     if (itemsWithoutSupplier.length > 0) {
-        //         alert("Please ensure all pickup items have a supplier assigned");
-        //         return;
-        //     }
-        // }
+        // Validate customer information
+        if (!form.data.customer_name || !form.data.phone) {
+            alert("Please provide customer name and phone number");
+            return;
+        }
+
+        // Validate account selection
+        if (!selectedAccount) {
+            alert("Please select a payment account");
+            return;
+        }
+
+        // Validate pickup sale supplier (only if pickup items exist)
+        if (pickupItems.length > 0 && !selectedSupplier) {
+            alert("Please select a supplier for pickup items");
+            return;
+        }
 
         form.post(route("sales.store"), {
             onSuccess: () => {
@@ -565,24 +876,22 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             <form onSubmit={submit}>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     <div className="lg:col-span-1 space-y-4">
+                        {/* UPDATED CUSTOMER SECTION */}
                         <div className="form-control">
                             <label className="label">
-                                <span className="label-text">Customer *</span>
+                                <span className="label-text">Select Customer *</span>
                             </label>
                             <select
                                 className="select select-bordered"
-                                value={form.data.customer_id}
+                                value={selectedCustomer ? selectedCustomer.id : ""}
                                 onChange={(e) => handleCustomerSelect(e.target.value)}
-                                required
                             >
-                                <option value="">Select Customer</option>
+                                <option value="">Select Existing Customer</option>
+                                <option value="new">+ New Customer</option>
                                 {customers.map(c => (
-                                    <option key={c.id} value={c.id}>{c.customer_name}</option>
+                                    <option key={c.id} value={c.id}>{c.customer_name} ({c.phone})</option>
                                 ))}
                             </select>
-                            {form.errors.customer_id && (
-                                <div className="text-error text-sm mt-1">{form.errors.customer_id}</div>
-                            )}
                         </div>
 
                         {/* Customer Information Display */}
@@ -612,18 +921,20 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                             <span className="line-clamp-2">{selectedCustomer.address}</span>
                                         </div>
                                     )}
-                                    <div className="flex items-center gap-2 text-sm">
-                                        <DollarSign size={12} className="text-green-500" />
-                                        <span>
-                                            <span className="font-medium">Available Advance:</span>
-                                            <span className="ml-1 font-bold text-green-600">
-                                                ৳{formatCurrency(availableAdvance)}
+                                    {availableAdvance > 0 && (
+                                        <div className="flex items-center gap-2 text-sm">
+                                            <DollarSign size={12} className="text-green-500" />
+                                            <span>
+                                                <span className="font-medium">Available Advance:</span>
+                                                <span className="ml-1 font-bold text-green-600">
+                                                    ৳{formatCurrency(availableAdvance)}
+                                                </span>
                                             </span>
-                                        </span>
-                                    </div>
+                                        </div>
+                                    )}
                                 </div>
 
-                                {/* Payment Options */}
+                                {/* Payment Options - UPDATED with second file features */}
                                 <div className="mt-4 pt-3 border-t border-gray-200">
                                     <h4 className="font-medium text-gray-700 mb-2">Payment Options</h4>
 
@@ -654,6 +965,34 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                         )}
                                     </div>
 
+                                    {/* Payment Status Selector from second file */}
+                                    <div className="mt-3">
+                                        <label className="label py-0">
+                                            <span className="label-text font-medium">Payment Status</span>
+                                        </label>
+                                        <select
+                                            className="select select-bordered select-sm w-full"
+                                            value={paymentStatus}
+                                            onChange={(e) => handlePaymentStatusChange(e.target.value)}
+                                        >
+                                            <option value="unpaid">Unpaid</option>
+                                            <option value="partial">Partial</option>
+                                            <option value="paid">Paid</option>
+                                        </select>
+                                    </div>
+
+                                    {/* Manual Payment Override from second file */}
+                                    <div className="mt-2 flex justify-between items-center">
+                                        <span className="text-sm">Manual Payment:</span>
+                                        <button
+                                            type="button"
+                                            onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
+                                            className="btn btn-xs btn-outline"
+                                        >
+                                            {manualPaymentOverride ? 'Disable' : 'Enable'}
+                                        </button>
+                                    </div>
+
                                     {adjustFromAdvance && availableAdvance > 0 && (
                                         <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded-box">
                                             <p className="text-sm text-blue-700">
@@ -665,6 +1004,85 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                 </div>
                             </div>
                         )}
+
+                        {/* Customer Name Input */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Customer Name *</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="input input-bordered"
+                                value={customerNameInput}
+                                onChange={(e) => handleCustomerNameChange(e.target.value)}
+                                required
+                            />
+                            {form.errors.customer_name && (
+                                <div className="text-error text-sm mt-1">{form.errors.customer_name}</div>
+                            )}
+                        </div>
+
+                        {/* Customer Phone Input */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text">Customer Phone *</span>
+                            </label>
+                            <input
+                                type="text"
+                                className="input input-bordered"
+                                value={customerPhoneInput}
+                                onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+                                required
+                            />
+                            {form.errors.phone && (
+                                <div className="text-error text-sm mt-1">{form.errors.phone}</div>
+                            )}
+                        </div>
+
+                        {/* Payment Account Selection */}
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text font-bold">Payment Account *</span>
+                            </label>
+                            <select
+                                className="select select-bordered w-full"
+                                value={selectedAccount}
+                                onChange={(e) => handleAccountSelect(e.target.value)}
+                                required
+                            >
+                                <option value="">Select Account</option>
+                                {accounts && accounts.map(account => (
+                                    <option key={account.id} value={account.id}>
+                                        <div className="flex items-center gap-2">
+                                            {getAccountIcon(account.type)}
+                                            <span>{account.name}</span>
+                                            <span className="text-xs text-gray-500">
+                                                (Balance: {formatWithSymbol(account.current_balance)})
+                                            </span>
+                                        </div>
+                                    </option>
+                                ))}
+                            </select>
+                            {selectedAccount && (
+                                <div className="mt-2 text-xs">
+                                    {(() => {
+                                        const account = accounts.find(a => a.id == selectedAccount);
+                                        if (account) {
+                                            return (
+                                                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-box">
+                                                    {getAccountIcon(account.type)}
+                                                    <span className="font-bold">{account.name}</span>
+                                                    <span className="ml-auto font-mono">
+                                                        {formatWithSymbol(account.current_balance)}
+                                                    </span>
+                                                </div>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                </div>
+                            )}
+                        </div>
 
                         {/* Supplier Selection for Pickup Sale */}
                         {pickupItems.length > 0 && (
@@ -689,13 +1107,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                             </option>
                                         ))}
                                     </select>
-                                    {/* <button
+                                    <button
                                         type="button"
                                         onClick={() => setShowSupplierModal(true)}
                                         className="btn btn-sm btn-outline"
                                     >
                                         <Plus size={14} />
-                                    </button> */}
+                                    </button>
                                 </div>
                                 {selectedSupplier && (
                                     <div className="mt-2 text-sm bg-blue-50 p-2 rounded-box">
@@ -721,53 +1139,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             />
                         </div>
 
-                        {/* Payment Account Selection */}
-                        <div className="form-control">
-                            <label className="label py-1">
-                                <span className="label-text font-bold text-gray-600">
-                                    {t('sales.payment_account', 'Payment Account')} *
-                                </span>
-                            </label>
-                            <select
-                                className="select select-bordered w-full rounded-xl focus:border-red-600"
-                                value={selectedAccount}
-                                onChange={(e) => handleAccountSelect(e.target.value)}
-                                required
-                            >
-                                <option value="">{t('sales.select_account', 'Select Account')}</option>
-                                {accounts && accounts.map(account => (
-                                    <option key={account.id} value={account.id}>
-                                        <div className="flex items-center gap-2">
-                                            {getAccountIcon(account.type)}
-                                            <span>{account.name}</span>
-                                            <span className="text-xs text-gray-500">
-                                                (Balance: {formatWithSymbol(account.current_balance)})
-                                            </span>
-                                        </div>
-                                    </option>
-                                ))}
-                            </select>
-                            {selectedAccount && (
-                                <div className="mt-2 text-xs">
-                                    {(() => {
-                                        const account = accounts.find(a => a.id == selectedAccount);
-                                        if (account) {
-                                            return (
-                                                <div className="flex items-center gap-2 bg-gray-50 p-2 rounded-lg">
-                                                    {getAccountIcon(account.type)}
-                                                    <span className="font-bold">{account.name}</span>
-                                                    <span className="ml-auto font-mono">
-                                                        {formatWithSymbol(account.current_balance)}
-                                                    </span>
-                                                </div>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
-                                </div>
-                            )}
-                        </div>
-
                         <div className="form-control">
                             <label className="label">
                                 <span className="label-text">Notes</span>
@@ -782,7 +1153,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                         </div>
                     </div>
 
-                    {/* Product Selection */}
+                    {/* Product Selection - UPDATED with second file features */}
                     <div className="lg:col-span-2">
                         {/* Header with both sale types */}
                         <div className="flex justify-between items-center mb-4">
@@ -794,53 +1165,214 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             </div>
                         </div>
 
-                        {/* Stock Products Section */}
+                        {/* Stock Products Section - UPDATED with second file dropdowns */}
                         <div className="mb-6">
+                            <div className="flex justify-between items-center mb-2">
+                                <h4 className="font-bold text-gray-700 flex items-center gap-2">
+                                    <Warehouse size={16} /> Stock Products
+                                </h4>
+                                <button
+                                    type="button"
+                                    className="btn btn-xs btn-outline"
+                                    onClick={() => {
+                                        setProductSearch("");
+                                        setShowProductDropdown(!showProductDropdown);
+                                    }}
+                                >
+                                    <Search size={12} className="mr-1" /> Search Stock
+                                </button>
+                            </div>
+
+                            {/* Product Search with Enhanced Dropdowns */}
                             <div className="form-control mb-4 relative">
-                                <label className="label">
-                                    <span className="label-text">Add Stock Products</span>
-                                </label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered w-full pr-10"
-                                    value={productSearch}
-                                    onChange={(e) => setProductSearch(e.target.value)}
-                                    placeholder="Search products by name or SKU..."
-                                />
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        className="input input-bordered w-full pr-10"
+                                        value={productSearch}
+                                        onChange={(e) => {
+                                            setProductSearch(e.target.value);
+                                            if (e.target.value.trim() || allProducts.length > 0) {
+                                                setShowProductDropdown(true);
+                                            }
+                                        }}
+                                        onClick={() => {
+                                            if (allProducts.length > 0) {
+                                                setShowProductDropdown(true);
+                                            }
+                                        }}
+                                        onBlur={() => {
+                                            setTimeout(() => {
+                                                setShowProductDropdown(false);
+                                            }, 200);
+                                        }}
+                                        placeholder="Search products by name or SKU..."
+                                    />
+                                    <Search size={18} className="absolute right-3 top-3.5 text-gray-400" />
 
-                                {productSearch && filteredProducts.length > 0 && (
-                                    <div className="absolute z-10 mt-1 w-full max-w-md bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
-                                        {filteredProducts.map(filteredProduct => {
-                                            const brandName = filteredProduct.variant?.attribute_values
-                                                ? Object.entries(filteredProduct.variant.attribute_values)
-                                                    .map(([key, value]) => ` ${key}`)
-                                                    .join(', ')
-                                                : null;
+                                    {productSearch && (
+                                        <button
+                                            type="button"
+                                            onClick={resetSelectionFlow}
+                                            className="absolute right-10 top-3 text-gray-400 hover:text-error"
+                                        >
+                                            <X size={16} />
+                                        </button>
+                                    )}
+                                </div>
 
-                                            const attributes = filteredProduct.variant?.attribute_values
-                                                ? Object.entries(filteredProduct.variant.attribute_values)
-                                                    .map(([key, value]) => ` ${value}`)
-                                                    .join(', ')
-                                                : null;
+                                {/* Product Dropdown */}
+                                {showProductDropdown && filteredProducts.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="bg-gray-100 p-2 sticky top-0 z-10">
+                                            <div className="flex justify-between items-center">
+                                                <h3 className="text-sm font-semibold text-gray-700">
+                                                    Select Product ({filteredProducts.length})
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowProductDropdown(false)}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {filteredProducts.map((product) => (
+                                            <div
+                                                key={product.id}
+                                                className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => handleProductSelect(product)}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{product.name}</div>
+                                                        <div className="text-xs text-gray-500 mt-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <span>Code: {product.product_no || 'N/A'}</span>
+                                                                <span>•</span>
+                                                                <span>Stock: {product.totalStock}</span>
+                                                                <span>•</span>
+                                                                <span>Variants: {product.variantsCount}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={16} className="text-gray-400" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Brand Dropdown */}
+                                {showBrandDropdown && availableBrands.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="bg-gray-100 p-2 sticky top-0 z-10">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={goBackToProducts}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <ArrowLeft size={12} />
+                                                </button>
+                                                <h3 className="text-sm font-semibold text-gray-700 flex-1">
+                                                    Select Brand for {selectedProduct?.name}
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowBrandDropdown(false)}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {availableBrands.map((brand, index) => (
+                                            <div
+                                                key={index}
+                                                className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                                                onMouseDown={(e) => e.preventDefault()}
+                                                onClick={() => handleBrandSelect(brand)}
+                                            >
+                                                <div className="flex justify-between items-center">
+                                                    <div className="flex-1">
+                                                        <div className="font-medium">{brand}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            Click to view variants
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={16} className="text-gray-400" />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Variant Dropdown */}
+                                {showVariantDropdown && availableVariants.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="bg-gray-100 p-2 sticky top-0 z-10">
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={selectedBrand ? goBackToBrands : goBackToProducts}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <ArrowLeft size={12} />
+                                                </button>
+                                                <h3 className="text-sm font-semibold text-gray-700 flex-1">
+                                                    {selectedBrand
+                                                        ? `Select ${selectedBrand} Variant`
+                                                        : `Select Variant for ${selectedProduct?.name}`}
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowVariantDropdown(false)}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {availableVariants.map((variantWithStocks, index) => {
+                                            const { variant, stocks, totalQuantity, sale_price, shadow_sale_price } = variantWithStocks;
+
+                                            const displayName = selectedBrand
+                                                ? variant.attribute_values?.[selectedBrand] || 'Default'
+                                                : Object.values(variant.attribute_values || {})[0] || 'Default';
+
+                                            const salePrice = Number(sale_price) || 0;
+                                            const shadowPrice = Number(shadow_sale_price) || 0;
 
                                             return (
                                                 <div
-                                                    key={filteredProduct.product.id}
+                                                    key={variant.id}
                                                     className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
-                                                    onClick={() => addItem(filteredProduct, filteredProduct.variant)}
+                                                    onMouseDown={(e) => e.preventDefault()}
+                                                    onClick={() => handleVariantSelect(variantWithStocks)}
                                                 >
-                                                    <div className="flex flex-col">
-                                                        <div className="flex justify-between items-center">
-                                                            <span>{filteredProduct?.product?.name} ({filteredProduct.variant.sku})</span>
-                                                            <Plus size={14} className="text-primary" />
-                                                        </div>
-                                                        {attributes && (
-                                                            <div className="text-sm text-gray-500 mt-1">
-                                                                <span> <strong>Variant:</strong> {brandName} || </span>
-                                                                <span><strong>Model:</strong> {attributes || 'N/A'} || </span>
-                                                                <span><strong>Batch No:</strong> {filteredProduct.batch_no || 'N/A'} </span>
+                                                    <div className="flex justify-between items-center">
+                                                        <div className="flex-1">
+                                                            <div className="font-medium">{displayName}</div>
+                                                            <div className="text-xs text-gray-500 mt-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span>Stock: {totalQuantity}</span>
+                                                                    <span>•</span>
+                                                                    <span>SKU: {variant.sku || 'N/A'}</span>
+                                                                    <span>•</span>
+                                                                    <span>Price: {formatWithSymbol(salePrice)}</span>
+                                                                    {shadowPrice > 0 && (
+                                                                        <>
+                                                                            <span>•</span>
+                                                                            <span>Shadow: {formatWithSymbol(shadowPrice)}</span>
+                                                                        </>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        )}
+                                                        </div>
+                                                        <Plus size={16} className="text-primary" />
                                                     </div>
                                                 </div>
                                             );
@@ -858,8 +1390,10 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                             <div className="flex justify-between items-start mb-3">
                                                 <div className="flex-1">
                                                     <h4 className="font-medium">{item.product_name} ({item.product_code})</h4>
-                                                    <p className="text-sm text-gray-600"><strong>Variant: </strong> {item.variant_name} || <strong>Batch No: </strong> {item?.batch_no}</p>
-                                                    <p className="text-sm text-gray-600"><strong>Model: </strong> {item.model_name}</p>
+                                                    <p className="text-sm text-gray-600"><strong>Variant: </strong> Attribute:  {item.variant_attribute} |  Value: {item.variant_value} </p>
+                                                    <p className="text-sm text-gray-600">
+                                                        <strong>Batch No: </strong> {item?.batch_no} ||  <strong>Sku: </strong> {item?.sku}
+                                                    </p>
                                                     <p className="text-sm text-gray-600"> <strong>Available Stock: </strong> {item.stockQuantity} |
                                                         <strong> Sale Price:</strong> ৳{formatCurrency(item.sell_price)}</p>
                                                 </div>
@@ -899,7 +1433,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                         readOnly
                                                     />
                                                 </div>
-                                                <div className="form-control">
+                                                <div className="form-control hidden">
                                                     <label className="label"><span className="label-text">Sh Unit Price (৳) *</span></label>
                                                     <input
                                                         type="number"
@@ -920,7 +1454,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                         readOnly
                                                     />
                                                 </div>
-                                                <div className="form-control">
+                                                <div className="form-control hidden">
                                                     <label className="label"><span className="label-text">Sh Total Price (৳)</span></label>
                                                     <input
                                                         type="number"
@@ -969,10 +1503,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                             <div className="text-xs">
                                                               <strong>Brand:</strong>   {item.brand || 'N/A'} | Variant: {item.variant || 'N/A'}
                                                             </div>
-                                                            {/* <div className="text-xs mt-1">
-                                                                <strong>Supplier:</strong> {item.supplier_name}
-                                                                {item.supplier_company && ` (${item.supplier_company})`}
-                                                            </div> */}
                                                             <div className="grid grid-cols-4 gap-2 mt-2">
                                                                 <div>
                                                                     <span className="text-xs text-gray-500">Qty:</span>
@@ -1075,7 +1605,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                     <span>{formatWithSymbol(grandTotal)}</span>
                                 </div>
 
-                                {/* Payment Information */}
+                                {/* Payment Information - UPDATED with manual payment override */}
                                 <div className="bg-gray-50 p-3 rounded-box border border-gray-200">
                                     <h4 className="font-medium text-gray-700 mb-2">Payment Details</h4>
 
@@ -1090,7 +1620,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                         </div>
                                     )}
 
-                                    {/* Paid Amount */}
+                                    {/* Paid Amount with manual override */}
                                     <div className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
                                             <span>Paid Amount:</span>
@@ -1101,14 +1631,14 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                                                 max={calculateGrandTotal()}
                                                 className="input input-bordered input-sm w-32"
                                                 value={paidAmount}
-                                                onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)}
-                                                disabled={!usePartialPayment && !adjustFromAdvance}
+                                                onChange={handleManualPaymentInput}
+                                                // disabled={!manualPaymentOverride && !usePartialPayment && !adjustFromAdvance}
                                             />
                                         </div>
                                         <span>{formatWithSymbol(paidAmount)}</span>
                                     </div>
 
-                                    <div className="flex justify-between items-center">
+                                    <div className="flex justify-between items-center hidden">
                                         <div className="flex items-center gap-2">
                                             <span>Sh Paid Amount:</span>
                                             <input
@@ -1140,7 +1670,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     <button
                         type="submit"
                         className="btn bg-[#1e4d2b] text-white"
-                        disabled={form.processing || (selectedItems.length === 0 && pickupItems.length === 0)}
+                        disabled={form.processing || (selectedItems.length === 0 && pickupItems.length === 0) || !selectedAccount}
                     >
                         {form.processing ? "Creating Sale..." : "Create Sale"}
                     </button>
@@ -1169,7 +1699,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                         </div>
 
                         <div className="space-y-4">
-
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">Product Name *</span>

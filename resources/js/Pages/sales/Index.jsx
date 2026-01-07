@@ -1,11 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Plus, Printer, Trash2, Eye, Search, Edit, Check, X, Calendar, DollarSign, History } from "lucide-react";
+import { Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Wallet, AlertCircle, DollarSign, History, Landmark, Smartphone, CreditCard } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 
-export default function SalesIndex({ sales, filters, isShadowUser }) {
+export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
     const { auth } = usePage().props;
+    const [paymentErrors, setPaymentErrors] = useState({});
+    const [selectedAccount, setSelectedAccount] = useState(null); // Added missing state
 
     // Handle search and filters
     const filterForm = useForm({
@@ -21,10 +23,21 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
         shadow_paid_amount: 0,
         payment_date: new Date().toISOString().split('T')[0],
         payment_method: 'cash',
-        notes: ''
+        notes: '',
+        account_id: null
     });
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [processingPayment, setProcessingPayment] = useState(false);
+
+    // Fix: Added useEffect to handle account selection when paymentData changes
+    useEffect(() => {
+        if (paymentData.account_id && accounts && accounts.length > 0) {
+            const account = accounts.find(acc => acc.id == paymentData.account_id);
+            setSelectedAccount(account || null);
+        } else {
+            setSelectedAccount(null);
+        }
+    }, [paymentData.account_id, accounts]);
 
     const handleFilter = () => {
         const queryParams = {};
@@ -63,24 +76,39 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
     };
 
     const openPaymentModal = (sale) => {
-        console.log('Selected Sale:', sale); // Debug: Check what data we have
-        console.log('Sale Payments:', sale.payments); // Debug: Check payments data
-        
+        console.log('Selected Sale:', sale);
+        console.log('Sale Payments:', sale.payments);
+
+        let defaultAccountId = '';
+        if (accounts && accounts.length > 0) {
+            // Find default account
+            const defaultAccount = accounts.find(acc => acc.is_default);
+            if (defaultAccount) {
+                defaultAccountId = defaultAccount.id;
+            } else {
+                defaultAccountId = accounts[0]?.id || '';
+            }
+        }
+
         setSelectedSale(sale);
         setPaymentData({
             paid_amount: sale.due_amount > 0 ? sale.due_amount : 0,
             shadow_paid_amount: sale.shadow_due_amount > 0 ? sale.shadow_due_amount : 0,
             payment_date: new Date().toISOString().split('T')[0],
             payment_method: 'cash',
-            notes: ''
+            notes: '',
+            account_id: defaultAccountId
         });
         setShowPaymentModal(true);
+        setPaymentErrors({});
     };
 
     const closePaymentModal = () => {
         setShowPaymentModal(false);
         setSelectedSale(null);
+        setSelectedAccount(null);
         setProcessingPayment(false);
+        setPaymentErrors({});
     };
 
     const handlePaymentSubmit = (e) => {
@@ -90,20 +118,52 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
 
         setProcessingPayment(true);
 
+        // Clear previous errors
+        setPaymentErrors({});
+
+        // Validate before submitting
+        const errors = {};
+        
+        if (!paymentData.account_id) {
+            errors.account_id = "Please select an account";
+        }
+        
+        if (paymentData.paid_amount <= 0 && paymentData.shadow_paid_amount <= 0) {
+            errors.amount = "Please enter a payment amount";
+        }
+        
+        if (paymentData.paid_amount > selectedSale.due_amount) {
+            errors.paid_amount = "Payment cannot exceed due amount";
+        }
+        
+        if (paymentData.shadow_paid_amount > selectedSale.shadow_due_amount) {
+            errors.shadow_paid_amount = "Shadow payment cannot exceed shadow due amount";
+        }
+
+        if (Object.keys(errors).length > 0) {
+            setPaymentErrors(errors);
+            setProcessingPayment(false);
+            return;
+        }
+
         router.post(route('sales.payments.store', { sale: selectedSale.id }), {
             sale_id: selectedSale.id,
             amount: paymentData.paid_amount,
             shadow_paid_amount: paymentData.shadow_paid_amount,
             payment_date: paymentData.payment_date,
             payment_method: paymentData.payment_method,
-            notes: paymentData.notes
+            notes: paymentData.notes,
+            account_id: paymentData.account_id
         }, {
+            preserveScroll: true,
+            preserveState: true,
             onSuccess: () => {
                 closePaymentModal();
                 router.reload({ only: ['sales'] });
             },
             onError: (errors) => {
                 console.error('Payment error:', errors);
+                setPaymentErrors(errors);
                 setProcessingPayment(false);
             }
         });
@@ -142,6 +202,25 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
         });
     };
 
+    // Get account icon
+    const getAccountIcon = (type) => {
+        switch (type) {
+            case 'cash': return <Wallet size={14} className="text-green-600" />;
+            case 'bank': return <Landmark size={14} className="text-blue-600" />;
+            case 'mobile_banking': return <Smartphone size={14} className="text-purple-600" />;
+            default: return <CreditCard size={14} />;
+        }
+    };
+    
+    // Simple number format
+    const formatNumber = (amount) => {
+        const num = parseFloat(amount) || 0;
+        return new Intl.NumberFormat('en-IN', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(num);
+    };
+
     const calculateTotals = () => {
         const salesData = sales?.data || [];
         
@@ -175,7 +254,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader
-                title={isShadowUser ? "Sales History (Inventory)" : "Sales History (Inventory)"}
+                title="Sales History (Inventory)"
                 subtitle={isShadowUser ? "View sales data" : "Manage your product sales"}
             >
                 <div className="flex items-center gap-3 flex-wrap">
@@ -249,7 +328,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                 <div className="overflow-x-auto">
                     {sales?.data?.length > 0 ? (
                         <table className="table table-auto w-full">
-                            <thead className={`${isShadowUser ? 'bg-warning' : 'bg-[#1e4d2b] text-white'} text-white`}>
+                            <thead className={`${isShadowUser ? 'bg-warning' : 'bg-[#1e4d2b]'} text-white`}>
                                 <tr>
                                     <th>Invoice No</th>
                                     <th>Customer</th>
@@ -348,38 +427,40 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                             <Check size={13} /> Accepted
                                                         </Link>
 
-                                                        <Link
-                                                            href={route("sales.rejected", { sale: sale.id })}
-                                                            method="delete"
-                                                            as="button"
+                                                        <button
                                                             onClick={(e) => {
-                                                                if (!confirm("Are you sure you want to reject this order?")) {
-                                                                    e.preventDefault();
+                                                                if (confirm("Are you sure you want to reject this order?")) {
+                                                                    router.delete(route("sales.rejected", { sale: sale.id }), {
+                                                                        preserveScroll: true,
+                                                                        preserveState: true,
+                                                                        onSuccess: () => router.reload({ only: ['sales'] })
+                                                                    });
                                                                 }
                                                             }}
                                                             className="btn btn-xs btn-error"
                                                         >
                                                             <X size={13} />
                                                             Rejected
-                                                        </Link>
+                                                        </button>
                                                     </>
                                                 )}
 
                                                 {sale.shadow_type == 'general' && (
-                                                    <Link
-                                                        href={route("sales.destroy", { sale: sale.id })}
-                                                        method="delete"
-                                                        as="button"
+                                                    <button
                                                         onClick={(e) => {
-                                                            if (!confirm("Are you sure you want to delete this sale?")) {
-                                                                e.preventDefault();
+                                                            if (confirm("Are you sure you want to delete this sale?")) {
+                                                                router.delete(route("sales.destroy", { sale: sale.id }), {
+                                                                    preserveScroll: true,
+                                                                    preserveState: true,
+                                                                    onSuccess: () => router.reload({ only: ['sales'] })
+                                                                });
                                                             }
                                                         }}
                                                         className="btn btn-xs btn-error"
                                                     >
                                                         <Trash2 size={13} />
                                                         Delete
-                                                    </Link>
+                                                    </button>
                                                 )}
                                             </div>
                                         </td>
@@ -476,7 +557,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                             <span className="text-gray-600">Grand Total:</span>
                                             <p className="font-semibold">{formatCurrency(selectedSale.grand_total)} Tk</p>
                                         </div>
-                                        <div>
+                                        <div className="hidden">
                                             <span className="text-gray-600">Shadow Grand Total:</span>
                                             <p className="font-semibold">{formatCurrency(selectedSale.shadow_grand_total)} Tk</p>
                                         </div> 
@@ -485,7 +566,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                             <span className="text-gray-600">Total Paid:</span>
                                             <p className="font-semibold text-success">{formatCurrency(selectedSale.paid_amount)} Tk</p>
                                         </div>
-                                        <div>
+                                        <div className="hidden"> 
                                             <span className="text-gray-600">Shadow Total Paid:</span>
                                             <p className="font-semibold text-success">{formatCurrency(selectedSale.shadow_paid_amount)} Tk</p>
                                         </div>
@@ -496,7 +577,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                 {formatCurrency(selectedSale.due_amount)} Tk
                                             </p>
                                         </div>
-                                         <div>
+                                        <div className="hidden">
                                             <span className="text-gray-600">Shadow Due Amount:</span>
                                             <p className={`font-semibold ${selectedSale.shadow_due_amount > 0 ? 'text-error' : 'text-success'}`}>
                                                 {formatCurrency(selectedSale.shadow_due_amount)} Tk
@@ -508,47 +589,6 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Payment History List */}
-                                {/* <div className="max-h-60 overflow-y-auto">
-                                    <h5 className="font-medium mb-2">Previous Payments:</h5>
-                                    {(() => {
-                                        const payments = getPayments(selectedSale);
-                                        console.log('Payments data:', payments); 
-                                        
-                                        return payments.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {payments.map((payment, index) => (
-                                                    <div key={payment.id || index} className="bg-white border rounded-box p-3">
-                                                        <div className="flex justify-between items-start">
-                                                            <div>
-                                                                <p className="font-semibold text-success">
-                                                                    {formatCurrency(payment.amount)} Tk
-                                                                </p>
-                                                                <p className="text-sm text-gray-600">
-                                                                    {formatDate(payment.payment_date || payment.created_at)}
-                                                                </p>
-                                                                <p className="text-sm capitalize">{payment.payment_method || 'cash'}</p>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                <span className="badge badge-sm badge-success">Paid</span>
-                                                                {payment.notes && (
-                                                                    <p className="text-xs text-gray-500 mt-1">{payment.notes}</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="text-center py-4 text-gray-500">
-                                                <History size={24} className="mx-auto mb-2" />
-                                                <p>No payment history found</p>
-                                                <p className="text-xs mt-1">Payments array: {JSON.stringify(payments)}</p>
-                                            </div>
-                                        );
-                                    })()}
-                                </div> */}
                             </div>
 
                             {/* Right Column: Payment Form */}
@@ -573,9 +613,15 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                 className="input input-bordered"
                                                 required
                                             />
+                                            {paymentErrors.paid_amount && (
+                                                <div className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                                                    <AlertCircle size={12} />
+                                                    {paymentErrors.paid_amount}
+                                                </div>
+                                            )}
                                         </div>
 
-                                        <div className="form-control">
+                                        <div className="form-control hidden">
                                             <label className="label">
                                                 <span className="label-text">Shadow Amount to Pay</span>
                                                 <span className="label-text-alt">Due: {formatCurrency(selectedSale.shadow_due_amount)} Tk</span>
@@ -590,6 +636,12 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                 step="0.01"
                                                 className="input input-bordered"
                                             />
+                                            {paymentErrors.shadow_paid_amount && (
+                                                <div className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                                                    <AlertCircle size={12} />
+                                                    {paymentErrors.shadow_paid_amount}
+                                                </div>
+                                            )}
                                         </div> 
 
                                         <div className="form-control">
@@ -606,24 +658,64 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                             />
                                         </div>
 
-                                        <div className="form-control">
-                                            <label className="label">
-                                                <span className="label-text">Payment Method</span>
-                                            </label>
-                                            <select
-                                                name="payment_method"
-                                                value={paymentData.payment_method}
-                                                onChange={handlePaymentInputChange}
-                                                className="select select-bordered"
-                                                required
-                                            >
-                                                <option value="cash">Cash</option>
-                                                <option value="card">Card</option>
-                                                <option value="bank">Bank Transfer</option>
-                                                <option value="mobile">Mobile Banking</option>
-                                                <option value="check">Check</option>
-                                            </select>
-                                        </div>
+                                        {/* Account Selection */}
+                                        {accounts && accounts.length > 0 && (
+                                            <div className="form-control">
+                                                <label className="label py-0">
+                                                    <span className="label-text font-bold text-gray-700">Payment Account *</span>
+                                                </label>
+                                                <select
+                                                    name="account_id"
+                                                    value={paymentData.account_id || ''}
+                                                    onChange={handlePaymentInputChange}
+                                                    className="select select-bordered w-full"
+                                                    disabled={processingPayment}
+                                                    required
+                                                >
+                                                    <option value="">Select Account</option>
+                                                    {accounts.filter(acc => acc.is_active).map(account => (
+                                                        <option key={account.id} value={account.id}>
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    {getAccountIcon(account.type)}
+                                                                    <span>{account.name}</span>
+                                                                </div>
+                                                                <span className="text-xs text-gray-500">
+                                                                    ৳{formatNumber(account.current_balance)}
+                                                                </span>
+                                                            </div>
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {paymentErrors.account_id && (
+                                                    <div className="text-red-600 text-xs mt-1 flex items-center gap-1">
+                                                        <AlertCircle size={12} />
+                                                        {paymentErrors.account_id}
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Selected Account Info */}
+                                                {selectedAccount && (
+                                                    <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-2">
+                                                                {getAccountIcon(selectedAccount.type)}
+                                                                <span className="text-sm font-bold">{selectedAccount.name}</span>
+                                                                <span className="text-xs text-gray-500 capitalize">
+                                                                    ({selectedAccount.type})
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <div className="text-xs text-gray-500">Current Balance</div>
+                                                                <div className="text-sm font-mono font-bold">
+                                                                    ৳{formatNumber(selectedAccount.current_balance)}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         <div className="form-control">
                                             <label className="label">
@@ -647,7 +739,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                     <span>Current Due:</span>
                                                     <span>{formatCurrency(selectedSale.due_amount)} Tk</span>
                                                 </div>
-                                                 <div className="flex justify-between">
+                                                <div className="hidden">
                                                     <span>Shadow Current Due:</span>
                                                     <span>{formatCurrency(selectedSale.shadow_due_amount)} Tk</span>
                                                 </div> 
@@ -655,7 +747,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                     <span>Paying Now:</span>
                                                     <span className="text-success">{formatCurrency(paymentData.paid_amount)} Tk</span>
                                                 </div>
-                                                 <div className="flex justify-between">
+                                                <div className="hidden">
                                                     <span>Shadow Paying Now:</span>
                                                     <span className="text-success">{formatCurrency(paymentData.shadow_paid_amount)} Tk</span>
                                                 </div>
@@ -665,7 +757,7 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                         {formatCurrency(selectedSale.due_amount - paymentData.paid_amount)} Tk
                                                     </span>
                                                 </div>
-                                                <div className="flex justify-between font-semibold">
+                                                <div className="hidden">
                                                     <span>Shadow Remaining Due:</span>
                                                     <span className={selectedSale.shadow_due_amount - paymentData.shadow_paid_amount > 0 ? 'text-error' : 'text-success'}>
                                                         {formatCurrency(selectedSale.shadow_due_amount - paymentData.shadow_paid_amount)} Tk
@@ -689,15 +781,18 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                 disabled={processingPayment || 
                                                     (paymentData.paid_amount <= 0 && paymentData.shadow_paid_amount <= 0) ||
                                                     paymentData.paid_amount > selectedSale.due_amount ||
-                                                    paymentData.shadow_paid_amount > selectedSale.shadow_due_amount
+                                                    paymentData.shadow_paid_amount > selectedSale.shadow_due_amount ||
+                                                    !paymentData.account_id
                                                 }
                                             >
                                                 {processingPayment ? (
                                                     <span className="loading loading-spinner"></span>
                                                 ) : (
-                                                    <DollarSign size={16} />
+                                                    <>
+                                                        <DollarSign size={16} className="mr-1" />
+                                                        Process Payment
+                                                    </>
                                                 )}
-                                                Process Payment
                                             </button>
                                         </div>
                                     </div>

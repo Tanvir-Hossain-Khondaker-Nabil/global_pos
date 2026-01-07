@@ -12,8 +12,8 @@ import { router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
 
-export default function Index({ suppliers, filters, accounts }) {
-    const { auth } = usePage().props;
+export default function Index({ suppliers, filters, accounts ,dealerships}) {
+    const { auth,errors } = usePage().props;
     const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
     const [advanceModel, setAdvanceModel] = useState(false);
@@ -115,6 +115,7 @@ export default function Index({ suppliers, filters, accounts }) {
         due_amount: 0,
         is_active: true,
         send_welcome_sms: true, // New SMS field
+        dealership_id : null,
     });
 
     const handleAdvancePayment = (supplier) => {
@@ -162,7 +163,7 @@ export default function Index({ suppliers, filters, accounts }) {
             account_id: paymentData.account_id,
             notes: paymentData.notes,
             is_advance: true,
-            payment_date: paymentData.payment_date
+            payment_date: paymentData.payment_date,
         }, {
             onSuccess: () => {
                 advanceModelClose();
@@ -228,6 +229,7 @@ export default function Index({ suppliers, filters, accounts }) {
                 website: data.website || "",
                 advance_amount: parseFloat(data.advance_amount) || 0,
                 account_id: data.account_id || "",
+                dealership_id: data.dealership_id || "",
                 due_amount: parseFloat(data.due_amount) || 0,
                 is_active: Boolean(data.is_active),
                 send_welcome_sms: true, // Default to true for new suppliers
@@ -1197,7 +1199,7 @@ export default function Index({ suppliers, filters, accounts }) {
                                                 min="0"
                                                 value={supplyForm.data.advance_amount}
                                                 onChange={(e) => supplyForm.setData("advance_amount", parseFloat(e.target.value) || 0)}
-                                                className={`input input-bordered w-full pl-10 py-3 ${supplyForm.data.id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900'}`}
+                                                className={`input input-bordered w-full pl-3 py-3 ${supplyForm.data.id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900'}`}
                                                 placeholder={t('supplier.advance_amount_placeholder', 'Enter advance amount')}
                                                 readOnly={!!supplyForm.data.id}
                                             />
@@ -1216,12 +1218,39 @@ export default function Index({ suppliers, filters, accounts }) {
                                             <select
                                                 value={supplyForm.data.account_id}
                                                 onChange={(e) => supplyForm.setData("account_id", e.target.value)}
-                                                className="select select-bordered w-full pl-10 py-3 border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                                className="select select-bordered w-full pl-3 py-3 border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
                                             >
                                                 <option value="">{t('supplier.select_account_optional', 'Select default account (optional)')}</option>
                                                 {accounts.map((account) => (
                                                     <option key={account.id} value={account.id}>
                                                         {account.name} - ৳{formatCurrency(account.current_balance)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        {errors.account_id && (
+                                            <span className="text-red-500 text-sm">{errors.account_id}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Default Dealership */}
+                                    <div className="form-control">
+                                        <label className="label py-0 mb-2">
+                                            <span className="label-text font-bold text-gray-700 text-sm">
+                                                {t('supplier.default_dealership', 'Default Dealership')}
+                                            </span>
+                                        </label>
+                                        <div className="relative">
+                                            <Landmark size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                                            <select
+                                                value={supplyForm.data.dealership_id}
+                                                onChange={(e) => supplyForm.setData("dealership_id", e.target.value)}
+                                                className="select select-bordered w-full pl-3 py-3 border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                                            >
+                                                <option value="">{t('supplier.select_dealership_optional', 'Select default dealership (optional)')}</option>
+                                                {dealerships.map((dealership) => (
+                                                    <option key={dealership.id} value={dealership.id}>
+                                                        {dealership.name} - {dealership.email}
                                                     </option>
                                                 ))}
                                             </select>

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Scopes\UserScope;
+use App\Models\DillerShip;
 
 
 class Supplier extends Model
@@ -24,11 +25,20 @@ class Supplier extends Model
         'due_amount',
         'is_active',
         'created_by',
+        'dealership_id',
+        // 'send_welcome_sms'
     ];
 
     protected static function booted()
     {
         static::addGlobalScope(new UserScope);
+    }
+
+
+    //relationship to dealership
+    public function dealership()
+    {
+        return $this->belongsTo(DillerShip::class, 'dealership_id' , 'id');
     }
 
     //relationship to creator

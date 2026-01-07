@@ -121,7 +121,13 @@ return [
     'update_supplier' => 'সরবরাহকারী হালনাগাদ করুন',
     'update_supplier_info' => 'সরবরাহকারী তথ্য হালনাগাদ করুন',
     'add_advance' => 'অগ্রিম যোগ করুন',
-    'record_advance_payment' => 'অগ্রিম পেমেন্ট রেকর্ড করুন'
+    'record_advance_payment' => 'অগ্রিম পেমেন্ট রেকর্ড করুন',
+    'select_dealership_optional' => 'ডিলারশিপ নির্বাচন করুন (ঐচ্ছিক)',
+    'default_dealership' => 'ডিফল্ট ডিলারশিপ',
+    'clear' => 'পরিষ্কার করুন',
+    'add_first_supplier' => 'প্রথম সরবরাহকারী যোগ করুন',
+    'read_only_edit' => 'পড়ার জন্য শুধুমাত্র সম্পাদনা',
+    'no_matching_suppliers' => 'কোন মিলছে না সরবরাহকারী পাওয়া যায়নি'
 
 
 ];
