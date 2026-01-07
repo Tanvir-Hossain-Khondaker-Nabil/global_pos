@@ -62,20 +62,10 @@ Route::middleware('auth')->group(function () {
 
 
     //outles rount will be here
-
-    Route::controller(OutletController::class)->prefix('outlets')->group(function () {
-
-        Route::get('/', 'index')->name('outlets.index');
-        Route::post('/store', 'store')->name('outlets.store');
-        // Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
-
-        // Route::post('/', 'store')->middleware('permission:outlets.create')->name('outlets.store');
-
-        Route::get('/{id}', 'show')->name('outlets.show');
-        Route::put('/{id}', 'update')->name('outlets.update');
-        Route::delete('/{id}', 'destroy')->name('outlets.delete');
-
-    });
+    Route::get('/outlets', [OutletController::class, 'index'])->name('outlets.index');
+    Route::post('/outlets', [OutletController::class, 'store'])->name('outlets.store');
+    Route::put('/outlets/{outlet}', [OutletController::class, 'update'])->name('outlets.update');
+    Route::delete('/outlets/{outlet}', [OutletController::class, 'destroy'])->name('outlets.destroy');
 
     // users managment
     Route::controller(UserController::class)->prefix('users')->group(function () {

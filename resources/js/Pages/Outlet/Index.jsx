@@ -1,25 +1,17 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
-import Pagination from "../../components/Pagination";
 import {
-    Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Calendar, User,
-    Mail, Phone, MapPin, Globe, CheckCircle, AlertCircle,
-    Building, Users, TrendingUp, TrendingDown, FileText,
-    ArrowUpRight, Info, ChevronRight, Home, Hash, Clock,
-    MapPin as MapIcon, Globe as World, Settings, Shield, Star
+    Frown, Plus, Trash2, Search, Edit, X, User,
+    Mail, Phone, MapPin, CheckCircle, AlertCircle,
+    Building, Check
 } from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
-import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
 
-export default function Index({ outlets, filters = {} }) { // Add default value for filters
+export default function Index({ outlets, filters = {} }) {
     const { auth, errors, flash } = usePage().props;
     const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
-    const [setMainModel, setSetMainModel] = useState(false);
-    const [selectedOutlet, setSelectedOutlet] = useState(null);
-    const [editProcessing, setEditProcessing] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState({
         show: false,
         type: 'success',
@@ -46,9 +38,9 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
         }
     }, [flash]);
 
-    // Handle search and filters - fix the initialization
+    // Handle search and filters
     const [localFilters, setLocalFilters] = useState({
-        search: filters?.search || "", // Use optional chaining
+        search: filters?.search || "",
         status: filters?.status || "",
     });
 
@@ -87,7 +79,7 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
         }
     };
 
-    // Handle outlet form submission - SIMPLIFIED TO MATCH CONTROLLER
+    // Handle outlet form submission
     const outletForm = useForm({
         id: "",
         name: "",
@@ -97,31 +89,27 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
         is_active: true,
     });
 
-    // Handle outlet edit - SIMPLIFIED
+    // Handle outlet edit - USING EXISTING DATA
     const handleOutletEdit = (id) => {
-        setEditProcessing(true);
-        // Use show route since edit doesn't exist in controller
-        axios.get(route("outlets.show", { outlet: id })).then((res) => {
-            const data = res.data.outlet;
+        // Find the outlet from the existing data
+        const outlet = outlets.find(o => o.id === id);
+        if (outlet) {
             outletForm.setData({
-                id: data.id,
-                name: data.name,
-                phone: data.phone || "",
-                email: data.email || "",
-                address: data.address || "",
-                is_active: Boolean(data.is_active),
+                id: outlet.id,
+                name: outlet.name,
+                phone: outlet.phone || "",
+                email: outlet.email || "",
+                address: outlet.address || "",
+                is_active: Boolean(outlet.is_active),
             });
             setModel(true);
-        }).catch((error) => {
-            console.error('Error fetching outlet:', error);
+        } else {
             setNotification({
                 show: true,
                 type: 'error',
-                message: t('outlet.fetch_error', 'Failed to fetch outlet details')
+                message: t('outlet.fetch_error', 'Failed to find outlet details')
             });
-        }).finally(() => {
-            setEditProcessing(false);
-        });
+        }
     };
 
     // Handle outlet delete
@@ -158,6 +146,13 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                 },
                 onError: (errors) => {
                     console.error('Update error:', errors);
+                    // Show validation errors in notification
+                    const errorMessages = Object.values(errors).join(', ');
+                    setNotification({
+                        show: true,
+                        type: 'error',
+                        message: errorMessages || t('outlet.update_error', 'Failed to update outlet')
+                    });
                 },
             });
         } else {
@@ -171,6 +166,13 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                 },
                 onError: (errors) => {
                     console.error('Create error:', errors);
+                    // Show validation errors in notification
+                    const errorMessages = Object.values(errors).join(', ');
+                    setNotification({
+                        show: true,
+                        type: 'error',
+                        message: errorMessages || t('outlet.create_error', 'Failed to create outlet')
+                    });
                 },
             });
         }
@@ -277,7 +279,7 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                 </div>
             </PageHeader>
 
-            {/* Summary Stats - SIMPLIFIED */}
+            {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="bg-[#1e4d2b] text-white rounded-xl p-4">
                     <p className="text-xs uppercase tracking-widest font-bold text-gray-300 mb-2">
@@ -375,7 +377,6 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                                     <td className="text-right">
                                         <div className="flex justify-end gap-1">
                                             <button
-                                                disabled={editProcessing}
                                                 onClick={() => handleOutletEdit(outlet.id)}
                                                 className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600"
                                                 title={t('outlet.edit', 'Edit')}
@@ -415,7 +416,7 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                 )}
             </div>
 
-            {/* Add/Edit Outlet Modal - SIMPLIFIED */}
+            {/* Add/Edit Outlet Modal */}
             <dialog className={`modal ${model ? 'modal-open' : ''}`}>
                 <div className="modal-box max-w-2xl p-0 overflow-hidden">
                     {/* Modal Header */}
@@ -554,7 +555,7 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
                                     <div className="p-1.5 bg-amber-100 rounded">
-                                        <MapIcon size={14} className="text-amber-600" />
+                                        <MapPin size={14} className="text-amber-600" />
                                     </div>
                                     <h3 className="font-bold text-gray-900">{t('outlet.address', 'Address')}</h3>
                                     <div className="flex-1 h-px bg-gray-200"></div>
@@ -569,7 +570,7 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                                             </span>
                                         </label>
                                         <div className="relative">
-                                            <MapIcon size={16} className="absolute left-3 top-3 text-gray-400" />
+                                            <MapPin size={16} className="absolute left-3 top-3 text-gray-400" />
                                             <textarea
                                                 value={outletForm.data.address}
                                                 onChange={(e) => outletForm.setData("address", e.target.value)}
@@ -593,7 +594,7 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                             <div className="mb-8">
                                 <div className="flex items-center gap-2 mb-4">
                                     <div className="p-1.5 bg-gray-100 rounded">
-                                        <Shield size={14} className="text-gray-600" />
+                                        <CheckCircle size={14} className="text-gray-600" />
                                     </div>
                                     <h3 className="font-bold text-gray-900">{t('outlet.status_settings', 'Status Settings')}</h3>
                                     <div className="flex-1 h-px bg-gray-200"></div>
@@ -650,7 +651,7 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
                                             </>
                                         ) : outletForm.data.id ? (
                                             <>
-                                                <CheckCircle size={18} />
+                                                <Check size={18} />
                                                 {t('outlet.update_outlet', 'Update Outlet')}
                                             </>
                                         ) : (
