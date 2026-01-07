@@ -59,14 +59,14 @@ class SupplierController extends Controller
             'advance_amount' => 'nullable|numeric|min:0',
             'due_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
-            'send_welcome_sms' => 'boolean', // New field for SMS option
+            'send_welcome_sms' => 'boolean',
         ]);
 
-        // Set default values for numeric fields
         $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
         $validated['due_amount'] = $validated['due_amount'] ?? 0;
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['created_by'] = Auth::id();
+        
         $account = Account::find($request->input('account_id'));
 
         $supplier = Supplier::create($validated);
@@ -77,21 +77,25 @@ class SupplierController extends Controller
 
         if ($request->boolean('send_welcome_sms')) {
             try {
+                // Get user's own SMS gateway
                 $smsService = new SmsService();
                 $smsResult = $smsService->sendSupplierWelcome($supplier);
                 $smsSent = $smsResult['success'] ?? false;
 
                 if (!$smsResult['success']) {
-                    $smsError = $smsResult['message'] ?? 'Failed to send SMS';
+                    $smsError = $smsResult['message'] ?? 'SMS পাঠানো ব্যর্থ হয়েছে';
                 }
 
-                Log::info('Supplier Welcome SMS Result:', [
+                Log::info('সাপ্লায়ার ওয়েলকাম SMS রেজাল্ট:', [
                     'supplier_id' => $supplier->id,
                     'phone' => $supplier->phone,
+                    'user_id' => Auth::id(),
                     'result' => $smsResult,
                 ]);
             } catch (\Exception $e) {
-                Log::error('Failed to send welcome SMS: ' . $e->getMessage());
+                Log::error('ওয়েলকাম SMS পাঠানো ব্যর্থ: ' . $e->getMessage(), [
+                    'user_id' => Auth::id(),
+                ]);
                 $smsError = $e->getMessage();
             }
         }
@@ -104,7 +108,7 @@ class SupplierController extends Controller
                 'shadow_amount' => 0,
                 'payment_method' => 'Cash',
                 'txn_ref' => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
-                'note' => 'Initial advance amount payment of supplier',
+                'note' => 'সাপ্লায়ারের প্রাথমিক অ্যাডভ্যান্স পেমেন্ট',
                 'paid_at' => Carbon::now(),
                 'created_by' => Auth::id(),
             ]);
@@ -113,28 +117,26 @@ class SupplierController extends Controller
             if ($request->boolean('send_welcome_sms')) {
                 try {
                     $smsService = new SmsService();
-                    $advanceMessage = "Dear {$supplier->contact_person}, Advance payment of {$request->advance_amount} has been recorded. Transaction ID: {$payment->txn_ref}";
+                    $advanceResult = $smsService->sendSupplierAdvanceNotification($supplier, $payment);
 
-                    $smsResult = $smsService->sendSms(
-                        $supplier->phone,
-                        $advanceMessage
-                    );
-
-                    Log::info('Advance Payment SMS Result:', [
+                    Log::info('অ্যাডভ্যান্স পেমেন্ট SMS রেজাল্ট:', [
                         'payment_id' => $payment->id,
-                        'result' => $smsResult,
+                        'result' => $advanceResult,
+                        'user_id' => Auth::id(),
                     ]);
                 } catch (\Exception $e) {
-                    Log::error('Failed to send advance payment SMS: ' . $e->getMessage());
+                    Log::error('অ্যাডভ্যান্স পেমেন্ট SMS পাঠানো ব্যর্থ: ' . $e->getMessage(), [
+                        'user_id' => Auth::id(),
+                    ]);
                 }
             }
         }
 
-        $responseMessage = 'Supplier contact added successfully!';
+        $responseMessage = 'সাপ্লায়ার কন্টাক্ট সফলভাবে যোগ করা হয়েছে!';
         if ($smsSent) {
-            $responseMessage .= ' Welcome SMS sent.';
+            $responseMessage .= ' ওয়েলকাম SMS পাঠানো হয়েছে।';
         } elseif ($smsError) {
-            $responseMessage .= ' (SMS failed: ' . $smsError . ')';
+            $responseMessage .= ' (SMS ব্যর্থ: ' . $smsError . ')';
         }
 
         return redirect()->back()->with('success', $responseMessage);
