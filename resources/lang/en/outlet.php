@@ -36,5 +36,13 @@ return [
     'search' => 'Search',
     'create_outlet' => 'Create Outlet',
     'inactive' => 'Inactive',
-    'active' => 'Active'
+    'active' => 'Active',
+    'inactive_outlet' => 'Inactive Outlet',
+    'processing' => 'Processing',
+    'outlet_info' => 'Outlet Information',
+    'contact_details' => 'Contact Details',
+    'status' => 'Status' ,
+    'command' => 'Command',
+    'cancel' => 'Cancel',
+    'created' => 'Created'
 ];

@@ -30,8 +30,12 @@ return [
 'status_field' => 'আউটলেটের অবস্থা',
 'create_outlet' => 'আউটলেট তৈরি করুন',
 'active' => 'সক্রিয়',
-'inactive' => 'নিষ্ক্রিয়'
+'inactive' => 'নিষ্ক্রিয়',
+'inactive_outlet' => 'নিষ্ক্রিয় আউটলেট',
+'processing' => 'প্রক্রিয়াধীন',
+'outlet_info' => 'আউটলেটের তথ্য',
+'contact_details' => 'যোগাযোগের বিস্তারিত',
+'status' => 'অবস্থা',
+'command' => 'কমান্ড'
 
-]
-
-;
+];

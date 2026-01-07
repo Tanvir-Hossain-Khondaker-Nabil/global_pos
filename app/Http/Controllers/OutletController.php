@@ -40,6 +40,7 @@ class OutletController extends Controller
             'is_active' => 'boolean',
         ]);
 
+
         // Merge the authenticated user ID
         $outlet = Outlet::create(array_merge($validated, [
             'user_id' => Auth::id(),
@@ -48,6 +49,9 @@ class OutletController extends Controller
             'currency' => 'BDT',
             'timezone' => 'Asia/Dhaka',
         ]));
+
+        dd($outlet);
+
 
         return to_route('outlets.show', $outlet)
                         ->with('success', 'Outlet created successfully!');

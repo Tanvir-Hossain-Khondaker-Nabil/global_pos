@@ -66,12 +66,14 @@ Route::middleware('auth')->group(function () {
     Route::controller(OutletController::class)->prefix('outlets')->group(function () {
 
         Route::get('/', 'index')->name('outlets.index');
+        Route::post('/store', 'store')->name('outlets.store');
         // Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
 
-        Route::post('/', 'store')->middleware('permission:outlets.create')->name('outlets.store');
-        Route::get('/{id}', 'show')->middleware('permission:outlets.view')->name('outlets.show');
-        Route::put('/{id}', 'update')->middleware('permission:outlets.edit')->name('outlets.update');
-        Route::delete('/{id}', 'destroy')->middleware('permission:outlets.delete')->name('outlets.delete');
+        // Route::post('/', 'store')->middleware('permission:outlets.create')->name('outlets.store');
+
+        Route::get('/{id}', 'show')->name('outlets.show');
+        Route::put('/{id}', 'update')->name('outlets.update');
+        Route::delete('/{id}', 'destroy')->name('outlets.delete');
 
     });
 
