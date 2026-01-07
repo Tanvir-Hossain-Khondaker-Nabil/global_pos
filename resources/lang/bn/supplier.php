@@ -127,7 +127,8 @@ return [
     'clear' => 'পরিষ্কার করুন',
     'add_first_supplier' => 'প্রথম সরবরাহকারী যোগ করুন',
     'read_only_edit' => 'পড়ার জন্য শুধুমাত্র সম্পাদনা',
-    'no_matching_suppliers' => 'কোন মিলছে না সরবরাহকারী পাওয়া যায়নি'
+    'no_matching_suppliers' => 'কোন মিলছে না সরবরাহকারী পাওয়া যায়নি',
+    'inactive_supplier' => 'নিষ্ক্রিয় সরবরাহকারী'
 
 
 ];

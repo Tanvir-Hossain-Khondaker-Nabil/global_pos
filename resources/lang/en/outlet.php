@@ -45,5 +45,6 @@ return [
     'command' => 'Command',
     'cancel' => 'Cancel',
     'created' => 'Created',
-    'clear' => 'Clear'
+    'clear' => 'Clear',
+    'inactive_supplier' => 'Inactive Supplier'
 ];
