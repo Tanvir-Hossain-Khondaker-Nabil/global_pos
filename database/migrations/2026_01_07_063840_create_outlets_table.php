@@ -32,6 +32,8 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->boolean('is_main')->default(false); // main/head outlet
 
+            $table->string('created_by');
+            $table->softDeletes();
             $table->timestamps();
         });
     }

@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->string('code')->unique();
             $table->boolean('is_active')->default(true);
             $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
     }

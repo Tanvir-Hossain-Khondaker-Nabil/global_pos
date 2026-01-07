@@ -1,26 +1,21 @@
-// resources/js/Pages/Outlet/Index.jsx
 import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
 import {
-    Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Calendar, User,
-    Mail, Phone, MapPin, Globe, CheckCircle, AlertCircle,
-    Building, Users, TrendingUp, TrendingDown, FileText,
-    ArrowUpRight, Info, ChevronRight, Home, Hash, Clock,
-    MapPin as MapIcon, Globe as World, Settings, Shield, Star
+    Plus, Trash2, Search, Edit, X, User,
+    Mail, Phone, MapPin, CheckCircle, AlertCircle,
+    Building, ChevronRight, MapPin as MapIcon, Shield,
+    Hash, Store, Clock,LogIn  // Added Hash and Store here
 } from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
 import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
 
-export default function Index({ outlets, filters = {} }) { // Add default value for filters
+export default function Index({ outlets, filters = {} }) {
     const { auth, errors, flash } = usePage().props;
     const { t, locale } = useTranslation();
     const [model, setModel] = useState(false);
-    const [setMainModel, setSetMainModel] = useState(false);
-    const [selectedOutlet, setSelectedOutlet] = useState(null);
     const [editProcessing, setEditProcessing] = useState(false);
-    const [loading, setLoading] = useState(false);
     const [notification, setNotification] = useState({
         show: false,
         type: 'success',
@@ -30,638 +25,272 @@ export default function Index({ outlets, filters = {} }) { // Add default value 
     // Show flash messages
     useEffect(() => {
         if (flash.success) {
-            setNotification({
-                show: true,
-                type: 'success',
-                message: flash.success
-            });
+            setNotification({ show: true, type: 'success', message: flash.success });
             setTimeout(() => setNotification({ show: false, type: '', message: '' }), 3000);
-        }
-        if (flash.error) {
-            setNotification({
-                show: true,
-                type: 'error',
-                message: flash.error
-            });
-            setTimeout(() => setNotification({ show: false, type: '', message: '' }), 5000);
         }
     }, [flash]);
 
-    // Handle search and filters - fix the initialization
     const [localFilters, setLocalFilters] = useState({
-        search: filters?.search || "", // Use optional chaining
+        search: filters?.search || "",
         status: filters?.status || "",
     });
 
-    // Model close handle
     const modelClose = () => {
         outletForm.reset();
         setModel(false);
     };
 
-    // Handle search
     const handleFilter = (field, value) => {
         const newFilters = { ...localFilters, [field]: value };
         setLocalFilters(newFilters);
-
         router.get(route("outlets.index"),
             { search: newFilters.search, status: newFilters.status },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                replace: true,
-            }
+            { preserveScroll: true, preserveState: true, replace: true }
         );
     };
 
-    const clearFilters = () => {
-        setLocalFilters({ search: "", status: "" });
-        router.get(route("outlets.index"), {}, { replace: true });
-    };
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter') {
-            router.get(route("outlets.index"),
-                { search: localFilters.search, status: localFilters.status },
-                { preserveScroll: true, preserveState: true, replace: true }
-            );
-        }
-    };
-
-    // Handle outlet form submission - SIMPLIFIED TO MATCH CONTROLLER
     const outletForm = useForm({
-        id: "",
-        name: "",
-        phone: "",
-        email: "",
-        address: "",
-        is_active: true,
+        id: "", name: "", phone: "", email: "", address: "", is_active: true,
     });
 
-    // Handle outlet edit - SIMPLIFIED
     const handleOutletEdit = (id) => {
         setEditProcessing(true);
-        // Use show route since edit doesn't exist in controller
         axios.get(route("outlets.show", { outlet: id })).then((res) => {
             const data = res.data.outlet;
             outletForm.setData({
-                id: data.id,
-                name: data.name,
-                phone: data.phone || "",
-                email: data.email || "",
-                address: data.address || "",
-                is_active: Boolean(data.is_active),
+                id: data.id, name: data.name, phone: data.phone || "",
+                email: data.email || "", address: data.address || "", is_active: Boolean(data.is_active),
             });
             setModel(true);
-        }).catch((error) => {
-            console.error('Error fetching outlet:', error);
-            setNotification({
-                show: true,
-                type: 'error',
-                message: t('outlet.fetch_error', 'Failed to fetch outlet details')
-            });
-        }).finally(() => {
-            setEditProcessing(false);
+        }).finally(() => setEditProcessing(false));
+    };
+
+    const handleDelete = (id) => {
+        if (confirm(t('outlet.delete_confirmation', 'Delete this shop record?'))) {
+            router.delete(route("outlets.destroy", { outlet: id }), { preserveScroll: true });
+        }
+    };
+
+    const handleOutletCreateForm = (e) => {
+        e.preventDefault();
+        const action = outletForm.data.id ? "put" : "post";
+        const url = outletForm.data.id ? route("outlets.update", { outlet: outletForm.data.id }) : route("outlets.store");
+
+        outletForm[action](url, {
+            onSuccess: () => { outletForm.reset(); setModel(false); }
         });
     };
 
-    // Handle outlet delete
-    const handleDelete = (id) => {
-        if (confirm(t('outlet.delete_confirmation', 'Are you sure you want to delete this outlet?'))) {
-            router.delete(route("outlets.destroy", { outlet: id }), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    // Flash message will be shown via the flash prop
-                },
-                onError: () => {
-                    setNotification({
-                        show: true,
-                        type: 'error',
-                        message: t('outlet.delete_error', 'Failed to delete outlet')
-                    });
-                },
-            });
-        }
-    };
-
-    // Handle outlet create/update form
-    const handleOutletCreateForm = (e) => {
-        e.preventDefault();
-
-        if (outletForm.data.id) {
-            // Update existing outlet
-            outletForm.put(route("outlets.update", { outlet: outletForm.data.id }), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    outletForm.reset();
-                    setModel(false);
-                    // Flash message will be shown via the flash prop
-                },
-                onError: (errors) => {
-                    console.error('Update error:', errors);
-                },
-            });
-        } else {
-            // Create new outlet
-            outletForm.post(route("outlets.store"), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    outletForm.reset();
-                    setModel(false);
-                    // Flash message will be shown via the flash prop
-                },
-                onError: (errors) => {
-                    console.error('Create error:', errors);
-                },
-            });
-        }
-    };
-
-    // Format date based on locale
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        try {
-            const date = new Date(dateString);
-            if (locale === 'bn') {
-                return date.toLocaleDateString('bn-BD', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                });
-            } else {
-                return date.toLocaleDateString('en-US', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric'
-                });
-            }
-        } catch (e) {
-            return dateString;
-        }
-    };
-
     return (
-        <div className={`bg-white rounded-box p-5 ${locale === 'bn' ? 'bangla-font' : ''}`}>
+        <div className={`bg-[#f4f1ea] min-h-screen p-6 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             {/* Notification */}
             {notification.show && (
-                <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
-                    notification.type === 'success' ? 'bg-green-100 border border-green-400 text-green-800' :
-                    notification.type === 'error' ? 'bg-red-100 border border-red-400 text-red-800' :
-                    'bg-yellow-100 border border-yellow-400 text-yellow-800'
-                }`}>
-                    <div className="flex items-center">
-                        {notification.type === 'success' && <CheckCircle className="h-5 w-5 mr-2" />}
-                        {notification.type === 'error' && <AlertCircle className="h-5 w-5 mr-2" />}
-                        {notification.type === 'warning' && <AlertCircle className="h-5 w-5 mr-2" />}
-                        <span>{notification.message}</span>
-                        <button
-                            onClick={() => setNotification({ show: false, type: '', message: '' })}
-                            className="ml-4 text-gray-500 hover:text-gray-700"
-                        >
-                            <X size={16} />
-                        </button>
+                <div className="fixed top-6 right-6 z-[100] bg-white border-2 border-[#1e4d2b] p-4 shadow-[8px_8px_0px_rgba(30,77,43,0.2)]">
+                    <div className="flex items-center gap-3">
+                        <CheckCircle size={20} className="text-[#1e4d2b]" />
+                        <span className="font-black uppercase text-xs">{notification.message}</span>
                     </div>
                 </div>
             )}
 
-            {/* Page Header */}
-            <PageHeader
-                title={t('outlet.title', 'Outlets')}
-                subtitle={t('outlet.subtitle', 'Manage your all outlets/branches from here.')}
-            >
-                <div className="flex flex-wrap items-center gap-2">
-                    {/* Search */}
+            <PageHeader title={t('outlet.title', 'Dokan Registry')} subtitle={t('outlet.subtitle', 'Official register of shop locations.')}>
+                <div className="flex items-center gap-3">
                     <div className="relative">
-                        <Search
-                            size={14}
-                            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
-                        />
+                        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
                             type="search"
                             value={localFilters.search}
                             onChange={(e) => handleFilter('search', e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder={t('outlet.search_placeholder', 'Search outlets...')}
-                            className="h-8 pl-8 pr-3 text-xs font-semibold border border-gray-300 rounded-md focus:outline-none focus:border-gray-500"
+                            placeholder="Find a Shop..."
+                            className="h-10 pl-9 pr-4 text-xs font-bold border-2 border-[#dcd4c3] bg-white focus:border-[#1e4d2b] focus:outline-none w-64 shadow-sm"
                         />
                     </div>
-
-                    {/* Status Filter */}
-                    <select
-                        value={localFilters.status}
-                        onChange={(e) => handleFilter('status', e.target.value)}
-                        className="h-8 px-3 text-xs font-semibold border border-gray-300 rounded-md focus:outline-none focus:border-gray-500"
-                    >
-                        <option value="">{t('outlet.all_status', 'All Status')}</option>
-                        <option value="active">{t('outlet.active', 'Active')}</option>
-                        <option value="inactive">{t('outlet.inactive', 'Inactive')}</option>
-                    </select>
-
-                    {/* Clear Filter */}
-                    {(localFilters.search || localFilters.status) && (
-                        <button
-                            onClick={clearFilters}
-                            className="h-8 px-3 text-xs font-semibold text-gray-600 hover:text-black"
-                        >
-                            {t('outlet.clear', 'Clear')}
-                        </button>
-                    )}
-
-                    {/* Add New Button */}
                     <button
                         onClick={() => setModel(true)}
-                        className="h-8 px-3 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-[#1e4d2b] text-white rounded-md hover:bg-black"
+                        className="h-10 px-6 bg-[#1e4d2b] text-white font-black uppercase text-[10px] tracking-widest shadow-[4px_4px_0px_#000] active:translate-y-1 active:shadow-none transition-all"
                     >
-                        <Plus size={14} />
-                        {t('outlet.add_outlet', 'Add Outlet')}
+                        + Register Dokan
                     </button>
                 </div>
             </PageHeader>
 
-            {/* Summary Stats - SIMPLIFIED */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-[#1e4d2b] text-white rounded-xl p-4">
-                    <p className="text-xs uppercase tracking-widest font-bold text-gray-300 mb-2">
-                        {t('outlet.total_outlets', 'Total Outlets')}
-                    </p>
-                    <div className="flex items-center justify-between">
-                        <p className="text-2xl font-black">{outlets?.length || 0}</p>
-                        <Building size={20} className="text-gray-400" />
-                    </div>
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                    <p className="text-xs uppercase tracking-widest font-bold text-green-700 mb-2">
-                        {t('outlet.active_outlets', 'Active Outlets')}
-                    </p>
-                    <div className="flex items-center justify-between">
-                        <p className="text-2xl font-black text-green-700">
-                            {outlets?.filter(o => o.is_active).length || 0}
-                        </p>
-                        <CheckCircle size={20} className="text-green-500" />
-                    </div>
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <p className="text-xs uppercase tracking-widest font-bold text-amber-700 mb-2">
-                        {t('outlet.inactive_outlets', 'Inactive Outlets')}
-                    </p>
-                    <div className="flex items-center justify-between">
-                        <p className="text-2xl font-black text-amber-700">
-                            {outlets?.filter(o => !o.is_active).length || 0}
-                        </p>
-                        <X size={20} className="text-amber-500" />
-                    </div>
-                </div>
-            </div>
+            {/* Shop Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10">
+                {outlets?.length > 0 ? outlets.map((outlet) => (
+                    <div key={outlet.id} className="relative bg-white border-2 border-[#dcd4c3] p-0 shadow-sm hover:shadow-xl transition-all group">
+                        {/* Status Stamp - Physical Look */}
+                        <div className={`absolute -top-2 -right-2 border-2 px-3 py-1 font-black text-[10px] uppercase tracking-tighter transform rotate-12 z-10 shadow-sm
+                            ${outlet.is_active ? 'border-green-600 text-green-600 bg-white' : 'border-red-600 text-red-600 bg-white'}`}>
+                            {outlet.is_active ? '● Verified Open' : '○ Closed'}
+                        </div>
 
-            {/* Outlets Table */}
-            <div className="overflow-x-auto rounded-xl border border-gray-100">
-                {outlets && outlets.length > 0 ? (
-                    <table className="table w-full">
-                        <thead className="bg-[#1e4d2b] text-white uppercase text-[10px] tracking-widest">
-                            <tr>
-                                <th className="py-4">#</th>
-                                <th>{t('outlet.outlet_info', 'Outlet Info')}</th>
-                                <th>{t('outlet.contact_details', 'Contact Details')}</th>
-                                <th>{t('outlet.status', 'Status')}</th>
-                                <th className="text-right">{t('outlet.command', 'Command')}</th>
-                            </tr>
-                        </thead>
-                        <tbody className="font-bold text-sm text-gray-700">
-                            {outlets.map((outlet, index) => (
-                                <tr key={outlet.id} className="hover:bg-gray-50 border-b border-gray-50 transition-colors">
-                                    <td className="text-gray-400 font-mono text-xs">
-                                        {index + 1}
-                                    </td>
-                                    <td>
-                                        <p className="font-black text-gray-900 uppercase tracking-tighter leading-none mb-1">
-                                            {outlet.name}
-                                        </p>
-                                        {outlet.user && (
-                                            <span className="text-[10px] flex items-center gap-1 text-gray-400 font-black uppercase tracking-widest mt-1">
-                                                <User size={10} /> {outlet.user.name}
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <div className="flex flex-col gap-1">
-                                            {outlet.phone && (
-                                                <span className="text-[10px] flex items-center gap-1 text-gray-400 font-black uppercase tracking-widest">
-                                                    <Phone size={10} /> {outlet.phone}
-                                                </span>
-                                            )}
-                                            {outlet.email && (
-                                                <span className="text-[10px] flex items-center gap-1 text-gray-400 font-black uppercase tracking-widest">
-                                                    <Mail size={10} /> {outlet.email}
-                                                </span>
-                                            )}
-                                            {outlet.address && (
-                                                <span className="text-[10px] flex items-center gap-1 text-gray-400 font-black uppercase tracking-widest">
-                                                    <MapPin size={10} /> {outlet.address.substring(0, 30)}...
-                                                </span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div className="flex flex-col gap-1">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${outlet.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}`}>
-                                                    {outlet.is_active ? t('outlet.active', 'Active') : t('outlet.inactive', 'Inactive')}
-                                                </span>
-                                            </div>
-                                            <div className="text-[10px] text-gray-500 mt-1">
-                                                {t('outlet.created', 'Created')}: {formatDate(outlet.created_at)}
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="text-right">
-                                        <div className="flex justify-end gap-1">
-                                            <button
-                                                disabled={editProcessing}
-                                                onClick={() => handleOutletEdit(outlet.id)}
-                                                className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600"
-                                                title={t('outlet.edit', 'Edit')}
-                                            >
-                                                <Edit size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(outlet.id)}
-                                                className="btn btn-ghost btn-square btn-xs text-red-400 hover:bg-red-600 hover:text-white"
-                                                title={t('outlet.delete', 'Delete')}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                ) : (
-                    <div className="py-20 text-center text-gray-400 flex flex-col items-center gap-3">
-                        <Frown size={40} className="text-gray-200" />
-                        <span className="font-black uppercase tracking-widest text-xs">
-                            {localFilters.search
-                                ? t('outlet.no_matching_outlets', 'No outlets matching ":search"', { search: localFilters.search })
-                                : t('outlet.no_outlets_found', 'No outlets found')
-                            }
-                        </span>
-                        <button
-                            onClick={() => setModel(true)}
-                            className="h-8 px-3 flex items-center gap-1 text-[10px] font-black uppercase tracking-widest bg-[#1e4d2b] text-white rounded-md hover:bg-black mt-2"
-                        >
-                            <Plus size={14} />
-                            {t('outlet.add_first_outlet', 'Add Your First Outlet')}
-                        </button>
+                        {/* Top Signboard Color bar */}
+                        <div className="h-2 bg-[#1e4d2b] w-full"></div>
+
+                        <div className="p-6">
+                            {/* Shop Title */}
+                            <div className="mb-6">
+                                <h3 className="text-2xl font-black text-gray-900 uppercase italic leading-none tracking-tighter group-hover:text-[#1e4d2b] transition-colors">
+                                    {outlet.name}
+                                </h3>
+                                <div className="flex items-center gap-2 mt-2">
+                                    <div className="px-1.5 py-0.5 bg-gray-100 text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest">
+                                        ID: {outlet.id}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Info Rows */}
+                            <div className="space-y-4 border-t-2 border-dashed border-gray-100 pt-4">
+                                <div className="flex items-start gap-3">
+                                    <Phone size={14} className="mt-1 text-[#1e4d2b] flex-shrink-0" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase font-black text-gray-400">Merchant Contact</span>
+                                        <span className="text-sm font-bold text-gray-700">{outlet.phone}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <MapPin size={14} className="mt-1 text-[#1e4d2b] flex-shrink-0" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase font-black text-gray-400">Shop Address</span>
+                                        <span className="text-sm font-bold text-gray-700 leading-snug">{outlet.address}</span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-start gap-3">
+                                    <Clock size={14} className="mt-1 text-[#1e4d2b] flex-shrink-0" />
+                                    <div className="flex flex-col">
+                                        <span className="text-[9px] uppercase font-black text-gray-400">Registered On</span>
+                                        <span className="text-sm font-bold text-gray-700">{new Date(outlet.created_at).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer Actions */}
+                            <div className="mt-8 flex items-center justify-between border-t-2 border-[#f4f1ea] pt-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-7 h-7 bg-[#1e4d2b] text-white flex items-center justify-center font-black text-[10px]">
+                                        {outlet.user?.name?.charAt(0) || 'M'}
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-tighter truncate w-20">
+                                        {outlet.user?.name || 'Owner'}
+                                    </span>
+                                </div>
+
+                                <div className="flex gap-1">
+                                    {/* Outlet Login Button */}
+                                    <button
+                                        onClick={() => router.post(route('outlets.login', { outlet: outlet.id }))}
+                                        className="w-9 h-9 flex items-center justify-center border-2 border-gray-100 hover:border-green-600 hover:text-green-600 transition-all active:scale-90"
+                                        title="Login to this outlet"
+                                    >
+                                        <LogIn size={14} strokeWidth={3} />
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleOutletEdit(outlet.id)}
+                                        className="w-9 h-9 flex items-center justify-center border-2 border-gray-100 hover:border-blue-600 hover:text-blue-600 transition-all active:scale-90"
+                                    >
+                                        <Edit size={14} strokeWidth={3} />
+                                    </button>
+                                    <button
+                                        onClick={() => handleDelete(outlet.id)}
+                                        className="w-9 h-9 flex items-center justify-center border-2 border-gray-100 hover:border-red-600 hover:text-red-600 transition-all active:scale-90"
+                                    >
+                                        <Trash2 size={14} strokeWidth={3} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )) : (
+                    <div className="col-span-full py-32 text-center bg-white border-4 border-dashed border-[#dcd4c3]">
+                        <Store size={64} className="mx-auto text-gray-200 mb-4" strokeWidth={1} />
+                        <p className="text-xl font-black uppercase text-gray-300 tracking-[0.3em]">No Shops Registered Yet</p>
                     </div>
                 )}
             </div>
 
-            {/* Add/Edit Outlet Modal - SIMPLIFIED */}
+            {/* Modal */}
             <dialog className={`modal ${model ? 'modal-open' : ''}`}>
-                <div className="modal-box max-w-2xl p-0 overflow-hidden">
-                    {/* Modal Header */}
-                    <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-[#1e4d2b] text-white rounded-lg">
-                                    <Building size={20} className="text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-xl font-black text-gray-900">
-                                        {outletForm.data.id ? t('outlet.edit_outlet', 'Edit Outlet') : t('outlet.new_outlet', 'New Outlet')}
-                                    </h1>
-                                    <p className="text-sm text-gray-500">
-                                        {outletForm.data.id ? t('outlet.update_outlet_info', 'Update outlet information') : t('outlet.add_new_outlet', 'Add a new outlet to your business')}
-                                    </p>
-                                </div>
+                <div className="modal-box max-w-lg bg-[#fdfbf7] p-0 rounded-none border-t-[12px] border-[#1e4d2b] shadow-2xl">
+                    <div className="p-8">
+                        <div className="flex justify-between items-start mb-8">
+                            <div>
+                                <h3 className="text-2xl font-black uppercase italic tracking-tighter leading-none">Registration Form</h3>
+                                <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest">Entry to Dokan Ledger</p>
                             </div>
-                            <button
-                                onClick={modelClose}
-                                className="btn btn-ghost btn-circle btn-sm hover:bg-gray-100"
-                            >
-                                <X size={20} />
-                            </button>
+                            <button onClick={modelClose} className="p-2 hover:bg-gray-100"><X size={20} /></button>
                         </div>
-                    </div>
 
-                    {/* Modal Body */}
-                    <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
-                        <form onSubmit={handleOutletCreateForm}>
-                            {/* Basic Information Section */}
-                            <div className="mb-8">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="p-1.5 bg-blue-100 rounded">
-                                        <Building size={14} className="text-blue-600" />
-                                    </div>
-                                    <h3 className="font-bold text-gray-900">{t('outlet.basic_information', 'Basic Information')}</h3>
-                                    <div className="flex-1 h-px bg-gray-200"></div>
-                                </div>
-
-                                <div className="space-y-5">
-                                    {/* Outlet Name */}
-                                    <div className="form-control">
-                                        <label className="label py-0 mb-2">
-                                            <span className="label-text font-bold text-gray-700 text-sm">
-                                                {t('outlet.outlet_name', 'Outlet Name')} <span className="text-red-500">*</span>
-                                            </span>
-                                        </label>
-                                        <div className="relative">
-                                            <Building size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="text"
-                                                value={outletForm.data.name}
-                                                onChange={(e) => outletForm.setData("name", e.target.value)}
-                                                className="input input-bordered w-full pl-10 py-3 border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                                                placeholder={t('outlet.outlet_name_placeholder', 'Enter outlet name')}
-                                                required
-                                            />
-                                        </div>
-                                        {outletForm.errors.name && (
-                                            <div className="text-red-600 text-xs mt-2 flex items-center gap-2 bg-red-50 p-2 rounded">
-                                                <AlertCircle size={12} />
-                                                {outletForm.errors.name}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                        <form onSubmit={handleOutletCreateForm} className="space-y-6">
+                            <div className="form-control">
+                                <label className="text-[10px] font-black uppercase text-gray-500 mb-1">Dokan Name (Signboard Title)</label>
+                                <input
+                                    type="text"
+                                    value={outletForm.data.name}
+                                    onChange={(e) => outletForm.setData("name", e.target.value)}
+                                    className="w-full border-b-2 border-[#dcd4c3] bg-transparent py-2 focus:border-[#1e4d2b] outline-none font-bold text-xl placeholder:text-gray-200"
+                                    placeholder="e.g. Dhaka General Store" required
+                                />
                             </div>
 
-                            {/* Contact Information Section */}
-                            <div className="mb-8">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="p-1.5 bg-green-100 rounded">
-                                        <Phone size={14} className="text-green-600" />
-                                    </div>
-                                    <h3 className="font-bold text-gray-900">{t('outlet.contact_information', 'Contact Information')}</h3>
-                                    <div className="flex-1 h-px bg-gray-200"></div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                                    {/* Phone */}
-                                    <div className="form-control">
-                                        <label className="label py-0 mb-2">
-                                            <span className="label-text font-bold text-gray-700 text-sm">
-                                                {t('outlet.phone', 'Phone')} <span className="text-red-500">*</span>
-                                            </span>
-                                        </label>
-                                        <div className="relative">
-                                            <Phone size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="tel"
-                                                value={outletForm.data.phone}
-                                                onChange={(e) => outletForm.setData("phone", e.target.value)}
-                                                className="input input-bordered w-full pl-10 py-3 border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                                                placeholder="+880 1234 567890"
-                                                required
-                                            />
-                                        </div>
-                                        {outletForm.errors.phone && (
-                                            <div className="text-red-600 text-xs mt-2 flex items-center gap-2 bg-red-50 p-2 rounded">
-                                                <AlertCircle size={12} />
-                                                {outletForm.errors.phone}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Email */}
-                                    <div className="form-control">
-                                        <label className="label py-0 mb-2">
-                                            <span className="label-text font-bold text-gray-700 text-sm">
-                                                {t('outlet.email', 'Email')} <span className="text-red-500">*</span>
-                                            </span>
-                                        </label>
-                                        <div className="relative">
-                                            <Mail size={16} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                            <input
-                                                type="email"
-                                                value={outletForm.data.email}
-                                                onChange={(e) => outletForm.setData("email", e.target.value)}
-                                                className="input input-bordered w-full pl-10 py-3 border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
-                                                placeholder="email@example.com"
-                                                required
-                                            />
-                                        </div>
-                                        {outletForm.errors.email && (
-                                            <div className="text-red-600 text-xs mt-2 flex items-center gap-2 bg-red-50 p-2 rounded">
-                                                <AlertCircle size={12} />
-                                                {outletForm.errors.email}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Address Section */}
-                            <div className="mb-8">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="p-1.5 bg-amber-100 rounded">
-                                        <MapIcon size={14} className="text-amber-600" />
-                                    </div>
-                                    <h3 className="font-bold text-gray-900">{t('outlet.address', 'Address')}</h3>
-                                    <div className="flex-1 h-px bg-gray-200"></div>
-                                </div>
-
-                                <div className="space-y-5">
-                                    {/* Address */}
-                                    <div className="form-control">
-                                        <label className="label py-0 mb-2">
-                                            <span className="label-text font-bold text-gray-700 text-sm">
-                                                {t('outlet.address', 'Address')} <span className="text-red-500">*</span>
-                                            </span>
-                                        </label>
-                                        <div className="relative">
-                                            <MapIcon size={16} className="absolute left-3 top-3 text-gray-400" />
-                                            <textarea
-                                                value={outletForm.data.address}
-                                                onChange={(e) => outletForm.setData("address", e.target.value)}
-                                                className="textarea textarea-bordered w-full pl-10 py-3 border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900 min-h-[80px]"
-                                                rows="3"
-                                                placeholder={t('outlet.address_placeholder', 'Enter full address')}
-                                                required
-                                            />
-                                        </div>
-                                        {outletForm.errors.address && (
-                                            <div className="text-red-600 text-xs mt-2 flex items-center gap-2 bg-red-50 p-2 rounded">
-                                                <AlertCircle size={12} />
-                                                {outletForm.errors.address}
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Status Section */}
-                            <div className="mb-8">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <div className="p-1.5 bg-gray-100 rounded">
-                                        <Shield size={14} className="text-gray-600" />
-                                    </div>
-                                    <h3 className="font-bold text-gray-900">{t('outlet.status_settings', 'Status Settings')}</h3>
-                                    <div className="flex-1 h-px bg-gray-200"></div>
-                                </div>
-
+                            <div className="grid grid-cols-2 gap-8">
                                 <div className="form-control">
-                                    <label className="label py-0 mb-2">
-                                        <span className="label-text font-bold text-gray-700 text-sm">
-                                            {t('outlet.status_field', 'Status')}
-                                        </span>
-                                    </label>
-                                    <label className="flex items-center justify-between p-3 border border-gray-300 rounded-lg hover:border-gray-900 cursor-pointer">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`p-1 rounded ${outletForm.data.is_active ? 'bg-green-100' : 'bg-red-100'}`}>
-                                                {outletForm.data.is_active ? (
-                                                    <CheckCircle size={14} className="text-green-600" />
-                                                ) : (
-                                                    <X size={14} className="text-red-600" />
-                                                )}
-                                            </div>
-                                            <span className="font-bold">
-                                                {outletForm.data.is_active ? t('outlet.active_outlet', 'Active Outlet') : t('outlet.inactive_outlet', 'Inactive Outlet')}
-                                            </span>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            checked={outletForm.data.is_active}
-                                            onChange={(e) => outletForm.setData("is_active", e.target.checked)}
-                                            className="toggle toggle-primary"
-                                        />
-                                    </label>
+                                    <label className="text-[10px] font-black uppercase text-gray-500 mb-1">Mobile No.</label>
+                                    <input
+                                        type="tel"
+                                        value={outletForm.data.phone}
+                                        onChange={(e) => outletForm.setData("phone", e.target.value)}
+                                        className="w-full border-b-2 border-[#dcd4c3] bg-transparent py-2 focus:border-[#1e4d2b] outline-none font-bold"
+                                        placeholder="017..." required
+                                    />
+                                </div>
+                                <div className="form-control">
+                                    <label className="text-[10px] font-black uppercase text-gray-500 mb-1">Official Email</label>
+                                    <input
+                                        type="email"
+                                        value={outletForm.data.email}
+                                        onChange={(e) => outletForm.setData("email", e.target.value)}
+                                        className="w-full border-b-2 border-[#dcd4c3] bg-transparent py-2 focus:border-[#1e4d2b] outline-none font-bold"
+                                        placeholder="shop@mail.com" required
+                                    />
                                 </div>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="sticky bottom-0 bg-white border-t border-gray-200 -mx-6 px-6 py-4 mt-8">
-                                <div className="flex gap-3">
-                                    <button
-                                        type="button"
-                                        onClick={modelClose}
-                                        className="btn btn-ghost flex-1 hover:bg-gray-100"
-                                    >
-                                        {t('outlet.cancel', 'Cancel')}
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={outletForm.processing}
-                                        className="btn bg-[#1e4d2b] text-white flex-1 hover:bg-gray-800"
-                                    >
-                                        {outletForm.processing ? (
-                                            <>
-                                                <span className="loading loading-spinner loading-sm"></span>
-                                                {t('outlet.processing', 'Processing...')}
-                                            </>
-                                        ) : outletForm.data.id ? (
-                                            <>
-                                                <CheckCircle size={18} />
-                                                {t('outlet.update_outlet', 'Update Outlet')}
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Plus size={18} />
-                                                {t('outlet.create_outlet', 'Create Outlet')}
-                                            </>
-                                        )}
-                                    </button>
+                            <div className="form-control">
+                                <label className="text-[10px] font-black uppercase text-gray-500 mb-1">Physical Location</label>
+                                <textarea
+                                    value={outletForm.data.address}
+                                    onChange={(e) => outletForm.setData("address", e.target.value)}
+                                    className="w-full border-2 border-[#dcd4c3] bg-white p-4 focus:border-[#1e4d2b] outline-none font-bold h-24 shadow-inner"
+                                    placeholder="Building, Road, Area..." required
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-4 py-5 border-y-2 border-dashed border-[#dcd4c3]">
+                                <input
+                                    type="checkbox"
+                                    checked={outletForm.data.is_active}
+                                    onChange={(e) => outletForm.setData("is_active", e.target.checked)}
+                                    className="w-6 h-6 accent-[#1e4d2b] cursor-pointer"
+                                />
+                                <div className="flex flex-col">
+                                    <span className="font-black uppercase text-xs italic leading-none">Verified & Open</span>
+                                    <span className="text-[9px] font-bold text-gray-400 mt-1 uppercase">Ticking this will make shop visible in reports</span>
                                 </div>
+                            </div>
+
+                            <div className="flex justify-end gap-6 pt-6">
+                                <button type="button" onClick={modelClose} className="font-black uppercase text-[10px] tracking-widest text-gray-400 hover:text-black transition-colors">Discard Entry</button>
+                                <button
+                                    type="submit"
+                                    disabled={outletForm.processing}
+                                    className="bg-[#1e4d2b] text-white px-10 py-4 font-black uppercase text-[10px] tracking-widest shadow-[6px_6px_0px_#000] active:shadow-none active:translate-y-1 transition-all"
+                                >
+                                    {outletForm.data.id ? 'Update Record' : 'Save To Ledger'}
+                                </button>
                             </div>
                         </form>
                     </div>

@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Validation\ValidationException;
+
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Outlet extends Model
 {
-    use HasFactory;
-    
+    use HasFactory, SoftDeletes;
+
     protected $fillable = [
         'user_id',
         'name',
@@ -20,6 +24,7 @@ class Outlet extends Model
         'timezone',
         'is_active',
         'is_main',
+        'created_by'
     ];
 
     protected $casts = [
@@ -27,10 +32,20 @@ class Outlet extends Model
         'is_main' => 'boolean',
     ];
 
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
+    }
+
+
     // Relationships
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+    public function currentUsers()
+    {
+        return $this->hasMany(User::class, 'current_outlet_id');
     }
 
     // Scopes
@@ -56,9 +71,9 @@ class Outlet extends Model
     public function makeMain()
     {
         self::where('is_main', true)->update(['is_main' => false]);
-        
+
         $this->update(['is_main' => true]);
-        
+
         return $this;
     }
 

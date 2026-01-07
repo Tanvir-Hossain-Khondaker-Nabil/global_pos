@@ -7,12 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
 
-class UserScope implements Scope
+class OutletScope implements Scope
 {
     public function apply(Builder $builder, Model $model)
     {
-        if (Auth::check()) {
-            $builder->where('created_by', operator: Auth::id());
+        // Only apply scope if user is authenticated and has current outlet
+        if (Auth::check() && Auth::user()->current_outlet_id) {
+            $builder->where('outlet_id', Auth::user()->current_outlet_id);
         }
     }
 }

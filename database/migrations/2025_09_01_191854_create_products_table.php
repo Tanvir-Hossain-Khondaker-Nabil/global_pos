@@ -25,6 +25,7 @@ return new class extends Migration {
             $table->integer('in_house_initial_stock')->default(0);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
 

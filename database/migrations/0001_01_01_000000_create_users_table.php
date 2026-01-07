@@ -22,6 +22,8 @@ return new class extends Migration {
             $table->enum('role', ['admin', 'seller','buyer','user'])->default('user');
             $table->timestamp('email_verified_at')->nullable();
             $table->unsignedBigInteger('parent_id')->nullable();
+            $table->foreignId('current_outlet_id')->nullable()->constrained('outlets')->onDelete('set null');
+            $table->timestamp('outlet_logged_in_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

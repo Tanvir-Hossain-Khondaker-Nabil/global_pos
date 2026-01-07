@@ -21,6 +21,8 @@ class OutletController extends Controller
         )
         ->get();
 
+       
+
 
         return inertia('Outlet/Index', [
             'outlets' => $outlets
@@ -48,10 +50,11 @@ class OutletController extends Controller
             'is_main' => false,
             'currency' => 'BDT',
             'timezone' => 'Asia/Dhaka',
+            'created_by' => Auth::id(),
         ]));
 
 
-        return to_route('outlets.show', $outlet)
+        return to_route('outlets.index', $outlet)
                         ->with('success', 'Outlet created successfully!');
     }
 
@@ -73,7 +76,7 @@ class OutletController extends Controller
 
         $outlet->update($validated);
 
-        return to_route('outlets.show', $outlet)
+        return to_route('outlets.index', $outlet)
                         ->with('success', 'Outlet updated successfully!');
     }
 
@@ -104,6 +107,62 @@ class OutletController extends Controller
 
         return to_route('outlets.index')
                         ->with('success', 'Outlet deleted successfully!');
+    }
+
+    public function login(Request $request, $id)
+    {
+        $outlet = Outlet::where('user_id', Auth::id())
+            ->where('id', $id)
+            ->firstOrFail();
+
+        // User এর current outlet সেট করুন
+        Auth::user()->update([
+            'current_outlet_id' => $outlet->id,
+            'outlet_logged_in_at' => now(),
+        ]);
+
+        return redirect()->route('home')
+            ->with('success', "{$outlet->name} outlet এ লগইন করা হয়েছে!");
+    }
+
+    /**
+     * Outlet থেকে লগআউট করান
+     */
+    public function logout(Request $request)
+    {
+        $currentOutlet = Auth::user()->currentOutlet;
+        
+        Auth::user()->update([
+            'current_outlet_id' => null,
+            'outlet_logged_in_at' => null,
+        ]);
+
+        return redirect()->route('outlets.index')
+            ->with('success', $currentOutlet 
+                ? "{$currentOutlet->name} outlet থেকে লগআউট করা হয়েছে!" 
+                : 'Outlet থেকে লগআউট করা হয়েছে!'
+            );
+    }
+
+    /**
+     * Outlet সুইচ করান
+     */
+    public function switchOutlet(Request $request)
+    {
+        $request->validate([
+            'outlet_id' => 'required|exists:outlets,id',
+        ]);
+
+        $outlet = Outlet::where('user_id', Auth::id())
+            ->where('id', $request->outlet_id)
+            ->firstOrFail();
+
+        Auth::user()->update([
+            'current_outlet_id' => $outlet->id,
+            'outlet_logged_in_at' => now(),
+        ]);
+
+        return back()->with('success', "Outlet পরিবর্তন করা হয়েছে: {$outlet->name}");
     }
 
 }

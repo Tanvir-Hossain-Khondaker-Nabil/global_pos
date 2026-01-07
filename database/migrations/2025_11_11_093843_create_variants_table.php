@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('product_id')->nullable();
             $table->json('attribute_values')->nullable();
             $table->string('sku')->unique()->nullable();
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
     }

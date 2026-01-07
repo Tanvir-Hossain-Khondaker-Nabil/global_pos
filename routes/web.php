@@ -69,9 +69,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', 'index')->name('outlets.index');
         Route::post('/store', 'store')->name('outlets.store');
         // Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
-
         // Route::post('/', 'store')->middleware('permission:outlets.create')->name('outlets.store');
-
         Route::get('/{id}', 'show')->name('outlets.show');
         Route::put('/{id}', 'update')->name('outlets.update');
         Route::delete('/{id}', 'destroy')->name('outlets.delete');
@@ -267,7 +265,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/purchase/{id}', [PurchaseController::class, 'destroy'])->middleware('permission:purchase.delete')->name('purchase.destroy');
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 
-    
+
 
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 
@@ -497,6 +495,13 @@ Route::middleware('auth')->group(function () {
     Route::resource('sms-templates', SmsTemplateController::class);
     Route::post('/sms-templates/{smsTemplate}/toggle-status', [SmsTemplateController::class, 'toggleStatus'])
         ->name('sms-templates.toggle-status');
+
+    Route::post('/outlets/{outlet}/login', [OutletController::class, 'login'])
+        ->name('outlets.login');
+    Route::post('/outlets/logout', [OutletController::class, 'logout'])
+        ->name('outlets.logout');
+    Route::post('/outlets/switch', [OutletController::class, 'switchOutlet'])
+        ->name('outlets.switch');
 });
 
 

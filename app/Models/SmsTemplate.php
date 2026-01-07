@@ -2,11 +2,12 @@
 
 namespace App\Models;
 
+use App\Scopes\UserScope;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class SmsTemplate extends Model
 {
@@ -32,6 +33,11 @@ class SmsTemplate extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
     }
 
     protected static function boot()

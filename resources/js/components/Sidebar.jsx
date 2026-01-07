@@ -44,7 +44,8 @@ import {
     Clock,
     Plane,
     BoxIcon,
-    TagIcon
+    TagIcon,
+    Store // Added Store icon
 } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -365,15 +366,6 @@ const baseMenu = [
         role: "all",
         category: "HR"
     },
-    // {
-    //     title: "Provident Fund",
-    //     icon: "shield",
-    //     route: "provident-fund.index",
-    //     routeParams: null,
-    //     active: "provident-fund.index",
-    //     role: "all",
-    //     category: "HR"
-    // },
     {
         title: "Allowances",
         icon: "trending-up",
@@ -401,7 +393,6 @@ const baseMenu = [
         role: "all",
         category: "HR"
     },
-
     {
         title: "SMS",
         icon: "gift",
@@ -411,15 +402,14 @@ const baseMenu = [
         role: "all",
         category: "HR"
     },
-
     {
         title: "Outlet",
-        icon: "gift",
+        icon: "store",
         route: "outlets.index",
         routeParams: null,
         active: "outlets.index",
         role: "all",
-        category: "HR"
+        category: "Outlets"
     }
 ];
 
@@ -462,7 +452,8 @@ const iconComponents = {
     'clock': Clock,
     'plane': Plane,
     'box-icon': BoxIcon,
-    'tag-icon': TagIcon
+    'tag-icon': TagIcon,
+    'store': Store // Added store icon
 };
 
 export default function Sidebar({ status, setStatus }) {
@@ -471,6 +462,22 @@ export default function Sidebar({ status, setStatus }) {
     const [openMenus, setOpenMenus] = useState({});
     const [searchQuery, setSearchQuery] = useState("");
     const sidebarRef = useRef(null);
+
+    // Check if user is logged into an outlet
+    const isLoggedIntoOutlet = auth?.user?.is_logged_into_outlet || false;
+    
+    // If not logged into outlet, show only outlet menu
+    const outletOnlyMenu = [
+        {
+            title: "Outlet",
+            icon: "store",
+            route: "outlets.index",
+            routeParams: null,
+            active: "outlets.index",
+            role: "all",
+            category: "Outlet Management"
+        }
+    ];
 
     // Get icon component
     const getIconComponent = (iconName) => {
@@ -496,6 +503,7 @@ export default function Sidebar({ status, setStatus }) {
     const getTranslatedTitle = (englishTitle) => {
         const translationMap = {
             'Dashboard': t('auth.dashboard', 'Dashboard'),
+            'Outlet': t('auth.outlet', 'Outlet'),
             'Add Sale (Inventory)': t('auth.add_sale_inventory', 'Add Sale (Inventory)'),
             'Add Sale (POS)': t('auth.add_sale_pos', 'Add Sale (POS)'),
             'All Orders (Inventory)': t('auth.all_orders_inventory', 'All Orders (Inventory)'),
@@ -525,27 +533,12 @@ export default function Sidebar({ status, setStatus }) {
             'Users': t('auth.users', 'Users'),
             'Employees': t('auth.employees', 'Employees'),
             'Attendance': t('auth.attendance', 'Attendance'),
-            'Monthly Report': t('auth.monthly_report', 'Monthly Report'),
-            'Top Performers': t('auth.top_performers', 'Top Performers'),
-            'Manual Entry': t('auth.manual_entry', 'Manual Entry'),
             'Salary': t('auth.salary', 'Salary'),
-            'Salary Report': t('auth.salary_report', 'Salary Report'),
-            'Test Salary': t('auth.test_salary', 'Test Salary'),
-            'Process Awards': t('auth.process_awards', 'Process Awards'),
-            'Leave Management': t('auth.leave_management', 'Leave Management'),
-            'Create Leave': t('auth.create_leave', 'Create Leave'),
-            'Leave Dashboard': t('auth.leave_dashboard', 'Leave Dashboard'),
-            'Leave Balance': t('auth.leave_balance', 'Leave Balance'),
-            'Provident Fund': t('auth.provident_fund', 'Provident Fund'),
-            'Overall Summary': t('auth.overall_summary', 'Overall Summary'),
             'Allowances': t('auth.allowances', 'Allowances'),
             'Ranks': t('auth.ranks', 'Ranks'),
-            'Employee Awards': t('auth.employee_awards', 'Employee Awards'),
-            'Award Statistics': t('auth.award_statistics', 'Award Statistics'),
-            'Assign Monthly': t('auth.assign_monthly', 'Assign Monthly'),
             'Bonus': t('auth.bonus', 'Bonus'),
-            'Apply Eid Bonus': t('auth.apply_eid_bonus', 'Apply Eid Bonus'),
-            'Apply Festival Bonus': t('auth.apply_festival_bonus', 'Apply Festival Bonus'),
+            'SMS': t('auth.sms', 'SMS'),
+            'Outlet Management': t('auth.outlet_management', 'Outlet Management'),
         };
         
         return translationMap[englishTitle] || englishTitle;
@@ -565,11 +558,11 @@ export default function Sidebar({ status, setStatus }) {
     };
 
     // Group menu items by category
-    const groupMenuByCategory = () => {
+    const groupMenuByCategory = (menuItems) => {
         const categories = {};
         
-        baseMenu.forEach(item => {
-            if (item.role === "all" || item.role === auth.role) {
+        menuItems.forEach(item => {
+            if (item.role === "all" || item.role === auth.user?.role) {
                 const category = item.category || 'General';
                 if (!categories[category]) {
                     categories[category] = [];
@@ -613,7 +606,12 @@ export default function Sidebar({ status, setStatus }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [status, setStatus]);
 
-    const menuCategories = groupMenuByCategory();
+    // Determine which menu to show based on outlet login status
+    const menuToShow = isLoggedIntoOutlet ? baseMenu : outletOnlyMenu;
+    const menuCategories = groupMenuByCategory(menuToShow);
+
+    // Get current outlet info for display
+    const currentOutlet = auth?.user?.current_outlet;
 
     return (
         <>
@@ -652,30 +650,90 @@ export default function Sidebar({ status, setStatus }) {
                         </button>
                     </div>
 
-                    {/* Search Bar */}
-                    <div className="mb-6 relative">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white w-4 h-4" />
-                            <input
-                                type="text"
-                                placeholder={locale === 'bn' ? 'মেনু সার্চ করুন...' : 'Search menu...'}
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all"
-                            />
-                            {searchQuery && (
-                                <button
-                                    onClick={() => setSearchQuery("")}
-                                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white hover:text-white"
-                                >
-                                    <X size={16} />
-                                </button>
-                            )}
+                    {/* Current Outlet Info - Show if logged into outlet */}
+                    {isLoggedIntoOutlet && currentOutlet && (
+                        <div className="mb-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#35a952] to-[#1e4d2b] flex items-center justify-center">
+                                    <Store size={20} className="text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-white font-bold text-sm truncate">
+                                        {currentOutlet.name}
+                                    </p>
+                                    <p className="text-white/70 text-xs truncate">
+                                        {currentOutlet.code} • {currentOutlet.address?.substring(0, 30)}...
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between">
+                                <span className="text-xs text-white/50">
+                                    {locale === 'bn' ? 'সক্রিয় আউটলেট' : 'Active Outlet'}
+                                </span>
+                                <div className="flex items-center">
+                                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse mr-2"></div>
+                                    <span className="text-xs text-green-400 font-medium">
+                                        {locale === 'bn' ? 'অনলাইন' : 'Online'}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Active Dashboard Indicator */}
-                    {currentRoute === 'dashboard' && (
+                    {/* Alert if not logged into outlet */}
+                    {!isLoggedIntoOutlet && (
+                        <div className="mb-6 bg-gradient-to-r from-amber-500/20 to-amber-600/10 backdrop-blur-sm border border-amber-500/20 rounded-xl p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center">
+                                    <Store size={20} className="text-white" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-white font-bold text-sm">
+                                        {locale === 'bn' ? 'আউটলেট নির্বাচন করুন' : 'Select an Outlet'}
+                                    </p>
+                                    <p className="text-white/70 text-xs">
+                                        {locale === 'bn' ? 'সব ফিচার এক্সেস করতে আউটলেটে লগইন করুন' : 'Login to an outlet to access all features'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="mt-3">
+                                <Link
+                                    href={route("outlets.index")}
+                                    className="inline-flex items-center justify-center w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200"
+                                >
+                                    <Store size={16} className="mr-2" />
+                                    {locale === 'bn' ? 'আউটলেট নির্বাচন করুন' : 'Select Outlet'}
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Search Bar - Only show when logged into outlet */}
+                    {isLoggedIntoOutlet && (
+                        <div className="mb-6 relative">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white w-4 h-4" />
+                                <input
+                                    type="text"
+                                    placeholder={locale === 'bn' ? 'মেনু সার্চ করুন...' : 'Search menu...'}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white hover:text-white"
+                                    >
+                                        <X size={16} />
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Active Dashboard Indicator - Only show when logged into outlet */}
+                    {isLoggedIntoOutlet && currentRoute === 'dashboard' && (
                         <div className="bg-gradient-to-r from-[#35a952]/20 to-[#35a952]/10 backdrop-blur-sm text-white rounded-xl px-4 py-3 flex items-center gap-3 font-bold text-xs uppercase tracking-wider mb-6 border border-white/10">
                             <div className="w-2 h-2 rounded-full bg-[#35a952] animate-pulse"></div>
                             <span>DASHBOARD</span>
@@ -691,7 +749,7 @@ export default function Sidebar({ status, setStatus }) {
                             return (
                                 <div key={category} className="space-y-2">
                                     <p className="text-[10px] uppercase text-white font-bold px-3 mb-1 tracking-widest">
-                                        {category}
+                                        {getTranslatedTitle(category)}
                                     </p>
                                     
                                     <div className="space-y-1">
@@ -801,8 +859,8 @@ export default function Sidebar({ status, setStatus }) {
                             );
                         })}
                         
-                        {/* No Search Results */}
-                        {searchQuery && Object.values(menuCategories).every(items => filterMenuItems(items).length === 0) && (
+                        {/* No Search Results - Only show when logged into outlet */}
+                        {isLoggedIntoOutlet && searchQuery && Object.values(menuCategories).every(items => filterMenuItems(items).length === 0) && (
                             <div className="text-center py-8">
                                 <Search className="w-12 h-12 text-white/20 mx-auto mb-3" />
                                 <p className="text-white text-sm">
@@ -813,12 +871,25 @@ export default function Sidebar({ status, setStatus }) {
                                 </p>
                             </div>
                         )}
+
+                        {/* Info message when not logged into outlet */}
+                        {!isLoggedIntoOutlet && (
+                            <div className="text-center py-8">
+                                <Store className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                                <p className="text-white text-sm font-medium mb-2">
+                                    {locale === 'bn' ? 'শুধুমাত্র আউটলেট মেনু' : 'Outlet Menu Only'}
+                                </p>
+                                <p className="text-white/60 text-xs">
+                                    {locale === 'bn' ? 'সম্পূর্ণ মেনু দেখতে আউটলেটে লগইন করুন' : 'Login to an outlet to see full menu'}
+                                </p>
+                            </div>
+                        )}
                     </nav>
 
                     {/* User Info & Logout */}
                     <div className="mt-auto pt-6 border-t border-white/10">
                         {/* User Info */}
-                        <div className="flex items-center gap-3 mb-4 px-3 py-2 rounded-lg bg-white/5">
+                        {/* <div className="flex items-center gap-3 mb-4 px-3 py-2 rounded-lg bg-white/5">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#35a952] to-[#1e4d2b] flex items-center justify-center text-white font-bold text-xs">
                                 {auth.user?.name?.charAt(0) || 'U'}
                             </div>
@@ -827,10 +898,10 @@ export default function Sidebar({ status, setStatus }) {
                                     {auth.user?.name || 'User'}
                                 </p>
                                 <p className="text-white text-xs truncate">
-                                    {auth.role || 'Administrator'}
+                                    {auth.user?.role || 'Administrator'}
                                 </p>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Logout Button */}
                         <Link

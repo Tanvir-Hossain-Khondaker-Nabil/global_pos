@@ -17,6 +17,7 @@ return new class extends Migration {
             $table->string('code');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+            $table->unsignedBigInteger('outlet_id');
             
             // Unique constraint for attribute_id and code combination
             $table->unique(['attribute_id', 'code']);
