@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
-import Pagination from "../../components/Pagination";
 import {
     Plus, Trash2, Search, Edit, X, User,
     Mail, Phone, MapPin, CheckCircle, AlertCircle,
@@ -8,7 +7,6 @@ import {
     Hash, Store, Clock,LogIn  // Added Hash and Store here
 } from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
-import axios from "axios";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Index({ outlets, filters = {} }) {
@@ -18,10 +16,7 @@ export default function Index({ outlets, filters = {} }) {
     const [editProcessing, setEditProcessing] = useState(false);
     const [notification, setNotification] = useState({
         show: false,
-        type: 'success',
         message: ''
-    });
-
     // Show flash messages
     useEffect(() => {
         if (flash.success) {

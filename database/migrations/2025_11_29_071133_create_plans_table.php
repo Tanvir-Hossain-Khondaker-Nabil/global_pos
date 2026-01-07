@@ -19,7 +19,7 @@ return new class extends Migration
             $table->integer('validity')->default(0);
             $table->text('description')->nullable();
             $table->json('features')->nullable(); 
-            $table->enum('status', [1, 2])
+            $table->enum('status', [1, 2]) // 1 = active // 2 = inactive
             ->default(1)
             ->comment('1=active, 2=inactive');
             $table->integer('total_sell')->nullable()->default(0);

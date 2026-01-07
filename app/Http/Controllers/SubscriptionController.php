@@ -36,7 +36,8 @@ class SubscriptionController extends Controller
     public function create()
     {
         $plans = Plan::with('modules')->active()->get();
-        $users = User::where('role', User::COMPANY_ROLE)->get();
+        $users = User::where('role', User::USER_ROLE)->get();
+
         return inertia('Subscriptions/Create', [
             'plans' => $plans,
             'users' => $users
@@ -60,7 +61,9 @@ class SubscriptionController extends Controller
             }
         }
 
-        if(Subscription::where('user_id', $validated['user_id'])->where('plan_id', $validated['plan_id'])->where('status', 1)->exists()) 
+        $checkUser = Subscription::where('user_id', $validated['user_id'])->where('plan_id', $validated['plan_id'])->where('status', 1)->exists();
+
+        if($checkUser) 
         {
             return back()->withErrors(['user_id' => 'This user already has an active subscription for the selected plan.'])->withInput();
         }

@@ -15,6 +15,7 @@ class Plan extends Model
         'features',
         'status',
         'total_sell',
+        'product_range'
     ];
 
 

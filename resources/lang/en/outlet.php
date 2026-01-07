@@ -46,5 +46,8 @@ return [
     'cancel' => 'Cancel',
     'created' => 'Created',
     'clear' => 'Clear',
-    'inactive_supplier' => 'Inactive Supplier'
+    'inactive_supplier' => 'Inactive Supplier',
+    'edit_outlet' => 'Edit Outlet',
+    'update_outlet_info' => 'Update Outlet Info',
+    'update_outlet' => 'Update Outlet'
 ];

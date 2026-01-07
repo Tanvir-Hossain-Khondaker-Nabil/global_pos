@@ -59,6 +59,15 @@ class OutletController extends Controller
     }
 
 
+    // edit function will be here
+    public function edit($id)
+    {
+        $outlet = Outlet::findOrFail($id);
+        return inertia('Outlet/Edit', [
+            'outlet' => $outlet
+        ]); 
+    }
+
 
     // update function will be here
 
