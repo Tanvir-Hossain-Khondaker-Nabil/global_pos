@@ -49,6 +49,10 @@ return [
     'enter_product_code' => 'পণ্য কোড লিখুন',
     'enter_description' => 'পণ্যের বিবরণ লিখুন',
 
+    // Brand field
+    'brand' => 'ব্র্যান্ড',
+    'pick_brand' => '--একটি ব্র্যান্ড নির্বাচন করুন--',
+
     // Attributes section
     'product_attributes' => 'পণ্যের ব্র্যান্ড',
     'select_attributes' => 'ব্র্যান্ড নির্বাচন করুন',
@@ -82,6 +86,7 @@ return [
     'variant_attributes_required' => 'এই ভেরিয়েন্টের জন্য ব্র্যান্ড নির্বাচন করুন',
     'fix_validation_errors' => 'দয়া করে বৈধতা ত্রুটিগুলি ঠিক করুন',
     'something_went_wrong' => 'কিছু ভুল হয়েছে। দয়া করে আবার চেষ্টা করুন!',
+    'duplicate_variants' => 'ডুপ্লিকেট ব্র্যান্ড কম্বিনেশন পাওয়া গেছে',
 
     // Success messages
     'product_added_success' => 'পণ্য সফলভাবে যোগ করা হয়েছে!',
@@ -114,4 +119,10 @@ return [
     'sale_price_required' => 'বিক্রয় মূল্য প্রয়োজন',
     'shadow_sale_price_required' => 'শ্যাডো বিক্রয় মূল্য প্রয়োজন',
     'initial_stock_invalid' => 'প্রারম্ভিক স্টক নেতিবাচক হতে পারে না',
+
+    // New keys for variant attribute management
+    'edit_attributes' => 'ব্র্যান্ড সম্পাদনা করুন',
+    'select_attributes_for' => 'এর জন্য ব্র্যান্ড নির্বাচন করুন',
+    'clear_attributes' => 'ব্র্যান্ড সাফ করুন',
+    'done' => 'সম্পন্ন',
 ];

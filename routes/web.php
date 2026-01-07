@@ -37,6 +37,7 @@ use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\SalesReturnController;
+use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
@@ -482,6 +483,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/sms/test', [SupplierController::class, 'sendTestSms'])->name('sms.test');
     Route::post('/sms/preview', [SupplierController::class, 'getSmsPreview'])->name('sms.preview');
 
+
+    Route::resource('sms-templates', SmsTemplateController::class);
+    Route::post('/sms-templates/{smsTemplate}/toggle-status', [SmsTemplateController::class, 'toggleStatus'])
+        ->name('sms-templates.toggle-status');
 });
 
 

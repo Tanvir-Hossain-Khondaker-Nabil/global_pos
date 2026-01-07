@@ -1,3 +1,4 @@
+// resources/js/Pages/Outlet/Index.jsx
 import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import {

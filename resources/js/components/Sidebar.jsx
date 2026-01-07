@@ -365,15 +365,15 @@ const baseMenu = [
         role: "all",
         category: "HR"
     },
-    {
-        title: "Provident Fund",
-        icon: "shield",
-        route: "provident-fund.index",
-        routeParams: null,
-        active: "provident-fund.index",
-        role: "all",
-        category: "HR"
-    },
+    // {
+    //     title: "Provident Fund",
+    //     icon: "shield",
+    //     route: "provident-fund.index",
+    //     routeParams: null,
+    //     active: "provident-fund.index",
+    //     role: "all",
+    //     category: "HR"
+    // },
     {
         title: "Allowances",
         icon: "trending-up",
@@ -398,6 +398,26 @@ const baseMenu = [
         route: "bonus.index",
         routeParams: null,
         active: "bonus.index",
+        role: "all",
+        category: "HR"
+    },
+
+    {
+        title: "SMS",
+        icon: "gift",
+        route: "sms-templates.index",
+        routeParams: null,
+        active: "sms-templates.index",
+        role: "all",
+        category: "HR"
+    },
+
+    {
+        title: "Outlet",
+        icon: "gift",
+        route: "outlets.index",
+        routeParams: null,
+        active: "outlets.index",
         role: "all",
         category: "HR"
     }
