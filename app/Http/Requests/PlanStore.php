@@ -28,7 +28,7 @@ class PlanStore extends FormRequest
             'plan_type' => ['required', 'string'],
             'validity' => ['required', 'integer', 'min:1'],
             'description' => ['nullable', 'string'],
-            'modules' => ['required', 'array', 'min:1'],
+            'modules' => ['nullable', 'array', 'min:1'],
             'modules.*' => ['exists:modules,id'],
             'product_range' => ['nullable', 'integer', 'min:0'],
         ];

@@ -28,7 +28,7 @@ class PlanUpdate extends FormRequest
             'validity' => 'required|integer|min:1',
             'description' => 'nullable|string',
             'product_range' => 'nullable|integer|min:0',
-            'modules' => 'required|array|min:1',
+            'modules' => 'nullable|array|min:1',
             'modules.*' => 'exists:modules,id',
         ];
     }

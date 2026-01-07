@@ -27,7 +27,7 @@ export default function Create({ modules }) {
         validity: "",
         description: "",
         modules: [],
-        product_range : ' ',
+        product_range : 0,
     });
 
     const [selectedModuleId, setSelectedModuleId] = useState("");
