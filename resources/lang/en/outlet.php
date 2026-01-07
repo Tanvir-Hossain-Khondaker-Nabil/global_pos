@@ -44,5 +44,6 @@ return [
     'status' => 'Status' ,
     'command' => 'Command',
     'cancel' => 'Cancel',
-    'created' => 'Created'
+    'created' => 'Created',
+    'clear' => 'Clear'
 ];

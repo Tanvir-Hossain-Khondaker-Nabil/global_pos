@@ -36,6 +36,7 @@ return [
 'outlet_info' => 'আউটলেটের তথ্য',
 'contact_details' => 'যোগাযোগের বিস্তারিত',
 'status' => 'অবস্থা',
-'command' => 'কমান্ড'
+'command' =>  'কমান্ড',
+'clear' => 'পরিষ্কার'
 
 ];

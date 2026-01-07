@@ -50,8 +50,6 @@ class OutletController extends Controller
             'timezone' => 'Asia/Dhaka',
         ]));
 
-        dd($outlet);
-
 
         return to_route('outlets.show', $outlet)
                         ->with('success', 'Outlet created successfully!');
