@@ -87,38 +87,25 @@ class SupplierController extends Controller
         }
 
         // if advance amount is given, create a payment record
-        if ($request->advance_amount && $request->advance_amount > 0) {
-            $payment = Payment::create([
+        if ($request->advance_amount && $request->advance_amount > 0 && $account) {
+
+            Payment::create([
                 'supplier_id' => $supplier->id ?? null,
                 'amount' => -$request->advance_amount ?? 0,
                 'shadow_amount' => 0,
-                'payment_method' => 'Cash',
+                'payment_method' => $account->type ?? 'Cash',
                 'txn_ref' => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
                 'note' => 'Initial advance amount payment of supplier',
                 'paid_at' => Carbon::now(),
                 'created_by' => Auth::id(),
+                'account_id'  => $account->id ?? null,
+                'status' => 'completed'
             ]);
 
-            // Send SMS for advance payment if requested
-            if ($request->boolean('send_welcome_sms')) {
-                try {
-                    $smsService = new SmsService();
-                    $advanceMessage = "Dear {$supplier->contact_person}, Advance payment of {$request->advance_amount} has been recorded. Transaction ID: {$payment->txn_ref}";
-
-                    $smsResult = $smsService->sendSms(
-                        $supplier->phone,
-                        $advanceMessage
-                    );
-
-                    Log::info('Advance Payment SMS Result:', [
-                        'payment_id' => $payment->id,
-                        'result' => $smsResult,
-                    ]);
-                } catch (\Exception $e) {
-                    Log::error('Failed to send advance payment SMS: ' . $e->getMessage());
-                }
-            }
+            $account->updateBalance($request->advance_amount ?? 0 , 'withdraw');
         }
+
+
 
         $responseMessage = 'Supplier contact added successfully!';
         if ($smsSent) {
