@@ -13,6 +13,7 @@ use Carbon\Carbon;
 use App\Services\SmsService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Account;
+use App\Models\DillerShip;
 
 class SupplierController extends Controller
 {
@@ -21,7 +22,7 @@ class SupplierController extends Controller
     {
         $filters = $request->only('search');
 
-        $suppliers = Supplier::with('purchases')->when($filters['search'] ?? null, function ($query, $search) {
+        $suppliers = Supplier::with(['purchases','dealership'])->when($filters['search'] ?? null, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('contact_person', 'like', "%{$search}%")
@@ -38,6 +39,7 @@ class SupplierController extends Controller
         return Inertia::render('Supplier/Index', [
             'suppliers' => $suppliers,
             'filters' => $filters,
+            'dealerships' => DillerShip::all(),
             'accounts' => Account::where('is_active',true)->get(),
         ]);
     }
@@ -47,27 +49,15 @@ class SupplierController extends Controller
     // Store new supplier
     public function store(SupplierStore $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'contact_person' => 'required|string|max:255',
-            'email' => 'required|email',
-            'phone' => 'required|string|max:20',
-            'company' => 'nullable|string|max:255',
-            'address' => 'nullable|string',
-            'website' => 'nullable|url',
-            'advance_amount' => 'nullable|numeric|min:0',
-            'due_amount' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean',
-            'send_welcome_sms' => 'boolean', // New field for SMS option
-        ]);
+        $validated = $request->validated();
 
-        // Set default values for numeric fields
-        $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
-        $validated['due_amount'] = $validated['due_amount'] ?? 0;
-        $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['created_by'] = Auth::id();
         $account = Account::find($request->input('account_id'));
+        $dealership = DillerShip::find($request->input('dealership_id'));
+
+        if ($dealership) {
+            $validated['dealership_id'] = $dealership->id;
+        }
 
         $supplier = Supplier::create($validated);
 
@@ -170,12 +160,15 @@ class SupplierController extends Controller
             'advance_amount' => 'nullable|numeric|min:0',
             'due_amount' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
+            'dealership_id' => 'nullable|exists:diller_ships,id'
         ]);
 
-        // Set default values for numeric fields if not provided
-        $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
-        $validated['due_amount'] = $validated['due_amount'] ?? 0;
-        $validated['is_active'] = $validated['is_active'] ?? true;
+
+        $dealership = DillerShip::find($request->input('dealership_id'));
+
+        if ($dealership) {
+            $validated['dealership_id'] = $dealership->id;
+        }
 
         $supplier->update($validated);
 
@@ -199,7 +192,7 @@ class SupplierController extends Controller
 
     public function show($id)
     {
-        $supplier = Supplier::with([
+        $supplier = Supplier::with(['dealership',
             'purchases' => function ($query) {
                 $query->with([
                     'items.product',

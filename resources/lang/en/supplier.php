@@ -119,5 +119,11 @@ return [
     'select_account' => 'Select Account',
     'add_new_supplier' => 'Add New Supplier',
     'update_supplier' => 'Update Supplier',
+    'default_dealership' => 'Default Dealership',
+    'select_dealership_optional' => 'Select Dealership (Optional)',
+    'no_matching_suppliers' => 'No matching suppliers found.',
+    'clear' => 'Clear',
+    'add_first_supplier' => 'Add First Supplier',
+    'read_only_edit' => 'Read Only Edit'
 
 ];
