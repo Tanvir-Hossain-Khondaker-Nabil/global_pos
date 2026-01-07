@@ -16,7 +16,10 @@ export default function Index({ outlets, filters = {} }) {
     const [editProcessing, setEditProcessing] = useState(false);
     const [notification, setNotification] = useState({
         show: false,
+        type: 'success',
         message: ''
+    });
+
     // Show flash messages
     useEffect(() => {
         if (flash.success) {
