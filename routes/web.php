@@ -61,18 +61,19 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('home');
 
 
-        // Outlet Routes
-    Route::resource('outlets', OutletController::class)->except(['create', 'edit']);
+    //outles rount will be here
 
-    // Additional routes
-    Route::post('outlets/{outlet}/toggle-status', [OutletController::class, 'toggleStatus'])
-        ->name('outlets.toggleStatus');
-    Route::post('outlets/{outlet}/set-as-main', [OutletController::class, 'setAsMain'])
-        ->name('outlets.setAsMain');
-    Route::get('outlets/{outlet}/edit', [OutletController::class, 'edit'])
-        ->name('outlets.edit');
-    Route::post('outlets/generate-code', [OutletController::class, 'generateCode'])
-        ->name('outlets.generateCode');
+    Route::controller(OutletController::class)->prefix('outlets')->group(function () {
+
+        Route::get('/', 'index')->name('outlets.index');
+        // Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
+
+        Route::post('/', 'store')->middleware('permission:outlets.create')->name('outlets.store');
+        Route::get('/{id}', 'show')->middleware('permission:outlets.view')->name('outlets.show');
+        Route::put('/{id}', 'update')->middleware('permission:outlets.edit')->name('outlets.update');
+        Route::delete('/{id}', 'destroy')->middleware('permission:outlets.delete')->name('outlets.delete');
+
+    });
 
     // users managment
     Route::controller(UserController::class)->prefix('users')->group(function () {
