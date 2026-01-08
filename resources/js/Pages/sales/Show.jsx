@@ -55,14 +55,14 @@ export default function SaleShow({ sale }) {
 
     return (
         <div className="bg-white rounded-box">
-       
+
 
             {/* Header */}
             <div className="p-5 border-b border-gray-200 print:p-2 print:border-b-2 print:hidden">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div className="print:w-full">
                         <div className="flex items-center gap-2 mb-2 print:mb-1">
-                            <Link 
+                            <Link
                                 href={route('sales.index')}
                                 className="btn btn-ghost btn-sm btn-circle print:hidden"
                             >
@@ -76,7 +76,7 @@ export default function SaleShow({ sale }) {
                             Invoice #: <span className="font-mono font-semibold">{sale.invoice_no}</span>
                         </p>
                     </div>
-                    
+
                     <div className="flex items-center gap-2 flex-wrap print:hidden">
                         <button
                             onClick={handlePrint}
@@ -158,13 +158,12 @@ export default function SaleShow({ sale }) {
                             </div>
                             <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Status:</span>
-                                <span className={`badge capitalize ${
-                                    sale.status === 'completed' 
-                                        ? 'badge-success' 
+                                <span className={`badge capitalize ${sale.status === 'completed'
+                                        ? 'badge-success'
                                         : sale.status === 'cancelled'
-                                        ? 'badge-error'
-                                        : 'badge-warning'
-                                } print:border print:border-gray-800 print:bg-transparent print:text-gray-800 print:font-normal`}>
+                                            ? 'badge-error'
+                                            : 'badge-warning'
+                                    } print:border print:border-gray-800 print:bg-transparent print:text-gray-800 print:font-normal`}>
                                     {sale.status}
                                 </span>
                             </div>
@@ -207,9 +206,8 @@ export default function SaleShow({ sale }) {
                             </div>
                             <div className="flex justify-between print:text-sm">
                                 <span className="text-gray-600">Payment Status:</span>
-                                <span className={`font-semibold ${
-                                    sale.due_amount > 0 ? 'text-error' : 'text-success'
-                                } print:font-normal`}>
+                                <span className={`font-semibold ${sale.due_amount > 0 ? 'text-error' : 'text-success'
+                                    } print:font-normal`}>
                                     {sale.due_amount > 0 ? 'Partial Payment' : 'Fully Paid'}
                                 </span>
                             </div>
@@ -254,59 +252,27 @@ export default function SaleShow({ sale }) {
                                             </div>
                                         </td>
                                         <td className='text-left p-2 print:p-1'>
-                                            {item.variant && (
-                                                <>
-                                               {(() => {
-                                                    const variant = item.variant;
-                                                    let attrsText = '';
-
-                                                    if (variant.attribute_values) {
-                                                    if (typeof variant.attribute_values === 'object') {
-                                                        attrsText = Object.entries(variant.attribute_values)
-                                                        .map(([key, value]) => `${key}`)
-                                                        .join(', ');
-                                                    } else {
-                                                        attrsText = variant.attribute_values;
-                                                    }
-                                                    }
-
-                                                    return <>{attrsText || 'N/A'}</>;
-                                                })()}<br />
-
-                                                </>
-                                            )}
-                                            {item?.brand }
+                                            {item?.product?.brand?.name || item?.brand || 'N/A'}
                                         </td>
-                                        
+
                                         <td className="text-center p-2 print:p-1">
                                             {item.variant && (
-                                                <>
-                                                {(() => {
-                                                    const variant = item.variant;
-                                                    let attrsText = '';
-
-                                                    if (variant.attribute_values) {
-                                                    if (typeof variant.attribute_values === 'object') {
-                                                        attrsText = Object.entries(variant.attribute_values)
-                                                        .map(([key, value]) => `${value}`)
-                                                        .join(', ');
-                                                    } else {
-                                                        attrsText = variant.attribute_values;
+                                                <div className="text-sm text-gray-600">
+                                                    {item.variant.attribute_values
+                                                        ? typeof item.variant.attribute_values === 'object'
+                                                            ? Object.entries(item.variant.attribute_values)
+                                                                .map(([key, value]) => `${key}{${value}}`)
+                                                                .join(', ')
+                                                            : item.variant.attribute_values
+                                                        : 'N/A'
                                                     }
-                                                    }
-
-                                                    return <>{attrsText || 'N/A'}</>;
-                                                })()}
-
-
-                                                <br />
-                                                <span className="text-sm text-gray-500 print:text-xs">
-                                                    {item.variant?.sku || 'No SKU'}
-                                                </span>
-                                                </>
+                                                    <br />
+                                                    <span className="text-xs text-gray-500 print:text-xs">
+                                                        SKU: {item.variant.sku || 'No SKU'}
+                                                    </span>
+                                                </div>
                                             )}
-
-                                            {item?.variant_name }
+                                            {item?.variant_name}
                                         </td>
 
                                         <td className="text-center p-2 print:p-1">
@@ -336,28 +302,28 @@ export default function SaleShow({ sale }) {
                                 <span className="text-gray-600">Sub Total:</span>
                                 <span className="font-semibold print:font-normal">{formatCurrency(sale.sub_total)} Tk</span>
                             </div>
-                            
+
                             {sale.discount > 0 && (
                                 <div className="flex justify-between text-lg print:text-base">
                                     <span className="text-gray-600">Discount:</span>
                                     <span className="font-semibold text-error print:font-normal">{formatCurrency(sale.discount)} %</span>
                                 </div>
                             )}
-                            
+
                             {sale.vat_tax > 0 && (
                                 <div className="flex justify-between text-lg print:text-base">
                                     <span className="text-gray-600">Vat/Tax:</span>
                                     <span className="font-semibold text-warning print:font-normal">{formatCurrency(sale.vat_tax)} %</span>
                                 </div>
                             )}
-                            
+
                             <div className="border-t border-gray-300 pt-3 print:pt-2">
                                 <div className="flex justify-between text-xl font-bold print:text-lg">
                                     <span>Grand Total:</span>
                                     <span className="text-primary">{formatCurrency(sale.grand_total)} Tk</span>
                                 </div>
                             </div>
-                            
+
                             <div className="border-t border-gray-300 pt-3 print:pt-2">
                                 <div className="flex justify-between text-lg print:text-base">
                                     <span className="text-gray-600">Paid Amount:</span>
