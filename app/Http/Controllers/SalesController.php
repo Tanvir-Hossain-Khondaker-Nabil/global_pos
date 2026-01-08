@@ -696,11 +696,20 @@ class SalesController extends Controller
     { 
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
-        $sale = Sale::with(['customer', 'items.product','items.product.brand' ,'items.variant', 'items.warehouse','creator'])->findOrFail($sale->id);
+        $sale =  Sale::with([
+            'customer',
+            'items',
+            'items.product',
+            'items.product.brand',
+            'items.variant',
+            'items.warehouse',
+            'creator'
+        ])->findOrFail($sale->id);
 
         if ($isShadowUser) {
             $sale = $this->transformToShadowData($sale);
         }
+
 
         $render = $print ? 'sales/ShowPos' : 'sales/Show';
 
@@ -1037,12 +1046,9 @@ class SalesController extends Controller
 
     private static function transformToShadowItemData($salesItems)
     {
-
-
         $salesItems->unit_price = $salesItems->shadow_unit_price;
         $salesItems->total_price = $salesItems->shadow_total_price;
  
-
         return $salesItems;
     }
 }

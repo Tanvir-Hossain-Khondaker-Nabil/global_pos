@@ -77,10 +77,10 @@ class Outlet extends Model
         return $this;
     }
 
-    // public function canBeDeleted(): bool
-    // {
-    //     return !$this->is_main;
-    // }
+    public function canBeDeleted(): bool
+    {
+        return !$this->is_main;
+    }
 
     public function getFormattedAddressAttribute(): ?string
     {

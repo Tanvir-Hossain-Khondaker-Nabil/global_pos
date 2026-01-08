@@ -6,6 +6,8 @@ import { Link } from '@inertiajs/react';
 export default function Invoice({ sale }) {
     const { auth } = usePage().props;
 
+    console.log(auth, sale);
+
     // Format currency
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-BD', {
@@ -41,7 +43,7 @@ export default function Invoice({ sale }) {
         try {
             const printWindow = window.open('', '_blank');
             const receiptHTML = generateReceiptHTML();
-            
+
             printWindow.document.write(`
                 <!DOCTYPE html>
                 <html>
@@ -122,14 +124,14 @@ export default function Invoice({ sale }) {
                 </html>
             `);
             printWindow.document.close();
-            
+
             // Wait for content to load then print
             setTimeout(() => {
                 printWindow.print();
                 // Optional: close window after print
                 // setTimeout(() => printWindow.close(), 500);
             }, 500);
-            
+
         } catch (error) {
             console.error('Error generating PDF:', error);
             // Fallback to regular print
@@ -248,7 +250,7 @@ export default function Invoice({ sale }) {
                         <Printer size={16} />
                         Print Invoice
                     </button>
-                    <button 
+                    <button
                         onClick={handleDownloadPDF}
                         className="btn btn-outline btn-sm"
                     >
@@ -262,10 +264,10 @@ export default function Invoice({ sale }) {
             <div className="p-6 print-p-2 print-max-w-80mm print-mx-auto thermal-receipt">
                 {/* Company Header - Compact */}
                 <div className="text-center print-mb-2 border-b-2 border-black print-border-b-2 print-border-black pb-4 print-pb-2">
-                    <h1 className="text-xl font-bold print-text-lg">{sale?.creator?.business?.name}</h1>
-                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.address}</p>
-                    <p className="text-sm text-gray-600 print-text-xs">Phone: {sale?.creator?.business?.phone}</p>
-                    <p className="text-sm text-gray-600 print-text-xs">Email: {sale?.creator?.business?.email}</p>
+                    <h1 className="text-xl font-bold print-text-lg">{sale?.creator?.business?.name || 'Business Name'}</h1>
+                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.address || 'Business Address'}</p>
+                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.phone || 'Business Phone'}</p>
+                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.email || 'Business Email'}</p>
                 </div>
 
                 {/* Receipt Info */}
@@ -313,64 +315,36 @@ export default function Invoice({ sale }) {
                                     <tr className="border-bottom-dashed">
                                         <td className="py-1 print-py-1">
                                             <div>
-                                                <p className="font-medium">{item.product?.name || item?.product_name} 
+                                                <p className="font-medium">{item.product?.name || item?.product_name}
                                                     {item.product && (
-                                                        <span> ( {item.product?.product_no ||  ''} )</span>
+                                                        <span> ( {item.product?.product_no || item?.product_name} )</span>
                                                     )}
                                                 </p>
-                                              {item.variant && (
-                                                <>
-                                               {(() => {
-                                                    const variant = item.variant;
-                                                    let attrsText = '';
+                                       
+                                                {item.variant && (
+                                                    <div className="text-xs text-gray-500">
+                                                        {item.variant.attribute_values &&
+                                                            (typeof item.variant.attribute_values === 'object'
+                                                                ? Object.entries(item.variant.attribute_values)
+                                                                    .map(([k, v]) => `${k}{${v}}`)
+                                                                    .join(', ')
+                                                                : item.variant.attribute_values)
+                                                        }
+                                                        {item.variant.attribute_values && ' · '}
+                                                        SKU: {item.variant.sku || 'N/A'}
+                                                    </div>
+                                                )}
 
-                                                    if (variant.attribute_values) {
-                                                    if (typeof variant.attribute_values === 'object') {
-                                                        attrsText = Object.entries(variant.attribute_values)
-                                                        .map(([key, value]) => `${key}`)
-                                                        .join(', ');
-                                                    } else {
-                                                        attrsText = variant.attribute_values;
-                                                    }
-                                                    }
 
-                                                    return <>{attrsText || 'N/A'}</>;
-                                                })()}<br />
-
-                                                </>
-                                            )}
-                                            {item?.brand }
                                             </div>
                                         </td>
                                         <td className="text-left py-1 print-py-1">
-                                            {item.variant && (
-                                                <>
-                                                {(() => {
-                                                    const variant = item.variant;
-                                                    let attrsText = '';
-
-                                                    if (variant.attribute_values) {
-                                                    if (typeof variant.attribute_values === 'object') {
-                                                        attrsText = Object.entries(variant.attribute_values)
-                                                        .map(([key, value]) => `${value}`)
-                                                        .join(', ');
-                                                    } else {
-                                                        attrsText = variant.attribute_values;
-                                                    }
-                                                    }
-
-                                                    return <>{attrsText || 'N/A'}</>;
-                                                })()}
-
-
-                                                <br />
-                                                <span className="text-sm text-gray-500 print:text-xs">
-                                                    {item.variant?.sku || 'No SKU'}
-                                                </span>
-                                                </>
+                                            {item?.product?.brand && (
+                                                <p className="text-sm text-gray-500 print:text-xs">
+                                                    Brand: {item.product.brand?.name || 'N/A'}
+                                                </p>
                                             )}
-
-                                            {item?.variant_name }
+                                            {item?.brand || 'N/A'}
                                         </td>
                                         <td className="text-center py-1 print-py-1">{item.quantity}</td>
                                         <td className="text-right py-1 print-py-1">{formatCurrency(item.unit_price)}</td>

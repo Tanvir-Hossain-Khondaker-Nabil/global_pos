@@ -61,7 +61,7 @@ class SaleItem extends Model
     //relation to variant
     public function variant()
     {
-        return $this->belongsTo(Variant::class, 'variant_id');
+        return $this->belongsTo(Variant::class)->withDefault();
     }
 
     //relation to warehouse
