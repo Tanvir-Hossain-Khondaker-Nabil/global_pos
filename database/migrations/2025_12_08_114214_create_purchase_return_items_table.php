@@ -27,6 +27,8 @@ return new class extends Migration {
             $table->enum('status', ['pending', 'approved', 'completed', 'cancelled'])->default('pending');
             $table->timestamps();
 
+            $table->unsignedBigInteger('outlet_id');
+            
             $table->foreign('purchase_return_id')->references('id')->on('purchase_returns')->onDelete('cascade');
             $table->foreign('purchase_item_id')->references('id')->on('purchase_items')->onDelete('restrict');
             $table->foreign('product_id')->references('id')->on('products')->onDelete('restrict');

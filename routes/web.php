@@ -265,7 +265,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/purchase/{id}', [PurchaseController::class, 'destroy'])->middleware('permission:purchase.delete')->name('purchase.destroy');
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 
-
+    // Add these barcode routes after your existing purchase routes
+    Route::get('/purchase/{purchaseId}/barcode/generate', [PurchaseController::class, 'generatePurchaseBarcodes'])->name('purchase.generate.barcodes');
+    Route::get('/purchase/{purchaseId}/barcode/print', [PurchaseController::class, 'printPurchaseBarcodes'])->name('purchase.print.barcodes');
+    Route::get('/purchase/{purchaseId}/item/{itemId}/barcode/generate', [PurchaseController::class, 'generatePurchaseItemBarcode'])->name('purchase.item.barcode.generate');
+    Route::get('/purchase/{purchaseId}/item/{itemId}/barcode/print', [PurchaseController::class, 'printItemBarcode'])->name('purchase.item.barcode.print');
 
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 

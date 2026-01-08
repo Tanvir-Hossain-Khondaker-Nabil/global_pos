@@ -31,6 +31,8 @@ return new class extends Migration {
             $table->enum('payment_type', ['cash', 'bank' ,'mobile_banking','advance_adjustment'])->default('cash');
             $table->timestamps();
 
+            $table->unsignedBigInteger('outlet_id');
+            
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');

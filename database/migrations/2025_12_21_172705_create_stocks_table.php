@@ -28,6 +28,8 @@ return new class extends Migration
             $table->string('barcode_path')->nullable();
             $table->timestamps();
 
+            $table->unsignedBigInteger('outlet_id');
+
             $table->index(['warehouse_id', 'product_id', 'variant_id', 'batch_no']);
         });
     }

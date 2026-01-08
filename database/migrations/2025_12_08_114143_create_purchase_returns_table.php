@@ -30,6 +30,8 @@ return new class extends Migration {
             $table->enum('payment_type', ['cash', 'card', 'mobile_banking', 'adjust_to_advance'])->nullable();
             $table->timestamps();
 
+            $table->unsignedBigInteger('outlet_id');
+            
             $table->foreign('purchase_id')->references('id')->on('purchases')->onDelete('restrict');
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('restrict');
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('restrict');

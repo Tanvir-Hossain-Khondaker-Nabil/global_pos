@@ -27,6 +27,8 @@ return new class extends Migration
             $table->decimal('total_price', 10, 2)->default(0);
             $table->decimal('shadow_total_price', 10, 2)->default(0);
             $table->timestamps();
+            
+            $table->unsignedBigInteger('outlet_id');
 
             $table->string('product_name')->nullable(); 
             $table->string('brand')->nullable(); 

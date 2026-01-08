@@ -83,11 +83,11 @@ export default function AddProduct({ category, update, brand, attributes }) {
         setVariants(prev => {
             const updated = [...prev];
             const variant = updated[variantIndex];
-            
+
             if (!variant.attribute_values) {
                 variant.attribute_values = {};
             }
-            
+
             if (checked) {
                 // Add attribute value
                 variant.attribute_values[attributeCode] = value;
@@ -95,7 +95,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                 // Remove attribute value
                 delete variant.attribute_values[attributeCode];
             }
-            
+
             return updated;
         });
     };
@@ -225,16 +225,16 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
         // Validate variants - each variant can have zero or more attributes
         // No requirement for at least one attribute
-        
+
         // Check for duplicate attribute combinations
-        const attributeCombinations = variants.map(variant => 
+        const attributeCombinations = variants.map(variant =>
             JSON.stringify(Object.entries(variant.attribute_values || {}).sort())
         );
-        
-        const hasDuplicates = attributeCombinations.some((combination, index) => 
+
+        const hasDuplicates = attributeCombinations.some((combination, index) =>
             attributeCombinations.indexOf(combination) !== index
         );
-        
+
         if (hasDuplicates) {
             hasError = true;
             newErrors.variants = t('product.duplicate_variants', 'Duplicate attribute combinations found');
@@ -409,7 +409,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                 </div>
 
                 {/* Product Basic Information */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1  gap-4 mb-6">
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">
                             {t('product.from_product_name', 'Product Name')}*
@@ -430,31 +430,6 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">
-                            {t('product.from_category', 'Category')}*
-                        </legend>
-                        <select
-                            value={productForm.data.category_id}
-                            className={`select ${errors.category_id ? 'select-error' : ''}`}
-                            onChange={(e) =>
-                                productForm.setData("category_id", e.target.value)
-                            }
-                        >
-                            <option value="">
-                                {t('product.pick_category', '--Pick a category--')}
-                            </option>
-                            {categories.map((cat) => (
-                                <option key={cat.id} value={cat.id}>
-                                    {cat.name}
-                                </option>
-                            ))}
-                        </select>
-                        {errors.category_id && (
-                            <p className="text-sm text-error mt-1">{errors.category_id}</p>
-                        )}
-                    </fieldset>
-
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">
                             {t('product.from_product_code', 'Product Code')}*
                         </legend>
                         <input
@@ -470,6 +445,56 @@ export default function AddProduct({ category, update, brand, attributes }) {
                             <p className="text-sm text-error mt-1">{errors.product_no}</p>
                         )}
                     </fieldset>
+
+                    {/* Category and Brand side by side */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <fieldset className="fieldset">
+                            <legend className="fieldset-legend">
+                                {t('product.from_category', 'Category')}*
+                            </legend>
+                            <select
+                                value={productForm.data.category_id}
+                                className={`select ${errors.category_id ? 'select-error' : ''}`}
+                                onChange={(e) =>
+                                    productForm.setData("category_id", e.target.value)
+                                }
+                            >
+                                <option value="">
+                                    {t('product.pick_category', '--Pick a category--')}
+                                </option>
+                                {categories.map((cat) => (
+                                    <option key={cat.id} value={cat.id}>
+                                        {cat.name}
+                                    </option>
+                                ))}
+                            </select>
+                            {errors.category_id && (
+                                <p className="text-sm text-error mt-1">{errors.category_id}</p>
+                            )}
+                        </fieldset>
+
+                        <fieldset className="fieldset">
+                            <legend className="fieldset-legend">
+                                {t('product.from_brand', 'Brand')}
+                            </legend>
+                            <select
+                                value={productForm.data.brand_id}
+                                className="select"
+                                onChange={(e) =>
+                                    productForm.setData("brand_id", e.target.value)
+                                }
+                            >
+                                <option value="">
+                                    {t('product.pick_brand', '--Pick a brand--')}
+                                </option>
+                                {brands.map((brand) => (
+                                    <option key={brand.id} value={brand.id}>
+                                        {brand.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </fieldset>
+                    </div>
 
                     <fieldset className="fieldset col-span-2">
                         <legend className="fieldset-legend">
@@ -685,7 +710,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                                             </div>
                                         )}
                                     </div>
-                                    
+
                                     {/* Attribute selection button for this variant */}
                                     <button
                                         type="button"
@@ -714,7 +739,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                                                 <X size={12} />
                                             </button>
                                         </div>
-                                        
+
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                             {availableAttributes.map((attribute) => (
                                                 <div key={attribute.code} className="border rounded-box p-3">
@@ -742,7 +767,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                                                 </div>
                                             ))}
                                         </div>
-                                        
+
                                         <div className="flex justify-between items-center mt-4">
                                             <div className="text-sm text-gray-500">
                                                 {t('product.selected_count', 'Selected')}: {Object.keys(variant.attribute_values || {}).length} {t('product.attributes', 'attributes')}

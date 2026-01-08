@@ -214,6 +214,15 @@ const baseMenu = [
         category: "Inventory"
     },
     {
+        title: "Brands",
+        icon: "box",
+        route: "brands.index",
+        routeParams: null,
+        active: "brands.index",
+        role: "all",
+        category: "Inventory"
+    },
+    {
         title: "Extra cash",
         icon: "banknote-arrow-up",
         route: "extra.cash.all",

@@ -24,6 +24,8 @@ return new class extends Migration {
             $table->decimal('shadow_total_price', 10, 2);
             $table->timestamps();
 
+            $table->unsignedBigInteger('outlet_id');
+            
             $table->foreign('purchase_return_id')->references('id')->on('purchase_returns')->onDelete('cascade');
             $table->foreign('product_id')->references('id')->on('products')->onDelete('restrict');
             $table->foreign('variant_id')->references('id')->on('variants')->onDelete('restrict');
