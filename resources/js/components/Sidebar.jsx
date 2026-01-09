@@ -307,7 +307,7 @@ export default function Sidebar({ status, setStatus }) {
               <div className="bg-white p-2 rounded-xl shadow-lg">
                 <LayoutDashboard className="w-6 h-6 text-[#1e4d2b]" />
               </div>
-              <h1 className="font-bold text-lg uppercase tracking-tight text-white">Wiki Pos</h1>
+              <h1 className="font-bold text-lg uppercase tracking-tight text-white">Total Biz</h1>
             </div>
             <button onClick={() => setStatus(false)} className="lg:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors">
               <X size={20} />

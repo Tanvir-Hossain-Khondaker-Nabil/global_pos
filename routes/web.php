@@ -155,6 +155,12 @@ Route::middleware('auth')->group(function () {
 
     // sales
     Route::controller(SalesController::class)->prefix('/sales')->group(function () {
+
+        // ✅ MUST BE BEFORE /{sale}
+        Route::post('/scan-barcode', 'scanBarcode')
+            ->middleware('permission:sales.create')
+            ->name('sales.scan-barcode');
+
         Route::get('/add', 'createPos')->middleware('permission:sales.create')->name('sales.add');
         Route::post('/store', 'store')->middleware('permission:sales.create')->name('sales.store');
         Route::post('/store/shadow', 'shadowStore')->middleware('permission:sales.create')->name('salesShadow.store');
@@ -163,17 +169,23 @@ Route::middleware('auth')->group(function () {
         Route::get('/', 'index')->middleware('permission:sales.view')->name('sales.index');
         Route::get('/list/{pos}', 'index')->middleware('permission:sales.view')->name('salesPos.index');
 
-        Route::get('/{sale}', 'show')->middleware('permission:sales.view')->name('sales.show');
-        Route::get('/{sale}/{print}', 'show')->middleware('permission:sales.print')->name('salesPrint.show');
-        Route::get('/{sale}/print', 'print')->middleware('permission:sales.print')->name('sales.print');
-        Route::get('/{sale}/download-pdf', 'downloadPdf')->middleware('permission:sales.download_pdf')->name('sales.download.pdf');
-        Route::delete('/{sale}', 'destroy')->middleware('permission:sales.delete')->name('sales.destroy');
+        // ✅ Restrict sale id (so scan-barcode never matches)
+        Route::get('/{sale}', 'show')->whereNumber('sale')->middleware('permission:sales.view')->name('sales.show');
+        Route::get('/{sale}/{print}', 'show')->whereNumber('sale')->middleware('permission:sales.print')->name('salesPrint.show');
+
+        Route::get('/{sale}/print', 'print')->whereNumber('sale')->middleware('permission:sales.print')->name('sales.print');
+        Route::get('/{sale}/download-pdf', 'downloadPdf')->whereNumber('sale')->middleware('permission:sales.download_pdf')->name('sales.download.pdf');
+
+        Route::delete('/{sale}', 'destroy')->whereNumber('sale')->middleware('permission:sales.delete')->name('sales.destroy');
 
         Route::delete('/sales-items/{id}', 'destroy')->middleware('permission:sales.delete')->name('sales.items.destroy');
     });
 
+
     Route::get('/sales/scan-barcode/{barcode}', [SalesController::class, 'scanBarcode'])
-    ->name('sales.scan.barcode');
+        ->name('sales.scan.barcode');
+    Route::post('/pos/print-request/{id}', [SalesController::class, 'printRequest'])->name('print.request');
+
 
     // Sales Return Routes
     Route::get('/return', [SalesReturnController::class, 'index'])

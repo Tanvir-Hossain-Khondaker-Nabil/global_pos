@@ -56,10 +56,6 @@ class User extends Authenticatable
         return $this->hasOne(BusinessProfile::class, 'user_id', 'id');
     }
 
-    public function subscriptions()
-    {
-        return $this->hasMany(Subscription::class, 'user_id', 'id');
-    }
 
     /**
      * Super Admin check (Spatie Role name based)
@@ -90,6 +86,22 @@ class User extends Authenticatable
         return $this->belongsTo(Outlet::class, 'current_outlet_id');
     }
 
+    // roles relationship
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    // subscriptions relationship
+    public function subscriptions()
+    {
+        return $this->hasMany(Subscription::class, 'user_id', 'id');
+    }
+
+    /**
+     * Check if user is logged into an outlet
+     */
     public function isLoggedIntoOutlet(): bool
     {
         return !is_null($this->current_outlet_id) && $this->current_outlet_id > 0;

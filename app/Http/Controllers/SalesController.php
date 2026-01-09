@@ -20,10 +20,16 @@ use App\Models\StockMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Services\ReceiptService;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 
 class SalesController extends Controller
 {
+
+
+
     /**
      * Display a listing of all sales
      */
@@ -717,6 +723,15 @@ class SalesController extends Controller
         ]);
     }
 
+    public function printRequest(ReceiptService $posPrinter, $id)
+    {
+        $sale = Sale::with(['customer', 'items.product', 'items.product.brand', 'items.variant', 'items.warehouse'])
+            ->findOrFail($id);
+
+        $posPrinter->printRequest((float) $sale->paid_amount, $sale);
+
+        return response()->json(['ok' => true]);
+    }
 
     public function print(Sale $sale)
     {
@@ -736,6 +751,8 @@ class SalesController extends Controller
 
         return response()->json(['message' => 'PDF download would be implemented here']);
     }
+
+
 
 
     /**
@@ -1051,42 +1068,46 @@ class SalesController extends Controller
     }
 
     public function scanBarcode(Request $request)
-{
-    $request->validate([
-        'code' => 'required|string'
-    ]);
+    {
+        $code = trim($request->code);          // ✅ trim
+        $code = preg_replace('/\s+/', '', $code); // ✅ remove spaces/newlines
 
-    $code = $request->code;
+        $stock = Stock::with(['product', 'variant'])
+            ->where('quantity', '>', 0)
+            ->where(function ($q) use ($code) {
+                $q->where('barcode', $code)
+                    ->orWhere('batch_no', $code);
+            })
+            ->first();
 
-    $stock = Stock::with(['product', 'variant'])
-        ->where('barcode', $code)
-        ->orWhere('batch_no', $code)
-        ->where('quantity', '>', 0)
-        ->first();
+        if (!$stock) {
+            return response()->json([
+                'message' => 'Stock not found',
+                'code_received' => $code, // ✅ debug
+            ], 404);
+        }
 
-    if (!$stock) {
-        return response()->json(['message' => 'Stock not found'], 404);
+        return response()->json([
+            'stock' => [
+                'id' => $stock->id,
+                'barcode' => $stock->barcode,
+                'batch_no' => $stock->batch_no,
+                'quantity' => $stock->quantity,
+                'sale_price' => $stock->sale_price,
+                'shadow_sale_price' => $stock->shadow_sale_price,
+                'product' => [
+                    'id' => $stock->product->id,
+                    'name' => $stock->product->name,
+                    'product_no' => $stock->product->product_no,
+                ],
+                'variant' => [
+                    'id' => $stock->variant->id,
+                    'sku' => $stock->variant->sku,
+                    'attribute_values' => $stock->variant->attribute_values,
+                ],
+            ]
+        ]);
     }
 
-    return response()->json([
-        'stock' => [
-            'id' => $stock->id,
-            'batch_no' => $stock->batch_no,
-            'quantity' => $stock->quantity,
-            'sale_price' => $stock->sale_price,
-            'shadow_sale_price' => $stock->shadow_sale_price,
-            'product' => [
-                'id' => $stock->product->id,
-                'name' => $stock->product->name,
-                'product_no' => $stock->product->product_no,
-            ],
-            'variant' => [
-                'id' => $stock->variant->id,
-                'sku' => $stock->variant->sku,
-                'attribute_values' => $stock->variant->attribute_values,
-            ],
-        ]
-    ]);
-}
 
 }
