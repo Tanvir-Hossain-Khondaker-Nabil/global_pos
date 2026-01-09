@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
             
-            $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('account_id')->nullable();
 
             $table->string('invoice_no')->unique();
@@ -43,6 +42,8 @@ return new class extends Migration
             $table->unsignedBigInteger('supplier_id')->nullable();
             $table->foreign('supplier_id')->references('id')->on('suppliers');
 
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->softDeletes();
             $table->timestamps();
         });

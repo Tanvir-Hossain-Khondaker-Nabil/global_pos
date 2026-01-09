@@ -16,23 +16,20 @@ return new class extends Migration {
             $table->string('bonus_name');
             $table->enum('bonus_type', ['eid', 'festival', 'performance', 'other']); // Bonus category
 
-            // For percentage bonus
             $table->decimal('percentage', 8, 2)->nullable();
 
-            // For fixed amount bonus
             $table->decimal('fixed_amount', 12, 2)->nullable();
 
-            // true = percentage bonus, false = fixed amount
             $table->boolean('is_percentage')->default(false);
 
-            // Bonus active or not
             $table->boolean('is_active')->default(true);
 
-            // Optional description
             $table->text('description')->nullable();
 
-            // Bonus effective date
             $table->date('effective_date')->nullable();
+
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
 
             $table->timestamps();
         });

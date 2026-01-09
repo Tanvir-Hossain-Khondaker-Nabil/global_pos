@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->boolean('is_percentage')->default(true);
             $table->boolean('is_active')->default(true);
             $table->text('description')->nullable();
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
     }

@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -47,6 +46,9 @@ return new class extends Migration
             $table->string('trade_license_doc')->nullable();
             $table->string('nid_doc')->nullable();
             $table->string('tax_clearance_doc')->nullable();
+
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
     }

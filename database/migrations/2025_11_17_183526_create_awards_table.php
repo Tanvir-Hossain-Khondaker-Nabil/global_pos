@@ -20,6 +20,8 @@ return new class extends Migration {
             $table->integer('year');
             $table->json('criteria')->nullable();
             $table->boolean('is_active')->default(true);
+                        $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
     }

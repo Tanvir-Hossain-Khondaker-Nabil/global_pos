@@ -26,7 +26,8 @@ return new class extends Migration
             $table->decimal('shadow_replacement_total', 15, 2)->default(0)->nullable();
             $table->string('type')->default('sale_return'); // sale_return, damaged, replacement
             $table->integer('return_quantity')->default(0);
-            $table->unsignedBigInteger('created_by');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
     }

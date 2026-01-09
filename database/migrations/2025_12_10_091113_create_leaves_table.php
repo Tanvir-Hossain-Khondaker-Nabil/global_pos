@@ -44,6 +44,9 @@ return new class extends Migration {
             // Notes
             $table->text('notes')->nullable();
 
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
+
             // Timestamps
             $table->timestamps();
 
