@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Models\Outlet;
 use App\Models\Warehouse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -26,16 +27,6 @@ return new class extends Migration {
             $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
-
-
-        Warehouse::create([
-            'name' => 'In-House Production',
-            'code' => 'IN-HOUSE',
-            'address' => 'Internal Production Department',
-            'is_active' => true,
-            'created_by' => User::count() + 1,
-            'outlet_id' => User::count() + 1,
-        ]);
     }
 
     /**
