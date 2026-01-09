@@ -21,7 +21,7 @@ class UserDeposit extends Model
     ];
 
     const STATUS_PENDING = 'pending';
-    const STATUS_COMPLETED = 'completed';
+    const STATUS_APPROVED = 'approved';
     const STATUS_FAILED = 'failed';
 
     // relationships

@@ -65,15 +65,18 @@ Route::middleware('auth')->group(function () {
 
 
     // user deposit route will be here
-    Route::resource('user_deposits', UserDepositController::class)->names([
-        'index' => 'user_deposits.index',
-        'create' => 'user_deposits.create',
-        'store' => 'user_deposits.store',
-        'show' => 'user_deposits.show',
-        'edit' => 'user_deposits.edit',
-        'update' => 'user_deposits.update',
-        'destroy' => 'user_deposits.destroy',
+    Route::resource('deposits', UserDepositController::class)->names([
+        'index' => 'deposits.index',
+        'create' => 'deposits.create',
+        'store' => 'deposits.store',
+        'show' => 'deposits.show',
+        'edit' => 'deposits.edit',
+        'update' => 'deposits.update',
+        'destroy' => 'deposits.destroy',
     ]);
+    // In routes/web.php
+    Route::post('/deposits/{deposit}/approve', [UserDepositController::class, 'approve'])->name('deposits.approve');
+    Route::post('/deposits/{deposit}/reject', [UserDepositController::class, 'reject'])->name('deposits.reject');
 
 
     //outles rount will be here

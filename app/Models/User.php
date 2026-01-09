@@ -6,6 +6,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Spatie\Permission\Models\Role;
 
 class User extends Authenticatable
 {
@@ -29,6 +30,8 @@ class User extends Authenticatable
         'parent_id',
         'current_outlet_id',
         'outlet_logged_in_at',
+        'total_deposit',
+        'role_id'
     ];
 
     /**
@@ -89,6 +92,13 @@ class User extends Authenticatable
     public function currentOutlet()
     {
         return $this->belongsTo(Outlet::class, 'current_outlet_id');
+    }
+
+    // roles relationship
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
     }
 
     /**

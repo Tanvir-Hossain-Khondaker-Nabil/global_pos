@@ -16,7 +16,14 @@ class UserDepositController extends Controller
     public function index(Request $request)
     {
 
-        $deposits = UserDeposit::with('user','outlet')->get();
+        $deposits = UserDeposit::with('user','outlet')
+        ->when($request->input('payment_method'), function ($query, $paymentMethod) {
+            return $query->where('payment_method', $paymentMethod);
+        })
+        ->when($request->input('status'), function ($query, $status) {
+            return $query->where('status', $status);
+        })
+        ->get();
 
         return inertia('UserDeposits/Index', [
             'deposits' => $deposits,
@@ -29,7 +36,9 @@ class UserDepositController extends Controller
      */
     public function create()
     {
-        //
+        return inertia('UserDeposits/Create', [
+            'users' => User::where('outlet_id', Auth::user()->outlet_id)->get(),
+        ]);
     }
 
     /**
@@ -45,7 +54,7 @@ class UserDepositController extends Controller
 
         UserDeposit::create($validated);
 
-        return to_route('user_deposits.index')->withSuccess('User deposit created successfully.');
+        return to_route('deposits.index')->withSuccess('User deposit created successfully.');
     }
 
     /**
@@ -88,8 +97,14 @@ class UserDepositController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function approve(string $id)
     {
-        //
+        $deposit = UserDeposit::findOrFail($id);
+        $deposit->status = UserDeposit::STATUS_APPROVED;
+        $deposit->save();
+
+        User::where('id', $deposit->created_by)->increment('total_deposit', $deposit->amount);
+
+        return to_route('deposits.index')->withSuccess('User deposit approved successfully.');
     }
 }
