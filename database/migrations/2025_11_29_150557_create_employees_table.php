@@ -28,6 +28,10 @@ return new class extends Migration {
             $table->decimal('other_allowance', 10, 2)->default(0);
             $table->decimal('provident_fund_percentage', 5, 2)->default(5);
             $table->boolean('is_active')->default(true);
+
+            $table->unsignedBigInteger('created_by');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
         });
     }

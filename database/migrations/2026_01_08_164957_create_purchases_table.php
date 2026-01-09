@@ -27,7 +27,6 @@ return new class extends Migration
             $table->enum('shadow_payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
-            $table->unsignedBigInteger('created_by')->nullable();
             $table->enum('user_type', ['shadow', 'general'])->default('general');
             $table->enum('payment_type', ['cash', 'bank' ,'mobile_banking','advance_adjustment'])->default('cash');
             $table->timestamps();
@@ -36,6 +35,7 @@ return new class extends Migration
             
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('cascade');
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
 
             $table->boolean('is_pickup_sale_purchase')->default(false); 

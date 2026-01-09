@@ -20,7 +20,9 @@ return new class extends Migration {
             $table->boolean('is_active')->default(true);
             $table->string('balance')->nullable();
             $table->text('notes')->nullable();
-            $table->string('created_by');
+            $table->unsignedBigInteger('created_by');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
             $table->softDeletes();
             $table->unique(['created_by']);

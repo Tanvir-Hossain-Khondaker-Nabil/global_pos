@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -14,7 +13,7 @@ return new class extends Migration
         if (!Schema::hasTable('payments')) {
             Schema::create('payments', function (Blueprint $table) {
                 $table->id();
-                
+
                 $table->decimal('amount', 15, 2)->nullable();
                 $table->decimal('shadow_amount', 15, 2)->nullable();
                 $table->string('payment_method')->default('cash'); // e.g., cash, card, online
@@ -25,7 +24,9 @@ return new class extends Migration
                 $table->timestamp('paid_at')->nullable();
                 $table->string('status')->default('completed'); // e.g., completed, pending, failed
                 $table->unsignedBigInteger('sale_id')->default(0)->nullable();
-                $table->unsignedBigInteger('created_by')->default(0)->nullable();
+                $table->unsignedBigInteger('created_by');
+                $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+                $table->unsignedBigInteger('outlet_id');
                 $table->unsignedBigInteger('purchase_id')->default(0)->nullable();
                 $table->unsignedBigInteger('account_id')->nullable();
                 $table->unsignedBigInteger('salary_id')->default(0)->nullable();

@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
+use App\Scopes\UserScope;
+use App\Scopes\OutletScope;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Scopes\UserScope;
-use Illuminate\Support\Facades\Auth;
 
 class Account extends Model
 {
@@ -23,23 +24,48 @@ class Account extends Model
         'is_default',
         'is_active',
         'user_id',
-        'created_by'
+        'created_by',
+        'outlet_id'
     ];
 
     protected static function booted()
     {
+        // প্রথমে গ্লোবাল স্কোপ যোগ করুন
         static::addGlobalScope(new UserScope);
-        
+        static::addGlobalScope(new OutletScope);
+
+        // একটি মাত্র creating ইভেন্ট হ্যান্ডলার ব্যবহার করুন
         static::creating(function ($account) {
-            $account->user_id = Auth::id() ?? $account->user_id;
+            if (Auth::check()) {
+                $user = Auth::user();
+
+                // user_id সেট করুন
+                $account->user_id = $user->id;
+
+                // created_by সেট করুন
+                $account->created_by = $user->id;
+
+                // outlet_id সেট করুন
+                if ($user->current_outlet_id) {
+                    $account->outlet_id = $user->current_outlet_id;
+                }
+            }
         });
 
-        // When a default account is created, unset previous defaults
+        // ডিফল্ট অ্যাকাউন্ট সেট করার লজিক
         static::saving(function ($account) {
             if ($account->is_default) {
                 Account::where('user_id', $account->user_id)
                     ->where('id', '!=', $account->id)
                     ->update(['is_default' => false]);
+            }
+        });
+
+        // outlet_id আপডেট প্রতিরোধ
+        static::updating(function ($account) {
+            $originalOutletId = $account->getOriginal('outlet_id');
+            if ($originalOutletId !== null && $account->outlet_id !== $originalOutletId) {
+                $account->outlet_id = $originalOutletId;
             }
         });
     }
@@ -58,7 +84,7 @@ class Account extends Model
     {
         return $query->where('is_active', true);
     }
-    
+
     public function scopeDefault($query)
     {
         return $query->where('is_default', true);
@@ -76,9 +102,9 @@ class Account extends Model
             }
             $newBalance -= $amount;
         }
-        
+
         $this->update(['current_balance' => $newBalance]);
-        
+
         return $this;
     }
 
@@ -95,7 +121,7 @@ class Account extends Model
 
     public function getTypeLabel(): string
     {
-        return match($this->type) {
+        return match ($this->type) {
             'cash' => 'Cash',
             'bank' => 'Bank',
             'mobile_banking' => 'Mobile Banking',

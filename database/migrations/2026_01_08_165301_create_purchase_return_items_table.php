@@ -28,6 +28,8 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'completed', 'cancelled'])->default('pending');
             $table->timestamps();
 
+            $table->unsignedBigInteger('created_by');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
             
             $table->foreign('purchase_return_id')->references('id')->on('purchase_returns')->onDelete('cascade');

@@ -660,7 +660,7 @@ export default function Sidebar({ status, setStatus }) {
                     </div>
 
                     {/* Current Outlet Info - Show if logged into outlet */}
-                    {isLoggedIntoOutlet && currentOutlet && (
+                    {/* {isLoggedIntoOutlet && currentOutlet && (
                         <div className="mb-6 bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#35a952] to-[#1e4d2b] flex items-center justify-center">
@@ -687,7 +687,7 @@ export default function Sidebar({ status, setStatus }) {
                                 </div>
                             </div>
                         </div>
-                    )}
+                    )} */}
 
                     {/* Alert if not logged into outlet */}
                     {!isLoggedIntoOutlet && (

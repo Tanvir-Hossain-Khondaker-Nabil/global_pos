@@ -18,9 +18,11 @@ return new class extends Migration
             $table->unsignedBigInteger('variant_id')->nullable();
             $table->enum('type', ['in','out','sale_return','damaged','adjustment_in','adjustment_out']);
             $table->integer('qty');
-            $table->string('created_by')->nullable();
             $table->text('reason')->nullable();
             $table->nullableMorphs('reference'); 
+            $table->unsignedBigInteger('created_by');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->softDeletes();
 
             $table->timestamps();

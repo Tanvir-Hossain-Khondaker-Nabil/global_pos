@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Str;
 use App\Scopes\UserScope;
+use App\Scopes\OutletScope;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Model;
 
 class Payment extends Model
 {
@@ -24,30 +26,55 @@ class Payment extends Model
         'shadow_amount',
         'status',
         'created_by',
+        'outlet_id'
     ];
 
     protected static function booted()
     {
+        // Add global scopes
         static::addGlobalScope(new UserScope);
-        
-        static::created(function ($payment) {
+        static::addGlobalScope(new OutletScope);
+
+        // Automatically set outlet_id and created_by when creating
+        static::creating(function ($model) {
+            if (Auth::check()) {
+                $user = Auth::user();
+                $model->created_by = $user->id;
+
+                // Get current outlet ID from user
+                if ($user->current_outlet_id) {
+                    $model->outlet_id = $user->current_outlet_id;
+                }
+            }
+        });
+
+        // Prevent updating outlet_id once set
+        static::updating(function ($model) {
+            $originalOutletId = $model->getOriginal('outlet_id');
+            if ($originalOutletId !== null && $model->outlet_id !== $originalOutletId) {
+                $model->outlet_id = $originalOutletId;
+            }
+        });
+
+        // Payment-specific event handlers
+        static::created(function ($model) {
             // Update account balance when payment is created
-            if ($payment->account && $payment->status == 'completed') {
-                $payment->updateAccountBalance();
+            if ($model->account && $model->status == 'completed') {
+                $model->updateAccountBalance();
             }
         });
 
-        static::updated(function ($payment) {
+        static::updated(function ($model) {
             // Handle balance updates if payment status or amount changes
-            if ($payment->account && $payment->isDirty(['amount', 'status'])) {
-                $payment->updateAccountBalance();
+            if ($model->account && $model->isDirty(['amount', 'status'])) {
+                $model->updateAccountBalance();
             }
         });
 
-        static::deleting(function ($payment) {
+        static::deleting(function ($model) {
             // Reverse account balance when payment is deleted
-            if ($payment->account && $payment->status == 'completed') {
-                $payment->reverseAccountBalance();
+            if ($model->account && $model->status == 'completed') {
+                $model->reverseAccountBalance();
             }
         });
     }
@@ -122,7 +149,7 @@ class Payment extends Model
         if ($this->sale?->is_return) {
             return 'expense'; // Sale return gives money back to customer
         }
-        return 'transfer'; 
+        return 'transfer';
     }
 
 
@@ -130,7 +157,8 @@ class Payment extends Model
     // Update account balance based on payment type
     public function updateAccountBalance()
     {
-        if (!$this->account) return;
+        if (!$this->account)
+            return;
 
         $oldAmount = $this->getOriginal('amount') ?? 0;
         $newAmount = $this->amount;
@@ -142,7 +170,7 @@ class Payment extends Model
             $this->reverseAccountBalanceForAmount($oldAmount);
             return;
         }
-        
+
         if ($newStatus == 'completed') {
             if ($oldStatus == 'completed') {
                 // Amount changed for completed payment
@@ -162,7 +190,7 @@ class Payment extends Model
     private function adjustAccountBalance($amount)
     {
         $type = $this->payment_type;
-        
+
         if ($type == 'income') {
             // Credit to account
             $this->account->updateBalance($amount, 'credit');
@@ -182,7 +210,7 @@ class Payment extends Model
     private function reverseAccountBalanceForAmount($amount)
     {
         $type = $this->payment_type;
-        
+
         if ($type === 'income') {
             // Reverse credit (debit)
             $this->account->updateBalance($amount, 'debit');
@@ -194,7 +222,8 @@ class Payment extends Model
 
     public function scopeSearch($query, $term)
     {
-        if (!$term) return $query;
+        if (!$term)
+            return $query;
 
         return $query->where(function ($q) use ($term) {
             $q->where('payment_method', 'like', "%{$term}%")

@@ -26,7 +26,6 @@ return new class extends Migration
             $table->enum('status', ['pending', 'approved', 'completed', 'cancelled'])->default('pending');
             $table->text('reason')->nullable();
             $table->text('notes')->nullable();
-            $table->unsignedBigInteger('created_by')->nullable();
             $table->enum('user_type', ['shadow', 'general'])->default('general');
             $table->enum('payment_type', ['cash', 'card', 'mobile_banking', 'adjust_to_advance'])->nullable();
             $table->timestamps();
@@ -36,6 +35,7 @@ return new class extends Migration
             $table->foreign('purchase_id')->references('id')->on('purchases')->onDelete('restrict');
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('restrict');
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('restrict');
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
 
             $table->decimal('replacement_total', 15, 2)->default(0);

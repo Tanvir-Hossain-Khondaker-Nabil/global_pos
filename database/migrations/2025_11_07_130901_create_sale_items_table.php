@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('sale_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('sale_id')->constrained('sales')->cascadeOnDelete();
-            $table->unsignedBigInteger('created_by')->nullable();
+
             $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->integer('quantity')->default(1);
             $table->decimal('unit_price', 10, 2)->default(0);
@@ -38,6 +38,10 @@ return new class extends Migration
 
             $table->foreignId('product_id')->nullable()->change();
             $table->foreignId('variant_id')->nullable()->change();
+
+            $table->unsignedBigInteger('created_by');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->softDeletes();
             $table->timestamps();
         });
