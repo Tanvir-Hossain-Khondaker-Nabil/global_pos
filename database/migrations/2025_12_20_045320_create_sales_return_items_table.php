@@ -18,6 +18,7 @@ return new class extends Migration
             $table->unsignedBigInteger('product_id')->nullable();
             $table->unsignedBigInteger('variant_id')->nullable();
             $table->unsignedBigInteger('warehouse_id')->nullable();
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
             $table->decimal('unit_price', 15, 2)->default(0);

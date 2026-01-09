@@ -21,6 +21,7 @@ return new class extends Migration {
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
@@ -33,6 +34,7 @@ return new class extends Migration {
             'address' => 'Internal Production Department',
             'is_active' => true,
             'created_by' => User::count() + 1,
+            'outlet_id' => User::count() + 1,
         ]);
     }
 

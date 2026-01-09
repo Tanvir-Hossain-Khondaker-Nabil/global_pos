@@ -24,6 +24,7 @@ return new class extends Migration {
                 $table->timestamp('paid_at')->nullable();
                 $table->string('status')->default('completed'); // e.g., completed, pending, failed
                 $table->unsignedBigInteger('sale_id')->default(0)->nullable();
+                $table->unsignedBigInteger('created_by');
                 $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
                 $table->unsignedBigInteger('outlet_id');
                 $table->unsignedBigInteger('purchase_id')->default(0)->nullable();

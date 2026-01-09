@@ -22,6 +22,7 @@ return new class extends Migration {
             $table->string('thum')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->text('description')->nullable();
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
             $table->timestamps();

@@ -28,6 +28,7 @@ return new class extends Migration {
 
             $table->date('effective_date')->nullable();
 
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
 

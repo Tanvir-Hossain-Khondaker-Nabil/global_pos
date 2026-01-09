@@ -19,6 +19,7 @@ return new class extends Migration {
             $table->decimal('cash_amount', 10, 2)->default(0);
             $table->boolean('is_paid')->default(false);
             $table->date('paid_date')->nullable();
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
             $table->timestamps();

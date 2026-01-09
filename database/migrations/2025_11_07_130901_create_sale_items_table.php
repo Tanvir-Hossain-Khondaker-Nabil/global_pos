@@ -39,6 +39,7 @@ return new class extends Migration
             $table->foreignId('product_id')->nullable()->change();
             $table->foreignId('variant_id')->nullable()->change();
 
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
             $table->softDeletes();

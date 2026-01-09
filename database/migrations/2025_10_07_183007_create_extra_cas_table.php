@@ -14,6 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->date('date')->nullable();
             $table->decimal('amount', 10, 2);
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
