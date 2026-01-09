@@ -177,7 +177,7 @@ export default function Index({ users, roles, filters, statistics }) {
                 {/* Filters and Search Bar */}
                 <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     {/* Filter Tabs */}
-                    <div className="flex w-full sm:w-auto rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+                    {/* <div className="flex w-full sm:w-auto rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
                         <button
                             onClick={handleReset}
                             className="flex-1 sm:flex-none rounded-md bg-gray-50 px-3 py-1.5 text-sm font-semibold text-gray-900 shadow-sm transition-all"
@@ -200,7 +200,7 @@ export default function Index({ users, roles, filters, statistics }) {
                                 {role.charAt(0).toUpperCase() + role.slice(1)}
                             </button>
                         ))}
-                    </div>
+                    </div> */}
 
                     {/* Search and Filter */}
                     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">

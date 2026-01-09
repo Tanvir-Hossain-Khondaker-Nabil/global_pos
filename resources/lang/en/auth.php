@@ -129,6 +129,7 @@ return [
     'accounts' => 'Accounts',
     'all_purchase_items' => 'All Purchase Items',
     'brand' => 'Brand',
+    'brands' => 'Brand',
     'roles' => 'Roles',
     'sms' => 'SMS',
     'search_menu' => 'Search menu...',

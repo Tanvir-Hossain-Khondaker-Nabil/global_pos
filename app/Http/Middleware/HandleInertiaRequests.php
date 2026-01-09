@@ -3,12 +3,9 @@
 namespace App\Http\Middleware;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Session;
 use Inertia\Middleware;
-use App\Models\Requisition;
 use Carbon\Carbon;
 
 class HandleInertiaRequests extends Middleware
@@ -25,30 +22,37 @@ class HandleInertiaRequests extends Middleware
     {
         $availableLocales = [
             'en' => ['name' => 'English', 'native' => 'English'],
-            'bn' => ['name' => 'Bengali', 'native' => 'বাংলা']
+            'bn' => ['name' => 'Bengali', 'native' => 'বাংলা'],
         ];
 
         $user = $request->user();
 
+        // ✅ Super Admin detect
+        $isSuperAdmin = false;
+
         // Load user with relationships
         if ($user) {
-            // Eager load the current outlet relationship
+            $isSuperAdmin = method_exists($user, 'hasRole')
+                ? $user->hasRole('Super Admin')
+                : false;
+
+            // Eager load current outlet relationship
             $user->load('currentOutlet');
-            
-            // Debug log
+
+            // Debug (optional)
             logger()->info('Current outlet ID: ' . $user->current_outlet_id);
             logger()->info('Current outlet loaded: ' . ($user->currentOutlet ? 'Yes' : 'No'));
             logger()->info($user->getAllPermissions()->pluck('name'));
         }
 
-        // Get current outlet data
+        // Outlet props
         $currentOutlet = null;
         $availableOutlets = [];
         $isLoggedIntoOutlet = false;
         $outletLoggedInAt = null;
 
         if ($user) {
-            // Load current outlet with relationship
+            // Current outlet data
             if ($user->currentOutlet) {
                 $currentOutlet = [
                     'id' => $user->currentOutlet->id,
@@ -67,16 +71,21 @@ class HandleInertiaRequests extends Middleware
                 ];
             }
 
-            // Check if user is logged into an outlet
-            $isLoggedIntoOutlet = !is_null($user->current_outlet_id) && $user->current_outlet_id > 0;
+            /**
+             * ✅ IMPORTANT FIX:
+             * Super Admin হলে outlet বাধ্যতামূলক না
+             * তাই is_logged_into_outlet = true করে দিচ্ছি
+             */
+            $isLoggedIntoOutlet = $isSuperAdmin
+                ? true
+                : (!is_null($user->current_outlet_id) && $user->current_outlet_id > 0);
 
-            // Handle outlet_logged_in_at (could be string or Carbon instance)
+            // outlet_logged_in_at safe parse
             if ($user->outlet_logged_in_at) {
                 try {
-                    if ($user->outlet_logged_in_at instanceof \Carbon\Carbon) {
+                    if ($user->outlet_logged_in_at instanceof Carbon) {
                         $outletLoggedInAt = $user->outlet_logged_in_at->format('Y-m-d H:i:s');
                     } else {
-                        // If it's a string, parse it first
                         $outletLoggedInAt = Carbon::parse($user->outlet_logged_in_at)->format('Y-m-d H:i:s');
                     }
                 } catch (\Exception $e) {
@@ -84,26 +93,10 @@ class HandleInertiaRequests extends Middleware
                 }
             }
 
-            // Get all available outlets for this user
-            if ($user->relationLoaded('availableOutlets')) {
-                $availableOutlets = $user->availableOutlets->map(function ($outlet) {
-                    return [
-                        'id' => $outlet->id,
-                        'name' => $outlet->name,
-                        'code' => $outlet->code,
-                        'phone' => $outlet->phone,
-                        'email' => $outlet->email,
-                        'address' => $outlet->address,
-                        'is_active' => $outlet->is_active,
-                        'is_main' => $outlet->is_main,
-                        'created_at' => $outlet->created_at ? $this->formatDate($outlet->created_at) : null,
-                    ];
-                })->toArray();
-            } else {
-                // If not loaded, manually load
-                $availableOutlets = \App\Models\Outlet::where('user_id', $user->id)
-                    ->get()
-                    ->map(function ($outlet) {
+            // Available outlets
+            try {
+                if ($user->relationLoaded('availableOutlets')) {
+                    $availableOutlets = $user->availableOutlets->map(function ($outlet) {
                         return [
                             'id' => $outlet->id,
                             'name' => $outlet->name,
@@ -116,24 +109,48 @@ class HandleInertiaRequests extends Middleware
                             'created_at' => $outlet->created_at ? $this->formatDate($outlet->created_at) : null,
                         ];
                     })->toArray();
+                } else {
+                    // Manual fallback load
+                    $availableOutlets = \App\Models\Outlet::where('user_id', $user->id)
+                        ->get()
+                        ->map(function ($outlet) {
+                            return [
+                                'id' => $outlet->id,
+                                'name' => $outlet->name,
+                                'code' => $outlet->code,
+                                'phone' => $outlet->phone,
+                                'email' => $outlet->email,
+                                'address' => $outlet->address,
+                                'is_active' => $outlet->is_active,
+                                'is_main' => $outlet->is_main,
+                                'created_at' => $outlet->created_at ? $this->formatDate($outlet->created_at) : null,
+                            ];
+                        })->toArray();
+                }
+            } catch (\Exception $e) {
+                $availableOutlets = [];
             }
         }
 
         return array_merge(parent::share($request), [
-            'locale' => fn() => App::getLocale(),
-            'availableLocales' => fn() => $availableLocales,
-            'language' => fn() => $this->getLanguageStrings(App::getLocale()),
+            'locale' => fn () => App::getLocale(),
+            'availableLocales' => fn () => $availableLocales,
+            'language' => fn () => $this->getLanguageStrings(App::getLocale()),
             'currentRoute' => Route::currentRouteName(),
             'appName' => config('app.name'),
 
-            // Authentication data - Combined structure
+            // Auth data
             'auth' => [
                 'user' => $user ? array_merge(
                     $user->only(['id', 'name', 'email', 'type', 'role', 'profile', 'current_outlet_id']),
                     [
                         'roles' => $user->getRoleNames(),
                         'permissions' => $user->getAllPermissions()->pluck('name'),
-                        // Outlet related data
+
+                        // ✅ Added
+                        'is_super_admin' => $isSuperAdmin,
+
+                        // Outlet data
                         'current_outlet' => $currentOutlet,
                         'available_outlets' => $availableOutlets,
                         'is_logged_into_outlet' => $isLoggedIntoOutlet,
@@ -146,15 +163,14 @@ class HandleInertiaRequests extends Middleware
                 ? $user->getAllPermissions()->pluck('name')->flip()
                 : [],
 
-            // Flash messages - Expanded
+            // Flash messages
             'flash' => [
-                'success' => fn() => $request->session()->get('success'),
-                'error' => fn() => $request->session()->get('error'),
-                'warning' => fn() => $request->session()->get('warning'),
-                'info' => fn() => $request->session()->get('info'),
+                'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
+                'warning' => fn () => $request->session()->get('warning'),
+                'info' => fn () => $request->session()->get('info'),
             ],
 
-            // Additional shared outlet data
             'outlet' => [
                 'current' => $currentOutlet,
                 'is_active' => $isLoggedIntoOutlet,
@@ -168,7 +184,6 @@ class HandleInertiaRequests extends Middleware
     protected function getLanguageStrings($locale)
     {
         $translations = [];
-
         $langPath = resource_path("lang/{$locale}");
 
         if (is_dir($langPath)) {
@@ -186,16 +201,13 @@ class HandleInertiaRequests extends Middleware
      */
     protected function formatDate($date)
     {
-        if (!$date) {
-            return null;
-        }
+        if (!$date) return null;
 
         try {
-            if ($date instanceof \Carbon\Carbon) {
+            if ($date instanceof Carbon) {
                 return $date->format('Y-m-d H:i:s');
-            } else {
-                return Carbon::parse($date)->format('Y-m-d H:i:s');
             }
+            return Carbon::parse($date)->format('Y-m-d H:i:s');
         } catch (\Exception $e) {
             return null;
         }

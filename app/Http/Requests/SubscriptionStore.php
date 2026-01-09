@@ -23,7 +23,7 @@ class SubscriptionStore extends FormRequest
     {
         return [
             'user_id'        => 'nullable|exists:users,id',
-            'user_email'     => 'required_without:user_id|email|exists:users,email',
+            'user_email'     => 'nullable|email|exists:users,email',
             'plan_id'        => 'required|exists:plans,id',
             'start_date'     => 'required|date',
             'end_date'       => 'required|date|after_or_equal:start_date',

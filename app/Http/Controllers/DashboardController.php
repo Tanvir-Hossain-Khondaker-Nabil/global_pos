@@ -3,219 +3,383 @@
 namespace App\Http\Controllers;
 
 use App\Models\Expense;
-use App\Models\Product;
 use App\Models\Sale;
-use App\Models\SalesList;
+use App\Models\Customer;
+use App\Models\SaleItem;
+use App\Models\Stock;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
-use App\Models\Customer;
-use App\Models\SaleItem;
-use App\Models\Stock;
-
 
 class DashboardController extends Controller
 {
-    // index
-    public function index()
+    public function index(Request $request)
+    {
+        $range = $request->get('timeRange', 'today'); // today|week|month|year
+        $payload = $this->buildDashboardPayload($range);
+
+        return inertia('Dashboard', $payload);
+    }
+
+    // If your frontend calls /dashboard/data/{range}
+    public function data(string $range)
+    {
+        $payload = $this->buildDashboardPayload($range);
+
+        return response()->json([
+            'success' => true,
+            'dashboardData' => $payload['dashboardData'],
+            'totalSales' => $payload['totalSales'],
+            'totalPaid' => $payload['totalPaid'],
+            'totalDue' => $payload['totalDue'],
+            'totalselas' => $payload['totalselas'],
+            'totalexpense' => $payload['totalexpense'],
+            'isShadowUser' => $payload['isShadowUser'],
+        ]);
+    }
+
+    private function buildDashboardPayload(string $range): array
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $today = Carbon::today();
-        $yesterday = Carbon::yesterday();
+        $salesTotalCol = $isShadowUser ? 'shadow_grand_total' : 'grand_total';
+        $paidCol       = $isShadowUser ? 'shadow_paid_amount' : 'paid_amount';
+        $dueCol        = $isShadowUser ? 'shadow_due_amount' : 'due_amount';
 
-        // ================= SALES SUMMARY =================
-        $totalSalesQuery = $isShadowUser ? 'SUM(shadow_grand_total)' : 'SUM(grand_total)';
-        $totalPaidQuery  = $isShadowUser ? 'SUM(shadow_paid_amount)' : 'SUM(paid_amount)';
-        $totalDueQuery   = $isShadowUser ? 'SUM(shadow_due_amount)' : 'SUM(due_amount)';
+        // --------- Period windows (current + previous same length) ----------
+        [$from, $to, $prevFrom, $prevTo, $labelMode] = $this->resolveRange($range);
 
-        $totalSales  = Sale::selectRaw("COALESCE($totalSalesQuery,0) as total")->value('total');
-        $totalPaid   = Sale::selectRaw("COALESCE($totalPaidQuery,0) as total")->value('total');
-        $totalDue    = Sale::selectRaw("COALESCE($totalDueQuery,0) as total")->value('total');
-        $totalOrders = Sale::count();
+        $salesBase = Sale::query()->whereBetween('created_at', [$from, $to]);
+        $salesPrev = Sale::query()->whereBetween('created_at', [$prevFrom, $prevTo]);
 
-        $todaySales = Sale::whereDate('created_at', $today)
-            ->selectRaw("COALESCE($totalSalesQuery,0) as total")
-            ->value('total');
+        // --------- Totals (ALL TIME) ----------
+        $totalSales  = (float) Sale::selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
+        $totalPaid   = (float) Sale::selectRaw("COALESCE(SUM($paidCol),0) as total")->value('total');
+        $totalDue    = (float) Sale::selectRaw("COALESCE(SUM($dueCol),0) as total")->value('total');
+        $totalOrders = (int) Sale::count();
 
-        $yesterdaySales = Sale::whereDate('created_at', $yesterday)
-            ->selectRaw("COALESCE($totalSalesQuery,0) as total")
-            ->value('total');
+        // --------- Period sales + growth ----------
+        $periodSales = (float) $salesBase->clone()->selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
+        $prevSales   = (float) $salesPrev->clone()->selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
 
-        $salesGrowth = $yesterdaySales > 0
-            ? (($todaySales - $yesterdaySales) / $yesterdaySales) * 100
-            : 0;
+        $salesGrowth = $prevSales > 0 ? (($periodSales - $prevSales) / $prevSales) * 100 : 0;
 
-        // ================= ORDER STATUS CALCULATIONS =================
-        // Get order counts by status
-        $deliveredOrders = Sale::where('status', 'delivered')->count();
-        $processingOrders = Sale::where('status', 'processing')->count();
-        $shippedOrders = Sale::where('status', 'shipped')->count();
-        $pendingOrders = Sale::where('status', 'pending')->count();
-        $cancelledOrders = Sale::where('status', 'cancelled')->count();
-        $returnedOrders = Sale::where('status', 'returned')->count();
-        
-        // Completed orders (delivered + shipped)
-        $completedOrders = $deliveredOrders + $shippedOrders;
-        
-        // Active processing (processing + pending)
-        $activeProcessingOrders = $processingOrders + $pendingOrders;
-        
-        // Calculate return rate based on returned orders
-        $returnRate = $totalOrders > 0 ? ($returnedOrders / $totalOrders) * 100 : 0;
-
-        // ================= CUSTOMERS =================
-        $totalCustomers  = Customer::count();
-        $activeCustomers = Customer::where('is_active', true)->count();
-
-        // ================= INVENTORY =================
-        $inventoryValue = Stock::selectRaw('COALESCE(SUM(quantity * purchase_price),0) as value')
-            ->value('value');
-
-        $lowStockItems  = Stock::where('quantity', '<=', 10)->count();
-        $outOfStockItems = Stock::where('quantity', '<=', 0)->count();
-
-        // ================= FINANCIAL =================
-        $totalExpenses = Expense::sum('amount');
-
-        $profitMargin = $totalSales > 0
-            ? (($totalSales - $totalExpenses) / $totalSales) * 100
-            : 0;
-
-        // ================= CONVERSION RATE (Estimation) =================
-        // Assuming 25% of active customers made purchases this month
-        $conversionRate = $activeCustomers > 0 
-            ? (($totalCustomers * 0.25) / $activeCustomers) * 100 
-            : 0;
-
-        // ================= MONTHLY SALES =================
-        $monthlySales = Sale::selectRaw("
-                MONTH(created_at) as month_num,
-                DATE_FORMAT(created_at,'%b') as month,
-                COALESCE($totalSalesQuery,0) as total
-            ")
-            ->whereYear('created_at', date('Y'))
-            ->groupBy('month_num', 'month')
-            ->orderBy('month_num')
-            ->get()
-            ->pluck('total', 'month')
+        // --------- Status counts (period) ----------
+        $statusCounts = $salesBase->clone()
+            ->select('status', DB::raw('COUNT(*) as c'))
+            ->groupBy('status')
+            ->pluck('c', 'status')
             ->toArray();
 
-        $months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        $monthlySalesData = [];
+        $delivered   = (int)($statusCounts['delivered'] ?? 0);
+        $shipped     = (int)($statusCounts['shipped'] ?? 0);
+        $processing  = (int)($statusCounts['processing'] ?? 0);
+        $pending     = (int)($statusCounts['pending'] ?? 0);
+        $cancelled   = (int)($statusCounts['cancelled'] ?? 0);
+        $returned    = (int)($statusCounts['returned'] ?? 0);
 
-        foreach ($months as $m) {
-            $monthlySalesData[$m] = $monthlySales[$m] ?? 0;
-        }
+        $periodOrders = (int) $salesBase->clone()->count();
+        $completedOrders = $delivered + $shipped;
+        $activeProcessingOrders = $processing + $pending;
+        $returnRate = $periodOrders > 0 ? ($returned / $periodOrders) * 100 : 0;
 
-        // ================= TOP ITEMS (NO product_id) =================
-        $topProducts = SaleItem::select([
-            'id',
-            DB::raw('SUM(quantity) as total_quantity'),
-            DB::raw('SUM(total_price) as total_sales')
-        ])
-            ->groupBy('id')
+        // --------- Customers ----------
+        $totalCustomers  = (int) Customer::count();
+        $activeCustomers = (int) Customer::where('is_active', true)->count();
+
+        // Real conversion: unique customers who bought in period / active customers
+        // (Assumes sales table has customer_id. If not, tell me your schema.)
+        $buyersThisPeriod = (int) $salesBase->clone()
+            ->whereNotNull('customer_id')
+            ->distinct('customer_id')
+            ->count('customer_id');
+
+        $conversionRate = $activeCustomers > 0 ? ($buyersThisPeriod / $activeCustomers) * 100 : 0;
+
+        // --------- Inventory ----------
+        $inventoryValue = (float) Stock::selectRaw('COALESCE(SUM(quantity * purchase_price),0) as value')->value('value');
+        $lowStockItems  = (int) Stock::where('quantity', '<=', 10)->where('quantity', '>', 0)->count();
+        $outOfStockItems = (int) Stock::where('quantity', '<=', 0)->count();
+
+        // --------- Expenses + Profit (period) ----------
+        // If you have expense dates, make this period-based. Otherwise it stays all-time.
+        $totalExpenses = (float) Expense::sum('amount');
+
+        $profitMargin = $periodSales > 0
+            ? (($periodSales - $totalExpenses) / $periodSales) * 100
+            : 0;
+
+        $averageOrderValue = $periodOrders > 0 ? ($periodSales / $periodOrders) : 0;
+
+        // --------- Sales chart series (100% backend) ----------
+        // returns: ['labels'=>[], 'values'=>[]]
+        $salesSeries = $this->buildSalesSeries($labelMode, $from, $to, $salesTotalCol);
+
+        // --------- Top products (period) ----------
+        // Assumes sale_items has product_id and total_price, quantity.
+        // If your schema differs, tell me columns and I’ll adapt.
+        $topProducts = SaleItem::query()
+            ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+            ->leftJoin('products', 'sale_items.product_id', '=', 'products.id')
+            ->whereBetween('sales.created_at', [$from, $to])
+            ->selectRaw('sale_items.product_id as product_id')
+            ->selectRaw("COALESCE(products.name, CONCAT('Product #', sale_items.product_id)) as name")
+            ->selectRaw('SUM(sale_items.quantity) as total_quantity')
+            ->selectRaw('SUM(sale_items.total_price) as total_sales')
+            ->groupBy('sale_items.product_id', 'products.name')
             ->orderByDesc('total_sales')
             ->limit(5)
             ->get()
-            ->map(function ($item) {
+            ->map(function ($row) use ($from, $to, $prevFrom, $prevTo) {
+                // growth: compare this product sales in previous period vs current
+                $current = (float) $row->total_sales;
+
+                $prev = (float) SaleItem::query()
+                    ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
+                    ->whereBetween('sales.created_at', [$prevFrom, $prevTo])
+                    ->where('sale_items.product_id', $row->product_id)
+                    ->sum('sale_items.total_price');
+
+                $growth = $prev > 0 ? (($current - $prev) / $prev) * 100 : 0;
+
                 return [
-                    'id'       => $item->id,
-                    'name'     => 'Item #' . $item->id,
-                    'sales'    => $item->total_sales,
-                    'quantity' => $item->total_quantity,
-                    'growth'   => rand(5, 20)
+                    'id'       => $row->product_id,
+                    'name'     => $row->name,
+                    'sales'    => $current,
+                    'quantity' => (int) $row->total_quantity,
+                    'growth'   => round($growth, 1),
                 ];
             });
 
-        // ================= RECENT ACTIVITIES =================
-        $recentActivities = [];
+        // --------- Recent activities (period) ----------
+        $recentActivities = $salesBase->clone()
+            ->latest()
+            ->limit(5)
+            ->get()
+            ->map(function ($sale) use ($salesTotalCol) {
+                return [
+                    'id'     => $sale->id,
+                    'type'   => 'sale',
+                    'user'   => 'Customer',
+                    'action' => 'Completed sale ' . $sale->invoice_no,
+                    'time'   => Carbon::parse($sale->created_at)->diffForHumans(),
+                    'amount' => (float) ($sale->{$salesTotalCol} ?? 0),
+                ];
+            })
+            ->values()
+            ->toArray();
 
-        Sale::latest()->limit(5)->get()->each(function ($sale) use (&$recentActivities) {
-            $recentActivities[] = [
-                'id' => $sale->id,
-                'type' => 'sale',
-                'user' => 'Customer',
-                'action' => 'Completed sale ' . $sale->invoice_no,
-                'time' => Carbon::parse($sale->created_at)->diffForHumans(),
-                'amount' => $sale->grand_total
-            ];
-        });
+        // --------- Donut percentages (period) ----------
+        // Categories: completed, processing, returned
+        $completed = $completedOrders;
+        $processingAll = $activeProcessingOrders;
 
-        // ================= ORDER ANALYTICS DATA =================
-        $orderAnalytics = [
-            'totalOrders' => $totalOrders,
-            'deliveredOrders' => $deliveredOrders,
-            'processingOrders' => $processingOrders,
-            'pendingOrders' => $pendingOrders,
-            'shippedOrders' => $shippedOrders,
-            'cancelledOrders' => $cancelledOrders,
-            'returnedOrders' => $returnedOrders,
-            'completedOrders' => $completedOrders,
-            'activeProcessingOrders' => $activeProcessingOrders,
-            'returnRate' => round($returnRate, 1)
-        ];
+        $donut = $this->percentTriplet($completed, $processingAll, $returned);
 
-        // Calculate percentages for donut chart
-        $donutPercentages = [
-            'delivered' => $totalOrders > 0 ? round(($completedOrders / $totalOrders) * 100) : 65,
-            'processing' => $totalOrders > 0 ? round((($processingOrders + $pendingOrders) / $totalOrders) * 100) : 22,
-            'returned' => round($returnRate) > 0 ? round($returnRate) : 13
-        ];
-
-        // Ensure total is 100%
-        $totalPercent = array_sum($donutPercentages);
-        if ($totalPercent !== 100) {
-            $adjustment = 100 - $totalPercent;
-            $donutPercentages['delivered'] += $adjustment;
-        }
-
-        // ================= DASHBOARD DATA =================
         $dashboardData = [
-            'todaySales' => $todaySales,
-            'yesterdaySales' => $yesterdaySales,
+            // period metrics
+            'periodSales' => $periodSales,
+            'prevPeriodSales' => $prevSales,
             'salesGrowth' => round($salesGrowth, 1),
 
             'totalCustomers' => $totalCustomers,
             'activeCustomers' => $activeCustomers,
+            'buyersThisPeriod' => $buyersThisPeriod,
             'conversionRate' => round($conversionRate, 1),
 
             'inventoryValue' => $inventoryValue,
             'lowStockItems' => $lowStockItems,
             'outOfStockItems' => $outOfStockItems,
 
-            'pendingOrders' => $pendingOrders,
-            'completedOrders' => $completedOrders,
-            'deliveredOrders' => $deliveredOrders,
-            'processingOrders' => $processingOrders,
-            'returnedOrders' => $returnedOrders,
-
             'profitMargin' => round($profitMargin, 1),
             'returnRate' => round($returnRate, 1),
+            'averageOrderValue' => round($averageOrderValue, 2),
 
-            'monthlySalesData' => $monthlySalesData,
-            'monthLabels' => $months,
+            // period orders
+            'orderAnalytics' => [
+                'totalOrders' => $periodOrders,
+                'deliveredOrders' => $delivered,
+                'shippedOrders' => $shipped,
+                'completedOrders' => $completedOrders,
+                'processingOrders' => $processing,
+                'pendingOrders' => $pending,
+                'activeProcessingOrders' => $activeProcessingOrders,
+                'cancelledOrders' => $cancelled,
+                'returnedOrders' => $returned,
+                'returnRate' => round($returnRate, 1),
+            ],
 
+            'donutPercentages' => $donut,
+
+            // chart + lists
+            'salesSeries' => $salesSeries,
             'topProducts' => $topProducts,
-            'recentActivities' => array_slice($recentActivities, 0, 5),
+            'recentActivities' => $recentActivities,
 
-            'averageOrderValue' => $totalOrders > 0 ? round($totalSales / $totalOrders, 2) : 0,
-            
-            // Order analytics
-            'orderAnalytics' => $orderAnalytics,
-            'donutPercentages' => $donutPercentages
+            // metadata
+            'range' => $range,
+            'rangeFrom' => $from->toDateTimeString(),
+            'rangeTo' => $to->toDateTimeString(),
+            'prevRangeFrom' => $prevFrom->toDateTimeString(),
+            'prevRangeTo' => $prevTo->toDateTimeString(),
+            'labelMode' => $labelMode,
         ];
 
-        return inertia('Dashboard', [
+        return [
             'dashboardData' => $dashboardData,
             'totalSales' => $totalSales,
             'totalPaid' => $totalPaid,
             'totalDue' => $totalDue,
             'totalselas' => $totalOrders,
             'totalexpense' => $totalExpenses,
-            'isShadowUser' => $isShadowUser
-        ]);
+            'isShadowUser' => $isShadowUser,
+        ];
+    }
+
+    private function resolveRange(string $range): array
+    {
+        $now = Carbon::now();
+
+        if ($range === 'today') {
+            $from = $now->copy()->startOfDay();
+            $to   = $now->copy()->endOfDay();
+
+            $prevFrom = $from->copy()->subDay();
+            $prevTo   = $to->copy()->subDay();
+
+            $labelMode = 'hour';
+            return [$from, $to, $prevFrom, $prevTo, $labelMode];
+        }
+
+        if ($range === 'week') {
+            $from = $now->copy()->startOfWeek();
+            $to   = $now->copy()->endOfWeek();
+
+            $prevFrom = $from->copy()->subWeek();
+            $prevTo   = $to->copy()->subWeek();
+
+            $labelMode = 'day';
+            return [$from, $to, $prevFrom, $prevTo, $labelMode];
+        }
+
+        if ($range === 'month') {
+            $from = $now->copy()->startOfMonth();
+            $to   = $now->copy()->endOfMonth();
+
+            $prevFrom = $from->copy()->subMonth()->startOfMonth();
+            $prevTo   = $from->copy()->subMonth()->endOfMonth();
+
+            $labelMode = 'day';
+            return [$from, $to, $prevFrom, $prevTo, $labelMode];
+        }
+
+        // year
+        $from = $now->copy()->startOfYear();
+        $to   = $now->copy()->endOfYear();
+
+        $prevFrom = $from->copy()->subYear()->startOfYear();
+        $prevTo   = $from->copy()->subYear()->endOfYear();
+
+        $labelMode = 'month';
+        return [$from, $to, $prevFrom, $prevTo, $labelMode];
+    }
+
+    private function buildSalesSeries(string $mode, Carbon $from, Carbon $to, string $salesTotalCol): array
+    {
+        if ($mode === 'hour') {
+            // 24 buckets
+            $rows = Sale::query()
+                ->whereBetween('created_at', [$from, $to])
+                ->selectRaw('HOUR(created_at) as k')
+                ->selectRaw("COALESCE(SUM($salesTotalCol),0) as v")
+                ->groupBy('k')
+                ->orderBy('k')
+                ->get();
+
+            $map = $rows->pluck('v', 'k')->toArray();
+
+            $labels = [];
+            $values = [];
+            for ($h = 0; $h < 24; $h++) {
+                $labels[] = str_pad((string)$h, 2, '0', STR_PAD_LEFT) . ':00';
+                $values[] = (float)($map[$h] ?? 0);
+            }
+            return compact('labels', 'values');
+        }
+
+        if ($mode === 'day') {
+            // daily buckets
+            $rows = Sale::query()
+                ->whereBetween('created_at', [$from, $to])
+                ->selectRaw('DATE(created_at) as k')
+                ->selectRaw("COALESCE(SUM($salesTotalCol),0) as v")
+                ->groupBy('k')
+                ->orderBy('k')
+                ->get();
+
+            $map = $rows->pluck('v', 'k')->toArray();
+
+            $labels = [];
+            $values = [];
+            $cursor = $from->copy()->startOfDay();
+            while ($cursor->lte($to)) {
+                $k = $cursor->toDateString();
+                $labels[] = $cursor->format('d M');
+                $values[] = (float)($map[$k] ?? 0);
+                $cursor->addDay();
+            }
+            return compact('labels', 'values');
+        }
+
+        // month buckets
+        $rows = Sale::query()
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw('MONTH(created_at) as k')
+            ->selectRaw("COALESCE(SUM($salesTotalCol),0) as v")
+            ->groupBy('k')
+            ->orderBy('k')
+            ->get();
+
+        $map = $rows->pluck('v', 'k')->toArray();
+
+        $labels = [];
+        $values = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $labels[] = Carbon::createFromDate($from->year, $m, 1)->format('M');
+            $values[] = (float)($map[$m] ?? 0);
+        }
+        return compact('labels', 'values');
+    }
+
+    private function percentTriplet(int $a, int $b, int $c): array
+    {
+        $total = $a + $b + $c;
+        if ($total <= 0) {
+            return ['completed' => 0, 'processing' => 0, 'returned' => 0];
+        }
+
+        $pa = (int) round(($a / $total) * 100);
+        $pb = (int) round(($b / $total) * 100);
+        $pc = (int) round(($c / $total) * 100);
+
+        // fix rounding to sum 100
+        $sum = $pa + $pb + $pc;
+        $diff = 100 - $sum;
+
+        // adjust the largest bucket
+        $arr = [
+            ['k' => 'completed', 'v' => $pa],
+            ['k' => 'processing', 'v' => $pb],
+            ['k' => 'returned', 'v' => $pc],
+        ];
+        usort($arr, fn($x, $y) => $y['v'] <=> $x['v']);
+        $arr[0]['v'] += $diff;
+
+        $out = [];
+        foreach ($arr as $it) $out[$it['k']] = max(0, (int)$it['v']);
+        return $out;
     }
 }

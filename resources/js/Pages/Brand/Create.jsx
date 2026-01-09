@@ -97,7 +97,7 @@ export default function Create() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Basic Information Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                        <div className="bg-green-600 px-6 py-4">
                             <div className="flex items-center gap-3">
                                 <Tag className="text-white" size={24} />
                                 <h2 className="text-xl font-semibold text-white">

@@ -179,4 +179,11 @@ return [
     'support' => 'Support',
     'documentation' => 'Documentation',
     'feedback' => 'Feedback',
+    "no_sales_data"=> "No sales data",
+    "try_another_range"=> "Try another time range",
+    "avg_order"=> "Avg Order",
+    'view' => 'Dashboard',
+    'period_sales' => 'Period Sales',
+    'customers' => 'Customers Overview',
+    'sync' => 'Dashboard Data Sync',
 ];

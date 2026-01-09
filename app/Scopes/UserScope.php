@@ -11,8 +11,8 @@ class UserScope implements Scope
 {
     public function apply(Builder $builder, Model $model)
     {
-        if (Auth::check()) {
-            $builder->where('created_by', operator: Auth::id());
-        }
+        if (!Auth::check()) return;
+
+        $builder->where($model->qualifyColumn('created_by'), Auth::id());
     }
 }

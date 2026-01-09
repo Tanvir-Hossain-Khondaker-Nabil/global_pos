@@ -11,9 +11,11 @@ class OutletScope implements Scope
 {
     public function apply(Builder $builder, Model $model)
     {
-        // Only apply scope if user is authenticated and has current outlet
-        if (Auth::check() && Auth::user()->current_outlet_id) {
-            $builder->where('outlet_id', Auth::user()->current_outlet_id);
-        }
+        if (!Auth::check()) return;
+
+        $outletId = Auth::user()->current_outlet_id;
+        if (!$outletId) return;
+
+        $builder->where($model->qualifyColumn('outlet_id'), $outletId);
     }
 }

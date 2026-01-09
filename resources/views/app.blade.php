@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>M/s. Motor Cycle Enterprise</title>
-    <link rel="shortcut icon" href="https://i.ibb.co.com/DHPRjDkT/Whats-App-Image-2025-12-11-at-2-57-24-PM-1.jpg" type="image/x-icon">
+    <link rel="shortcut icon" href="https://i.ibb.co.com/B2GvYy9s/b54ce146-32b3-4c73-9a14-5b7dfea2a11c-1.png" type="image/x-icon">
     @routes
     @viteReactRefresh
     @vite('resources/js/app.jsx')

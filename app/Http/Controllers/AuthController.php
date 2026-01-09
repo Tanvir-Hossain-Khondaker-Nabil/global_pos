@@ -26,12 +26,24 @@ class AuthController extends Controller
             'password' => 'required|string|min:6',
         ]);
 
-
         try {
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user) {
+                return back()->with('error', 'The provided credentials do not match our records.');
+            }
+
+            if (!$user->isSuperAdmin()) {
+                if (!$user->hasValidSubscription()) {
+                    return back()->with('error', 'Your subscription is not active or has expired. Please renew to login.');
+                }
+            }
+
             $credentials = $request->only('email', 'password');
 
             if (Auth::attempt($credentials, $request->filled('remember'))) {
-                return redirect()->route('home')->with('success', 'Login successfull');
+                $request->session()->regenerate();
+                return redirect()->route('home')->with('success', 'Login successful');
             }
 
             return back()->with('error', 'The provided credentials do not match our records.');
@@ -40,7 +52,6 @@ class AuthController extends Controller
         }
     }
 
-    // logout
     public function logout()
     {
         try {
@@ -53,7 +64,6 @@ class AuthController extends Controller
         }
     }
 
-    // profile ===========
     public function profileView()
     {
         return Inertia::render('auth/Profile');
@@ -148,7 +158,7 @@ class AuthController extends Controller
         try {
             $q = User::find(Auth::id());
             $q->name = $request->name;
-            if ($request->phone) {
+            if ($request->phone_no) {
                 $q->phone = $request->phone_no;
             }
             if ($request->address) {
@@ -192,7 +202,7 @@ class AuthController extends Controller
         ]);
 
         try {
-            $q = User::find(AUth::id());
+            $q = User::find(Auth::id());
             $q->password = Hash::make($request->new_password);
             $q->save();
             return redirect()->back()->with('success', 'New password updated success.');

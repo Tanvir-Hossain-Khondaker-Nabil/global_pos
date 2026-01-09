@@ -64,20 +64,38 @@ class AccountController extends Controller
         $validated = $request->validated();
 
         DB::transaction(function () use ($validated) {
+
+            // ✅ Create Account
             $account = Account::create([
                 ...$validated,
                 'current_balance' => $validated['opening_balance'],
-                'user_id' => User::where('role', User::ADMIN_ROLE)->first(),
+                'user_id' => User::where('role', User::ADMIN_ROLE)->first()?->id, // make sure it's ID
                 'created_by' => Auth::id(),
             ]);
 
+            // ✅ Make first account default
             if (Account::where('user_id', Auth::id())->count() == 1) {
                 $account->update(['is_default' => true]);
+            }
+
+            // ✅ Create Payment transaction for Opening Balance
+            if (!empty($validated['opening_balance']) && $validated['opening_balance'] > 0) {
+                Payment::create([
+                    'account_id' => $account->id,
+                    'amount' => $validated['opening_balance'],
+                    'payment_method' => 'deposit', // OR use 'opening_balance'
+                    'txn_ref' => 'OB-' . strtoupper(Str::random(8)),
+                    'note' => 'Opening balance added while creating account',
+                    'paid_at' => now(),
+                    'status' => 'completed',
+                    'created_by' => Auth::id(),
+                ]);
             }
         });
 
         return to_route('accounts.index')->with('success', 'Account created successfully.');
     }
+
 
 
     // Show account details
@@ -120,7 +138,7 @@ class AccountController extends Controller
         // Calculate running balance for each month
         $runningBalance = $account->opening_balance;
         $balanceTrend = [];
-        
+
         foreach ($balanceHistory as $record) {
             $runningBalance += $record->net_change;
             $balanceTrend[] = [
@@ -195,7 +213,7 @@ class AccountController extends Controller
 
         DB::transaction(function () use ($account, $validated) {
             // Create payment record
-             Payment::create([
+            Payment::create([
                 'account_id' => $account->id,
                 'amount' => $validated['amount'],
                 'payment_method' => 'deposit',

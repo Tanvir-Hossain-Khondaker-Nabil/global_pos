@@ -574,7 +574,7 @@ export default function AddPurchaseReturn({
                                 <div className="grid grid-cols-2 gap-2">
                                     <label className={`card card-compact cursor-pointer ${
                                         returnType === 'money_back' 
-                                            ? 'bg-[#1e4d2b] text-white/10 border border-primary' 
+                                            ? 'bg-[#1e4d2b] text-white border border-primary' 
                                             : 'bg-base-100 border border-base-300'
                                     }`}>
                                         <div className="card-body p-3">
@@ -588,7 +588,7 @@ export default function AddPurchaseReturn({
                                                 <DollarSign size={16} />
                                                 <span className="font-medium">Money Back</span>
                                             </div>
-                                            <p className="text-xs text-gray-500">
+                                            <p className="text-xs text-white-500">
                                                 {t('purchase_return.money_back_desc', 'Refund amount to supplier')}
                                             </p>
                                         </div>

@@ -21,6 +21,9 @@ return new class extends Migration
             $table->decimal('overtime_hours', 5, 2)->default(0); // ✅ হাউজে
             $table->enum('status', ['present', 'absent', 'late', 'half_day'])->default('present');
             $table->text('notes')->nullable();
+             $table->unsignedBigInteger('created_by');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->unsignedBigInteger('outlet_id');
             $table->timestamps();
 
             $table->unique(['employee_id', 'date']);

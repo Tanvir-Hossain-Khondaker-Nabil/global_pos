@@ -73,23 +73,38 @@ Route::middleware('auth')->group(function () {
         'edit' => 'deposits.edit',
         'update' => 'deposits.update',
         'destroy' => 'deposits.destroy',
-    ]);
-    // In routes/web.php
-    Route::post('/deposits/{deposit}/approve', [UserDepositController::class, 'approve'])->name('deposits.approve');
-    Route::post('/deposits/{deposit}/reject', [UserDepositController::class, 'reject'])->name('deposits.reject');
+    ])->middleware('permission:deposits.view|deposits.create|deposits.edit|deposits.delete');
+
+    Route::post('/deposits/{deposit}/approve', [UserDepositController::class, 'approve'])
+        ->middleware('permission:deposits.approve')
+        ->name('deposits.approve');
+
+    Route::post('/deposits/{deposit}/reject', [UserDepositController::class, 'reject'])
+        ->middleware('permission:deposits.reject')
+        ->name('deposits.reject');
 
 
     //outles rount will be here
     Route::controller(OutletController::class)->prefix('outlets')->group(function () {
-        Route::get('/', 'index')->name('outlets.index');
-        Route::post('/store', 'store')->name('outlets.store');
-        // Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
-        // Route::post('/', 'store')->middleware('permission:outlets.create')->name('outlets.store');
-        Route::get('/{id}', 'show')->name('outlets.show');
-        Route::put('/{id}', 'update')->name('outlets.update');
-        Route::delete('/{id}', 'destroy')->name('outlets.delete');
+        Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
+        Route::post('/store', 'store')->middleware('permission:outlets.create')->name('outlets.store');
 
+        Route::get('/{id}', 'show')->middleware('permission:outlets.show')->name('outlets.show');
+        Route::put('/{id}', 'update')->middleware('permission:outlets.edit')->name('outlets.update');
+        Route::delete('/{id}', 'destroy')->middleware('permission:outlets.delete')->name('outlets.delete');
     });
+
+    Route::post('/outlets/{outlet}/login', [OutletController::class, 'login'])
+        ->middleware('permission:outlets.login')
+        ->name('outlets.login');
+
+    Route::post('/outlets/logout', [OutletController::class, 'logout'])
+        ->middleware('permission:outlets.logout')
+        ->name('outlets.logout');
+
+    Route::post('/outlets/switch', [OutletController::class, 'switchOutlet'])
+        ->middleware('permission:outlets.switch')
+        ->name('outlets.switch');
 
     // users managment
     Route::controller(UserController::class)->prefix('users')->group(function () {
@@ -157,27 +172,79 @@ Route::middleware('auth')->group(function () {
         Route::delete('/sales-items/{id}', 'destroy')->middleware('permission:sales.delete')->name('sales.items.destroy');
     });
 
+    Route::get('/sales/scan-barcode/{barcode}', [SalesController::class, 'scanBarcode'])
+    ->name('sales.scan.barcode');
+
     // Sales Return Routes
-    Route::get('/return/create', [SalesReturnController::class, 'create'])->middleware('permission:dashboard.view')->name('return.create');
-    Route::post('/return/store', [SalesReturnController::class, 'store'])->name('return.store');
-    Route::get('/return', [SalesReturnController::class, 'index'])->name('salesReturn.list');
-    Route::get('/return/{id}', [SalesReturnController::class, 'show'])->name('salesReturn.show');
-    Route::get('/return/{id}/edit', [SalesReturnController::class, 'edit'])->name('salesReturn.edit');
-    Route::put('/return/{id}', [SalesReturnController::class, 'update'])->name('salesReturn.update');
-    Route::delete('/return/{id}', [SalesReturnController::class, 'destroy'])->name('salesReturn.destroy');
+    Route::get('/return', [SalesReturnController::class, 'index'])
+        ->middleware('permission:sales_return.view')
+        ->name('salesReturn.list');
+
+    Route::get('/return/create', [SalesReturnController::class, 'create'])
+        ->middleware('permission:sales_return.create')
+        ->name('return.create');
+
+    Route::post('/return/store', [SalesReturnController::class, 'store'])
+        ->middleware('permission:sales_return.create')
+        ->name('return.store');
+
+    Route::get('/return/{id}', [SalesReturnController::class, 'show'])
+        ->middleware('permission:sales_return.show')
+        ->name('salesReturn.show');
+
+    Route::get('/return/{id}/edit', [SalesReturnController::class, 'edit'])
+        ->middleware('permission:sales_return.edit')
+        ->name('salesReturn.edit');
+
+    Route::put('/return/{id}', [SalesReturnController::class, 'update'])
+        ->middleware('permission:sales_return.edit')
+        ->name('salesReturn.update');
+
+    Route::delete('/return/{id}', [SalesReturnController::class, 'destroy'])
+        ->middleware('permission:sales_return.delete')
+        ->name('salesReturn.destroy');
 
 
     // account route will be here
-    Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
-    Route::get('/accounts/create', [AccountController::class, 'create'])->name('accounts.create');
-    Route::post('/accounts', [AccountController::class, 'store'])->name('accounts.store');
-    Route::get('/accounts/{account}/edit', [AccountController::class, 'edit'])->name('accounts.edit');
-    Route::put('/accounts/{account}', [AccountController::class, 'update'])->name('accounts.update');
-    Route::delete('/accounts/{account}', [AccountController::class, 'destroy'])->name('accounts.destroy');
-    Route::get('/accounts/{account}', [AccountController::class, 'show'])->name('accounts.show');
-    Route::post('/accounts/{account}/deposit', [AccountController::class, 'deposit'])->name('accounts.deposit');
-    Route::post('/accounts/{account}/withdraw', [AccountController::class, 'withdraw'])->name('accounts.withdraw');
-    Route::post('/accounts/transfer', [AccountController::class, 'transfer'])->name('accounts.transfer');
+    Route::get('/accounts', [AccountController::class, 'index'])
+        ->middleware('permission:accounts.view')
+        ->name('accounts.index');
+
+    Route::get('/accounts/create', [AccountController::class, 'create'])
+        ->middleware('permission:accounts.create')
+        ->name('accounts.create');
+
+    Route::post('/accounts', [AccountController::class, 'store'])
+        ->middleware('permission:accounts.create')
+        ->name('accounts.store');
+
+    Route::get('/accounts/{account}/edit', [AccountController::class, 'edit'])
+        ->middleware('permission:accounts.edit')
+        ->name('accounts.edit');
+
+    Route::put('/accounts/{account}', [AccountController::class, 'update'])
+        ->middleware('permission:accounts.edit')
+        ->name('accounts.update');
+
+    Route::delete('/accounts/{account}', [AccountController::class, 'destroy'])
+        ->middleware('permission:accounts.delete')
+        ->name('accounts.destroy');
+
+    Route::get('/accounts/{account}', [AccountController::class, 'show'])
+        ->middleware('permission:accounts.show')
+        ->name('accounts.show');
+
+    Route::post('/accounts/{account}/deposit', [AccountController::class, 'deposit'])
+        ->middleware('permission:accounts.deposit')
+        ->name('accounts.deposit');
+
+    Route::post('/accounts/{account}/withdraw', [AccountController::class, 'withdraw'])
+        ->middleware('permission:accounts.withdraw')
+        ->name('accounts.withdraw');
+
+    Route::post('/accounts/transfer', [AccountController::class, 'transfer'])
+        ->middleware('permission:accounts.transfer')
+        ->name('accounts.transfer');
 
 
     Route::get('/items/{id}', [SalesController::class, 'showItem'])->middleware('permission:sales.items.view')->name('sales.items.show');
@@ -281,10 +348,23 @@ Route::middleware('auth')->group(function () {
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 
     // Add these barcode routes after your existing purchase routes
-    Route::get('/purchase/{purchaseId}/barcode/generate', [PurchaseController::class, 'generatePurchaseBarcodes'])->name('purchase.generate.barcodes');
-    Route::get('/purchase/{purchaseId}/barcode/print', [PurchaseController::class, 'printPurchaseBarcodes'])->name('purchase.print.barcodes');
-    Route::get('/purchase/{purchaseId}/item/{itemId}/barcode/generate', [PurchaseController::class, 'generatePurchaseItemBarcode'])->name('purchase.item.barcode.generate');
-    Route::get('/purchase/{purchaseId}/item/{itemId}/barcode/print', [PurchaseController::class, 'printItemBarcode'])->name('purchase.item.barcode.print');
+    // Barcode routes (match React calls)
+    Route::post('/purchase/{purchase}/barcodes/generate', [PurchaseController::class, 'generatePurchaseBarcodes'])
+        ->middleware('permission:purchase.edit')
+        ->name('purchase.generate-barcodes');
+
+    Route::get('/purchase/{purchase}/barcodes/print', [PurchaseController::class, 'printPurchaseBarcodes'])
+        ->middleware('permission:purchase.view')
+        ->name('purchase.print-barcodes');
+
+    Route::post('/purchase/{purchase}/items/{item}/barcode/generate', [PurchaseController::class, 'generatePurchaseItemBarcode'])
+        ->middleware('permission:purchase.edit')
+        ->name('purchase.generate-item-barcode');
+
+    Route::get('/purchase/{purchase}/items/{item}/barcode/print', [PurchaseController::class, 'printItemBarcode'])
+        ->middleware('permission:purchase.view')
+        ->name('purchase.print-item-barcode');
+
 
     Route::post('/toggle-user-type', [UserController::class, 'toggleUserType'])->name('user.toggle.type');
 
@@ -515,12 +595,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/sms-templates/{smsTemplate}/toggle-status', [SmsTemplateController::class, 'toggleStatus'])
         ->name('sms-templates.toggle-status');
 
-    Route::post('/outlets/{outlet}/login', [OutletController::class, 'login'])
-        ->name('outlets.login');
-    Route::post('/outlets/logout', [OutletController::class, 'logout'])
-        ->name('outlets.logout');
-    Route::post('/outlets/switch', [OutletController::class, 'switchOutlet'])
-        ->name('outlets.switch');
 });
 
 

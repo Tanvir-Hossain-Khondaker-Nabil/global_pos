@@ -43,6 +43,7 @@ class Outlet extends Model
     {
         return $this->belongsTo(User::class);
     }
+
     public function currentUsers()
     {
         return $this->hasMany(User::class, 'current_outlet_id');
