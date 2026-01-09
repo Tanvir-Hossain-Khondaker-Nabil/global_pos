@@ -44,6 +44,8 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\OutletController;
+use App\Http\Controllers\UserDepositController;
+
 
 
 // Guest routes
@@ -62,10 +64,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('home');
 
 
+    // user deposit route will be here
+    Route::resource('user_deposits', UserDepositController::class)->names([
+        'index' => 'user_deposits.index',
+        'create' => 'user_deposits.create',
+        'store' => 'user_deposits.store',
+        'show' => 'user_deposits.show',
+        'edit' => 'user_deposits.edit',
+        'update' => 'user_deposits.update',
+        'destroy' => 'user_deposits.destroy',
+    ]);
+
+
     //outles rount will be here
-
     Route::controller(OutletController::class)->prefix('outlets')->group(function () {
-
         Route::get('/', 'index')->name('outlets.index');
         Route::post('/store', 'store')->name('outlets.store');
         // Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
