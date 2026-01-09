@@ -1,7 +1,7 @@
 import { Link, usePage, router } from "@inertiajs/react";
 import React, { useState, useEffect } from "react";
 import Image from "../components/Image";
-import { Bell, Home, LogOut, Menu, Search, User, Shield, Store, ChevronDown, MapPin } from "lucide-react"; // MapPin import করুন
+import { Bell, Home, LogOut, Menu, Search, User, Shield, Store, ChevronDown, MapPin, DollarSign } from "lucide-react"; // MapPin import করুন
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 export default function Header({ sidebarOpen, setSidebarOpen }) {
@@ -231,12 +231,12 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                 </Link>
                             </li>
 
-                            {/* <li>
-                                <Link onClick={depositHandel()}>
-                                    <Shield size={14} />
+                            <li>
+                                <Link href={route("deposits.index")}>
+                                    <DollarSign size={14} />
                                     <span>Deposit</span>
                                 </Link>
-                            </li> */}
+                            </li>
                    
                             <li>
                                 <Link
