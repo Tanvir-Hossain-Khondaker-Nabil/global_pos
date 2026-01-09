@@ -1,7 +1,7 @@
 import { Link, usePage, router } from "@inertiajs/react";
 import React, { useState, useEffect } from "react";
 import Image from "../components/Image";
-import { Bell, Home, LogOut, Menu, Search, User, Shield, Store, ChevronDown, MapPin } from "lucide-react"; // MapPin import করুন
+import { Bell, Home, LogOut, Menu, Search, User, Shield, Store, ChevronDown, MapPin, DollarSign } from "lucide-react"; // MapPin import করুন
 import LanguageSwitcher from "../components/LanguageSwitcher";
 
 export default function Header({ sidebarOpen, setSidebarOpen }) {
@@ -230,16 +230,14 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                     <span>Security</span>
                                 </Link>
                             </li>
+
                             <li>
-                                <button
-                                    onClick={handleToggleUserType}
-                                    className={`btn btn-sm ${isShadowUser ? 'bg-[#1e4d2b] text-white text-white' : 'bg-amber-500 text-white'} gap-2`}
-                                    title={`Switch to ${isShadowUser ? 'Shadow' : 'General'} mode`}
-                                >
-                                    <Shield size={16} />
-                                    {isShadowUser ? 'General Mode' : 'Shadow Mode'}
-                                </button>
+                                <Link href={route("deposits.index")}>
+                                    <DollarSign size={14} />
+                                    <span>Deposit</span>
+                                </Link>
                             </li>
+                   
                             <li>
                                 <Link
                                     href={route("logout")}
@@ -253,6 +251,18 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                                     <span>Logout</span>
                                 </Link>
                             </li>
+
+                            <li>
+                                <button
+                                    onClick={handleToggleUserType}
+                                    className={`btn btn-sm ${isShadowUser ? 'bg-[#1e4d2b] text-white text-white' : 'bg-amber-500 text-white'} gap-2`}
+                                    title={`Switch to ${isShadowUser ? 'Shadow' : 'General'} mode`}
+                                >
+                                    <Shield size={16} />
+                                    {isShadowUser ? 'General Mode' : 'Shadow Mode'}
+                                </button>
+                            </li>
+
                         </ul>
                     </div>
                 </div>

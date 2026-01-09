@@ -19,11 +19,12 @@ return new class extends Migration {
             $table->string('address')->nullable();
             $table->string('profile')->nullable();
             $table->string('password');
-            $table->enum('role', ['admin', 'seller','buyer','user'])->default('user');
             $table->timestamp('email_verified_at')->nullable();
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->unsignedBigInteger('current_outlet_id')->nullable();
+            $table->unsignedBigInteger('role_id')->default(3);
             $table->timestamp('outlet_logged_in_at')->nullable();
+            $table->integer('total_deposit')->default(0);
             $table->rememberToken();
             $table->timestamps();
         });
