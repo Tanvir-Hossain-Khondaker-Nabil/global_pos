@@ -157,6 +157,9 @@ Route::middleware('auth')->group(function () {
         Route::delete('/sales-items/{id}', 'destroy')->middleware('permission:sales.delete')->name('sales.items.destroy');
     });
 
+    Route::post('/pos/print-request/{id}', [SalesController::class, 'printRequest'])->name('print.request');
+
+
     // Sales Return Routes
     Route::get('/return/create', [SalesReturnController::class, 'create'])->middleware('permission:dashboard.view')->name('return.create');
     Route::post('/return/store', [SalesReturnController::class, 'store'])->name('return.store');

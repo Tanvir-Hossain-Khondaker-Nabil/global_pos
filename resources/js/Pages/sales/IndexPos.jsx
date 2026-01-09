@@ -271,6 +271,15 @@ export default function SalesIndex({ sales, filters, isShadowUser }) {
                                                     </>
 
                                                 )}
+                                         
+                                                <Link
+                                                    href={route('print.request',{ id: sale.id })}
+                                                    method= "post"
+                                                    className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600"
+                                                    title="Print"
+                                                >
+                                                    <Printer size={16} />
+                                                </Link>
 
                                                 {sale.shadow_type == 'general' && (
                                                     <Link

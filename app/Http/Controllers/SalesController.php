@@ -19,10 +19,16 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Illuminate\Support\Str;
+use App\Services\ReceiptService;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 
 class SalesController extends Controller
 {
+
+
+
     /**
      * Display a listing of all sales
      */
@@ -719,6 +725,15 @@ class SalesController extends Controller
         ]);
     }
 
+    public function printRequest(ReceiptService $posPrinter,$id)
+    {
+        $sale = Sale::with(['customer', 'items.product','items.product.brand', 'items.variant', 'items.warehouse'])
+            ->findOrFail($id);
+
+        $posPrinter->printRequest((float) $sale->paid_amount, $sale);
+
+        return response()->json(['ok' => true]);
+    }
 
     public function print(Sale $sale)
     {
@@ -739,6 +754,8 @@ class SalesController extends Controller
         return response()->json(['message' => 'PDF download would be implemented here']);
     }
 
+  
+   
 
     /**
      * Remove the specified sale

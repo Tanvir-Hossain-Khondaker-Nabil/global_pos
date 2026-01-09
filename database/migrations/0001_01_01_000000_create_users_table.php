@@ -22,6 +22,7 @@ return new class extends Migration {
             $table->timestamp('email_verified_at')->nullable();
             $table->unsignedBigInteger('parent_id')->nullable();
             $table->unsignedBigInteger('current_outlet_id')->nullable();
+            $table->enum('role', ['superadmin', 'admin', 'user', 'saller'])->default('user');
             $table->unsignedBigInteger('role_id')->default(3);
             $table->timestamp('outlet_logged_in_at')->nullable();
             $table->integer('total_deposit')->default(0);
