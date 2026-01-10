@@ -88,10 +88,6 @@ class User extends Authenticatable
 
     // roles relationship
 
-    public function role()
-    {
-        return $this->belongsTo(Role::class, 'role_id');
-    }
 
     // subscriptions relationship
     public function subscriptions()
