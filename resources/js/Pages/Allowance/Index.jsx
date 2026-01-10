@@ -1,7 +1,21 @@
 import { Head, useForm, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { 
+    Plus, 
+    X, 
+    Edit3, 
+    Trash2, 
+    AlertTriangle, 
+    CheckCircle2, 
+    Settings, 
+    Percent, 
+    DollarSign, 
+    UserCog,
+    RefreshCcw,
+    Zap
+} from 'lucide-react';
 
-export default function Allowance({ allowanceSettings, employees }) {
+export default function Allowance({ allowanceSettings, employees, locale }) {
     const [showForm, setShowForm] = useState(false);
     const [editingSetting, setEditingSetting] = useState(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -86,59 +100,62 @@ export default function Allowance({ allowanceSettings, employees }) {
     };
 
     return (
-        <>
-            <div className="flex justify-between items-center mb-6">
+        <div className={`p-6 bg-[#fcfcfc] min-h-screen ${locale === 'bn' ? 'bangla-font' : ''}`}>
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-gray-200 pb-6 bg-white p-6 rounded-2xl shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Allowance Management</h1>
-                    <p className="text-gray-600">Configure and manage employee allowance settings</p>
+                    <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Allowance <span className="text-red-600">Engine</span></h1>
+                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1">Global Compensation Logic & Parameters</p>
                 </div>
-                <div className="flex space-x-3">
+                <div className="flex flex-wrap gap-3">
                     <button
                         onClick={() => setShowResetConfirm(true)}
                         disabled={resetting}
-                        className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center"
+                        className="btn bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 border-none rounded-xl px-4 font-black uppercase text-[10px] tracking-widest transition-all"
                     >
-                        {resetting ? 'Resetting...' : 'Reset All to 0'}
+                        {resetting ? 'Resetting...' : 'System Reset'}
                     </button>
                     <button
                         onClick={handleApplySettings}
                         disabled={applying}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 flex items-center"
+                        className="btn bg-gray-900 hover:bg-red-600 text-white border-none rounded-xl px-4 font-black uppercase text-[10px] tracking-widest shadow-lg transition-all"
                     >
-                        {applying ? 'Applying...' : 'Apply to All Employees'}
+                        {applying ? 'Applying...' : 'Synchronize All'}
                     </button>
                     <button
                         onClick={() => { setEditingSetting(null); setShowForm(true); }}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center"
+                        className="btn bg-red-600 hover:bg-red-700 text-white border-none rounded-xl px-4 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-red-200 transition-all"
                     >
-                        <span className="mr-2">➕</span> Add Setting
+                        <Plus size={16} className="mr-1" /> New Parameter
                     </button>
                 </div>
             </div>
 
             {/* Reset Confirmation Modal */}
             {showResetConfirm && (
-                <div className="fixed inset-0  bg-[#0000003b] flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg w-full max-w-md">
-                        <div className="text-center">
-                            <div className="text-red-500 text-4xl mb-4">⚠️</div>
-                            <h2 className="text-xl font-bold mb-2">Reset All Allowances to 0</h2>
-                            <p className="text-gray-600 mb-4">
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white rounded-[2rem] border-4 border-gray-900 w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="p-8 text-center">
+                            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <AlertTriangle size={40} className="text-red-600" />
+                            </div>
+                            <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-2">Registry Wipe</h2>
+                            <p className="text-gray-500 font-bold text-sm mb-8 px-4">
                                 This action will set ALL employee allowances to 0. This is irreversible. 
                                 Are you sure you want to continue?
                             </p>
-                            <div className="flex justify-center space-x-3">
+                            <div className="flex gap-3">
                                 <button
                                     onClick={() => setShowResetConfirm(false)}
-                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                                    className="btn flex-1 bg-gray-100 text-gray-500 border-none rounded-xl font-black uppercase text-xs tracking-widest"
                                 >
-                                    Cancel
+                                    Abort
                                 </button>
                                 <button
                                     onClick={handleResetAllowances}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                                    className="btn flex-1 bg-red-600 hover:bg-red-700 text-white border-none rounded-xl font-black uppercase text-xs tracking-widest shadow-lg"
                                 >
-                                    Yes, Reset All
+                                    Confirm Reset
                                 </button>
                             </div>
                         </div>
@@ -146,27 +163,28 @@ export default function Allowance({ allowanceSettings, employees }) {
                 </div>
             )}
 
-            {/* Add/Edit Allowance Form */}
+            {/* Add/Edit Allowance Form Modal */}
             {showForm && (
-                <div className="fixed inset-0  bg-[#0000003b] flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg w-full max-w-md">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold">
-                                {editingSetting ? 'Edit Allowance Setting' : 'Add Allowance Setting'}
+                <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white rounded-[2rem] border-4 border-gray-900 w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-gray-900 p-6 flex justify-between items-center text-white border-b border-gray-800">
+                            <h2 className="font-black uppercase text-xs tracking-widest flex items-center gap-2">
+                                <Settings size={18} className="text-red-500" />
+                                {editingSetting ? 'Modify Allowance Logic' : 'Define New Allowance'}
                             </h2>
-                            <button onClick={() => { setShowForm(false); setEditingSetting(null); reset(); }} className="text-gray-500 hover:text-gray-700">
-                                ✕
+                            <button onClick={() => { setShowForm(false); setEditingSetting(null); reset(); }} className="hover:rotate-90 transition-transform">
+                                <X size={24}/>
                             </button>
                         </div>
                         
-                        <form onSubmit={submit}>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Allowance Type *</label>
+                        <form onSubmit={submit} className="p-8 space-y-6">
+                            <div className="space-y-5">
+                                <div className="form-control">
+                                    <label className="label text-[10px] font-black uppercase text-gray-400 tracking-widest">Allowance Class *</label>
                                     <select
                                         value={data.allowance_type}
                                         onChange={e => setData('allowance_type', e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
+                                        className="select select-bordered rounded-xl font-bold border-gray-300 focus:border-red-600 w-full"
                                         required
                                     >
                                         <option value="">Select Type</option>
@@ -175,91 +193,69 @@ export default function Allowance({ allowanceSettings, employees }) {
                                         <option value="transport_allowance">Transport Allowance</option>
                                         <option value="other_allowance">Other Allowance</option>
                                     </select>
-                                    {errors.allowance_type && <div className="text-red-600 text-sm">{errors.allowance_type}</div>}
+                                    {errors.allowance_type && <p className="text-red-600 text-[10px] mt-1 font-bold">{errors.allowance_type}</p>}
                                 </div>
 
-                                <div>
-                                    <label className="flex items-center">
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+                                    <label className="flex items-center cursor-pointer group">
                                         <input
                                             type="checkbox"
                                             checked={data.is_percentage}
                                             onChange={e => setData('is_percentage', e.target.checked)}
-                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            className="checkbox checkbox-error rounded-md"
                                         />
-                                        <span className="ml-2 text-sm text-gray-700">Calculate as percentage of basic salary</span>
+                                        <span className="ml-3 text-xs font-black uppercase text-gray-700 tracking-tight group-hover:text-red-600 transition-colors">Apply as Percentage of Basic Salary</span>
                                     </label>
                                 </div>
 
-                                {data.is_percentage ? (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Percentage (%) *</label>
+                                <div className="form-control">
+                                    <label className="label text-[10px] font-black uppercase text-gray-400 tracking-widest">
+                                        {data.is_percentage ? 'Percentage Rate (%)' : 'Fixed Valuation (BDT)'} *
+                                    </label>
+                                    <div className="relative">
+                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black">
+                                            {data.is_percentage ? <Percent size={16}/> : <DollarSign size={16}/>}
+                                        </div>
                                         <input
                                             type="number"
                                             step="0.01"
-                                            min="0"
-                                            max="100"
-                                            value={data.percentage}
-                                            onChange={e => setData('percentage', e.target.value)}
-                                            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                            required={data.is_percentage}
+                                            value={data.is_percentage ? data.percentage : data.fixed_amount}
+                                            onChange={e => setData(data.is_percentage ? 'percentage' : 'fixed_amount', e.target.value)}
+                                            className="input input-bordered w-full pl-12 rounded-xl font-mono font-black border-gray-300 focus:border-red-600"
+                                            required
                                         />
-                                        {errors.percentage && <div className="text-red-600 text-sm">{errors.percentage}</div>}
                                     </div>
-                                ) : (
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">Fixed Amount *</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            min="0"
-                                            value={data.fixed_amount}
-                                            onChange={e => setData('fixed_amount', e.target.value)}
-                                            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                            required={!data.is_percentage}
-                                        />
-                                        {errors.fixed_amount && <div className="text-red-600 text-sm">{errors.fixed_amount}</div>}
-                                    </div>
-                                )}
+                                    {errors[data.is_percentage ? 'percentage' : 'fixed_amount'] && (
+                                        <p className="text-red-600 text-[10px] mt-1 font-bold">{errors[data.is_percentage ? 'percentage' : 'fixed_amount']}</p>
+                                    )}
+                                </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Description</label>
+                                <div className="form-control">
+                                    <label className="label text-[10px] font-black uppercase text-gray-400 tracking-widest">Parameter Description</label>
                                     <textarea
                                         value={data.description}
                                         onChange={e => setData('description', e.target.value)}
-                                        rows="3"
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        placeholder="e.g., House rent allowance calculated at 50% of basic salary"
+                                        rows="2"
+                                        className="textarea textarea-bordered rounded-xl font-bold border-gray-300 focus:border-red-600"
+                                        placeholder="Note the logic behind this allowance..."
                                     />
-                                    {errors.description && <div className="text-red-600 text-sm">{errors.description}</div>}
                                 </div>
 
-                                <div>
-                                    <label className="flex items-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={data.is_active}
-                                            onChange={e => setData('is_active', e.target.checked)}
-                                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                                        />
-                                        <span className="ml-2 text-sm text-gray-700">Active</span>
-                                    </label>
+                                <div className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={data.is_active}
+                                        onChange={e => setData('is_active', e.target.checked)}
+                                        className="toggle toggle-error rounded-full"
+                                    />
+                                    <span className="ml-3 text-xs font-black uppercase text-gray-700 tracking-widest">Active State</span>
                                 </div>
                             </div>
 
-                            <div className="mt-6 flex justify-end space-x-3">
-                                <button
-                                    type="button"
-                                    onClick={() => { setShowForm(false); setEditingSetting(null); reset(); }}
-                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                    {processing ? 'Saving...' : (editingSetting ? 'Update Setting' : 'Create Setting')}
+                            <div className="mt-8 flex justify-end gap-3 border-t border-gray-100 pt-6">
+                                <button type="button" onClick={() => { setShowForm(false); setEditingSetting(null); reset(); }} className="btn btn-ghost font-black uppercase text-xs tracking-widest">Abort</button>
+                                <button type="submit" disabled={processing} className="btn bg-gray-900 hover:bg-red-600 text-white border-none rounded-xl px-10 font-black uppercase text-xs tracking-widest shadow-lg">
+                                    {processing ? 'Processing...' : (editingSetting ? 'Update Parameter' : 'Initialize Parameter')}
                                 </button>
                             </div>
                         </form>
@@ -267,157 +263,104 @@ export default function Allowance({ allowanceSettings, employees }) {
                 </div>
             )}
 
-            {/* Allowance Settings Table */}
-            <div className="bg-white shadow rounded-lg mb-6">
-                <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-medium text-gray-900">Allowance Settings</h2>
-                    <p className="text-sm text-gray-500">
-                        {allowanceSettings.length} active settings
-                    </p>
+            {/* Allowance Rules Registry */}
+            <div className="bg-white rounded-3xl border-2 border-gray-900 overflow-hidden shadow-2xl mb-10">
+                <div className="bg-gray-900 px-8 py-5 flex justify-between items-center text-white border-b border-gray-800">
+                    <h2 className="font-black uppercase tracking-widest text-xs flex items-center gap-2">
+                        <Zap size={16} className="text-red-500"/> Logic Registry
+                    </h2>
+                    <span className="text-[10px] font-black uppercase text-gray-400">{allowanceSettings.length} Parameters Operational</span>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <table className="table w-full border-separate border-spacing-0">
+                        <thead className="bg-gray-50 text-[10px] font-black uppercase text-gray-400 tracking-widest">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Calculation</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                <th className="py-4 pl-8 border-b">Allowance Type</th>
+                                <th className="border-b">Calculation Mode</th>
+                                <th className="border-b">Standard Value</th>
+                                <th className="border-b">Registry Description</th>
+                                <th className="border-b">Status</th>
+                                <th className="border-b text-right pr-8">Commands</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="font-bold text-sm text-gray-700 italic-last-child">
                             {allowanceSettings.length > 0 ? (
                                 allowanceSettings.map((setting) => (
-                                    <tr key={setting.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900 capitalize">
-                                                {setting.allowance_type.replace(/_/g, ' ')}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {setting.is_percentage ? 'Percentage' : 'Fixed Amount'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {setting.is_percentage 
-                                                ? `${setting.percentage}%` 
-                                                : `৳${setting.fixed_amount?.toLocaleString() || 0}`
-                                            }
-                                        </td>
-                                        <td className="px-6 py-4 text-sm text-gray-900">
-                                            {setting.description || '-'}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 text-xs rounded-full ${
-                                                setting.is_active 
-                                                    ? 'bg-green-100 text-green-800' 
-                                                    : 'bg-red-100 text-red-800'
-                                            }`}>
-                                                {setting.is_active ? 'Active' : 'Inactive'}
+                                    <tr key={setting.id} className="hover:bg-red-50/30 transition-colors border-b last:border-0">
+                                        <td className="pl-8 py-4 uppercase font-black text-gray-900 tracking-tight">{setting.allowance_type.replace(/_/g, ' ')}</td>
+                                        <td>
+                                            <span className={`badge border-none font-black text-[9px] uppercase px-3 py-2 ${setting.is_percentage ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                                                {setting.is_percentage ? 'Relative %' : 'Static Fixed'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                                            <button
-                                                onClick={() => handleEdit(setting)}
-                                                className="text-blue-600 hover:text-blue-900"
-                                            >
-                                                Edit
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(setting)}
-                                                className="text-red-600 hover:text-red-900"
-                                            >
-                                                Delete
-                                            </button>
+                                        <td className="font-mono text-gray-900 font-black">
+                                            {setting.is_percentage ? `${setting.percentage}%` : `৳${setting.fixed_amount?.toLocaleString()}`}
+                                        </td>
+                                        <td className="text-xs text-gray-400 max-w-xs truncate">{setting.description || '-'}</td>
+                                        <td>
+                                            <span className={`badge border-none font-black text-[9px] uppercase px-3 py-2 ${setting.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                                {setting.is_active ? 'Active' : 'Halted'}
+                                            </span>
+                                        </td>
+                                        <td className="pr-8 text-right flex justify-end gap-1">
+                                            <button onClick={() => handleEdit(setting)} className="btn btn-ghost btn-square btn-xs hover:bg-gray-900 hover:text-white"><Edit3 size={14}/></button>
+                                            <button onClick={() => handleDelete(setting)} className="btn btn-ghost btn-square btn-xs hover:bg-red-600 hover:text-white text-red-400"><Trash2 size={14}/></button>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
-                                <tr>
-                                    <td colSpan="6" className="px-6 py-8 text-center">
-                                        <div className="text-gray-400 text-4xl mb-4">💰</div>
-                                        <h3 className="text-lg font-medium text-gray-900 mb-2">No allowance settings found</h3>
-                                        <p className="text-gray-500 mb-4">Create your first allowance setting to get started</p>
-                                        <button
-                                            onClick={() => setShowForm(true)}
-                                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                                        >
-                                            Create Allowance Setting
-                                        </button>
-                                    </td>
-                                </tr>
+                                <tr><td colSpan="6" className="py-20 text-center text-gray-400 font-black uppercase text-xs tracking-widest opacity-30">No Parameters Defined</td></tr>
                             )}
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            {/* Employees Table */}
-            <div className="bg-white shadow rounded-lg">
-                <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-medium text-gray-900">Employee Allowances</h2>
-                    <p className="text-sm text-gray-500">
-                        Current allowance values for employees (should be 0 if using settings)
-                    </p>
+            {/* Individual Payroll Matrix */}
+            <div className="bg-white rounded-3xl border border-gray-200 overflow-hidden shadow-sm">
+                <div className="bg-gray-50 px-8 py-5 border-b border-gray-200">
+                    <h2 className="font-black uppercase tracking-widest text-xs text-gray-900">Personnel Compensation Matrix</h2>
                 </div>
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <table className="table w-full border-separate border-spacing-0">
+                        <thead className="text-[10px] font-black uppercase tracking-tighter text-gray-400 bg-white">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Basic Salary</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">House Rent</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Medical</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Transport</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Other</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                <th className="py-4 pl-8 border-b">Personnel</th>
+                                <th className="border-b">Basic Base</th>
+                                <th className="border-b">House Rent</th>
+                                <th className="border-b">Medical</th>
+                                <th className="border-b">Transport</th>
+                                <th className="border-b">Other</th>
+                                <th className="border-b text-right pr-8">Audit</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="font-bold text-sm">
                             {employees.map((employee) => (
-                                <tr key={employee.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <div className="text-sm font-medium text-gray-900">{employee.name}</div>
-                                        <div className="text-sm text-gray-500">{employee.employee_id}</div>
+                                <tr key={employee.id} className="hover:bg-gray-50 transition-colors border-b last:border-0">
+                                    <td className="pl-8 py-4">
+                                        <div className="flex flex-col leading-tight">
+                                            <span className="font-black text-gray-900 uppercase tracking-tight">{employee.name}</span>
+                                            <span className="text-[10px] font-mono text-red-600 font-bold uppercase tracking-tighter">ID: {employee.employee_id}</span>
+                                        </div>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        ৳{employee.basic_salary?.toLocaleString() || 0}
+                                    <td className="font-mono text-xs text-gray-900">৳{employee.basic_salary?.toLocaleString()}</td>
+                                    <td className="font-mono text-xs">
+                                        <span className={employee.house_rent > 0 ? 'text-red-600 font-black' : 'text-green-600'}>৳{employee.house_rent?.toLocaleString()}</span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <span className={employee.house_rent > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
-                                            ৳{employee.house_rent?.toLocaleString() || 0}
-                                        </span>
+                                    <td className="font-mono text-xs">
+                                        <span className={employee.medical_allowance > 0 ? 'text-red-600 font-black' : 'text-green-600'}>৳{employee.medical_allowance?.toLocaleString()}</span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <span className={employee.medical_allowance > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
-                                            ৳{employee.medical_allowance?.toLocaleString() || 0}
-                                        </span>
+                                    <td className="font-mono text-xs">
+                                        <span className={employee.transport_allowance > 0 ? 'text-red-600 font-black' : 'text-green-600'}>৳{employee.transport_allowance?.toLocaleString()}</span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <span className={employee.transport_allowance > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
-                                            ৳{employee.transport_allowance?.toLocaleString() || 0}
-                                        </span>
+                                    <td className="font-mono text-xs">
+                                        <span className={employee.other_allowance > 0 ? 'text-red-600 font-black' : 'text-green-600'}>৳{employee.other_allowance?.toLocaleString()}</span>
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        <span className={employee.other_allowance > 0 ? 'text-red-600 font-medium' : 'text-green-600'}>
-                                            ৳{employee.other_allowance?.toLocaleString() || 0}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <button
-                                            onClick={() => handleDebugAllowance(employee.id)}
-                                            className="text-blue-600 hover:text-blue-900 mr-3"
-                                            title="Debug allowance calculation"
-                                        >
-                                            Debug
-                                        </button>
-                                        <Link
-                                            href={route('employees.edit', employee.id)}
-                                            className="text-green-600 hover:text-green-900"
-                                        >
-                                            Edit
-                                        </Link>
+                                    <td className="pr-8 text-right">
+                                        <div className="flex justify-end gap-2">
+                                            <button onClick={() => handleDebugAllowance(employee.id)} className="btn btn-xs bg-gray-900 text-white rounded-lg font-black uppercase text-[8px] tracking-widest px-3 border-none hover:bg-red-600 transition-colors">Debug</button>
+                                            <Link href={route('employees.edit', employee.id)} className="btn btn-xs btn-ghost text-red-600 font-black uppercase text-[8px] tracking-widest px-3 border border-red-100 hover:bg-red-50">Edit</Link>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -425,6 +368,7 @@ export default function Allowance({ allowanceSettings, employees }) {
                     </table>
                 </div>
             </div>
-        </>
+            
+        </div>
     );
 }

@@ -160,7 +160,6 @@ class EmployeeController extends Controller
 
         $newRank = Rank::find($request->new_rank_id);
 
-        // নতুন স্যালারি = পুরানো স্যালারি + (পুরানো স্যালারি × ইনক্রিমেন্ট %)
         $newSalary = $employee->current_salary +
             ($employee->current_salary * $newRank->salary_increment_percentage / 100);
 

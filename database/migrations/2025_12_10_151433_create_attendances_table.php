@@ -17,8 +17,8 @@ return new class extends Migration
             $table->date('date');
             $table->time('check_in')->nullable();
             $table->time('check_out')->nullable();
-            $table->decimal('late_hours', 5, 2)->default(0); // ✅ হাউজে
-            $table->decimal('overtime_hours', 5, 2)->default(0); // ✅ হাউজে
+            $table->decimal('late_hours', 5, 2)->default(0); 
+            $table->decimal('overtime_hours', 5, 2)->default(0); 
             $table->enum('status', ['present', 'absent', 'late', 'half_day'])->default('present');
             $table->text('notes')->nullable();
              $table->unsignedBigInteger('created_by');
