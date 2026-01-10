@@ -1,22 +1,36 @@
+import { Head, Link } from '@inertiajs/react';
+import { 
+    Printer, 
+    ArrowLeft, 
+    User, 
+    Briefcase, 
+    Building2, 
+    Calendar, 
+    DollarSign, 
+    CreditCard, 
+    ShieldCheck, 
+    CheckCircle2,
+    Clock,
+    Wallet
+} from 'lucide-react';
 
-import { Head } from '@inertiajs/react';
-
-export default function Payslip({ salary }) {
-    // যদি salary null হয়
+export default function Payslip({ salary, business }) {
+    // যদি salary null হয়
     if (!salary) {
         return (
-            <>
-                <div className="bg-white p-8 rounded-lg shadow max-w-4xl mx-auto text-center">
-                    <h1 className="text-2xl font-bold text-red-600 mb-4">Payslip Not Found</h1>
-                    <p className="text-gray-600">The requested payslip does not exist or has been deleted.</p>
-                    <a 
-                        href="/salary" 
-                        className="inline-block mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                    >
-                        Back to Salary List
-                    </a>
+            <div className="bg-white p-8 rounded-2xl border-2 border-gray-900 shadow-2xl max-w-4xl mx-auto text-center mt-10">
+                <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <XCircle className="text-red-600" size={32} />
                 </div>
-            </>
+                <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight mb-2">Payslip Not Found</h1>
+                <p className="text-gray-500 font-bold uppercase text-xs tracking-widest mb-6">The requested registry entry does not exist.</p>
+                <Link 
+                    href="/salary" 
+                    className="btn bg-gray-900 text-white border-none rounded-xl px-8 font-black uppercase text-xs tracking-widest"
+                >
+                    Back to Salary List
+                </Link>
+            </div>
         );
     }
 
@@ -25,12 +39,10 @@ export default function Payslip({ salary }) {
     // যদি employee relation না থাকে
     if (!employee) {
         return (
-            <>
-                <div className="bg-white p-8 rounded-lg shadow max-w-4xl mx-auto text-center">
-                    <h1 className="text-2xl font-bold text-red-600 mb-4">Employee Data Missing</h1>
-                    <p className="text-gray-600">Employee information for this payslip is not available.</p>
-                </div>
-            </>
+            <div className="bg-white p-8 rounded-2xl border-2 border-gray-900 shadow-2xl max-w-4xl mx-auto text-center mt-10">
+                <h1 className="text-2xl font-black text-red-600 uppercase tracking-tight mb-4">Employee Data Missing</h1>
+                <p className="text-gray-500 font-bold uppercase text-xs tracking-widest">Incomplete registry record detected.</p>
+            </div>
         );
     }
 
@@ -65,7 +77,6 @@ export default function Payslip({ salary }) {
         { label: 'Total Deductions', amount: salary.total_deductions || 0 },
     ];
 
-    // টাকার ফরম্যাট করার ফাংশন
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('en-BD', {
             style: 'currency',
@@ -78,202 +89,231 @@ export default function Payslip({ salary }) {
         window.print();
     };
 
-    // মোট বোনাস আছে কিনা চেক
     const hasBonus = salary.total_bonus > 0;
-    // মোট অন্যান্য আয় আছে কিনা চেক
     const hasOtherEarnings = salary.commission > 0 || salary.overtime_amount > 0;
 
     return (
         <>
-            <div className="bg-white p-8 rounded-lg shadow max-w-4xl mx-auto">
-                {/* Print Button */}
-                <div className="text-right mb-6 no-print">
-                    <button
-                        onClick={printPayslip}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
-                    >
-                        Print Payslip
-                    </button>
-                </div>
-
-                {/* Company Header */}
-                <div className="text-center mb-8 border-b pb-6">
-                    <h1 className="text-3xl font-bold text-gray-900">ABC Company Ltd.</h1>
-                    <p className="text-gray-600">Salary Payslip</p>
-                </div>
-
-                {/* Employee & Salary Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <h3 className="text-lg font-semibold mb-3">Employee Information</h3>
-                        <div className="space-y-2">
-                            <p><strong>Name:</strong> {employee.name}</p>
-                            <p><strong>Employee ID:</strong> {employee.employee_id}</p>
-                            <p><strong>Designation:</strong> {employee.rank?.name || 'N/A'}</p>
-                            <p><strong>Department:</strong> {employee.department || 'IT Department'}</p>
-                        </div>
+            <Head title={`Payslip - ${employee.name}`} />
+            
+            <div className="bg-[#fcfcfc] min-h-screen p-4 md:p-10">
+                <div className="bg-white rounded-3xl border-2 border-gray-900 shadow-2xl max-w-4xl mx-auto overflow-hidden">
+                    
+                    {/* Industrial Header Toolbar */}
+                    <div className="bg-gray-900 p-6 flex flex-col md:flex-row justify-between items-center gap-4 no-print border-b-4 border-red-600">
+                        <Link href="/salary" className="text-white hover:text-red-500 flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-colors">
+                            <ArrowLeft size={16}/> Back to Archive
+                        </Link>
+                        <button
+                            onClick={printPayslip}
+                            className="btn bg-red-600 hover:bg-red-700 text-white border-none rounded-xl px-8 font-black uppercase text-xs tracking-widest shadow-lg transition-all"
+                        >
+                            <Printer size={16} className="mr-2" /> Print Payslip
+                        </button>
                     </div>
-                    <div>
-                        <h3 className="text-lg font-semibold mb-3">Salary Information</h3>
-                        <div className="space-y-2">
-                            <p><strong>Pay Period:</strong> {salary.month}/{salary.year}</p>
-                            <p><strong>Payment Date:</strong> {salary.payment_date ? new Date(salary.payment_date).toLocaleDateString() : 'Not Paid'}</p>
-                            <p><strong>Status:</strong> 
-                                <span className={`ml-2 px-2 py-1 text-xs rounded-full ${
-                                    salary.status === 'paid' ? 'bg-green-100 text-green-800' :
-                                    salary.status === 'approved' ? 'bg-blue-100 text-blue-800' :
-                                    'bg-yellow-100 text-yellow-800'
-                                }`}>
-                                    {salary.status?.toUpperCase() || 'UNKNOWN'}
-                                </span>
+
+                    <div className="p-8 md:p-12">
+                        {/* Company Branding */}
+                        <div className="flex flex-col items-center text-center mb-10 pb-10 border-b border-gray-100">
+                            <div className="w-20 h-20 bg-gray-900 rounded-2xl flex items-center justify-center mb-4 shadow-xl border-b-4 border-red-600">
+                                <span className="text-white font-black text-2xl">MC</span>
+                            </div>
+                            <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">Motorcycle Enterprise Ltd.</h1>
+                            <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.3em] mt-1 italic">Industrial Human Resources Division</p>
+                        </div>
+
+                        {/* Employee & Salary Info Grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-12">
+                            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-red-600 mb-4 flex items-center gap-2">
+                                    <User size={14}/> Personnel Identity
+                                </h3>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between border-b border-gray-200 pb-2">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px]">Name</span>
+                                        <span className="font-black text-gray-900 uppercase">{employee.name}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-gray-200 pb-2">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px]">Staff ID</span>
+                                        <span className="font-mono font-black text-gray-900">{employee.employee_id}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-gray-200 pb-2">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px]">Rank</span>
+                                        <span className="font-bold text-gray-700">{employee.rank?.name || 'N/A'}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px]">Unit</span>
+                                        <span className="font-bold text-gray-700">{employee.department || 'Operations'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-red-600 mb-4 flex items-center gap-2">
+                                    <Calendar size={14}/> Statement cycle
+                                </h3>
+                                <div className="space-y-3 text-sm">
+                                    <div className="flex justify-between border-b border-gray-200 pb-2">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px]">Pay Period</span>
+                                        <span className="font-black text-gray-900">{salary.month}/{salary.year}</span>
+                                    </div>
+                                    <div className="flex justify-between border-b border-gray-200 pb-2">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px]">Payment Date</span>
+                                        <span className="font-bold text-gray-700">{salary.payment_date ? new Date(salary.payment_date).toLocaleDateString() : 'PENDING'}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-400 font-bold uppercase text-[10px]">Registry Status</span>
+                                        <span className={`px-3 py-0.5 rounded-lg text-[10px] font-black uppercase ${
+                                            salary.status === 'paid' ? 'bg-green-100 text-green-700' :
+                                            salary.status === 'approved' ? 'bg-blue-100 text-blue-700' :
+                                            'bg-amber-100 text-amber-700'
+                                        }`}>
+                                            {salary.status || 'UNPAID'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Breakdown Tables */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-12">
+                            {/* Left Side: Earnings & Bonuses */}
+                            <div className="space-y-8">
+                                <div>
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-gray-900 mb-4 border-l-4 border-gray-900 pl-3">Standard Earnings</h3>
+                                    <div className="space-y-3">
+                                        {earnings.map((item, index) => (
+                                            (item.amount > 0 || item.label.includes('Total')) && (
+                                                <div key={index} className={`flex justify-between text-sm ${item.label.includes('Total') ? 'pt-2 border-t-2 border-gray-900 mt-2' : ''}`}>
+                                                    <span className={`${item.label.includes('Total') ? 'font-black uppercase' : 'text-gray-500 font-bold'}`}>{item.label}</span>
+                                                    <span className={`font-mono ${item.label.includes('Total') ? 'font-black text-gray-900' : 'text-gray-700'}`}>{formatCurrency(item.amount)}</span>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {hasBonus && (
+                                    <div>
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-green-700 mb-4 border-l-4 border-green-600 pl-3">Incentive Bonuses</h3>
+                                        <div className="space-y-3">
+                                            {bonuses.map((item, index) => (
+                                                (item.amount > 0 || item.label.includes('Total')) && (
+                                                    <div key={index} className={`flex justify-between text-sm ${item.label.includes('Total') ? 'pt-2 border-t-2 border-green-600 mt-2' : ''}`}>
+                                                        <span className={`${item.label.includes('Total') ? 'font-black uppercase text-green-700' : 'text-gray-500 font-bold'}`}>{item.label}</span>
+                                                        <span className="font-mono font-bold text-gray-700">{formatCurrency(item.amount)}</span>
+                                                    </div>
+                                                )
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Right Side: Deductions & Others */}
+                            <div className="space-y-8">
+                                <div>
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-red-600 mb-4 border-l-4 border-red-600 pl-3">Registry Deductions</h3>
+                                    <div className="space-y-3">
+                                        {deductions.map((item, index) => (
+                                            (item.amount > 0 || item.label.includes('Total')) && (
+                                                <div key={index} className={`flex justify-between text-sm ${item.label.includes('Total') ? 'pt-2 border-t-2 border-red-600 mt-2' : ''}`}>
+                                                    <span className={`${item.label.includes('Total') ? 'font-black uppercase text-red-600' : 'text-gray-500 font-bold'}`}>{item.label}</span>
+                                                    <span className="font-mono font-bold text-gray-700">{formatCurrency(item.amount)}</span>
+                                                </div>
+                                            )
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {hasOtherEarnings && (
+                                    <div>
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-blue-700 mb-4 border-l-4 border-blue-600 pl-3">Additional Earnings</h3>
+                                        <div className="space-y-3 text-sm">
+                                            {otherEarnings.map((item, index) => (
+                                                item.amount > 0 && (
+                                                    <div key={index} className="flex justify-between">
+                                                        <span className="text-gray-500 font-bold">{item.label}</span>
+                                                        <span className="font-mono font-bold text-gray-700">{formatCurrency(item.amount)}</span>
+                                                    </div>
+                                                )
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Final Net Payout Section */}
+                        <div className="bg-gray-900 rounded-[2rem] p-10 text-white shadow-2xl relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:scale-110 transition-transform duration-700">
+                                <DollarSign size={150}/>
+                            </div>
+                            
+                            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 items-center gap-8">
+                                <div>
+                                    <p className="text-[10px] font-black text-red-500 uppercase tracking-[0.4em] mb-2">Net Disbursement</p>
+                                    <p className="text-5xl font-black font-mono tracking-tighter">
+                                        {formatCurrency(salary.net_salary || 0)}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-6">
+                                        <CheckCircle2 size={16} className="text-green-400"/>
+                                        <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">
+                                            Amount in Words: {convertToWords(salary.net_salary || 0)} Taka Only
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 bg-white/5 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
+                                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-gray-400">
+                                        <span>Gross Volume</span>
+                                        <span className="text-white">{formatCurrency(salary.gross_salary || 0)}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-red-400">
+                                        <span>System Deductions</span>
+                                        <span className="text-red-400">-{formatCurrency(salary.total_deductions || 0)}</span>
+                                    </div>
+                                    <div className="h-px bg-white/20"></div>
+                                    <div className="flex items-center gap-2 text-xs font-black uppercase text-green-400">
+                                        <ShieldCheck size={14}/> Verified Ledger Entry
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Details */}
+                        <div className="mt-12 text-center">
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                                Official Document • Motorcycle Enterprise Terminal System
                             </p>
+                            <p className="text-[9px] text-gray-300 mt-2 italic">
+                                This is a cryptographically verifiable computer-generated payslip and does not require a manual signature.
+                            </p>
+                            <p className="text-[9px] font-mono text-gray-300 mt-1">Generated: {new Date().toLocaleString()}</p>
                         </div>
                     </div>
-                </div>
-
-                {/* Earnings, Bonuses & Deductions */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    {/* Earnings */}
-                    <div>
-                        <h3 className="text-lg font-semibold mb-3 border-b pb-2">Earnings</h3>
-                        <div className="space-y-2">
-                            {earnings.map((item, index) => (
-                                (item.amount > 0 || item.label.includes('Total')) && (
-                                    <div key={index} className="flex justify-between">
-                                        <span className={item.label.includes('Total') ? 'font-semibold' : ''}>
-                                            {item.label}:
-                                        </span>
-                                        <span className={item.label.includes('Total') ? 'font-semibold' : ''}>
-                                            {formatCurrency(item.amount)}
-                                        </span>
-                                    </div>
-                                )
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Bonuses */}
-                    {hasBonus && (
-                        <div>
-                            <h3 className="text-lg font-semibold mb-3 border-b pb-2">Bonuses</h3>
-                            <div className="space-y-2">
-                                {bonuses.map((item, index) => (
-                                    (item.amount > 0 || item.label.includes('Total')) && (
-                                        <div key={index} className="flex justify-between">
-                                            <span className={item.label.includes('Total') ? 'font-semibold' : ''}>
-                                                {item.label}:
-                                            </span>
-                                            <span className={item.label.includes('Total') ? 'font-semibold' : ''}>
-                                                {formatCurrency(item.amount)}
-                                            </span>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Other Earnings */}
-                    {hasOtherEarnings && (
-                        <div>
-                            <h3 className="text-lg font-semibold mb-3 border-b pb-2">Other Earnings</h3>
-                            <div className="space-y-2">
-                                {otherEarnings.map((item, index) => (
-                                    item.amount > 0 && (
-                                        <div key={index} className="flex justify-between">
-                                            <span>{item.label}:</span>
-                                            <span>{formatCurrency(item.amount)}</span>
-                                        </div>
-                                    )
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Deductions */}
-                    <div className={hasBonus || hasOtherEarnings ? 'md:col-span-3' : 'md:col-span-2'}>
-                        <h3 className="text-lg font-semibold mb-3 border-b pb-2">Deductions</h3>
-                        <div className="space-y-2">
-                            {deductions.map((item, index) => (
-                                (item.amount > 0 || item.label.includes('Total')) && (
-                                    <div key={index} className="flex justify-between">
-                                        <span className={item.label.includes('Total') ? 'font-semibold' : ''}>
-                                            {item.label}:
-                                        </span>
-                                        <span className={item.label.includes('Total') ? 'font-semibold' : ''}>
-                                            {formatCurrency(item.amount)}
-                                        </span>
-                                    </div>
-                                )
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Summary Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div className="bg-blue-50 p-4 rounded-lg">
-                        <h3 className="text-lg font-semibold mb-3 text-blue-900">Salary Summary</h3>
-                        <div className="space-y-2">
-                            <div className="flex justify-between">
-                                <span>Gross Salary:</span>
-                                <span className="font-semibold">{formatCurrency(salary.gross_salary || 0)}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span>Total Deductions:</span>
-                                <span className="font-semibold text-red-600">{formatCurrency(salary.total_deductions || 0)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Net Salary */}
-                    <div className="bg-green-50 p-4 rounded-lg text-center">
-                        <h3 className="text-xl font-bold text-green-900">Net Salary</h3>
-                        <p className="text-3xl font-bold text-green-600 mt-2">
-                            {formatCurrency(salary.net_salary || 0)}
-                        </p>
-                        <p className="text-sm text-green-700 mt-2">
-                            Amount in Words: {convertToWords(salary.net_salary || 0)} Taka Only
-                        </p>
-                    </div>
-                </div>
-
-                {/* Footer */}
-                <div className="mt-8 text-center text-gray-600 text-sm">
-                    <p>This is a computer-generated payslip and does not require a signature.</p>
-                    <p>Generated on: {new Date().toLocaleDateString()}</p>
                 </div>
             </div>
 
             <style>{`
                 @media print {
-                    .no-print {
-                        display: none !important;
-                    }
-                    body {
-                        background: white !important;
-                        font-size: 12px !important;
-                    }
-                    .bg-white {
-                        background: white !important;
-                        box-shadow: none !important;
-                        margin: 0 !important;
-                        padding: 20px !important;
-                    }
-                    .max-w-4xl {
-                        max-width: 100% !important;
-                    }
-                    .bg-blue-50, .bg-green-50 {
-                        background: #f0f8ff !important;
-                        -webkit-print-color-adjust: exact;
-                    }
+                    .no-print { display: none !important; }
+                    body { background: white !important; font-size: 11px !important; }
+                    .bg-[#fcfcfc] { background: white !important; padding: 0 !important; }
+                    .rounded-3xl, .rounded-[2rem] { border-radius: 0 !important; border: 1px solid #000 !important; }
+                    .shadow-2xl, .shadow-xl, .shadow-md { box-shadow: none !important; }
+                    .bg-gray-900 { background: #000 !important; color: white !important; -webkit-print-color-adjust: exact; }
+                    .text-white { color: white !important; }
+                    .bg-red-600 { background: #000 !important; border: 1px solid #000 !important; }
+                    .text-red-600, .text-red-500, .text-red-400 { color: #000 !important; font-weight: bold !important; }
+                    .bg-gray-50 { background: transparent !important; border: 1px solid #eee !important; }
                 }
             `}</style>
         </>
     );
 }
 
-// টাকা কথায় কনভার্ট করার ফাংশন (ঐচ্ছিক)
+// টাকা কথায় কনভার্ট করার ফাংশন
 function convertToWords(amount) {
     if (amount === 0) return 'Zero';
     
@@ -281,7 +321,6 @@ function convertToWords(amount) {
     const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
     const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
     
-    // শুধু মৌলিক সংখ্যার জন্য (পূর্ণ সংখ্যা)
     const num = Math.floor(amount);
     
     if (num < 10) return ones[num];

@@ -1,5 +1,17 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import { useState } from 'react';
+import { 
+    Gift, 
+    Moon, 
+    PartyPopper, 
+    Plus, 
+    Settings2, 
+    Trash2, 
+    ChevronRight, 
+    Calendar,
+    BadgePercent,
+    Zap
+} from 'lucide-react';
 
 // কম্পোনেন্ট ইম্পোর্ট করুন
 import BonusFormModal from '@/Components/BonusFormModal';
@@ -31,168 +43,166 @@ export default function Bonus({ bonusSettings }) {
         });
     };
 
+    const formatCurrency = (amount) => {
+        return new Intl.NumberFormat('en-BD', {
+            style: 'currency',
+            currency: 'BDT',
+            minimumFractionDigits: 2
+        }).format(amount || 0);
+    };
+
     return (
-        <>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Bonus Management</h1>
-                <div className="flex space-x-3">
+        <div className="p-6 bg-[#fcfcfc] min-h-screen">
+            <Head title="Bonus Management" />
+
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-gray-200 pb-6 bg-white p-6 rounded-2xl shadow-sm">
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Bonus <span className="text-red-600">Incentives</span></h1>
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Configure & Execute Employee Rewards</p>
+                </div>
+                <div className="flex flex-wrap gap-3">
                     <button
                         onClick={() => setShowEidForm(true)}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
+                        className="btn bg-gray-900 hover:bg-green-600 text-white border-none rounded-xl px-6 font-black uppercase text-[10px] tracking-widest shadow-lg transition-all"
                     >
-                        Apply Eid Bonus
+                        <Moon size={16} className="mr-2" /> Apply Eid Bonus
                     </button>
                     <button
                         onClick={() => setShowFestivalForm(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                        className="btn bg-gray-900 hover:bg-blue-600 text-white border-none rounded-xl px-6 font-black uppercase text-[10px] tracking-widest shadow-lg transition-all"
                     >
-                        Apply Festival Bonus
+                        <PartyPopper size={16} className="mr-2" /> Festival Bonus
                     </button>
                     <button
                         onClick={() => setShowForm(true)}
-                        className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
+                        className="btn bg-red-600 hover:bg-red-700 text-white border-none rounded-xl px-6 font-black uppercase text-[10px] tracking-widest shadow-lg shadow-red-100 transition-all"
                     >
-                        Add Bonus Setting
+                        <Plus size={18} className="mr-1" /> New Setting
                     </button>
+                </div>
+            </div>
+
+            {/* Quick Action Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div className="group bg-white rounded-3xl border-2 border-transparent hover:border-green-500 p-6 shadow-sm transition-all duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="bg-green-50 p-4 rounded-2xl text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors">
+                            <Moon size={24} />
+                        </div>
+                        <ChevronRight className="text-gray-300 group-hover:text-green-500 transition-colors" />
+                    </div>
+                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Religious Festivals</h3>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1 mb-6">Standard Eid-ul-Fitr/Adha payouts</p>
+                    <button onClick={() => setShowEidForm(true)} className="text-[10px] font-black uppercase text-green-600 hover:text-green-800 tracking-[0.2em]">Initialize Batch →</button>
+                </div>
+
+                <div className="group bg-white rounded-3xl border-2 border-transparent hover:border-blue-500 p-6 shadow-sm transition-all duration-300">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="bg-blue-50 p-4 rounded-2xl text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            <PartyPopper size={24} />
+                        </div>
+                        <ChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors" />
+                    </div>
+                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Occasional Events</h3>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1 mb-6">New Year or Seasonal incentives</p>
+                    <button onClick={() => setShowFestivalForm(true)} className="text-[10px] font-black uppercase text-blue-600 hover:text-blue-800 tracking-[0.2em]">Open Console →</button>
+                </div>
+
+                <div className="group bg-white rounded-3xl border-2 border-gray-900 p-6 shadow-lg transition-all duration-300 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-4 opacity-5"><Zap size={80}/></div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="bg-gray-900 p-4 rounded-2xl text-red-500">
+                            <Settings2 size={24} />
+                        </div>
+                    </div>
+                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Custom logic</h3>
+                    <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mt-1 mb-6">Define unique rewarding parameters</p>
+                    <button onClick={() => setShowForm(true)} className="text-[10px] font-black uppercase text-red-600 hover:text-red-800 tracking-[0.2em]">Add Parameter →</button>
                 </div>
             </div>
 
             {/* Bonus Settings Table */}
-            <div className="bg-white shadow rounded-lg mb-6">
-                <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-medium text-gray-900">Bonus Settings</h2>
+            <div className="bg-white rounded-3xl border-2 border-gray-900 overflow-hidden shadow-2xl">
+                <div className="bg-gray-900 px-8 py-5 flex justify-between items-center border-b border-gray-800">
+                    <h2 className="text-white text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                        <Gift size={16} className="text-red-500"/> Reward Registry Configuration
+                    </h2>
                 </div>
+                
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
+                    <table className="table w-full border-separate border-spacing-0">
+                        <thead className="bg-gray-50 text-[10px] font-black uppercase text-gray-400 tracking-widest">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Calculation</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective Date</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                                <th className="py-4 pl-8 border-b">Bonus Designation</th>
+                                <th className="border-b">Category</th>
+                                <th className="border-b">Method</th>
+                                <th className="border-b">Standard Value</th>
+                                <th className="border-b">Effective Date</th>
+                                <th className="border-b">Status</th>
+                                <th className="border-b text-right pr-8">Command</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {bonusSettings.map((setting) => (
-                                <tr key={setting.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {setting.bonus_name}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                                        {setting.bonus_type}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {setting.is_percentage ? 'Percentage' : 'Fixed Amount'}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {setting.is_percentage ? `${setting.percentage}%` : `৳${setting.fixed_amount}`}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {new Date(setting.effective_date).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 py-1 text-xs rounded-full ${
-                                            setting.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                        }`}>
-                                            {setting.is_active ? 'Active' : 'Inactive'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                        <Link
-                                            href={route('bonus.apply', { bonus: setting.id })}
-                                            className="text-blue-600 hover:text-blue-900 mr-3"
-                                        >
-                                            Apply
-                                        </Link>
-                                        <button className="text-red-600 hover:text-red-900">
-                                            Delete
-                                        </button>
+                        <tbody className="font-bold text-sm text-gray-700 italic-last-child">
+                            {bonusSettings.length > 0 ? (
+                                bonusSettings.map((setting) => (
+                                    <tr key={setting.id} className="hover:bg-red-50/30 transition-colors border-b last:border-0">
+                                        <td className="pl-8 py-4 uppercase font-black text-gray-900 tracking-tight">{setting.bonus_name}</td>
+                                        <td>
+                                            <span className="text-[10px] font-black uppercase bg-gray-100 px-2 py-1 rounded text-gray-600 tracking-tighter">
+                                                {setting.bonus_type}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                {setting.is_percentage ? <BadgePercent size={14}/> : <DollarSign size={14}/>}
+                                                {setting.is_percentage ? 'Relative %' : 'Static Fixed'}
+                                            </div>
+                                        </td>
+                                        <td className="font-mono text-gray-900 font-black">
+                                            {setting.is_percentage ? `${setting.percentage}%` : `৳${setting.fixed_amount.toLocaleString()}`}
+                                        </td>
+                                        <td className="text-gray-400 uppercase text-[10px]">
+                                            {new Date(setting.effective_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </td>
+                                        <td>
+                                            <span className={`badge border-none font-black text-[9px] uppercase tracking-widest py-2 px-3 ${
+                                                setting.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                            }`}>
+                                                {setting.is_active ? 'Operational' : 'Halted'}
+                                            </span>
+                                        </td>
+                                        <td className="pr-8 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Link
+                                                    href={route('bonus.apply', { bonus: setting.id })}
+                                                    className="btn btn-ghost btn-xs font-black uppercase text-red-600 hover:bg-red-50"
+                                                >
+                                                    Execute
+                                                </Link>
+                                                <button className="btn btn-ghost btn-square btn-xs text-gray-300 hover:text-red-600 transition-colors">
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="7" className="py-20 text-center">
+                                        <div className="flex flex-col items-center opacity-20 grayscale">
+                                            <Gift size={48} />
+                                            <p className="text-xs font-black uppercase tracking-[0.3em] mt-4">Registry Null</p>
+                                        </div>
                                     </td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
-
-                {/* Empty State */}
-                {bonusSettings.length === 0 && (
-                    <div className="text-center py-8">
-                        <div className="text-gray-400 text-6xl mb-4">🎁</div>
-                        <h3 className="text-lg font-medium text-gray-900 mb-2">No bonus settings found</h3>
-                        <p className="text-gray-500 mb-4">
-                            Create your first bonus setting to get started
-                        </p>
-                        <button
-                            onClick={() => setShowForm(true)}
-                            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700"
-                        >
-                            Add Bonus Setting
-                        </button>
-                    </div>
-                )}
             </div>
 
-            {/* Quick Actions Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                    <div className="flex items-center mb-3">
-                        <div className="bg-green-100 p-3 rounded-full mr-4">
-                            <span className="text-green-600 text-xl">🕌</span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-green-800">Eid Bonus</h3>
-                    </div>
-                    <p className="text-green-600 text-sm mb-4">
-                        Apply Eid bonus to all or selected employees
-                    </p>
-                    <button
-                        onClick={() => setShowEidForm(true)}
-                        className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700"
-                    >
-                        Apply Eid Bonus
-                    </button>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                    <div className="flex items-center mb-3">
-                        <div className="bg-blue-100 p-3 rounded-full mr-4">
-                            <span className="text-blue-600 text-xl">🎉</span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-blue-800">Festival Bonus</h3>
-                    </div>
-                    <p className="text-blue-600 text-sm mb-4">
-                        Apply festival bonus for various occasions
-                    </p>
-                    <button
-                        onClick={() => setShowFestivalForm(true)}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
-                    >
-                        Apply Festival Bonus
-                    </button>
-                </div>
-
-                <div className="bg-purple-50 border border-purple-200 rounded-lg p-6">
-                    <div className="flex items-center mb-3">
-                        <div className="bg-purple-100 p-3 rounded-full mr-4">
-                            <span className="text-purple-600 text-xl">⭐</span>
-                        </div>
-                        <h3 className="text-lg font-semibold text-purple-800">Custom Bonus</h3>
-                    </div>
-                    <p className="text-purple-600 text-sm mb-4">
-                        Create custom bonus settings for different needs
-                    </p>
-                    <button
-                        onClick={() => setShowForm(true)}
-                        className="w-full bg-purple-600 text-white py-2 px-4 rounded-md hover:bg-purple-700"
-                    >
-                        Add Bonus Setting
-                    </button>
-                </div>
-            </div>
-
-            {/* Modals */}
+            {/* Modals - Components logic preserved */}
             {showForm && (
                 <BonusFormModal 
                     data={data}
@@ -211,6 +221,11 @@ export default function Bonus({ bonusSettings }) {
             {showFestivalForm && (
                 <FestivalBonusModal onClose={() => setShowFestivalForm(false)} />
             )}
-        </>
+            
+            
+        </div>
     );
 }
+
+// Helper convert function logic is preserved in the backend/controller usually, 
+// so only JSX design updates are provided here.

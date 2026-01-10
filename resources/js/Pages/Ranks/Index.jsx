@@ -1,5 +1,6 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import { useState } from 'react';
+import { Plus, X, Award, DollarSign, Calendar, Clock, Save, Trash2 } from 'lucide-react';
 
 export default function Ranks({ ranks }) {
     const [showForm, setShowForm] = useState(false);
@@ -24,132 +25,84 @@ export default function Ranks({ ranks }) {
     };
 
     return (
-        <>
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-gray-900">Rank Management</h1>
+        <div className="p-6 bg-[#fcfcfc] min-h-screen">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-gray-200 pb-6">
+                <div>
+                    <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Personnel <span className="text-red-600">Ranks</span></h1>
+                    <p className="text-sm font-bold text-gray-400 uppercase tracking-widest mt-1">Hierarchical Wage & Benefit Configuration</p>
+                </div>
                 <button
                     onClick={() => setShowForm(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
+                    className="btn bg-red-600 hover:bg-red-700 text-white border-none rounded-xl px-8 font-black uppercase text-xs tracking-widest shadow-lg transition-all"
                 >
-                    Add Rank
+                    <Plus size={16} className="mr-2" /> Add New Rank
                 </button>
             </div>
 
-            {/* Add Rank Form */}
+            {/* Add Rank Modal */}
             {showForm && (
-                <div className="fixed inset-0  bg-[#0000003b] flex items-center justify-center z-50">
-                    <div className="bg-white p-6 rounded-lg w-full max-w-2xl max-h-screen overflow-y-auto">
-                        <div className="flex justify-between items-center mb-4">
-                            <h2 className="text-xl font-bold">Add New Rank</h2>
-                            <button onClick={() => setShowForm(false)} className="text-gray-500 hover:text-gray-700">
-                                ✕
-                            </button>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-3xl border-4 border-gray-900 w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+                        <div className="bg-gray-900 p-4 flex justify-between items-center text-white">
+                            <h2 className="font-black uppercase text-xs tracking-widest flex items-center gap-2">
+                                <Award size={18} className="text-red-500" /> Define System Rank
+                            </h2>
+                            <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-red-500 transition-colors"><X size={24}/></button>
                         </div>
                         
-                        <form onSubmit={submit}>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Rank Name</label>
-                                    <input
-                                        type="text"
-                                        value={data.name}
-                                        onChange={e => setData('name', e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        required
-                                    />
-                                    {errors.name && <div className="text-red-600 text-sm">{errors.name}</div>}
+                        <form onSubmit={submit} className="p-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="form-control">
+                                    <label className="label font-black text-[10px] uppercase text-gray-400 tracking-widest">Rank Title</label>
+                                    <input type="text" value={data.name} onChange={e => setData('name', e.target.value)} className="input input-bordered rounded-xl font-bold border-gray-300 focus:border-red-600" required placeholder="e.g. Senior Technician" />
+                                    {errors.name && <p className="text-red-600 text-[10px] mt-1 font-bold">{errors.name}</p>}
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Level</label>
-                                    <input
-                                        type="text"
-                                        value={data.level}
-                                        onChange={e => setData('level', e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        placeholder="e.g., A, B, C or 1, 2, 3"
-                                        required
-                                    />
-                                    {errors.level && <div className="text-red-600 text-sm">{errors.level}</div>}
+                                <div className="form-control">
+                                    <label className="label font-black text-[10px] uppercase text-gray-400 tracking-widest">Grade Level</label>
+                                    <input type="text" value={data.level} onChange={e => setData('level', e.target.value)} className="input input-bordered rounded-xl font-bold border-gray-300 focus:border-red-600" required placeholder="e.g. A1" />
+                                    {errors.level && <p className="text-red-600 text-[10px] mt-1 font-bold">{errors.level}</p>}
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Base Salary</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={data.base_salary}
-                                        onChange={e => setData('base_salary', e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        required
-                                    />
-                                    {errors.base_salary && <div className="text-red-600 text-sm">{errors.base_salary}</div>}
+                                <div className="form-control">
+                                    <label className="label font-black text-[10px] uppercase text-gray-400 tracking-widest">Base Salary (Monthly)</label>
+                                    <div className="relative">
+                                        <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                                        <input type="number" step="0.01" value={data.base_salary} onChange={e => setData('base_salary', e.target.value)} className="input input-bordered w-full pl-10 rounded-xl font-mono font-black border-gray-300" required />
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Increment Percentage</label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={data.salary_increment_percentage}
-                                        onChange={e => setData('salary_increment_percentage', e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        required
-                                    />
-                                    {errors.salary_increment_percentage && <div className="text-red-600 text-sm">{errors.salary_increment_percentage}</div>}
+                                <div className="form-control">
+                                    <label className="label font-black text-[10px] uppercase text-gray-400 tracking-widest">Annual Increment %</label>
+                                    <input type="number" step="0.01" value={data.salary_increment_percentage} onChange={e => setData('salary_increment_percentage', e.target.value)} className="input input-bordered rounded-xl font-mono font-black border-gray-300" required />
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Min Working Days</label>
-                                    <input
-                                        type="number"
-                                        value={data.min_working_days}
-                                        onChange={e => setData('min_working_days', e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        required
-                                    />
-                                    {errors.min_working_days && <div className="text-red-600 text-sm">{errors.min_working_days}</div>}
+                                <div className="form-control">
+                                    <label className="label font-black text-[10px] uppercase text-gray-400 tracking-widest">Duty Threshold (Days)</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                                        <input type="number" value={data.min_working_days} onChange={e => setData('min_working_days', e.target.value)} className="input input-bordered w-full pl-10 rounded-xl font-black border-gray-300" required />
+                                    </div>
                                 </div>
 
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Max Late Minutes</label>
-                                    <input
-                                        type="number"
-                                        value={data.max_late_minutes}
-                                        onChange={e => setData('max_late_minutes', e.target.value)}
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        required
-                                    />
-                                    {errors.max_late_minutes && <div className="text-red-600 text-sm">{errors.max_late_minutes}</div>}
+                                <div className="form-control">
+                                    <label className="label font-black text-[10px] uppercase text-gray-400 tracking-widest">Late Allowance (Mins)</label>
+                                    <div className="relative">
+                                        <Clock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16}/>
+                                        <input type="number" value={data.max_late_minutes} onChange={e => setData('max_late_minutes', e.target.value)} className="input input-bordered w-full pl-10 rounded-xl font-black border-gray-300" required />
+                                    </div>
                                 </div>
 
                                 <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700">Benefits</label>
-                                    <textarea
-                                        value={data.benefits}
-                                        onChange={e => setData('benefits', e.target.value)}
-                                        rows="3"
-                                        className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2"
-                                        placeholder="Describe the benefits for this rank..."
-                                    />
-                                    {errors.benefits && <div className="text-red-600 text-sm">{errors.benefits}</div>}
+                                    <label className="label font-black text-[10px] uppercase text-gray-400 tracking-widest">Benefit Package Details</label>
+                                    <textarea value={data.benefits} onChange={e => setData('benefits', e.target.value)} rows="3" className="textarea textarea-bordered w-full rounded-xl font-bold border-gray-300 focus:border-red-600" placeholder="List medical, fuel, or meal allowances..."></textarea>
                                 </div>
                             </div>
 
-                            <div className="mt-6 flex justify-end space-x-3">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowForm(false)}
-                                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
-                                >
-                                    {processing ? 'Creating...' : 'Create Rank'}
+                            <div className="mt-8 flex justify-end gap-3 border-t pt-6">
+                                <button type="button" onClick={() => setShowForm(false)} className="btn btn-ghost font-black uppercase text-xs tracking-widest">Abort</button>
+                                <button type="submit" disabled={processing} className="btn bg-red-600 hover:bg-red-700 text-white border-none rounded-xl px-10 font-black uppercase text-xs tracking-widest shadow-lg">
+                                    {processing ? 'Syncing...' : 'Commit Rank'} <Save size={16} className="ml-2"/>
                                 </button>
                             </div>
                         </form>
@@ -157,67 +110,54 @@ export default function Ranks({ ranks }) {
                 </div>
             )}
 
-            {/* Ranks Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {ranks.map((rank) => (
-                    <div key={rank.id} className="bg-white rounded-lg shadow border border-gray-200">
+                    <div key={rank.id} className="bg-white rounded-2xl border-t-8 border-gray-900 shadow-sm hover:shadow-md transition-all group overflow-hidden">
                         <div className="p-6">
-                            <div className="flex justify-between items-start mb-4">
+                            <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <h3 className="text-lg font-semibold text-gray-900">{rank.name}</h3>
-                                    <p className="text-sm text-gray-600">Level: {rank.level}</p>
+                                    <span className="text-[10px] font-black text-red-600 uppercase tracking-[0.2em]">Level {rank.level}</span>
+                                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">{rank.name}</h3>
                                 </div>
-                                <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                                    {rank.users_count} employees
-                                </span>
+                                <div className="p-3 bg-gray-100 rounded-xl text-gray-900 group-hover:bg-red-600 group-hover:text-white transition-colors">
+                                    <Award size={20} />
+                                </div>
                             </div>
 
-                            <div className="space-y-2 mb-4">
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-600">Base Salary:</span>
-                                    <span className="text-sm font-medium">${rank.base_salary}</span>
+                            <div className="space-y-3 bg-gray-50 p-4 rounded-xl mb-6">
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
+                                    <span className="text-gray-400">Base Salary</span>
+                                    <span className="text-gray-900 font-mono">৳{rank.base_salary}</span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-600">Increment %:</span>
-                                    <span className="text-sm font-medium">{rank.salary_increment_percentage}%</span>
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
+                                    <span className="text-gray-400">Annual Growth</span>
+                                    <span className="text-red-600">{rank.salary_increment_percentage}%</span>
                                 </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-600">Working Days:</span>
-                                    <span className="text-sm font-medium">{rank.min_working_days}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-sm text-gray-600">Max Late:</span>
-                                    <span className="text-sm font-medium">{rank.max_late_minutes} mins</span>
+                                <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
+                                    <span className="text-gray-400">Monthly Duty</span>
+                                    <span className="text-gray-900">{rank.min_working_days} Days</span>
                                 </div>
                             </div>
 
                             {rank.benefits && (
-                                <div className="mb-4">
-                                    <p className="text-sm text-gray-600 mb-1">Benefits:</p>
-                                    <p className="text-sm text-gray-900">{rank.benefits}</p>
+                                <div className="mb-6">
+                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Benefit Dossier</p>
+                                    <p className="text-xs font-bold text-gray-600 italic line-clamp-2">"{rank.benefits}"</p>
                                 </div>
                             )}
 
-                            <div className="flex justify-between items-center">
-                                {/* <Link
-                                    href={route('ranks.users', rank.id)}
-                                    className="text-blue-600 hover:text-blue-900 text-sm"
-                                >
-                                    View Employees
-                                </Link> */}
-                                <div className="flex space-x-2">
-                                    {/* <button className="text-blue-600 hover:text-blue-900 text-sm">
-                                        Edit
-                                    </button> */}
-                                    <button className="text-red-600 hover:text-red-900 text-sm">
-                                        Delete
-                                    </button>
-                                </div>
+                            <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                                    {rank.users_count} Active Staff
+                                </span>
+                                <button className="btn btn-ghost btn-xs text-red-400 hover:text-red-600 font-black uppercase">
+                                    <Trash2 size={14} className="mr-1"/> Delete
+                                </button>
                             </div>
                         </div>
                     </div>
                 ))}
             </div>
-        </>
+        </div>
     );
 }

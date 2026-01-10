@@ -238,7 +238,6 @@ class AttendanceController extends Controller
         }
     }
 
-    // ✅ Today's Attendance API (বাংলাদেশ টাইম অনুযায়ী)
     public function getTodayAttendance()
     {
         $today = Carbon::now('Asia/Dhaka')->format('Y-m-d');
@@ -264,7 +263,7 @@ class AttendanceController extends Controller
                     'formatted_date' => $att->formatted_date,
                     'check_in_time' => $att->check_in_time,
                     'check_out_time' => $att->check_out_time,
-                    'bangladesh_date' => $today
+                    'bangladesh_date' => $today ?? Carbon::now(),
                 ];
             });
 

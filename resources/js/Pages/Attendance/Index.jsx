@@ -286,59 +286,43 @@ export default function Attendance({ attendances, filters, employees }) {
     };
 
     return (
-        <>
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
+        <div className="p-6 bg-gray-50 min-h-screen">
+            <Head title="Attendance Registry" />
+
+            {/* Header Section */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 border-b border-gray-200 pb-6 bg-white p-6 rounded-2xl shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Attendance Management</h1>
-                    <p className="text-gray-600">Track employee attendance, late hours, and overtime</p>
-                </div>
-                <div className="flex space-x-3">
-                    {/* <Link
-                        href={route('attendance.manual-form')}
-                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
-                    >
-                        <Icons.Plus className="mr-2" />
-                        Manual Entry
-                    </Link>
-                    <Link
-                        href={route('attendance.monthly-report')}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                    >
-                        <Icons.ChartBar className="mr-2" />
-                        Monthly Report
-                    </Link> */}
+                    <h1 className="text-3xl font-black text-gray-900 uppercase tracking-tight">Shift <span className="text-red-600">Terminal</span></h1>
+                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs mt-1">Live Employee Punch-Clock Management</p>
                 </div>
             </div>
 
-            {/* Filters */}
-            <div className="bg-white p-4 rounded-lg shadow mb-6">
-                <form onSubmit={submit} className="flex flex-wrap gap-4 items-end">
-                    <div className="flex-1 min-w-[200px]">
-                        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                            <Icons.Calendar className="mr-1" />
-                            Date
+            {/* Filter Console */}
+            <div className="bg-white p-6 rounded-2xl border-2 border-gray-900 shadow-lg mb-8">
+                <form onSubmit={submit} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                    <div>
+                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 flex items-center gap-1">
+                            <Icons.Calendar /> Target Date
                         </label>
                         <input
                             type="date"
                             value={data.date}
                             onChange={e => setData('date', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full border-gray-300 rounded-xl px-4 py-2.5 font-bold focus:border-red-600 focus:ring-0 transition-all"
                             max={new Date().toISOString().split('T')[0]}
                         />
                     </div>
                     
-                    <div className="flex-1 min-w-[250px]">
-                        <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                            <Icons.Users className="mr-1" />
-                            Employee
+                    <div>
+                        <label className="block text-[10px] font-black uppercase text-gray-400 mb-1 flex items-center gap-1">
+                            <Icons.Users /> Personnel lookup
                         </label>
                         <select
                             value={data.employee_id}
                             onChange={e => setData('employee_id', e.target.value)}
-                            className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            className="w-full border-gray-300 rounded-xl px-4 py-2.5 font-bold focus:border-red-600 transition-all"
                         >
-                            <option value="">All Employees</option>
+                            <option value="">Full Roster</option>
                             {employees.map(employee => (
                                 <option key={employee.id} value={employee.id}>
                                     {employee.name} ({employee.employee_id})
@@ -351,19 +335,10 @@ export default function Attendance({ attendances, filters, employees }) {
                         <button
                             type="submit"
                             disabled={processing}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center"
+                            className="flex-1 bg-gray-900 text-white px-6 py-3 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-red-600 transition-all shadow-md active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                         >
-                            {processing ? (
-                                <>
-                                    <Icons.Loading className="mr-2" />
-                                    Filtering...
-                                </>
-                            ) : (
-                                <>
-                                    <Icons.Search className="mr-2" />
-                                    Filter
-                                </>
-                            )}
+                            {processing ? <Icons.Loading /> : <Icons.Search />}
+                            Execute Filter
                         </button>
                         
                         <button
@@ -380,36 +355,33 @@ export default function Attendance({ attendances, filters, employees }) {
                                     });
                                 }, 100);
                             }}
-                            className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors flex items-center"
+                            className="bg-gray-200 text-gray-700 px-5 py-3 rounded-xl hover:bg-gray-300 transition-all"
                         >
-                            <Icons.Reset className="mr-2" />
-                            Reset
+                            <Icons.Reset />
                         </button>
                     </div>
                 </form>
             </div>
 
-            {/* Today's Attendance Quick Actions */}
-            <div className="mb-8">
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-                        <Icons.List className="mr-2" />
-                        Today's Attendance ({new Date(todayDate).toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })})
+            {/* Quick Access Grid */}
+            <div className="mb-10">
+                <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xs font-black uppercase tracking-[0.2em] text-gray-900 flex items-center gap-2">
+                        <Icons.List /> LIVE SHIFT ROSTER
                     </h2>
-                    <div className="text-sm text-gray-600 flex items-center">
-                        <Icons.Users className="mr-1" />
-                        {employees.length} employees • {todayAttendances.length} checked in
+                    <div className="text-[10px] font-black uppercase bg-gray-200 px-3 py-1 rounded-full text-gray-600">
+                        {todayAttendances.length} Active • {employees.length} Total
                     </div>
                 </div>
                 
                 {employees.length === 0 ? (
-                    <div className="bg-white rounded-lg shadow p-8 text-center">
-                        <Icons.UsersGroup />
-                        <h3 className="text-lg font-medium text-gray-900 mb-2 mt-4">No Employees Found</h3>
-                        <p className="text-gray-500">Please add employees to start tracking attendance</p>
+                    <div className="bg-white rounded-3xl border-2 border-dashed border-gray-300 p-12 text-center">
+                        <div className="flex justify-center"><Icons.UsersGroup /></div>
+                        <h3 className="text-lg font-black text-gray-900 uppercase mt-4">Registry Empty</h3>
+                        <p className="text-gray-500">No employees registered in the system.</p>
                     </div>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {employees.map(employee => {
                             const status = employeeStatus[employee.id];
                             const isCheckingIn = checkingStates[`checkin-${employee.id}`];
@@ -417,148 +389,72 @@ export default function Attendance({ attendances, filters, employees }) {
                             const isEarlyOut = checkingStates[`earlyout-${employee.id}`];
                             
                             return (
-                                <div key={employee.id} className="bg-white rounded-lg shadow border border-gray-200 hover:shadow-md transition-shadow">
-                                    <div className="p-4">
-                                        <div className="flex justify-between items-start mb-3">
+                                <div key={employee.id} className="bg-white rounded-2xl shadow-sm border-2 border-transparent hover:border-red-600 transition-all group overflow-hidden relative">
+                                    <div className={`absolute top-0 left-0 w-1 h-full ${status.checkedIn ? (status.checkedOut ? 'bg-gray-300' : 'bg-green-500') : 'bg-red-600'}`}></div>
+                                    <div className="p-5">
+                                        <div className="flex justify-between items-start mb-4">
                                             <div>
-                                                <h3 className="font-medium text-gray-900">{employee.name}</h3>
-                                                <p className="text-sm text-gray-600 flex items-center">
-                                                    <Icons.Employee className="mr-1" />
+                                                <h3 className="font-black text-gray-900 uppercase tracking-tight text-sm">{employee.name}</h3>
+                                                <p className="text-[10px] font-mono text-gray-400 font-bold uppercase">
                                                     ID: {employee.employee_id}
                                                 </p>
                                             </div>
                                             {status.checkedIn && (
-                                                <span className={`px-2 py-1 text-xs rounded-full flex items-center ${getStatusColor(status.status)}`}>
-                                                    <span className="mr-1">{getStatusIcon(status.status)}</span>
+                                                <span className={`px-2 py-1 text-[9px] font-black uppercase rounded-lg border-none ${getStatusColor(status.status)}`}>
                                                     {status.status?.replace('_', ' ')}
                                                 </span>
                                             )}
                                         </div>
                                         
-                                        {/* Action Buttons */}
                                         <div className="space-y-2">
                                             {!status.checkedIn ? (
                                                 <button
                                                     onClick={() => handleCheckIn(employee.id)}
                                                     disabled={isCheckingIn}
-                                                    className="w-full bg-green-600 text-white py-2 px-3 rounded text-sm hover:bg-green-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                                                    className="w-full bg-gray-900 text-white py-3 px-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-green-600 disabled:opacity-50 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                                                 >
-                                                    {isCheckingIn ? (
-                                                        <>
-                                                            <Icons.Loading className="mr-2" />
-                                                            Checking In...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Icons.CheckIn className="mr-2" />
-                                                            Check In
-                                                        </>
-                                                    )}
+                                                    {isCheckingIn ? <Icons.Loading /> : <Icons.CheckIn />}
+                                                    PUNCH IN
                                                 </button>
                                             ) : !status.checkedOut ? (
-                                                <div className="space-y-2">
+                                                <div className="flex flex-col gap-2">
                                                     <button
                                                         onClick={() => handleCheckOut(employee.id)}
                                                         disabled={isCheckingOut}
-                                                        className="w-full bg-red-600 text-white py-2 px-3 rounded text-sm hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                                                        className="w-full bg-red-600 text-white py-3 px-4 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 disabled:opacity-50 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                                                     >
-                                                        {isCheckingOut ? (
-                                                            <>
-                                                                <Icons.Loading className="mr-2" />
-                                                                Checking Out...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Icons.CheckOut className="mr-2" />
-                                                                Check Out (After 5 PM)
-                                                            </>
-                                                        )}
+                                                        {isCheckingOut ? <Icons.Loading /> : <Icons.CheckOut />}
+                                                        PUNCH OUT
                                                     </button>
                                                     
                                                     <button
                                                         onClick={() => handleEarlyOut(employee.id)}
                                                         disabled={isEarlyOut}
-                                                        className="w-full bg-orange-500 text-white py-2 px-3 rounded text-sm hover:bg-orange-600 disabled:opacity-50 transition-colors flex items-center justify-center"
+                                                        className="w-full bg-orange-100 text-orange-700 py-2 px-4 rounded-xl font-black uppercase text-[9px] tracking-widest hover:bg-orange-200 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                                                     >
-                                                        {isEarlyOut ? (
-                                                            <>
-                                                                <Icons.Loading className="mr-2" />
-                                                                Processing...
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Icons.EarlyOut className="mr-2" />
-                                                                Early Out (Before 5 PM)
-                                                            </>
-                                                        )}
+                                                        {isEarlyOut ? <Icons.Loading /> : <Icons.EarlyOut />}
+                                                        EARLY RELEASE
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <div className="text-center py-2 text-sm text-green-600 bg-green-50 rounded flex items-center justify-center">
-                                                    <Icons.CircleCheck className="mr-2" />
-                                                    Completed for Today
+                                                <div className="text-center py-3 text-[10px] font-black uppercase text-green-600 bg-green-50 rounded-xl border-2 border-green-100">
+                                                    Shift Logged
                                                 </div>
                                             )}
                                         </div>
                                         
-                                        {/* Attendance Details */}
                                         {status.checkedIn && status.attendance && (
-                                            <div className="mt-3 pt-3 border-t border-gray-100">
-                                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                            <div className="mt-4 pt-4 border-t border-gray-50">
+                                                <div className="grid grid-cols-2 gap-2 text-[10px] font-black uppercase text-gray-400">
                                                     <div>
-                                                        <span className="text-gray-500 flex items-center">
-                                                            <Icons.CheckIn className="mr-1 w-3 h-3" />
-                                                            In:
-                                                        </span>
-                                                        <div className="font-medium">{status.attendance.formatted_check_in || status.attendance.check_in || '-'}</div>
+                                                        <span className="opacity-60 block">Arrival</span>
+                                                        <span className="text-gray-900 font-mono">{status.attendance.formatted_check_in || status.attendance.check_in || '-'}</span>
                                                     </div>
-                                                    {status.checkedOut && (
-                                                        <div>
-                                                            <span className="text-gray-500 flex items-center">
-                                                                <Icons.CheckOut className="mr-1 w-3 h-3" />
-                                                                Out:
-                                                            </span>
-                                                            <div className="font-medium">{status.attendance.formatted_check_out || status.attendance.check_out || '-'}</div>
-                                                        </div>
-                                                    )}
+                                                    <div className="text-right">
+                                                        <span className="opacity-60 block">Departure</span>
+                                                        <span className="text-gray-900 font-mono">{status.attendance.formatted_check_out || status.attendance.check_out || '-'}</span>
+                                                    </div>
                                                 </div>
-                                                
-                                                {(status.attendance.late_hours > 0 || status.attendance.overtime_hours > 0) && (
-                                                    <div className="grid grid-cols-2 gap-2 mt-2">
-                                                        {status.attendance.late_hours > 0 && (
-                                                            <div className="bg-red-50 p-2 rounded">
-                                                                <div className="text-red-700 font-medium flex items-center">
-                                                                    <Icons.Clock className="mr-1 w-3 h-3" />
-                                                                    {Number(status.attendance.late_hours).toFixed(2)}h late
-                                                                </div>
-                                                                <div className="text-red-600 text-xs flex items-center">
-                                                                    <Icons.Money className="mr-1 w-3 h-3" />
-                                                                    {formatCurrency(status.attendance.late_amount)}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                        
-                                                        {status.attendance.overtime_hours > 0 && (
-                                                            <div className="bg-green-50 p-2 rounded">
-                                                                <div className="text-green-700 font-medium flex items-center">
-                                                                    <Icons.Time className="mr-1 w-3 h-3" />
-                                                                    {Number(status.attendance.overtime_hours).toFixed(2)}h OT
-                                                                </div>
-                                                                <div className="text-green-600 text-xs flex items-center">
-                                                                    <Icons.Money className="mr-1 w-3 h-3" />
-                                                                    +{formatCurrency(status.attendance.overtime_amount)}
-                                                                </div>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                
-                                                {status.attendance.total_hours > 0 && (
-                                                    <div className="mt-2 text-xs text-gray-600 flex items-center">
-                                                        <Icons.Clock className="mr-1 w-3 h-3" />
-                                                        Total hours: {Number(status.attendance.total_hours).toFixed(2)}h
-                                                    </div>
-                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -569,164 +465,88 @@ export default function Attendance({ attendances, filters, employees }) {
                 )}
             </div>
 
-            {/* All Attendance Records */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-                    <div className="flex justify-between items-center">
-                        <h2 className="text-lg font-medium text-gray-900 flex items-center">
-                            <Icons.List className="mr-2" />
-                            All Attendance Records
-                        </h2>
-                        <div className="text-sm text-gray-500">
-                            Total: {attendances?.total || attendanceData.length} records
-                        </div>
+            {/* Master Log Table */}
+            <div className="bg-white rounded-3xl border-2 border-gray-900 overflow-hidden shadow-2xl">
+                <div className="px-8 py-5 border-b border-gray-100 bg-gray-900 flex justify-between items-center">
+                    <h2 className="text-white text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                        <Icons.List /> Registry Master Log
+                    </h2>
+                    <div className="text-[10px] font-black uppercase text-red-500">
+                        Total {attendances?.total || attendanceData.length} records
                     </div>
                 </div>
                 
                 <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
+                    <table className="min-w-full border-separate border-spacing-0">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="flex items-center">
-                                        <Icons.Employee className="mr-1" />
-                                        Employee
-                                    </div>
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="flex items-center">
-                                        <Icons.Calendar className="mr-1" />
-                                        Date
-                                    </div>
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="flex items-center">
-                                        <Icons.CheckIn className="mr-1" />
-                                        Check In
-                                    </div>
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="flex items-center">
-                                        <Icons.CheckOut className="mr-1" />
-                                        Check Out
-                                    </div>
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="flex items-center">
-                                        <Icons.Clock className="mr-1" />
-                                        Late Hours
-                                    </div>
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    <div className="flex items-center">
-                                        <Icons.Time className="mr-1" />
-                                        OT Hours
-                                    </div>
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Status
-                                </th>
+                                <th className="px-8 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">Personnel</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">Date</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">Arrival</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">Departure</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">Log Metrics</th>
+                                <th className="px-8 py-4 text-right text-[10px] font-black text-gray-400 uppercase tracking-widest border-b">Protocol Status</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white divide-y divide-gray-100">
                             {attendanceData.length > 0 ? (
                                 attendanceData.map((attendance) => (
-                                    <tr key={attendance.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                    <tr key={attendance.id} className="hover:bg-gray-50 transition-colors">
+                                        <td className="px-8 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
-                                                <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                                    <Icons.Employee className="text-blue-600" />
+                                                <div className="h-10 w-10 bg-gray-900 rounded-xl flex items-center justify-center text-white font-black text-sm">
+                                                    {attendance.employee?.name?.charAt(0)}
                                                 </div>
                                                 <div className="ml-4">
-                                                    <div className="text-sm font-medium text-gray-900">
+                                                    <div className="text-sm font-black text-gray-900 uppercase tracking-tight">
                                                         {attendance.employee?.name || 'N/A'}
                                                     </div>
-                                                    <div className="text-sm text-gray-500">
-                                                        {attendance.employee?.employee_id || 'N/A'}
+                                                    <div className="text-[10px] font-mono font-bold text-red-600">
+                                                        #{attendance.employee?.employee_id || 'N/A'}
                                                     </div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-gray-500 uppercase tracking-tighter">
                                             {attendance.formatted_date || attendance.date}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            <div className="flex items-center">
-                                                {attendance.check_in_time && attendance.check_in_time > '09:00:00' ? (
-                                                    <Icons.Warning className="mr-2 text-red-500" />
-                                                ) : (
-                                                    <Icons.CheckCircle className="mr-2 text-green-500" />
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-black text-gray-900">
+                                            {attendance.formatted_check_in || attendance.check_in || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-mono font-black text-gray-900">
+                                            {attendance.formatted_check_out || attendance.check_out || '-'}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <div className="flex flex-col gap-1">
+                                                {attendance.late_hours > 0 && (
+                                                    <div className="text-[10px] text-red-600 font-black uppercase">
+                                                        Late: {Number(attendance.late_hours).toFixed(2)}h
+                                                    </div>
                                                 )}
-                                                {attendance.formatted_check_in || attendance.check_in || '-'}
+                                                {attendance.overtime_hours > 0 && (
+                                                    <div className="text-[10px] text-green-600 font-black uppercase">
+                                                        OT: {Number(attendance.overtime_hours).toFixed(2)}h
+                                                    </div>
+                                                )}
+                                                {!(attendance.late_hours > 0) && !(attendance.overtime_hours > 0) && (
+                                                    <span className="text-gray-300">-</span>
+                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            <div className="flex items-center">
-                                                {attendance.check_out_time && attendance.check_out_time > '17:00:00' ? (
-                                                    <Icons.Money className="mr-2 text-green-500" />
-                                                ) : (
-                                                    <Icons.Time className="mr-2 text-blue-500" />
-                                                )}
-                                                {attendance.formatted_check_out || attendance.check_out || '-'}
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {attendance.late_hours > 0 ? (
-                                                <div className="bg-red-50 px-3 py-1 rounded-full inline-block">
-                                                    <div className="text-red-700 font-medium flex items-center">
-                                                        <Icons.Clock className="mr-1" />
-                                                        {Number(attendance.late_hours).toFixed(2)}h
-                                                    </div>
-                                                    <div className="text-red-600 text-xs flex items-center">
-                                                        <Icons.Money className="mr-1" />
-                                                        {formatCurrency(attendance.late_amount)}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="text-gray-500 flex items-center">
-                                                    <Icons.Clock className="mr-1" />
-                                                    0h
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {attendance.overtime_hours > 0 ? (
-                                                <div className="bg-green-50 px-3 py-1 rounded-full inline-block">
-                                                    <div className="text-green-700 font-medium flex items-center">
-                                                        <Icons.Time className="mr-1" />
-                                                        {Number(attendance.overtime_hours).toFixed(2)}h
-                                                    </div>
-                                                    <div className="text-green-600 text-xs flex items-center">
-                                                        <Icons.Money className="mr-1" />
-                                                        +{formatCurrency(attendance.overtime_amount)}
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="text-gray-500 flex items-center">
-                                                    <Icons.Time className="mr-1" />
-                                                    0h
-                                                </div>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className={`px-2 py-1 text-xs rounded-full font-medium flex items-center w-fit ${getStatusColor(attendance.status)}`}>
-                                                <span className="mr-1">{getStatusIcon(attendance.status)}</span>
-                                                {attendance.status?.charAt(0).toUpperCase() + attendance.status?.slice(1).replace('_', ' ')}
+                                        <td className="px-8 py-4 whitespace-nowrap text-right">
+                                            <span className={`px-3 py-1 text-[9px] font-black uppercase rounded-lg shadow-sm border-none ${getStatusColor(attendance.status)}`}>
+                                                {attendance.status?.replace('_', ' ')}
                                             </span>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="7" className="px-6 py-12 text-center">
-                                        <Icons.ChartPie />
-                                        <h3 className="text-lg font-medium text-gray-900 mb-2 mt-4">No attendance records found</h3>
-                                        <p className="text-gray-500">
-                                            {filters.date || filters.employee_id 
-                                                ? 'Try adjusting your filters'
-                                                : 'No attendance has been recorded yet'
-                                            }
-                                        </p>
+                                    <td colSpan="6" className="px-6 py-20 text-center">
+                                        <div className="flex flex-col items-center opacity-30 grayscale">
+                                            <Icons.ChartPie />
+                                            <p className="text-xs font-black uppercase tracking-[0.2em] mt-4">Registry Null</p>
+                                        </div>
                                     </td>
                                 </tr>
                             )}
@@ -734,54 +554,30 @@ export default function Attendance({ attendances, filters, employees }) {
                     </table>
                 </div>
 
-                {/* Pagination */}
+                {/* Pagination (Design Only update) */}
                 {attendances?.links && attendances.links.length > 3 && (
-                    <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-                        <div className="flex items-center justify-between">
-                            <div className="text-sm text-gray-700">
-                                Showing {attendances.from || 0} to {attendances.to || 0} of {attendances.total || 0} results
-                            </div>
-                            <div className="flex space-x-1">
-                                {attendances.links.map((link, index) => {
-                                    const isPrevious = link.label.includes('Previous');
-                                    const isNext = link.label.includes('Next');
-                                    const isCurrent = link.active;
-                                    
-                                    return (
-                                        <button
-                                            key={index}
-                                            onClick={() => {
-                                                if (link.url) {
-                                                    setProcessing(true);
-                                                    get(link.url, {
-                                                        preserveState: true,
-                                                        preserveScroll: true,
-                                                        onFinish: () => setProcessing(false),
-                                                    });
-                                                }
-                                            }}
-                                            disabled={!link.url || isCurrent}
-                                            className={`px-3 py-1 text-sm rounded transition-colors flex items-center ${
-                                                isCurrent 
-                                                    ? 'bg-blue-600 text-white' 
-                                                    : link.url
-                                                        ? 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                            }`}
-                                        >
-                                            {isPrevious && <Icons.ChevronLeft />}
-                                            {isNext && <Icons.ChevronRight />}
-                                            {!isPrevious && !isNext && (
-                                                <span dangerouslySetInnerHTML={{ __html: link.label }} />
-                                            )}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                    <div className="px-8 py-5 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+                        <div className="text-[10px] font-black uppercase text-gray-400">
+                            Page {attendances.current_page} of {attendances.last_page}
+                        </div>
+                        <div className="flex gap-1">
+                            {attendances.links.map((link, index) => (
+                                <button
+                                    key={index}
+                                    onClick={() => link.url && get(link.url, { preserveState: true, preserveScroll: true })}
+                                    disabled={!link.url || link.active}
+                                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all ${
+                                        link.active 
+                                            ? 'bg-red-600 text-white shadow-lg' 
+                                            : 'bg-white text-gray-600 border border-gray-200 hover:border-gray-900'
+                                    } ${!link.url ? 'opacity-30 grayscale' : ''}`}
+                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                />
+                            ))}
                         </div>
                     </div>
                 )}
             </div>
-        </>
+        </div>
     );
 }

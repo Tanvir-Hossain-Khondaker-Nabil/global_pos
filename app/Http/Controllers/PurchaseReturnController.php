@@ -88,50 +88,146 @@ class PurchaseReturnController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $purchaseId = $request->purchase_id;
+        $purchaseId = $request->query('purchase_id');
         $purchase = null;
         $purchaseItems = [];
 
         if ($purchaseId) {
             $purchase = Purchase::with(['items.product', 'items.variant', 'supplier', 'warehouse'])
-                ->findOrFail($purchaseId);
+                ->where('status', 'completed')
+                ->find($purchaseId);
 
-            // Filter items that still have stock
-            foreach ($purchase->items as $item) {
-                $stock = Stock::where('warehouse_id', $purchase->warehouse_id)
-                    ->where('product_id', $item->product_id)
-                    ->where('variant_id', $item->variant_id)
-                    ->first();
+            if ($purchase) {
+                foreach ($purchase->items as $item) {
+                    $stock = Stock::where('warehouse_id', $purchase->warehouse_id)
+                        ->where('product_id', $item->product_id)
+                        ->where('variant_id', $item->variant_id)
+                        ->first();
 
-                if ($stock && $stock->quantity > 0) {
-                    $purchaseItems[] = [
-                        'id' => $item->id,
-                        'product_id' => $item->product_id,
-                        'product_name' => $item->product->name,
-                        'variant_id' => $item->variant_id,
-                        'variant_name' => $this->getVariantDisplayName($item->variant),
-                        'max_quantity' => min($item->quantity, $stock->quantity),
-                        'unit_price' => $item->unit_price,
-                        'shadow_unit_price' => $item->shadow_unit_price,
-                        'sale_price' => $item->sale_price,
-                        'shadow_sale_price' => $item->shadow_sale_price,
-                        'purchase_quantity' => $item->quantity,
-                        'total_price' => $item->total_price,
-                        'shadow_total_price' => $item->shadow_total_price
-                    ];
+                    // Start with 0 - only show items with available stock
+                    $maxQuantity = 0;
+
+                    // If stock exists and has quantity > 0, calculate maximum returnable
+                    if ($stock && $stock->quantity > 0) {
+                        // Calculate already returned quantity
+                        $alreadyReturned = PurchaseReturnItem::where('purchase_item_id', $item->id)
+                            ->where('status', 'completed')
+                            ->sum('return_quantity');
+                        
+                        // Maximum returnable is min(stock quantity, purchase quantity - already returned)
+                        $availableFromStock = $stock->quantity;
+                        $availableFromPurchase = max(0, $item->quantity - $alreadyReturned);
+                        $maxQuantity = min($availableFromStock, $availableFromPurchase);
+                    }
+
+                    // Only add item if we can return something
+                    if ($maxQuantity > 0) {
+                        $purchaseItems[] = [
+                            'id' => $item->id,
+                            'purchase_item_id' => $item->id,
+                            'product_id' => $item->product_id,
+                            'product_name' => $item->product->name ?? 'Unknown Product',
+                            'variant_id' => $item->variant_id,
+                            'variant_name' => $this->getVariantDisplayName($item->variant),
+                            'max_quantity' => $maxQuantity,
+                            'available_quantity' => $maxQuantity,
+                            'unit_price' => $item->unit_price,
+                            'shadow_unit_price' => $item->shadow_unit_price,
+                            'sale_price' => $item->sale_price,
+                            'shadow_sale_price' => $item->shadow_sale_price,
+                            'purchase_quantity' => $item->quantity,
+                            'total_price' => $item->total_price,
+                            'shadow_total_price' => $item->shadow_total_price,
+                            'stock_quantity' => $stock ? $stock->quantity : 0,
+                            'already_returned' => $alreadyReturned ?? 0
+                        ];
+                    }
                 }
             }
         }
 
         // Get recent purchases for the dropdown
         $recentPurchases = Purchase::where('status', 'completed')
-            ->with(['supplier'])
+            ->with(['supplier', 'warehouse'])
             ->orderBy('purchase_date', 'desc')
-            ->take(20)
-            ->get();
+            ->limit(20)
+            ->get()
+            ->map(function ($purchase) {
+                // Count items available for return
+                $availableItems = 0;
+                foreach ($purchase->items as $item) {
+                    $stock = Stock::where('warehouse_id', $purchase->warehouse_id)
+                        ->where('product_id', $item->product_id)
+                        ->where('variant_id', $item->variant_id)
+                        ->first();
+
+                    if ($stock && $stock->quantity > 0) {
+                        $alreadyReturned = PurchaseReturnItem::where('purchase_item_id', $item->id)
+                            ->where('status', 'completed')
+                            ->sum('return_quantity');
+                        
+                        $availableFromStock = $stock->quantity;
+                        $availableFromPurchase = max(0, $item->quantity - $alreadyReturned);
+                        
+                        if (min($availableFromStock, $availableFromPurchase) > 0) {
+                            $availableItems++;
+                        }
+                    }
+                }
+
+                return [
+                    'id' => $purchase->id,
+                    'purchase_no' => $purchase->purchase_no,
+                    'purchase_date' => $purchase->purchase_date,
+                    'grand_total' => $purchase->grand_total,
+                    'available_items' => $availableItems,
+                    'supplier' => $purchase->supplier ? [
+                        'id' => $purchase->supplier->id,
+                        'name' => $purchase->supplier->name,
+                        'company' => $purchase->supplier->company,
+                    ] : null,
+                    'warehouse' => $purchase->warehouse ? [
+                        'id' => $purchase->warehouse->id,
+                        'name' => $purchase->warehouse->name,
+                    ] : null,
+                ];
+            });
 
         return Inertia::render('PurchaseReturn/AddPurchaseReturn', [
-            'purchase' => $purchase,
+            'purchase' => $purchase ? [
+                'id' => $purchase->id,
+                'purchase_no' => $purchase->purchase_no,
+                'purchase_date' => $purchase->purchase_date,
+                'grand_total' => $purchase->grand_total,
+                'paid_amount' => $purchase->paid_amount,
+                'due_amount' => $purchase->due_amount,
+                'status' => $purchase->status,
+                'supplier' => $purchase->supplier ? [
+                    'id' => $purchase->supplier->id,
+                    'name' => $purchase->supplier->name,
+                    'company' => $purchase->supplier->company,
+                    'email' => $purchase->supplier->email,
+                    'phone' => $purchase->supplier->phone,
+                    'address' => $purchase->supplier->address,
+                ] : null,
+                'warehouse' => $purchase->warehouse ? [
+                    'id' => $purchase->warehouse->id,
+                    'name' => $purchase->warehouse->name,
+                    'code' => $purchase->warehouse->code,
+                ] : null,
+                'items_count' => $purchase->items->count(),
+                'items' => $purchase->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'product_name' => $item->product->name ?? 'Unknown',
+                        'variant_id' => $item->variant_id,
+                        'quantity' => $item->quantity,
+                        'unit_price' => $item->unit_price,
+                        'total_price' => $item->total_price,
+                    ];
+                })
+            ] : null,
             'purchaseItems' => $purchaseItems,
             'purchases' => $recentPurchases,
             'suppliers' => Supplier::all(),
@@ -139,6 +235,30 @@ class PurchaseReturnController extends Controller
             'products' => Product::with('variants')->get(),
             'isShadowUser' => $isShadowUser
         ]);
+    }
+
+    private function getVariantDisplayName($variant)
+    {
+        if (!$variant)
+            return 'Default Variant';
+
+        if ($variant->attribute_values && is_array($variant->attribute_values)) {
+            $parts = [];
+            foreach ($variant->attribute_values as $attribute => $value) {
+                $parts[] = "$attribute: $value";
+            }
+            return implode(', ', $parts);
+        }
+
+        $parts = [];
+        if ($variant->size)
+            $parts[] = "Size: $variant->size";
+        if ($variant->color)
+            $parts[] = "Color: $variant->color";
+        if ($variant->material)
+            $parts[] = "Material: $variant->material";
+
+        return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
     }
 
     public function store(Request $request)
@@ -209,11 +329,6 @@ class PurchaseReturnController extends Controller
                 }
             }
 
-            Log::info('Calculated return amounts:', [
-                'totalReturnAmount' => $totalReturnAmount,
-                'shadowTotalReturnAmount' => $shadowTotalReturnAmount
-            ]);
-
             // For product replacement, use provided replacement totals or calculate
             $replacementValue = $request->replacement_total ?? 0;
             $shadowReplacementValue = $request->shadow_replacement_total ?? 0;
@@ -239,13 +354,6 @@ class PurchaseReturnController extends Controller
                 if ($shadowReplacementValue == 0) {
                     $shadowReplacementValue = $calculatedShadowReplacementValue;
                 }
-
-                Log::info('Calculated replacement values:', [
-                    'calculated_replacement' => $calculatedReplacementValue,
-                    'calculated_shadow_replacement' => $calculatedShadowReplacementValue,
-                    'final_replacement' => $replacementValue,
-                    'final_shadow_replacement' => $shadowReplacementValue
-                ]);
             }
 
             $refundedAmount = $request->refunded_amount ?? 0;
@@ -443,85 +551,47 @@ class PurchaseReturnController extends Controller
 
         DB::beginTransaction();
         try {
-            $purchaseReturn = PurchaseReturn::with(['items', 'replacementProducts', 'purchase'])
+            $purchaseReturn = PurchaseReturn::with(['items.product', 'replacementProducts', 'purchase'])
                 ->findOrFail($id);
 
             if ($purchaseReturn->status !== 'pending') {
                 throw new \Exception('This return cannot be approved.');
             }
 
-            // Update stock for RETURNED items (reduce stock)
+            // For ALL returns: DECREASE stock for returned items
+            // Items are leaving our warehouse to go back to supplier
             foreach ($purchaseReturn->items as $item) {
                 $stock = Stock::where('warehouse_id', $purchaseReturn->warehouse_id)
                     ->where('product_id', $item->product_id)
                     ->where('variant_id', $item->variant_id)
                     ->first();
 
-                if (!$stock || $stock->quantity < $item->return_quantity) {
-                    throw new \Exception('Insufficient stock for product: ' . $item->product->name);
+                if (!$stock) {
+                    throw new \Exception('Stock not found for product: ' . ($item->product->name ?? 'Unknown'));
                 }
 
-                // Reduce stock for returned items
+                if ($stock->quantity < $item->return_quantity) {
+                    throw new \Exception('Insufficient stock for product: ' . ($item->product->name ?? 'Unknown') .
+                        '. Available: ' . $stock->quantity . ', Requested: ' . $item->return_quantity);
+                }
+
+                // DECREASE stock (items leaving warehouse)
                 $stock->decrement('quantity', $item->return_quantity);
 
                 // Update return item status
                 $item->update(['status' => 'approved']);
+
+                Log::info('Stock decreased for return', [
+                    'product_id' => $item->product_id,
+                    'variant_id' => $item->variant_id,
+                    'quantity' => $item->return_quantity,
+                    'remaining_stock' => $stock->quantity - $item->return_quantity
+                ]);
             }
 
-            // For product replacement, add replacement products to stock (with price updates)
+            // For product replacement, just update status
             if ($purchaseReturn->return_type === 'product_replacement') {
                 foreach ($purchaseReturn->replacementProducts as $replacement) {
-                    $stock = Stock::where('warehouse_id', $purchaseReturn->warehouse_id)
-                        ->where('product_id', $replacement->product_id)
-                        ->where('variant_id', $replacement->variant_id)
-                        ->first();
-
-                    if ($stock) {
-                        // Store current values for weighted average calculation
-                        $oldQuantity = $stock->quantity;
-                        $oldPurchaseValue = $stock->purchase_price * $oldQuantity;
-                        $oldShadowPurchaseValue = $stock->shadow_purchase_price * $oldQuantity;
-
-                        // Add replacement products to stock
-                        $newQuantity = $oldQuantity + $replacement->quantity;
-                        $stock->quantity = $newQuantity;
-
-                        // Calculate weighted average purchase prices
-                        $newPurchaseValue = $oldPurchaseValue + ($replacement->unit_price * $replacement->quantity);
-                        $newShadowPurchaseValue = $oldShadowPurchaseValue + ($replacement->shadow_unit_price * $replacement->quantity);
-
-                        $stock->purchase_price = $newPurchaseValue / $newQuantity;
-                        $stock->shadow_purchase_price = $newShadowPurchaseValue / $newQuantity;
-
-                        // Update sale prices (take the lower price if new is lower)
-                        if ($replacement->sale_price > 0) {
-                            if ($stock->sale_price == 0 || $replacement->sale_price < $stock->sale_price) {
-                                $stock->sale_price = $replacement->sale_price;
-                            }
-                        }
-
-                        if ($replacement->shadow_sale_price > 0) {
-                            if ($stock->shadow_sale_price == 0 || $replacement->shadow_sale_price < $stock->shadow_sale_price) {
-                                $stock->shadow_sale_price = $replacement->shadow_sale_price;
-                            }
-                        }
-
-                        $stock->save();
-                    } else {
-                        // Create new stock entry for replacement product
-                        Stock::create([
-                            'warehouse_id' => $purchaseReturn->warehouse_id,
-                            'product_id' => $replacement->product_id,
-                            'variant_id' => $replacement->variant_id,
-                            'quantity' => $replacement->quantity,
-                            'purchase_price' => $replacement->unit_price,
-                            'sale_price' => $replacement->sale_price,
-                            'shadow_purchase_price' => $replacement->shadow_unit_price,
-                            'shadow_sale_price' => $replacement->shadow_sale_price,
-                        ]);
-                    }
-
-                    // Update replacement product status
                     $replacement->update(['status' => 'approved']);
                 }
             }
@@ -535,6 +605,7 @@ class PurchaseReturnController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Approve purchase return error: ' . $e->getMessage());
+            Log::error('Error trace: ' . $e->getTraceAsString());
             return redirect()->back()->with('error', 'Error approving purchase return: ' . $e->getMessage());
         }
     }
@@ -556,11 +627,9 @@ class PurchaseReturnController extends Controller
                 throw new \Exception('This return cannot be completed.');
             }
 
-            // Get the purchase with all items
             $purchase = Purchase::with('items')->findOrFail($purchaseReturn->purchase_id);
 
             // Calculate net difference for replacement returns
-            // Net Difference = Replacement Value - Return Value
             $netDifference = 0;
             $shadowNetDifference = 0;
 
@@ -571,46 +640,19 @@ class PurchaseReturnController extends Controller
 
             // For MONEY BACK returns
             if ($purchaseReturn->return_type === 'money_back') {
-                // First, adjust stock (should already be adjusted in approve, but double-check)
-                foreach ($purchaseReturn->items as $returnItem) {
-                    $stock = Stock::where('warehouse_id', $purchaseReturn->warehouse_id)
-                        ->where('product_id', $returnItem->product_id)
-                        ->where('variant_id', $returnItem->variant_id)
-                        ->first();
-
-                    if ($stock) {
-                        // Ensure stock is reduced (in case approve didn't work properly)
-                        if ($stock->quantity < $returnItem->return_quantity) {
-                            throw new \Exception('Insufficient stock after approval for: ' . $returnItem->product->name);
-                        }
-                    }
-
-                    // Also update the original purchase item quantity
-                    if ($returnItem->purchaseItem) {
-                        $newQuantity = $returnItem->purchaseItem->quantity - $returnItem->return_quantity;
-                        if ($newQuantity < 0)
-                            $newQuantity = 0;
-
-                        // Calculate proportional price adjustment
-                        $priceRatio = $returnItem->return_quantity / $returnItem->purchaseItem->quantity;
-                        $priceAdjustment = $returnItem->purchaseItem->total_price * $priceRatio;
-                        $shadowPriceAdjustment = $returnItem->purchaseItem->shadow_total_price * $priceRatio;
-
-                        $returnItem->purchaseItem->update([
-                            'quantity' => $newQuantity,
-                        ]);
-                    }
-                }
+                // Stock was already decreased during approval
+                // Now handle financial adjustments
 
                 if ($purchaseReturn->refunded_amount > 0) {
-                    // Update purchase amounts - REDUCE what we paid (increase due)
-                    $newPaidAmount = $purchase->paid_amount - $purchaseReturn->refunded_amount;
-                    $newDueAmount = $purchase->due_amount + $purchaseReturn->refunded_amount;
+                    // We GET money from supplier (refund) - money COMING IN
+                    $newPaidAmount = $purchase->paid_amount + $purchaseReturn->refunded_amount;
+                    $newDueAmount = max(0, $purchase->due_amount - $purchaseReturn->refunded_amount);
 
-                    // Ensure amounts don't go negative
-                    if ($newPaidAmount < 0) {
-                        $newDueAmount += abs($newPaidAmount);
-                        $newPaidAmount = 0;
+                    // If refund is more than due, adjust paid amount
+                    if ($purchaseReturn->refunded_amount > $purchase->due_amount) {
+                        $excessRefund = $purchaseReturn->refunded_amount - $purchase->due_amount;
+                        $newPaidAmount = $purchase->paid_amount + $excessRefund;
+                        $newDueAmount = 0;
                     }
 
                     $purchase->update([
@@ -620,12 +662,13 @@ class PurchaseReturnController extends Controller
 
                     // Update shadow amounts if applicable
                     if ($purchaseReturn->shadow_refunded_amount > 0) {
-                        $newShadowPaidAmount = $purchase->shadow_paid_amount - $purchaseReturn->shadow_refunded_amount;
-                        $newShadowDueAmount = $purchase->shadow_due_amount + $purchaseReturn->shadow_refunded_amount;
+                        $newShadowPaidAmount = $purchase->shadow_paid_amount + $purchaseReturn->shadow_refunded_amount;
+                        $newShadowDueAmount = max(0, $purchase->shadow_due_amount - $purchaseReturn->shadow_refunded_amount);
 
-                        if ($newShadowPaidAmount < 0) {
-                            $newShadowDueAmount += abs($newShadowPaidAmount);
-                            $newShadowPaidAmount = 0;
+                        if ($purchaseReturn->shadow_refunded_amount > $purchase->shadow_due_amount) {
+                            $excessShadowRefund = $purchaseReturn->shadow_refunded_amount - $purchase->shadow_due_amount;
+                            $newShadowPaidAmount = $purchase->shadow_paid_amount + $excessShadowRefund;
+                            $newShadowDueAmount = 0;
                         }
 
                         $purchase->update([
@@ -651,108 +694,162 @@ class PurchaseReturnController extends Controller
                         }
                     }
 
-                    // Create refund payment record (NEGATIVE for refund - money going OUT)
+                    // Create refund payment record - POSITIVE amount (money coming in)
                     Payment::create([
                         'purchase_id' => $purchase->id,
-                        'amount' => $purchaseReturn->refunded_amount, // Negative for refund
-                        'shadow_amount' => -$purchaseReturn->shadow_refunded_amount,
+                        'amount' => $purchaseReturn->refunded_amount, // POSITIVE for refund received
+                        'shadow_amount' => $purchaseReturn->shadow_refunded_amount,
                         'payment_method' => $purchaseReturn->payment_type,
                         'txn_ref' => 'REFUND-' . Str::random(10),
-                        'note' => 'Refund for return: ' . $purchaseReturn->return_no,
+                        'note' => 'Refund received for return: ' . $purchaseReturn->return_no,
                         'supplier_id' => $purchaseReturn->supplier_id,
                         'paid_at' => Carbon::now(),
                         'created_by' => $user->id,
-                        'type' => 'refund'
+                        'type' => 'refund_received'
+                    ]);
+                }
+            }
+            // For PRODUCT REPLACEMENT returns
+            elseif ($purchaseReturn->return_type === 'product_replacement') {
+                // IMPORTANT: First validate replacement products can be added to purchase
+                // This ensures purchase items exist or can be created
+
+                // Validate replacement products can be added to purchase
+                foreach ($purchaseReturn->replacementProducts as $replacement) {
+                    // Check if this product+variant exists in the original purchase
+                    $existingPurchaseItem = \App\Models\PurchaseItem::where('purchase_id', $purchase->id)
+                        ->where('product_id', $replacement->product_id)
+                        ->where('variant_id', $replacement->variant_id)
+                        ->first();
+
+                    if (!$existingPurchaseItem) {
+                        // Create a new purchase item for this replacement product
+                        $existingPurchaseItem = \App\Models\PurchaseItem::create([
+                            'purchase_id' => $purchase->id,
+                            'product_id' => $replacement->product_id,
+                            'variant_id' => $replacement->variant_id,
+                            'quantity' => 0, // Will be updated below
+                            'unit_price' => $replacement->unit_price,
+                            'shadow_unit_price' => $replacement->shadow_unit_price,
+                            'sale_price' => $replacement->sale_price,
+                            'shadow_sale_price' => $replacement->shadow_sale_price,
+                            'total_price' => 0,
+                            'shadow_total_price' => 0,
+                            'status' => 'active'
+                        ]);
+                    }
+
+                    // Update the purchase item quantity and totals
+                    $newQuantity = $existingPurchaseItem->quantity + $replacement->quantity;
+                    $newTotalPrice = $newQuantity * $existingPurchaseItem->unit_price;
+                    $newShadowTotalPrice = $newQuantity * $existingPurchaseItem->shadow_unit_price;
+
+                    $existingPurchaseItem->update([
+                        'quantity' => $newQuantity,
+                        'total_price' => $newTotalPrice,
+                        'shadow_total_price' => $newShadowTotalPrice
+                    ]);
+
+                    Log::info('Purchase item updated for replacement', [
+                        'purchase_item_id' => $existingPurchaseItem->id,
+                        'product_id' => $replacement->product_id,
+                        'variant_id' => $replacement->variant_id,
+                        'added_quantity' => $replacement->quantity,
+                        'new_quantity' => $newQuantity,
+                        'new_total' => $newTotalPrice
                     ]);
                 }
 
-                // Recalculate purchase totals after adjustments
-                $this->recalculatePurchaseTotals($purchase);
-
-            }
-            // For PRODUCT REPLACEMENT returns - SIMPLIFIED VERSION
-            elseif ($purchaseReturn->return_type === 'product_replacement') {
-
-                // 1. ADJUST ORIGINAL PURCHASE ITEMS (only reduce quantities, keep prices same)
+                // Update original purchase items (reduce quantities for returned items)
                 foreach ($purchaseReturn->items as $returnItem) {
                     $purchaseItem = $returnItem->purchaseItem;
                     if ($purchaseItem) {
-                        // Calculate new quantity after return
                         $newQuantity = $purchaseItem->quantity - $returnItem->return_quantity;
-
-                        // Don't let quantity go negative
                         if ($newQuantity < 0) {
-                            $newQuantity = 0;
+                            throw new \Exception('Cannot return more than purchased quantity for product: ' .
+                                ($returnItem->product->name ?? 'Unknown'));
                         }
 
-                        // Calculate proportional price adjustment
-                        $priceRatio = $returnItem->return_quantity / $purchaseItem->quantity;
-                        $priceAdjustment = $purchaseItem->total_price * $priceRatio;
-                        $shadowPriceAdjustment = $purchaseItem->shadow_total_price * $priceRatio;
+                        $purchaseItem->update(['quantity' => $newQuantity]);
 
-                        // Update the purchase item (only quantity, keep prices same)
-                        $purchaseItem->update([
-                            'quantity' => $newQuantity,
-                            'total_price' => $purchaseItem->total_price - $priceAdjustment,
-                            'shadow_total_price' => $purchaseItem->shadow_total_price - $shadowPriceAdjustment,
-                        ]);
-
-                        // If quantity becomes zero, mark as returned
                         if ($newQuantity <= 0) {
                             $purchaseItem->update([
                                 'status' => 'returned',
                                 'notes' => 'Fully returned via return #' . $purchaseReturn->return_no
                             ]);
                         }
+
+                        // Update purchase item totals
+                        $purchaseItem->update([
+                            'total_price' => $newQuantity * $purchaseItem->unit_price,
+                            'shadow_total_price' => $newQuantity * $purchaseItem->shadow_unit_price
+                        ]);
                     }
                 }
 
-                // 2. ADD NEW PURCHASE ITEMS FOR REPLACEMENT PRODUCTS (as separate items)
+                // INCREASE stock for REPLACEMENT items (new items coming in from supplier)
                 foreach ($purchaseReturn->replacementProducts as $replacement) {
-                    // Create new purchase item for replacement (keep original prices)
-                    \App\Models\PurchaseItem::create([
-                        'purchase_id' => $purchase->id,
-                        'product_id' => $replacement->product_id,
-                        'variant_id' => $replacement->variant_id,
-                        'quantity' => $replacement->quantity,
-                        'unit_price' => $replacement->unit_price, // Keep replacement price
-                        'shadow_unit_price' => $replacement->shadow_unit_price,
-                        'sale_price' => $replacement->sale_price,
-                        'shadow_sale_price' => $replacement->shadow_sale_price,
-                        'total_price' => $replacement->total_price,
-                        'shadow_total_price' => $replacement->shadow_total_price,
-                        'warehouse_id' => $purchase->warehouse_id,
-                        'created_by' => $user->id,
-                        'user_type' => $user->type,
-                        'notes' => 'Replacement via return #' . $purchaseReturn->return_no,
-                        'status' => 'active'
-                    ]);
+                    $stock = Stock::where('warehouse_id', $purchaseReturn->warehouse_id)
+                        ->where('product_id', $replacement->product_id)
+                        ->where('variant_id', $replacement->variant_id)
+                        ->first();
+
+                    if ($stock) {
+                        // INCREASE stock (replacement items coming in)
+                        $stock->increment('quantity', $replacement->quantity);
+
+                        // Optional: Update purchase price using weighted average
+                        $oldQuantity = $stock->quantity - $replacement->quantity;
+                        $oldValue = $stock->purchase_price * $oldQuantity;
+                        $newValue = $oldValue + ($replacement->unit_price * $replacement->quantity);
+                        $stock->purchase_price = $newValue / $stock->quantity;
+
+                        $stock->save();
+
+                        Log::info('Stock increased for replacement', [
+                            'product_id' => $replacement->product_id,
+                            'variant_id' => $replacement->variant_id,
+                            'quantity' => $replacement->quantity,
+                            'new_stock' => $stock->quantity
+                        ]);
+                    } else {
+                        // Create new stock entry
+                        Stock::create([
+                            'warehouse_id' => $purchaseReturn->warehouse_id,
+                            'product_id' => $replacement->product_id,
+                            'variant_id' => $replacement->variant_id,
+                            'quantity' => $replacement->quantity,
+                            'purchase_price' => $replacement->unit_price,
+                            'sale_price' => $replacement->sale_price,
+                            'batch_no' => 'REPL-' . $purchaseReturn->return_no . '-' . Str::random(4),
+                        ]);
+                    }
+
+                    // Update replacement product status
+                    $replacement->update(['status' => 'completed']);
                 }
 
-                // 3. ADJUST PAYMENT FOR NET DIFFERENCE
+                // Handle financial adjustments for net difference
                 if ($netDifference != 0) {
                     $paymentMethod = 'adjustment';
-                    $paymentNote = '';
 
-                    // Positive netDifference means Replacement Value > Return Value
-                    // We PAY to supplier (Pay)
+                    // Positive netDifference: Replacement Value > Return Value
+                    // We PAY extra to supplier
                     if ($netDifference > 0) {
-                        $additionalDue = $netDifference; // We need to pay this amount
+                        $additionalDue = $netDifference;
 
                         // We owe supplier more money
                         $purchase->increment('due_amount', $additionalDue);
 
-                        $paymentNote = 'Additional payment required for replacement return #' . $purchaseReturn->return_no .
-                            '. Replacement value exceeds return value by ৳' . $additionalDue;
-
-                        // Create payment record for ADDITIONAL DUE
+                        // Create payment record for ADDITIONAL DUE - NEGATIVE (money going out)
                         Payment::create([
                             'purchase_id' => $purchase->id,
-                            'amount' => $additionalDue, // Negative for payment due
-                            'shadow_amount' => $shadowNetDifference > 0 ? -$shadowNetDifference : 0,
+                            'amount' => -$additionalDue, // NEGATIVE for payment due
+                            'shadow_amount' => -$shadowNetDifference,
                             'payment_method' => $paymentMethod,
-                            'txn_ref' => 'REPL-DUE-ADD-' . Str::random(8),
-                            'note' => $paymentNote,
+                            'txn_ref' => 'REPL-DUE-' . Str::random(8),
+                            'note' => 'Additional payment for replacement return #' . $purchaseReturn->return_no .
+                                '. Replacement exceeds return by ৳' . $additionalDue,
                             'supplier_id' => $purchaseReturn->supplier_id,
                             'paid_at' => null, // Not paid yet
                             'created_by' => $user->id,
@@ -760,110 +857,42 @@ class PurchaseReturnController extends Controller
                             'status' => 'pending'
                         ]);
                     }
-                    // Negative netDifference means Return Value > Replacement Value
-                    // We RECEIVE from supplier (Receive)
+                    // Negative netDifference: Return Value > Replacement Value  
+                    // We GET refund from supplier
                     else {
-                        $refundAmount = abs($netDifference); // We get this amount
+                        $refundAmount = abs($netDifference);
 
+                        // We receive money from supplier
                         if ($purchase->due_amount > 0) {
-                            // First, reduce what we owe
-                            $oldDue = $purchase->due_amount;
-                            $purchase->decrement('due_amount', min($refundAmount, $purchase->due_amount));
+                            // First reduce what we owe
+                            $reduceDue = min($refundAmount, $purchase->due_amount);
+                            $purchase->decrement('due_amount', $reduceDue);
 
-                            // If we still have refund after reducing due, add to paid amount
-                            $remainingRefund = $refundAmount - min($refundAmount, $oldDue);
-                            if ($remainingRefund > 0) {
-                                $purchase->increment('paid_amount', $remainingRefund);
+                            // Any remaining is added to paid amount
+                            $remaining = $refundAmount - $reduceDue;
+                            if ($remaining > 0) {
+                                $purchase->increment('paid_amount', $remaining);
                             }
                         } else {
-                            // We don't owe anything, so we get cash refund (increase paid amount)
                             $purchase->increment('paid_amount', $refundAmount);
                         }
 
-                        $paymentNote = 'Refund received for replacement return #' . $purchaseReturn->return_no .
-                            '. Return value exceeds replacement value by ৳' . $refundAmount;
-
-                        // Create payment record for REFUND RECEIVED
+                        // Create payment record for REFUND - POSITIVE (money coming in)
                         Payment::create([
                             'purchase_id' => $purchase->id,
-                            'amount' => -$refundAmount, // Positive for refund received
-                            'shadow_amount' => $shadowNetDifference < 0 ? abs($shadowNetDifference) : 0,
+                            'amount' => $refundAmount, // POSITIVE for refund
+                            'shadow_amount' => abs($shadowNetDifference),
                             'payment_method' => $paymentMethod,
-                            'txn_ref' => 'REPL-REF-RECV-' . Str::random(8),
-                            'note' => $paymentNote,
+                            'txn_ref' => 'REPL-REF-' . Str::random(8),
+                            'note' => 'Refund for replacement return #' . $purchaseReturn->return_no .
+                                '. Return exceeds replacement by ৳' . $refundAmount,
                             'supplier_id' => $purchaseReturn->supplier_id,
                             'paid_at' => Carbon::now(),
                             'created_by' => $user->id,
                             'type' => 'refund_received'
                         ]);
                     }
-
-                    // Handle shadow amounts
-                    if ($shadowNetDifference != 0) {
-                        if ($shadowNetDifference > 0) {
-                            // We owe shadow money
-                            $shadowAdditionalDue = $shadowNetDifference;
-                            $purchase->increment('shadow_due_amount', $shadowAdditionalDue);
-                        } else {
-                            // We get shadow money
-                            $shadowRefundAmount = abs($shadowNetDifference);
-
-                            if ($purchase->shadow_due_amount > 0) {
-                                $oldShadowDue = $purchase->shadow_due_amount;
-                                $purchase->decrement('shadow_due_amount', min($shadowRefundAmount, $purchase->shadow_due_amount));
-
-                                $remainingShadowRefund = $shadowRefundAmount - min($shadowRefundAmount, $oldShadowDue);
-                                if ($remainingShadowRefund > 0) {
-                                    $purchase->increment('shadow_paid_amount', $remainingShadowRefund);
-                                }
-                            } else {
-                                $purchase->increment('shadow_paid_amount', $shadowRefundAmount);
-                            }
-                        }
-                    }
-
-                    // Recalculate payment status
-                    $paymentStatus = $this->calculatePaymentStatus($purchase);
-                    $shadowPaymentStatus = $this->calculateShadowPaymentStatus($purchase);
-
-                    $purchase->update([
-                        'payment_status' => $paymentStatus,
-                        'shadow_payment_status' => $shadowPaymentStatus
-                    ]);
-
-                    // Update purchase return with actual refund amount
-                    $actualRefund = $netDifference < 0 ? abs($netDifference) : 0;
-                    $shadowActualRefund = $shadowNetDifference < 0 ? abs($shadowNetDifference) : 0;
-
-                    $purchaseReturn->update([
-                        'refunded_amount' => $actualRefund,
-                        'shadow_refunded_amount' => $shadowActualRefund,
-                    ]);
                 }
-
-                // 4. RECALCULATE PURCHASE TOTALS
-                $this->recalculatePurchaseTotals($purchase);
-
-                // 5. Add note about replacement
-                $returnNote = "\n\nProduct replacement completed on: " . now()->format('Y-m-d H:i:s');
-                $returnNote .= "\nOriginal purchase items adjusted and replacement items added as separate entries.";
-
-                if ($netDifference != 0) {
-                    if ($netDifference > 0) {
-                        $returnNote .= "\nAdditional payment due to supplier: ৳" . $netDifference;
-                    } else {
-                        $returnNote .= "\nRefund received from supplier: ৳" . abs($netDifference);
-                    }
-                }
-
-                $purchaseReturn->update([
-                    'notes' => $purchaseReturn->notes . $returnNote
-                ]);
-
-                // Also update purchase notes
-                $purchase->update([
-                    'notes' => $purchase->notes . "\n\nModified via product replacement return: " . $purchaseReturn->return_no
-                ]);
             }
 
             // Update return items status
@@ -882,6 +911,7 @@ class PurchaseReturnController extends Controller
             return redirect()->back()->with('error', 'Error completing purchase return: ' . $e->getMessage());
         }
     }
+
     private function recalculatePurchaseTotals($purchase)
     {
         // Get all purchase items
@@ -891,24 +921,10 @@ class PurchaseReturnController extends Controller
         $newGrandTotal = $purchaseItems->sum('total_price');
         $newShadowGrandTotal = $purchaseItems->sum('shadow_total_price');
 
-        // Calculate new due amounts
-        $newDueAmount = max(0, $newGrandTotal - $purchase->paid_amount);
-        $newShadowDueAmount = max(0, $newShadowGrandTotal - $purchase->shadow_paid_amount);
-
-        // Ensure paid amounts don't exceed totals
-        if ($purchase->paid_amount > $newGrandTotal) {
-            $purchase->paid_amount = $newGrandTotal;
-        }
-        if ($purchase->shadow_paid_amount > $newShadowGrandTotal) {
-            $purchase->shadow_paid_amount = $newShadowGrandTotal;
-        }
-
         // Update the purchase with new totals
         $purchase->update([
             'grand_total' => $newGrandTotal,
             'shadow_total_amount' => $newShadowGrandTotal,
-            'due_amount' => $newDueAmount,
-            'shadow_due_amount' => $newShadowDueAmount,
             'payment_status' => $this->calculatePaymentStatus($purchase),
             'shadow_payment_status' => $this->calculateShadowPaymentStatus($purchase),
         ]);
@@ -917,8 +933,6 @@ class PurchaseReturnController extends Controller
             'purchase_id' => $purchase->id,
             'new_grand_total' => $newGrandTotal,
             'new_shadow_grand_total' => $newShadowGrandTotal,
-            'new_due_amount' => $newDueAmount,
-            'new_shadow_due_amount' => $newShadowDueAmount,
         ]);
     }
 
@@ -942,30 +956,6 @@ class PurchaseReturnController extends Controller
         } else {
             return 'unpaid';
         }
-    }
-
-    private function getVariantDisplayName($variant)
-    {
-        if (!$variant)
-            return 'Default Variant';
-
-        if ($variant->attribute_values && is_array($variant->attribute_values)) {
-            $parts = [];
-            foreach ($variant->attribute_values as $attribute => $value) {
-                $parts[] = "$attribute: $value";
-            }
-            return implode(', ', $parts);
-        }
-
-        $parts = [];
-        if ($variant->size)
-            $parts[] = "Size: $variant->size";
-        if ($variant->color)
-            $parts[] = "Color: $variant->color";
-        if ($variant->material)
-            $parts[] = "Material: $variant->material";
-
-        return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
     }
 
     private function transformToShadowData($purchaseReturn)
@@ -1044,6 +1034,91 @@ class PurchaseReturnController extends Controller
             'shadow_replacement_total' => $shadowReplacementTotal,
             'net_difference' => $replacementTotal - $totalReturn,
             'shadow_net_difference' => $shadowReplacementTotal - $shadowTotalReturn,
+        ]);
+    }
+
+    public function getPurchaseData(Request $request)
+    {
+        $request->validate([
+            'purchase_id' => 'required|exists:purchases,id'
+        ]);
+
+        $purchase = Purchase::with(['items.product', 'items.variant', 'supplier', 'warehouse'])
+            ->where('status', 'completed')
+            ->findOrFail($request->purchase_id);
+
+        $purchaseItems = [];
+        foreach ($purchase->items as $item) {
+            $stock = Stock::where('warehouse_id', $purchase->warehouse_id)
+                ->where('product_id', $item->product_id)
+                ->where('variant_id', $item->variant_id)
+                ->first();
+
+            // Start with 0 - only show items with available stock
+            $maxQuantity = 0;
+
+            // If stock exists and has quantity > 0, calculate maximum returnable
+            if ($stock && $stock->quantity > 0) {
+                // Calculate already returned quantity
+                $alreadyReturned = PurchaseReturnItem::where('purchase_item_id', $item->id)
+                    ->where('status', 'completed')
+                    ->sum('return_quantity');
+                
+                // Maximum returnable is min(stock quantity, purchase quantity - already returned)
+                $availableFromStock = $stock->quantity;
+                $availableFromPurchase = max(0, $item->quantity - $alreadyReturned);
+                $maxQuantity = min($availableFromStock, $availableFromPurchase);
+            }
+
+            // Only add item if we can return something
+            if ($maxQuantity > 0) {
+                $purchaseItems[] = [
+                    'id' => $item->id,
+                    'purchase_item_id' => $item->id,
+                    'product_id' => $item->product_id,
+                    'product_name' => $item->product->name ?? 'Unknown Product',
+                    'variant_id' => $item->variant_id,
+                    'variant_name' => $this->getVariantDisplayName($item->variant),
+                    'max_quantity' => $maxQuantity,
+                    'available_quantity' => $maxQuantity,
+                    'unit_price' => $item->unit_price,
+                    'shadow_unit_price' => $item->shadow_unit_price,
+                    'sale_price' => $item->sale_price,
+                    'shadow_sale_price' => $item->shadow_sale_price,
+                    'purchase_quantity' => $item->quantity,
+                    'total_price' => $item->total_price,
+                    'shadow_total_price' => $item->shadow_total_price,
+                    'stock_quantity' => $stock ? $stock->quantity : 0,
+                    'already_returned' => $alreadyReturned ?? 0
+                ];
+            }
+        }
+
+        return response()->json([
+            'purchase' => [
+                'id' => $purchase->id,
+                'purchase_no' => $purchase->purchase_no,
+                'purchase_date' => $purchase->purchase_date,
+                'grand_total' => $purchase->grand_total,
+                'paid_amount' => $purchase->paid_amount,
+                'due_amount' => $purchase->due_amount,
+                'status' => $purchase->status,
+                'supplier' => $purchase->supplier ? [
+                    'id' => $purchase->supplier->id,
+                    'name' => $purchase->supplier->name,
+                    'company' => $purchase->supplier->company,
+                    'email' => $purchase->supplier->email,
+                    'phone' => $purchase->supplier->phone,
+                    'address' => $purchase->supplier->address,
+                ] : null,
+                'warehouse' => $purchase->warehouse ? [
+                    'id' => $purchase->warehouse->id,
+                    'name' => $purchase->warehouse->name,
+                    'code' => $purchase->warehouse->code,
+                ] : null,
+                'items_count' => $purchase->items->count(),
+            ],
+            'purchaseItems' => $purchaseItems
         ]);
     }
 }
