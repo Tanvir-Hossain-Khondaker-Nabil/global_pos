@@ -29,6 +29,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unsignedBigInteger('outlet_id');
+            $table->unsignedBigInteger('purchase_id');
 
             $table->index(['warehouse_id', 'product_id', 'variant_id', 'batch_no']);
         });

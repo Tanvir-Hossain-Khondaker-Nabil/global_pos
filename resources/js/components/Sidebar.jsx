@@ -82,18 +82,18 @@ const baseMenu = [
   { title: "Accounts", icon: "dollar-sign", route: "accounts.index", routeParams: null, active: "accounts.index", role: "all", category: "Finance" },
   { title: "Ledgers", icon: "box", route: "ledgers.index", routeParams: null, active: "ledgers.index", role: "all", category: "Finance" },
 
-  { title: "Plan", icon: "barcode", route: "plans.index", routeParams: null, active: "plans.index", role: "all", category: "Subscriptions" },
-  { title: "Plan Modules", icon: "barcode", route: "modules.index", routeParams: null, active: "modules.index", role: "all", category: "Subscriptions" },
-  { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", routeParams: null, active: "subscriptions.index", role: "all", category: "Subscriptions" },
-  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", routeParams: null, active: "subscriptions.payments", role: "all", category: "Subscriptions" },
+  // { title: "Plan", icon: "barcode", route: "plans.index", routeParams: null, active: "plans.index", role: "all", category: "Subscriptions" },
+  // { title: "Plan Modules", icon: "barcode", route: "modules.index", routeParams: null, active: "modules.index", role: "all", category: "Subscriptions" },
+  // { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", routeParams: null, active: "subscriptions.index", role: "all", category: "Subscriptions" },
+  // { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", routeParams: null, active: "subscriptions.payments", role: "all", category: "Subscriptions" },
 
   { title: "Dealerships", icon: "box", route: "dealerships.index", routeParams: null, active: "dealerships.index", role: "all", category: "Partners" },
 
   { title: "Customer", icon: "user-plus", route: "customer.index", routeParams: null, active: "customer.index", role: "all", category: "CRM" },
   { title: "Companies", icon: "user-plus", route: "companies.index", routeParams: null, active: "companies.index", role: "all", category: "CRM" },
 
-  { title: "Users", icon: "user", route: "userlist.view", routeParams: null, active: "userlist.view", role: "all", category: "Admin" },
-  { title: "Roles", icon: "user", route: "roles.index", routeParams: null, active: "roles.index", role: "all", category: "Admin" },
+  // { title: "Users", icon: "user", route: "userlist.view", routeParams: null, active: "userlist.view", role: "all", category: "Admin" },
+  // { title: "Roles", icon: "user", route: "roles.index", routeParams: null, active: "roles.index", role: "all", category: "Admin" },
 
   { title: "Employees", icon: "users", route: "employees.index", routeParams: null, active: "employees.index", role: "all", category: "HR" },
   { title: "Attendance", icon: "calendar", route: "attendance.index", routeParams: null, active: "attendance.index", role: "all", category: "HR" },
@@ -216,14 +216,14 @@ export default function Sidebar({ status, setStatus }) {
 
       Plan: t("auth.plan", "Plan"),
       "Plan Modules": t("auth.plan_modules", "Plan Modules"),
-      Subscriptions: t("auth.subscriptions", "Subscriptions"),
-      "Subscriptions Payments": t("auth.subscriptions_payments", "Subscriptions Payments"),
+      // Subscriptions: t("auth.subscriptions", "Subscriptions"),
+      // "Subscriptions Payments": t("auth.subscriptions_payments", "Subscriptions Payments"),
 
       Dealerships: t("auth.dealerships", "Dealerships"),
       Customer: t("auth.customer", "Customer"),
       Companies: t("auth.companies", "Companies"),
-      Users: t("auth.users", "Users"),
-      Roles: t("auth.roles", "Roles"),
+      // Users: t("auth.users", "Users"),
+      // Roles: t("auth.roles", "Roles"),
       Employees: t("auth.employees", "Employees"),
       Attendance: t("auth.attendance", "Attendance"),
       Salary: t("auth.salary", "Salary"),
@@ -302,12 +302,13 @@ export default function Sidebar({ status, setStatus }) {
       >
         <div className="p-6 h-full flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-center mb-8">
             <div className="flex items-center gap-3">
-              <div className="bg-white p-2 rounded-xl shadow-lg">
-                <LayoutDashboard className="w-6 h-6 text-[#1e4d2b]" />
+              <div className="bg-white p-1 rounded-xl shadow-lg">
+                {/* <LayoutDashboard className="w-6 h-6 text-[#1e4d2b]" /> */}
+                <img src="https://i.ibb.co.com/t0bPR3c/output-onlinepngtools-12-1.png" className="w-[80px] h-[80px]" alt="" />
               </div>
-              <h1 className="font-bold text-lg uppercase tracking-tight text-white">Total Biz</h1>
+              {/* <h1 className="font-bold text-lg uppercase tracking-tight text-white">ALMODINA</h1> */}
             </div>
             <button onClick={() => setStatus(false)} className="lg:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors">
               <X size={20} />
