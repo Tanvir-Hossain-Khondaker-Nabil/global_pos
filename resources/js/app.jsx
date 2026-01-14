@@ -11,8 +11,8 @@ createInertiaApp({
             const pages = import.meta.glob("./Pages/**/*.jsx", { eager: true });
             const pagePath = `./Pages/${name}.jsx`;
             
-            console.log("Looking for page:", pagePath);
-            console.log("Available pages:", Object.keys(pages));
+            // console.log("Looking for page:", pagePath);
+            // console.log("Available pages:", Object.keys(pages));
             
             if (!pages[pagePath]) {
                 throw new Error(`Page not found: ${pagePath}`);

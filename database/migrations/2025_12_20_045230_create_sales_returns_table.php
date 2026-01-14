@@ -24,7 +24,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->decimal('replacement_total', 15, 2)->default(0)->nullable();
             $table->decimal('shadow_replacement_total', 15, 2)->default(0)->nullable();
-            $table->string('type')->default('sale_return'); // sale_return, damaged, replacement
+            $table->string('type')->default('sale_return'); 
             $table->integer('return_quantity')->default(0);
             $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');

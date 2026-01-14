@@ -10,32 +10,31 @@ use Illuminate\Database\Eloquent\Model;
 
 class SalesReturn extends Model
 {
-     protected $fillable = [
-        'sales_return_id',
-        'sale_item_id',
-        'product_id',
-        'variant_id',
-        'warehouse_id',
-        'unit_price',
-        'shadow_unit_price',
-        'sale_price',
-        'shadow_sale_price',
-        'total_price',
-        'shadow_total_price',
-        'return_quantity',
-        'reassaon',
-        'type',
+
+    protected $fillable = [
+        'sale_id',
+        'customer_id',
+        'refunded_amount',
+        'shadow_refunded_amount',
+        'return_type',
         'status',
+        'return_date',
+        'reason',
+        'notes',
+        'replacement_total',
+        'shadow_replacement_total',
+        'type',
+        'return_quantity',
         'created_by',
-        'outlet_id'
+        'outlet_id',
     ];
+
 
     protected static function booted()
     {
         static::addGlobalScope(new UserScope);
         static::addGlobalScope(new OutletScope);
         
-        // Automatically set outlet_id and created_by when creating
         static::creating(function ($attribute) {
             if (Auth::check()) {
                 $user = Auth::user();

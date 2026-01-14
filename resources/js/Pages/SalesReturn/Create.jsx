@@ -17,7 +17,8 @@ export default function AddSalesReturn({
     customers,
     warehouses,
     products,
-    isShadowUser
+    isShadowUser,
+    accounts
 }) {
     const { t, locale } = useTranslation();
     const [selectedItems, setSelectedItems] = useState([]);
@@ -31,12 +32,24 @@ export default function AddSalesReturn({
     const [paymentType, setPaymentType] = useState('cash');
     const [selectedSaleId, setSelectedSaleId] = useState(sale?.id || '');
     const [validationErrors, setValidationErrors] = useState({});
-
+    
     const searchRef = useRef(null);
     const dropdownRef = useRef(null);
+    const [urlSaleId, setUrlSaleId] = useState(null);
+
+    // Get sale_id from URL on component mount
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const saleIdFromUrl = params.get("sale_id");
+        setUrlSaleId(saleIdFromUrl);
+        
+        if (saleIdFromUrl && !sale?.id) {
+            setSelectedSaleId(saleIdFromUrl);
+        }
+    }, [sale?.id]);
 
     const form = useForm({
-        sale_id: sale?.id || "",
+        sale_id: sale?.id || urlSaleId || '',
         is_damaged: false,
         return_type: 'money_back',
         return_date: new Date().toISOString().split('T')[0],
@@ -46,8 +59,20 @@ export default function AddSalesReturn({
         refunded_amount: 0,
         shadow_refunded_amount: 0,
         items: [],
-        replacement_products: []
+        replacement_products: [],
+        account_id: null,
     });
+
+    // Update form sale_id when sale or urlSaleId changes
+    useEffect(() => {
+        if (sale?.id) {
+            form.setData('sale_id', sale.id);
+            setSelectedSaleId(sale.id);
+        } else if (urlSaleId) {
+            form.setData('sale_id', urlSaleId);
+            setSelectedSaleId(urlSaleId);
+        }
+    }, [sale?.id, urlSaleId]);
 
     const formatDate = (date) => {
         if (!date) return '';
@@ -59,8 +84,6 @@ export default function AddSalesReturn({
         });
     };
 
-
-    // Calculate total return amount based on sale price (not cost price)
     const calculateTotalReturn = useCallback(() => {
         return selectedItems.reduce((total, item) => {
             if (item.return_quantity > 0) {
@@ -71,8 +94,6 @@ export default function AddSalesReturn({
         }, 0);
     }, [selectedItems]);
 
-
-    // Calculate shadow total return amount
     const calculateShadowTotalReturn = useCallback(() => {
         return selectedItems.reduce((total, item) => {
             if (item.return_quantity > 0) {
@@ -83,8 +104,6 @@ export default function AddSalesReturn({
         }, 0);
     }, [selectedItems]);
 
-
-    // Calculate total replacement value (using sale price)
     const calculateReplacementTotal = useCallback(() => {
         return replacementProducts.reduce((total, product) => {
             const quantity = parseFloat(product.quantity) || 1;
@@ -93,8 +112,6 @@ export default function AddSalesReturn({
         }, 0);
     }, [replacementProducts]);
 
-
-    // Calculate shadow replacement value
     const calculateShadowReplacementTotal = useCallback(() => {
         return replacementProducts.reduce((total, product) => {
             const quantity = parseFloat(product.quantity) || 1;
@@ -103,14 +120,11 @@ export default function AddSalesReturn({
         }, 0);
     }, [replacementProducts]);
 
-
-    // Calculate net difference
     const calculateNetDifference = useCallback(() => {
         const totalReturn = calculateTotalReturn();
         const replacementTotal = calculateReplacementTotal();
-        return replacementTotal - totalReturn; // Positive = customer pays more, Negative = we refund
+        return replacementTotal - totalReturn;
     }, [calculateTotalReturn, calculateReplacementTotal]);
-
 
     const formatCurrency = (value) => {
         const numValue = Number(value) || 0;
@@ -119,7 +133,6 @@ export default function AddSalesReturn({
             maximumFractionDigits: 2
         }).format(numValue);
     };
-
 
     const getVariantDisplayName = (variant) => {
         if (!variant) return 'Default Variant';
@@ -162,14 +175,12 @@ export default function AddSalesReturn({
         return parts.length ? parts.join(', ') : 'Default Brand';
     };
 
-
     // Sync form data
     useEffect(() => {
         const totalReturn = calculateTotalReturn();
         const shadowTotalReturn = calculateShadowTotalReturn();
 
-        // For money back returns, auto-set refund amount to total return
-        if (returnType == 'money_back') {
+        if (returnType === 'money_back') {
             setRefundedAmount(totalReturn);
             setShadowRefundedAmount(shadowTotalReturn);
         } else {
@@ -244,7 +255,7 @@ export default function AddSalesReturn({
     const updateReturnItem = (index, field, value) => {
         const updated = [...selectedItems];
 
-        if (field == 'return_quantity') {
+        if (field === 'return_quantity') {
             const quantity = parseInt(value) || 0;
             const maxQuantity = updated[index].max_quantity;
 
@@ -258,7 +269,6 @@ export default function AddSalesReturn({
 
             updated[index].return_quantity = quantity;
 
-            // Clear quantity error if fixed
             if (validationErrors.quantity) {
                 setValidationErrors(prev => {
                     const newErrors = { ...prev };
@@ -276,10 +286,9 @@ export default function AddSalesReturn({
     // Add replacement product
     const addReplacementProduct = (product, variant) => {
         const existingProduct = replacementProducts.find(
-            item => item.product_id == product.id && item.variant_id == variant.id
+            item => item.product_id === product.id && item.variant_id === variant.id
         );
 
-        // For sales returns, we use sale prices
         const defaultUnitPrice = parseFloat(variant.unit_cost || variant.purchase_price || 0);
         const defaultShadowUnitPrice = parseFloat(variant.shadow_unit_cost || variant.shadow_purchase_price || 0);
         const defaultSalePrice = parseFloat(variant.selling_price || variant?.stock?.sale_price);
@@ -327,7 +336,6 @@ export default function AddSalesReturn({
 
         updated[index][field] = numericValue;
 
-        // Recalculate totals
         if (field === 'quantity' || field === 'sale_price' || field === 'shadow_sale_price') {
             const quantity = parseFloat(updated[index].quantity) || 1;
             const salePrice = parseFloat(updated[index].sale_price) || 0;
@@ -346,7 +354,6 @@ export default function AddSalesReturn({
         setReplacementProducts(updated);
     };
 
-    // Handle return type change
     const handleReturnTypeChange = (type) => {
         setReturnType(type);
         if (type === 'money_back') {
@@ -358,7 +365,6 @@ export default function AddSalesReturn({
         }
     };
 
-    // Handle sale selection
     const handleSaleSelect = (e) => {
         const saleId = e.target.value;
         setSelectedSaleId(saleId);
@@ -370,10 +376,10 @@ export default function AddSalesReturn({
         }
     };
 
-    // Validate form
     const validateForm = () => {
         const errors = {};
 
+        // Ensure sale_id is present
         if (!form.data.sale_id) {
             errors.sale = 'Please select a sale';
         }
@@ -400,7 +406,6 @@ export default function AddSalesReturn({
                 errors.replacement = 'Please add replacement products';
             }
 
-            // Validate replacement product prices
             replacementProducts.forEach((product, index) => {
                 if (parseFloat(product.sale_price) <= 0) {
                     errors[`replacement_price_${index}`] = 'Sale price must be greater than 0';
@@ -411,16 +416,21 @@ export default function AddSalesReturn({
             });
         }
 
+        // Validate account for money back returns
+        if (returnType === 'money_back' && !form.data.account_id) {
+            errors.account = 'Please select an account for refund';
+        }
+
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     };
 
-    // Submit form
     const submit = (e) => {
         e.preventDefault();
 
         if (!validateForm()) {
             console.log('Validation errors:', validationErrors);
+            toast.error('Please fix the form errors before submitting');
             return;
         }
 
@@ -453,36 +463,42 @@ export default function AddSalesReturn({
                 shadow_total_price: parseFloat(product.shadow_total_price) || 0
             })) : [];
 
+        // Ensure sale_id is included
+        const saleIdToUse = form.data.sale_id || sale?.id || urlSaleId || selectedSaleId;
+        
+        if (!saleIdToUse) {
+            toast.error('Sale ID is required');
+            return;
+        }
+
         const submitData = {
-            sale_id: form.data.sale_id,
+            sale_id: saleIdToUse,
+            account_id: form.data.account_id,
             return_type: returnType,
             return_date: form.data.return_date,
             reason: form.data.reason,
             notes: form.data.notes,
-            payment_type: returnType == 'money_back' ? paymentType : null,
-            refunded_amount: returnType == 'money_back' ? totalReturn : 0,
-            shadow_refunded_amount: returnType == 'money_back' ? shadowTotalReturn : 0,
+            payment_type: returnType === 'money_back' ? paymentType : null,
+            refunded_amount: returnType === 'money_back' ? totalReturn : 0,
+            shadow_refunded_amount: returnType === 'money_back' ? shadowTotalReturn : 0,
             items: itemsToSubmit,
             replacement_products: replacementToSubmit,
             replacement_total: replacementTotal,
             shadow_replacement_total: shadowReplacementTotal
         };
 
+        console.log('Submitting data:', submitData); // Debug log
 
         form.post(route("return.store"), {
             preserveScroll: true,
             data: submitData,
-
             onSuccess: () => {
                 toast.success("Sales return created successfully");
                 router.visit(route("salesReturn.list"));
             },
-
             onError: (errors) => {
                 console.error("Form errors:", errors);
-
-                let errorMessage =
-                    errors.error ||
+                let errorMessage = errors.error ||
                     errors.message ||
                     "There was an error creating the sales return.";
 
@@ -498,7 +514,6 @@ export default function AddSalesReturn({
         });
     };
 
-    // Calculate all totals
     const totalReturn = calculateTotalReturn();
     const shadowTotalReturn = calculateShadowTotalReturn();
     const replacementTotal = calculateReplacementTotal();
@@ -565,46 +580,48 @@ export default function AddSalesReturn({
                 </div>
             )}
 
-            {sale && (
+            {(sale || urlSaleId || selectedSaleId) && (
                 <form onSubmit={submit}>
                     {/* Sale Information */}
-                    <div className="card card-compact bg-base-100 border border-base-300 mb-6">
-                        <div className="card-body">
-                            <h3 className="card-title text-sm font-semibold">
-                                {t('sales_return.sale_info', 'Sale Information')}
-                            </h3>
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                <div>
-                                    <span className="font-medium">Sale No:</span>
-                                    <span className="ml-2 font-mono">{sale.invoice_no}</span>
-                                </div>
-                                <div>
-                                    <span className="font-medium">Customer:</span>
-                                    <span className="ml-2">{sale.customer?.customer_name}</span>
-                                </div>
-                                <div>
-                                    <span className="font-medium">Customer Phone:</span>
-                                    <span className="ml-2">{sale.customer?.phone}</span>
-                                </div>
-                                <div>
-                                    <span className="font-medium">Date:</span>
-                                    <span className="ml-2">{sale.created_at}</span>
-                                </div>
-                                <div>
-                                    <span className="font-medium">Total:</span>
-                                    <span className="ml-2 font-semibold">৳{formatCurrency(sale.grand_total)}</span>
-                                </div>
-                                <div>
-                                    <span className="font-medium">Payment Status:</span>
-                                    <span className={`badge badge-sm ml-2 rounded ${sale.status == 'paid' ? 'badge-success' :
-                                            sale.status == 'partial' ? 'badge-warning' : 'badge-error'
-                                        }`}>
-                                        {sale.status}
-                                    </span>
+                    {sale && (
+                        <div className="card card-compact bg-base-100 border border-base-300 mb-6">
+                            <div className="card-body">
+                                <h3 className="card-title text-sm font-semibold">
+                                    {t('sales_return.sale_info', 'Sale Information')}
+                                </h3>
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                    <div>
+                                        <span className="font-medium">Sale No:</span>
+                                        <span className="ml-2 font-mono">{sale.invoice_no}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Customer:</span>
+                                        <span className="ml-2">{sale.customer?.customer_name}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Customer Phone:</span>
+                                        <span className="ml-2">{sale.customer?.phone}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Date:</span>
+                                        <span className="ml-2">{sale.created_at}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Total:</span>
+                                        <span className="ml-2 font-semibold">৳{formatCurrency(sale.grand_total)}</span>
+                                    </div>
+                                    <div>
+                                        <span className="font-medium">Payment Status:</span>
+                                        <span className={`badge badge-sm ml-2 rounded ${sale.status === 'paid' ? 'badge-success' :
+                                                sale.status === 'partial' ? 'badge-warning' : 'badge-error'
+                                            }`}>
+                                            {sale.status}
+                                        </span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                         {/* Left Column - Return Details */}
@@ -614,15 +631,15 @@ export default function AddSalesReturn({
                                     <span className="label-text">{t('sales_return.return_type', 'Return Type')} *</span>
                                 </label>
                                 <div className="grid grid-cols-2 gap-2">
-                                    <label className={`card card-compact cursor-pointer ${returnType == 'money_back'
-                                            ? 'bg-[#1e4d2b] text-white/10 border border-primary'
+                                    <label className={`card card-compact cursor-pointer ${returnType === 'money_back'
+                                            ? 'bg-[#1e4d2b] text-white border border-primary'
                                             : 'bg-base-100 border border-base-300'
                                         }`}>
                                         <div className="card-body p-3">
                                             <input
                                                 type="radio"
                                                 className="radio radio-primary"
-                                                checked={returnType == 'money_back'}
+                                                checked={returnType === 'money_back'}
                                                 onChange={() => handleReturnTypeChange('money_back')}
                                             />
                                             <div className="flex items-center gap-2">
@@ -670,23 +687,29 @@ export default function AddSalesReturn({
                                 />
                             </div>
 
-                            {returnType == 'money_back' && (
+                            {/* {returnType === 'money_back' && ( */}
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">{t('sales_return.payment_type', 'Payment Type')} *</span>
+                                        <span className="label-text">{t('sales_return.account_id', 'Select Account')} *</span>
                                     </label>
                                     <select
                                         className="select select-bordered w-full"
-                                        value={paymentType}
-                                        onChange={(e) => setPaymentType(e.target.value)}
+                                        value={form.data.account_id || ''}
+                                        onChange={(e) => form.setData("account_id", e.target.value)}
+                                        required={returnType === 'money_back'}
                                     >
-                                        <option value="cash">Cash</option>
-                                        <option value="card">Card</option>
-                                        <option value="mobile_banking">Mobile Banking</option>
-                                        <option value="adjust_to_due">Adjust to Customer Due</option>
+                                        <option value="">Select an Account</option>
+                                        {accounts.map((account) => (
+                                            <option key={account.id} value={account.id}>
+                                                {account.name} ({account.current_balance || 0} tk only)
+                                            </option>
+                                        ))}
                                     </select>
+                                    {validationErrors.account && (
+                                        <span className="text-error text-xs mt-1">{validationErrors.account}</span>
+                                    )}
                                 </div>
-                            )}
+                            {/* )} */}
 
                             <div className="form-control">
                                 <label className="label cursor-pointer">
@@ -753,7 +776,7 @@ export default function AddSalesReturn({
                                                             <p className="text-sm text-gray-600"> <strong>Variant</strong> : {item.variant_name}</p>
                                                             <p className="text-sm text-gray-600"> <strong>Brand</strong> : {item?.brand_name}</p>
                                                             <p className="text-xs text-gray-500 text-bold">
-                                                               <strong>{t('sales_return.available_stock', 'Available for Return')}:</strong> {item.max_quantity} |
+                                                                <strong>{t('sales_return.available_stock', 'Available for Return')}:</strong> {item.max_quantity} |
                                                                 <strong>{t('sales_return.sold', 'Sold')}:</strong> {item.sale_quantity}
                                                             </p>
                                                         </div>
@@ -845,7 +868,7 @@ export default function AddSalesReturn({
                             </div>
 
                             {/* Replacement Products (only for product_replacement type) */}
-                            {returnType == 'product_replacement' && (
+                            {returnType === 'product_replacement' && (
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -913,7 +936,7 @@ export default function AddSalesReturn({
                                                                                 {getVariantDisplayName(variant)}
                                                                             </div>
                                                                             <div className="text-xs text-gray-500 mt-1">
-                                                                                Sale Price: ৳{formatCurrency( variant?.stock?.sale_price || 0)}
+                                                                                Sale Price: ৳{formatCurrency(variant?.stock?.sale_price || 0)}
                                                                             </div>
                                                                         </div>
                                                                         <Plus size={16} className="text-warning" />

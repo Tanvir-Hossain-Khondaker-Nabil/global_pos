@@ -25,6 +25,7 @@ class SalesReturnStore extends FormRequest
             'sale_id' => 'required|exists:sales,id',
             'return_type' => 'required|in:money_back,product_replacement',
             'return_date' => 'required|date',
+            'account_id' => 'nullable|exists:accounts,id',
             'reason' => 'required|string|max:500',
             'notes' => 'nullable|string|max:1000',
             'payment_type' => 'required_if:return_type,money_back|nullable|in:cash,card,mobile_banking,adjust_to_due',

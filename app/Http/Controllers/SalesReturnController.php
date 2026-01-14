@@ -58,6 +58,8 @@ class SalesReturnController extends Controller
         $sale = null;
         $saleItems = [];
 
+
+
         if ($saleId) {
 
             $sale = Sale::with(['items.product', 'items.variant', 'customer', 'items.warehouse'])
@@ -181,27 +183,24 @@ class SalesReturnController extends Controller
 
     public function store(SalesReturnStore $request)
     {
+
         $validated = $request->validated();
 
-        if (SalesReturn::where('sale_id', $validated['sale_id'])->exists()) {
+        if (SalesReturn::orWhere('sale_id', $request->sale_id)->exists()) {
             return back()->withErrors(['error' => 'Sales return for this sale already exists.']);
         }
 
         $request->is_damaged ? $type = 'damaged' : $type = 'sale_return';
         $account = Account::find($request->account_id);
 
-
-
         try {
             DB::beginTransaction();
-
-            // Create sales return record
-            $stock = SaleItem::where('sale_id', $validated['sale_id'])->first();
-            $customer_id = Sale::where('id', $validated['sale_id'])->value('customer_id');
+            $stock = SaleItem::where('sale_id', $request->sale_id)->first();
+            $customer_id = Sale::where('id', $request->sale_id)->value('customer_id');
 
 
             $salesReturn = SalesReturn::create([
-                'sale_id' => $validated['sale_id'],
+                'sale_id' => $request->sale_id ,
                 'customer_id' => $customer_id,
                 'return_type' => $validated['return_type'],
                 'return_date' => Carbon::parse($validated['return_date'])->format('Y-m-d'),
@@ -255,7 +254,7 @@ class SalesReturnController extends Controller
 
                     $payment = Payment::create([
                         'account_id' => $account->id,
-                        'amount' => $validated['refunded_amount'] ?? 0,
+                        'amount' =>   $validated['refunded_amount'] * (-1) ?? 0,
                         'note' =>  $request->notes ?? 'Refund issued to customer for sales product damage.',
                         'created_by' => Auth::id(),
                         'txn_ref' => 'EXP-' . Str::random(10),
@@ -287,7 +286,6 @@ class SalesReturnController extends Controller
             }
 
 
-
             if ($validated['return_type'] === 'product_replacement' && !empty($validated['replacement_products'])) {
 
                 // Process replacement products if applicable
@@ -314,7 +312,6 @@ class SalesReturnController extends Controller
                             'created_by' => Auth::id(),
                         ]);
                     }
-
 
                     $replacementItem = SalesReturnItem::create([
                         'sales_return_id' => $salesReturn->id,
