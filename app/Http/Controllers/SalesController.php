@@ -23,13 +23,8 @@ use Illuminate\Support\Facades\Storage;
 use App\Services\ReceiptService;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-
-
 class SalesController extends Controller
 {
-
-
-
     /**
      * Display a listing of all sales
      */
@@ -45,8 +40,8 @@ class SalesController extends Controller
 
         $pos === 'pos' ? $type = 'pos' : $type = 'inventory';
 
-
-        $sales = Sale::with(['customer', 'items.product', 'items.product.brand', 'items.variant', 'payments'])->where('type', $type)
+        $sales = Sale::with(['customer', 'items.product', 'items.product.brand', 'items.variant', 'payments'])
+            ->where('type', $type)
             ->where('status', '!=', 'cancelled')
             ->when($search, function ($query, $search) {
                 $query->where(function ($q) use ($search) {
@@ -69,20 +64,17 @@ class SalesController extends Controller
             ->paginate(15)
             ->withQueryString();
 
-
         if ($isShadowUser) {
             $sales->getCollection()->transform(function ($sale) {
                 return $this->transformToShadowData($sale);
             });
         }
 
-
         if ($type == 'pos') {
             $render = 'sales/IndexPos';
         } else {
             $render = 'sales/Index';
         }
-
 
         return Inertia::render($render, [
             'sales' => $sales,
@@ -96,7 +88,6 @@ class SalesController extends Controller
             ]
         ]);
     }
-
 
     /**
      * Show form for the sale(inventory) creation
@@ -153,37 +144,26 @@ class SalesController extends Controller
         ]);
     }
 
-
-
-
     /**
-     * Store sale
+     * ✅ Store sale (FIXED: inventory new customer works)
      */
     public function store(Request $request)
     {
         $type = $request->input('type', 'pos');
 
-        // ✅ Validation
-        if ($type === 'inventory') {
-            $rules = [
-                'customer_id' => 'required|exists:customers,id',
-            ];
-        } else {
-            // ✅ POS: Walk-in allowed with no customer
-            $rules = [
-                'customer_id' => 'nullable|exists:customers,id',
-                'customer_name' => 'nullable|string|max:255|required_with:phone',
-                'phone' => 'nullable|string|max:20|required_with:customer_name',
-            ];
-        }
+        // ✅ Unified rules: allow either existing customer_id OR new customer_name+phone
+        $rules = [
+            'customer_id' => 'nullable|exists:customers,id',
+            'customer_name' => 'nullable|string|max:255|required_without:customer_id',
+            'phone' => 'nullable|string|max:20|required_without:customer_id',
 
-        $rules = array_merge($rules, [
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.variant_id' => 'required|exists:variants,id',
             'items.*.quantity' => 'required|integer|min:1',
+
             'account_id' => 'required|exists:accounts,id',
-        ]);
+        ];
 
         if ($request->has('pickup_items') && is_array($request->pickup_items) && count($request->pickup_items) > 0) {
             $rules['supplier_id'] = 'required|exists:suppliers,id';
@@ -217,39 +197,36 @@ class SalesController extends Controller
                     throw new \Exception('Selected supplier not found.');
             }
 
-            // ✅ Determine customerId (walk-in = null)
+            // ✅ Determine customerId (works for inventory + pos)
             $customerId = null;
 
-            if ($type === 'inventory') {
-                $customerId = $request->customer_id;
+            if (!empty($request->customer_id)) {
+                $customerId = (int) $request->customer_id;
             } else {
-                // POS
-                if (!empty($request->customer_id)) {
-                    $customerId = $request->customer_id;
-                } else {
-                    $name = trim((string) $request->customer_name);
-                    $phone = trim((string) $request->phone);
+                $name = trim((string) $request->customer_name);
+                $phone = trim((string) $request->phone);
 
-                    // ✅ Only create/find customer if user actually typed name+phone
-                    if ($name !== '' && $phone !== '') {
-                        $existingCustomer = Customer::where('phone', $phone)
-                            ->orWhere('customer_name', $name)
-                            ->first();
+                if ($name !== '' && $phone !== '') {
+                    $existingCustomer = Customer::where('phone', $phone)->first();
 
-                        if ($existingCustomer) {
-                            $customerId = $existingCustomer->id;
-                        } else {
-                            $customerId = Customer::create([
-                                'customer_name' => $name,
-                                'phone' => $phone,
-                                'advance_amount' => 0,
-                                'due_amount' => 0,
-                                'is_active' => 1,
-                                'created_by' => Auth::id(),
-                            ])->id;
-                        }
+                    if ($existingCustomer) {
+                        $customerId = $existingCustomer->id;
+                    } else {
+                        $customerId = Customer::create([
+                            'customer_name' => $name,
+                            'phone' => $phone,
+                            'advance_amount' => 0,
+                            'due_amount' => 0,
+                            'is_active' => 1,
+                            'created_by' => Auth::id(),
+                        ])->id;
                     }
                 }
+            }
+
+            // ✅ Inventory must have a customer
+            if ($type === 'inventory' && !$customerId) {
+                throw new \Exception('Customer is required for inventory sale.');
             }
 
             // Handle advance adjustment (only if customer exists)
@@ -271,7 +248,9 @@ class SalesController extends Controller
             }
 
             // paid amount logic
-            $paidAmount = ($type === 'inventory') ? (float) ($request->paid_amount ?? 0) : (float) ($request->grand_amount ?? 0);
+            $paidAmount = ($type === 'inventory')
+                ? (float) ($request->paid_amount ?? 0)
+                : (float) ($request->grand_amount ?? 0);
 
             // status
             if ($type === 'inventory') {
@@ -281,7 +260,7 @@ class SalesController extends Controller
             }
 
             $sale = Sale::create([
-                'customer_id' => $customerId, // ✅ can be null for walk-in
+                'customer_id' => $customerId, // ✅ now inventory new customer works
                 'invoice_no' => $this->generateInvoiceNo(),
                 'sub_total' => $request->sub_amount ?? 0,
                 'discount' => $request->discount_rate ?? 0,
@@ -357,7 +336,7 @@ class SalesController extends Controller
                 }
             }
 
-            // Pickup items (unchanged from your logic)
+            // Pickup items
             if (count($pickup_items) > 0) {
                 foreach ($pickup_items as $pickupItem) {
                     $pickupQuantity = (int) ($pickupItem['quantity'] ?? 1);
@@ -439,7 +418,7 @@ class SalesController extends Controller
                     'payment_method' => $request->payment_method ?? ($payment_type ?? 'cash'),
                     'txn_ref' => $request->txn_ref ?? ('SIOP-' . Str::random(10)),
                     'note' => $request->notes ?? null,
-                    'customer_id' => $customerId, // ✅ can be null
+                    'customer_id' => $customerId,
                     'paid_at' => Carbon::now(),
                     'status' => 'completed',
                     'created_by' => Auth::id(),
@@ -453,14 +432,11 @@ class SalesController extends Controller
             DB::commit();
 
             return to_route('sales.show', $sale->id)->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
         }
     }
-
-
 
     // payment Clearance - UPDATED WITH ACCOUNT SUPPORT
     public function storePayment(Request $request, Sale $sale)
@@ -480,7 +456,6 @@ class SalesController extends Controller
         DB::beginTransaction();
 
         try {
-            // Create payment record
             Payment::create([
                 'sale_id' => $sale->id,
                 'account_id' => $request->account_id,
@@ -495,7 +470,6 @@ class SalesController extends Controller
                 'status' => 'completed',
             ]);
 
-            // Update sale amounts
             $newPaidAmount = $sale->paid_amount + $request->amount;
             $newDueAmount = max(0, $sale->due_amount - $request->amount);
 
@@ -507,23 +481,19 @@ class SalesController extends Controller
                 'status' => $newDueAmount <= 0.01 ? 'paid' : 'partial',
             ]);
 
-            // Update account balance (credit for income from sale)
             $account->updateBalance($request->amount, 'credit');
 
             DB::commit();
 
             return redirect()->back()->with('success', 'Payment recorded successfully!');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors(['error' => 'Payment failed: ' . $e->getMessage()]);
         }
     }
 
-
     public function shadowStore(Request $request)
     {
-
         $type = $request->input('type', 'pos');
 
         if ($type == 'inventory') {
@@ -545,10 +515,8 @@ class SalesController extends Controller
 
         $request->validate($rules);
 
-
         DB::beginTransaction();
         $type == 'inventory' ? $paidAmount = $request->paid_amount : $paidAmount = $request->grand_amount;
-
 
         if ($type == 'inventory') {
             $customerId = $request->customer_id;
@@ -566,9 +534,7 @@ class SalesController extends Controller
             }
         }
 
-
         try {
-            // 1. Create Sale
             $sale = Sale::create([
                 'customer_id' => $customerId,
                 'invoice_no' => $this->generateInvoiceNo(),
@@ -590,7 +556,6 @@ class SalesController extends Controller
                 'type' => $type ?? 'pos',
             ]);
 
-
             $subTotal = 0;
 
             foreach ($request->items as $item) {
@@ -608,7 +573,6 @@ class SalesController extends Controller
                     ->orderBy('created_at', 'asc')
                     ->value('warehouse_id');
 
-                // 4. Create sale item
                 SaleItem::create([
                     'sale_id' => $sale->id,
                     'product_id' => $product->id,
@@ -625,14 +589,11 @@ class SalesController extends Controller
                 $subTotal += $totalPrice;
             }
 
-            // 5. Update sale totals
             $sale->update([
                 'sub_total' => $subTotal,
                 'grand_total' => $subTotal + ($subTotal * $request->vat_rate / 100) - ($subTotal * $request->discount_rate / 100),
             ]);
 
-
-            // create payment record if paid_amount > 0
             if ($paidAmount > 0) {
                 $payment = new Payment();
                 $payment->sale_id = $sale->id;
@@ -654,14 +615,11 @@ class SalesController extends Controller
             } else {
                 return to_route('salesPos.index', $type)->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
             }
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
         }
     }
-
-
 
     /**
      * Display the specified sale
@@ -683,7 +641,6 @@ class SalesController extends Controller
         if ($isShadowUser) {
             $sale = $this->transformToShadowData($sale);
         }
-
 
         $render = $print ? 'sales/ShowPos' : 'sales/Show';
 
@@ -713,7 +670,6 @@ class SalesController extends Controller
         ]);
     }
 
-
     public function downloadPdf(Sale $sale)
     {
         $sale = Sale::with(['customer', 'items.product', 'items.product.brand', 'items.variant', 'items.warehouse'])
@@ -721,9 +677,6 @@ class SalesController extends Controller
 
         return response()->json(['message' => 'PDF download would be implemented here']);
     }
-
-
-
 
     /**
      * Remove the specified sale
@@ -733,9 +686,7 @@ class SalesController extends Controller
         DB::beginTransaction();
 
         try {
-            // Restore stock for each item
             foreach ($sale->items as $item) {
-                // Add stock back using FIFO logic
                 Stock::create([
                     'product_id' => $item->product_id,
                     'variant_id' => $item->variant_id,
@@ -743,7 +694,6 @@ class SalesController extends Controller
                     'quantity' => $item->quantity,
                 ]);
 
-                // Log stock movement
                 StockMovement::create([
                     'warehouse_id' => $item->warehouse_id,
                     'product_id' => $item->product_id,
@@ -762,17 +712,11 @@ class SalesController extends Controller
             DB::commit();
 
             return redirect()->route('sales.index')->with('success', 'Sale deleted successfully!');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
         }
     }
-
-
-    /**
-     * Display all sales items
-     */
 
     public function allSalesItems()
     {
@@ -798,9 +742,6 @@ class SalesController extends Controller
         ]);
     }
 
-
-
-
     public function showItem($id)
     {
         $user = Auth::user();
@@ -811,17 +752,14 @@ class SalesController extends Controller
             $saleItem = self::transformToShadowItemData($saleItem);
         }
 
-
         return Inertia::render('sales/ShowItem', [
             'saleItem' => $saleItem,
             'isShadowUser' => $isShadowUser,
         ]);
     }
 
-
     public function edit(Sale $sale)
     {
-
         $sale->load(['customer', 'items.product', 'items.variant']);
 
         return inertia('sales/Edit', [
@@ -829,14 +767,8 @@ class SalesController extends Controller
         ]);
     }
 
-
-    /**
-     * update the specified sale 
-     */
-
     public function update(Sale $sale, Request $request)
     {
-
         $sale = Sale::with(['customer', 'items.product', 'items.variant'])->findOrFail($sale->id);
 
         if ($request->paid_amount > $sale->grand_total) {
@@ -852,7 +784,6 @@ class SalesController extends Controller
         } else {
             $status = 'pending';
         }
-
 
         $sale->update([
             'paid_amount' => $request->paid_amount,
@@ -872,9 +803,6 @@ class SalesController extends Controller
 
         return redirect()->route('sales.index')->with('success', 'Sale updated successfully.');
     }
-
-
-    //rejected 
 
     public function rejected(Sale $sale)
     {
@@ -897,10 +825,6 @@ class SalesController extends Controller
         return back()->with('success', 'Sale cancelled successfully.');
     }
 
-
-    /**
-     * Recalculate sale totals after item deletion
-     */
     private function recalculateSaleTotals(Sale $sale)
     {
         $subtotal = $sale->saleItems->sum(function ($item) {
@@ -916,14 +840,10 @@ class SalesController extends Controller
         ]);
     }
 
-    /**
-     * Get sales items statistics
-     */
     public function getStatistics(Request $request)
     {
         $query = SaleItem::with('sale', 'product');
 
-        // Apply date filters if provided
         if ($request->has('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
@@ -943,10 +863,6 @@ class SalesController extends Controller
         return response()->json($stats);
     }
 
-
-    /**
-     * FIFO stock deduction
-     */
     private static function fifoOut($productId, $variantId, $qtyNeeded, $saleId, $stockId = null)
     {
         $stocks = Stock::where('product_id', $productId)
@@ -960,7 +876,6 @@ class SalesController extends Controller
             ->orderBy('created_at', 'asc')
             ->get();
 
-
         foreach ($stocks as $stock) {
             if ($qtyNeeded <= 0)
                 break;
@@ -968,7 +883,6 @@ class SalesController extends Controller
             $take = min($stock->quantity, $qtyNeeded);
             $stock->decrement('quantity', $take);
 
-            // log movement
             StockMovement::create([
                 'warehouse_id' => $stock->warehouse_id ?? null,
                 'product_id' => $productId,
@@ -988,20 +902,12 @@ class SalesController extends Controller
         }
     }
 
-    /**
-     * Generate invoice number
-     */
     private function generateInvoiceNo()
     {
         $last = Sale::latest()->first();
         $num = $last ? intval(substr($last->invoice_no, -4)) + 1 : 1;
         return 'INV-' . date('Y-m') . '-' . str_pad($num, 4, '0', STR_PAD_LEFT);
     }
-
-
-    /**
-     * Transform sale data to shadow data
-     */
 
     private function transformToShadowData($sale)
     {
@@ -1024,11 +930,6 @@ class SalesController extends Controller
         return $sale;
     }
 
-
-    /**
-     * Update the specified sale item
-     */
-
     private static function transformToShadowItemData($salesItems)
     {
         $salesItems->unit_price = $salesItems->shadow_unit_price;
@@ -1039,8 +940,8 @@ class SalesController extends Controller
 
     public function scanBarcode(Request $request)
     {
-        $code = trim($request->code);          // ✅ trim
-        $code = preg_replace('/\s+/', '', $code); // ✅ remove spaces/newlines
+        $code = trim($request->code);
+        $code = preg_replace('/\s+/', '', $code);
 
         $stock = Stock::with(['product', 'variant'])
             ->where('quantity', '>', 0)
@@ -1053,7 +954,7 @@ class SalesController extends Controller
         if (!$stock) {
             return response()->json([
                 'message' => 'Stock not found',
-                'code_received' => $code, // ✅ debug
+                'code_received' => $code,
             ], 404);
         }
 
@@ -1078,6 +979,4 @@ class SalesController extends Controller
             ]
         ]);
     }
-
-
 }
