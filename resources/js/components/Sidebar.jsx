@@ -306,9 +306,9 @@ export default function Sidebar({ status, setStatus }) {
             <div className="flex items-center gap-3">
               <div className="bg-white p-1 rounded-xl shadow-lg">
                 {/* <LayoutDashboard className="w-6 h-6 text-[#1e4d2b]" /> */}
-                <img src="https://i.ibb.co.com/d0YnxSgz/Chat-GPT-Image-Jan-11-2026-09-05-52-PM-1.png" className="w-[80px] h-[80px]" alt="" />
+                <img src="https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png" className="h-[80px]" alt="" />
               </div>
-              {/* <h1 className="font-bold text-lg uppercase tracking-tight text-white">Mobile Bazar</h1> */}
+              {/* <h1 className="font-bold text-lg uppercase tracking-tight text-white">Total Biz Pos</h1> */}
             </div>
             <button onClick={() => setStatus(false)} className="lg:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors">
               <X size={20} />
