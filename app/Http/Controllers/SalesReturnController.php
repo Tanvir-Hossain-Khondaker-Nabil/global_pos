@@ -270,8 +270,6 @@ class SalesReturnController extends Controller
             }
 
 
-
-
             $totalReturn = 0;
             $shadowTotalReturn = 0;
 
@@ -288,7 +286,6 @@ class SalesReturnController extends Controller
 
             if ($validated['return_type'] === 'product_replacement' && !empty($validated['replacement_products'])) {
 
-                // Process replacement products if applicable
                 $replacementTotal = 0;
                 $shadowReplacementTotal = 0;
 
