@@ -619,6 +619,11 @@ Route::get('/lang/{locale}', [Controller::class, 'setLang'])
 Route::get('/current-lang', [Controller::class, 'getLang'])
     ->middleware('permission:lang.current')->name('lang.current');
 
+    Route::get('/storage-link', function () {
+    Artisan::call('storage:link');
+    return 'Storage link created successfully';
+});
+
 require __DIR__ . '/command.php';
 
 

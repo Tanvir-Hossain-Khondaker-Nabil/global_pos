@@ -25,7 +25,8 @@ class Product extends Model
         'in_house_sale_price',
         'in_house_shadow_sale_price',
         'in_house_initial_stock',
-        'outlet_id'
+        'outlet_id',
+        'photo'
     ];
 
     protected $casts = [

@@ -516,7 +516,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                       <div className="flex justify-end gap-1">
                         <Link
                           href={route("purchase.show", purchase.id)}
-                          className="btn btn-ghost btn-square btn-xs hover:bg-[#1e4d2b] text-white hover:text-white"
+                          className="btn btn-square btn-xs bg-[#1e4d2b] text-white hover:text-white"
                           title="View Details"
                         >
                           <Eye size={16} />
