@@ -1001,6 +1001,31 @@ export default function Customers({ customers, filters, accounts }) {
                                                 readOnly={!!customerForm.data.id}
                                             />
                                         </div>
+
+
+                                          <label className="label py-0 mb-2">
+                                            <span className="label-text font-bold text-gray-700 text-sm">
+                                                {t('customer.due_amount', 'Due Amount')}
+                                            </span>
+                                            {customerForm.data.id && (
+                                                <span className="text-xs text-gray-500 ml-2">{t('customer.readonly_for_editing', '(Read-only for editing)')}</span>
+                                            )}
+                                        </label>
+
+                                        <div className="relative">
+                                            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 font-bold">৳</span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                value={customerForm.data.due_amount}
+                                                onChange={(e) => customerForm.setData("due_amount", parseFloat(e.target.value) || 0)}
+                                                className={`input input-bordered w-full pl-4 py-3 ${customerForm.data.id ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'border-gray-300 focus:border-gray-900 focus:ring-1 focus:ring-gray-900'}`}
+                                                placeholder={t('customer.enter_due_amount', 'Enter due amount')}
+                                                readOnly={!!customerForm.data.id}
+                                            />
+                                        </div>
+
                                     </div>
 
                                     {/* Default Payment Account */}

@@ -146,7 +146,7 @@ class SalesController extends Controller
     }
 
     /**
-     * ✅ Store sale (FIXED: inventory new customer works)
+     *  Store sale (FIXED: inventory new customer works)
      */
     public function store(Request $request)
     {

@@ -65,6 +65,7 @@ class CustomerController extends Controller
                 'address' => $request->address,
                 'advance_amount' => $request->advance_amount ?? 0,
                 'due_amount' => $request->due_amount ?? 0,
+                'due_amount' => $request->due_amount ?? 0,
                 'is_active' => $request->is_active ?? true,
                 'created_by' => Auth::id(),
             ]);

@@ -40,12 +40,13 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
     const [customerId, setCustomerId] = useState("");
     const [customerName, setCustomerName] = useState("");
     const [customerPhone, setCustomerPhone] = useState("");
+    const [customerDueAmount, setCustomerDueAmount] = useState(); // New due amount field
     const [showManualCustomerFields, setShowManualCustomerFields] = useState(false);
     const [selectedCustomer, setSelectedCustomer] = useState(null);
 
     // Payment state
     const [selectedAccount, setSelectedAccount] = useState("");
-    const [paymentStatus, setPaymentStatus] = useState("unpaid"); // Changed default to "unpaid"
+    const [paymentStatus, setPaymentStatus] = useState("unpaid");
     const [partialPayment, setPartialPayment] = useState(false);
     const [paidAmount, setPaidAmount] = useState(0);
     const [manualPaymentOverride, setManualPaymentOverride] = useState(false);
@@ -54,10 +55,12 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
     const [cart, setCart] = useState([]);
     const cartCount = cart.reduce((a, i) => a + n(i.qty), 0);
 
-    // Tax/Discount state
-    const [taxRate, setTaxRate] = useState(0);
-    const [discountValue, setDiscountValue] = useState(0);
-    const [shippingValue, setShippingValue] = useState(0);
+    // Tax/Discount state - UPDATED
+    const [taxRate, setTaxRate] = useState(null);
+    const [discountType, setDiscountType] = useState("percentage"); // 'percentage' or 'flat'
+    const [discountRate, setDiscountRate] = useState(null); // percentage discount
+    const [flatDiscount, setFlatDiscount] = useState(null); // flat discount value
+    const [shippingValue, setShippingValue] = useState(null);
     const [points, setPoints] = useState(0);
 
     // Pickup state
@@ -187,6 +190,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
             if (customer) {
                 setCustomerName(customer.customer_name || "");
                 setCustomerPhone(customer.phone || "");
+                setCustomerDueAmount(n(customer.due_amount) || 0);
             }
         } else {
             setSelectedCustomer(null);
@@ -198,9 +202,19 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
     const pickupSubTotal = useMemo(() => pickupItems.reduce((sum, i) => sum + n(i.quantity) * n(i.sale_price), 0), [pickupItems]);
     const totalSubTotal = useMemo(() => subTotal + pickupSubTotal, [subTotal, pickupSubTotal]);
     const taxAmount = useMemo(() => (totalSubTotal * n(taxRate)) / 100, [totalSubTotal, taxRate]);
+    
+    // Calculate discount based on type
+    const discountAmount = useMemo(() => {
+        if (discountType === "percentage") {
+            return (totalSubTotal * n(discountRate)) / 100;
+        } else {
+            return n(flatDiscount);
+        }
+    }, [totalSubTotal, discountType, discountRate, flatDiscount]);
+    
     const grandTotal = useMemo(
-        () => totalSubTotal + taxAmount - n(discountValue) + n(shippingValue),
-        [totalSubTotal, taxAmount, discountValue, shippingValue]
+        () => totalSubTotal + taxAmount - discountAmount + n(shippingValue),
+        [totalSubTotal, taxAmount, discountAmount, shippingValue]
     );
 
     // Effect to handle payment status and account enable/disable logic
@@ -444,14 +458,17 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
         customer_id: null,
         customer_name: null,
         phone: null,
+        customer_due_amount: null, // New field added
         sale_date: saleDate,
         notes: notes,
         items: [],
-        vat_rate: 0,
-        discount_rate: 0,
-        paid_amount: 0,
-        grand_amount: 0,
-        due_amount: 0,
+        vat_rate: null,
+        discount_type: "percentage", // New field
+        discount_rate: null,
+        flat_discount: null, // New field
+        paid_amount: null,
+        grand_amount: null,
+        due_amount: null,
         sub_amount: 0,
         type: "pos",
         pickup_items: [],
@@ -492,10 +509,13 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
             customer_id: customerId && customerId !== "01" ? customerId : null,
             customer_name: walkIn ? null : (customerId && customerId !== "01" ? null : (customerName.trim() || null)),
             phone: walkIn ? null : (customerId && customerId !== "01" ? null : (customerPhone.trim() || null)),
+            customer_due_amount: n(customerDueAmount), // Added due amount
             items: formattedItems,
             pickup_items: formattedPickupItems,
             vat_rate: n(taxRate),
-            discount_rate: 0,
+            discount_type: discountType, // Added discount type
+            discount_rate: n(discountRate),
+            flat_discount: n(flatDiscount),
             paid_amount: n(paidAmount),
             grand_amount: n(grandTotal),
             due_amount: n(dueAmount),
@@ -507,7 +527,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
             sale_date: saleDate,
             notes: notes,
         });
-    }, [cart, pickupItems, customerId, customerName, customerPhone, taxRate, totalSubTotal, grandTotal, paidAmount, dueAmount, selectedAccount, paymentStatus, selectedSupplier, saleDate, notes]);
+    }, [cart, pickupItems, customerId, customerName, customerPhone, customerDueAmount, taxRate, discountType, discountRate, flatDiscount, totalSubTotal, grandTotal, paidAmount, dueAmount, selectedAccount, paymentStatus, selectedSupplier, saleDate, notes]);
 
     const submit = (e) => {
         e.preventDefault();
@@ -518,11 +538,6 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
         // If they typed one of name/phone, require both (not for walk-in)
         const hasOne = (!!customerName.trim() && !customerPhone.trim()) || (!customerName.trim() && !!customerPhone.trim());
         if (!customerId && hasOne) return alert("If you type customer info, provide both Name and Phone. Otherwise keep walk-in empty.");
-
-        // Validate pickup items have supplier if any pickup items exist
-        // if (pickupItems.length > 0 && !selectedSupplier) {
-        //     return alert("Please select a supplier for pickup items");
-        // }
 
         form.post(route("sales.store"), {
             onSuccess: () => router.visit(route("sales.index")),
@@ -565,13 +580,21 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                 const val = e.target.value;
                                                 setCustomerId(val);
                                                 setShowManualCustomerFields(val === "01");
+                                                if (val !== "01" && val) {
+                                                    const customer = customers.find((c) => String(c.id) === String(val));
+                                                    if (customer) {
+                                                        setCustomerDueAmount(n(customer.due_amount) || 0);
+                                                    }
+                                                } else {
+                                                    setCustomerDueAmount(0);
+                                                }
                                             }}
                                         >
                                             <option value="">Walk In Customer</option>
                                             <option value="01">+ Add Customer Manual</option>
                                             {customers.map((c) => (
                                                 <option key={c.id} value={c.id}>
-                                                    {c.customer_name} ({c.phone})
+                                                    {c.customer_name} ({c.phone}) - Due: ৳{formatCurrency(c.due_amount || 0)}
                                                 </option>
                                             ))}
                                         </select>
@@ -604,6 +627,25 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                         required
                                                     />
                                                 </div>
+
+                                                {/* Customer Due Amount Field */}
+                                                <div className="form-control">
+                                                    <label className="label">
+                                                        <span className="label-text">Due Amount (৳)</span>
+                                                    </label>
+                                                    <input
+                                                        type="number"
+                                                        className="input input-bordered"
+                                                        placeholder="Enter due amount"
+                                                        value={customerDueAmount}
+                                                        onChange={(e) => setCustomerDueAmount(n(e.target.value))}
+                                                        min="0"
+                                                        step="0.01"
+                                                    />
+                                                    <div className="text-xs text-gray-500 mt-1">
+                                                        Previous due amount if any
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
 
@@ -614,6 +656,11 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                     <div>
                                                         <div className="font-medium">{selectedCustomer.customer_name}</div>
                                                         <div className="text-sm text-gray-600">{selectedCustomer.phone}</div>
+                                                        {selectedCustomer.due_amount > 0 && (
+                                                            <div className="text-sm text-red-600 font-semibold">
+                                                                Due Amount: ৳{formatCurrency(selectedCustomer.due_amount)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <button
                                                         type="button"
@@ -622,6 +669,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                             setSelectedCustomer(null);
                                                             setCustomerName("");
                                                             setCustomerPhone("");
+                                                            setCustomerDueAmount(0);
                                                         }}
                                                         className="btn btn-xs btn-ghost"
                                                     >
@@ -673,7 +721,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                                     </button>
 
                                                                     <input
-                                                                        className="input input-bordered input-xs  text-center  font-medium  focus:border-gray-400 focus:outline-none"
+                                                                        className="input input-bordered input-xs text-center font-medium focus:border-gray-400 focus:outline-none"
                                                                         type="number"
                                                                         min={1}
                                                                         max={i.maxQty}
@@ -681,7 +729,6 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                                         onChange={(e) => changeQty(i.key, Number(e.target.value))}
                                                                         style={{ width: '100px' }}
                                                                     />
-
 
                                                                     <button
                                                                         type="button"
@@ -800,21 +847,56 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                     <span className="text-xs text-gray-500">%</span>
                                                 </div>
                                             </div>
+                                            
+                                            {/* Discount Section - UPDATED */}
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">DISCOUNT:</span>
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-xs text-gray-500">৳</span>
-                                                    <input
-                                                        type="number"
-                                                        className="input input-bordered input-xs w-20 text-right"
-                                                        value={discountValue}
-                                                        onChange={(e) => setDiscountValue(n(e.target.value))}
-                                                        placeholder="0"
-                                                        min="0"
-                                                        step="0.01"
-                                                    />
+                                                    <select
+                                                        className="select select-bordered select-xs"
+                                                        value={discountType}
+                                                        onChange={(e) => setDiscountType(e.target.value)}
+                                                    >
+                                                        <option value="percentage">%</option>
+                                                        <option value="flat">Flat</option>
+                                                    </select>
+                                                    
+                                                    {discountType === "percentage" ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="number"
+                                                                className="input input-bordered input-xs w-16 text-right"
+                                                                value={discountRate}
+                                                                onChange={(e) => setDiscountRate(n(e.target.value))}
+                                                                placeholder="0"
+                                                                min="0"
+                                                                max="100"
+                                                                step="0.1"
+                                                            />
+                                                            <span className="text-xs text-gray-500">%</span>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center gap-1">
+                                                            <span className="text-xs text-gray-500">৳</span>
+                                                            <input
+                                                                type="number"
+                                                                className="input input-bordered input-xs w-16 text-right"
+                                                                value={flatDiscount}
+                                                                onChange={(e) => setFlatDiscount(n(e.target.value))}
+                                                                placeholder="0"
+                                                                min="0"
+                                                                step="0.01"
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
+                                            
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-sm text-gray-600">DISCOUNT AMOUNT:</span>
+                                                <span className="font-medium text-red-600">-{money(discountAmount)}</span>
+                                            </div>
+                                            
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">SHIPPING:</span>
                                                 <div className="flex items-center gap-2">
@@ -1345,5 +1427,6 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                 </div>
             )}
         </div>
+        
     );
 }
