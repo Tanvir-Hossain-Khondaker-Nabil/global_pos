@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { useForm } from "@inertiajs/react";
-import { Trash, X, Plus, Factory, Package, Image as ImageIcon } from "lucide-react";
+import { Trash, X, Plus, Factory, Package, Image as ImageIcon, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -16,13 +16,12 @@ export default function AddProduct({ category, update, brand, attributes }) {
   const [productType, setProductType] = useState("regular");
   const [variantAttributeSelector, setVariantAttributeSelector] = useState(null);
 
-  // ✅ photo states
+  // ✅ photo states (optional)
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
 
   const existingPhotoUrl = useMemo(() => {
     if (!update?.photo) return null;
-    // update.photo is like "products/xxx.webp"
     return `/storage/${update.photo}`;
   }, [update]);
 
@@ -40,7 +39,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
     in_house_shadow_sale_price: update ? update.in_house_shadow_sale_price || 0 : 0,
     in_house_initial_stock: update ? update.in_house_initial_stock || 0 : 0,
     variants: [],
-    photo: null, // ✅ will hold File
+    photo: null,
   });
 
   useEffect(() => {
@@ -48,26 +47,21 @@ export default function AddProduct({ category, update, brand, attributes }) {
     if (Array.isArray(category)) setCategories(category);
     else if (category && typeof category === "object") {
       if (category.data && Array.isArray(category.data)) setCategories(category.data);
-      else {
-        setCategories(Object.entries(category).map(([id, name]) => ({ id, name })));
-      }
+      else setCategories(Object.entries(category).map(([id, name]) => ({ id, name })));
     } else setCategories([]);
 
     // brands
     if (Array.isArray(brand)) setBrands(brand);
     else if (brand && typeof brand === "object") {
       if (brand.data && Array.isArray(brand.data)) setBrands(brand.data);
-      else {
-        setBrands(Object.entries(brand).map(([id, name]) => ({ id, name })));
-      }
+      else setBrands(Object.entries(brand).map(([id, name]) => ({ id, name })));
     } else setBrands([]);
 
     if (attributes && Array.isArray(attributes)) setAvailableAttributes(attributes);
-
     if (update?.product_type) setProductType(update.product_type);
   }, [category, brand, attributes, update]);
 
-  // ✅ photo change
+  // ✅ photo change (optional)
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0] || null;
     setPhotoFile(file);
@@ -88,6 +82,72 @@ export default function AddProduct({ category, update, brand, attributes }) {
     };
   }, [photoPreview]);
 
+  // =========================
+  // ✅ Product code generator
+  // =========================
+  const usedCodesRef = useRef(new Set());
+
+  const slugifyShort = (text) =>
+    String(text || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 8);
+
+  const randomBase36 = (len = 6) => {
+    // crypto if available, else Math.random
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      const arr = new Uint32Array(2);
+      crypto.getRandomValues(arr);
+      const s = (arr[0].toString(36) + arr[1].toString(36)).toUpperCase();
+      return s.replace(/[^A-Z0-9]/g, "").slice(0, len).padEnd(len, "X");
+    }
+    return Math.random().toString(36).slice(2, 2 + len).toUpperCase();
+  };
+
+  const dateStamp = () => {
+    const d = new Date();
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yy}${mm}${dd}`; // yymmdd
+  };
+
+  const generateUniqueProductCode = () => {
+    const baseFromName = slugifyShort(productForm.data.product_name);
+    const baseFromCategory =
+      categories.find((c) => String(c.id) === String(productForm.data.category_id))?.name || "";
+    const base = baseFromName || slugifyShort(baseFromCategory) || "PRD";
+
+    // Try a few times to avoid duplicates in the current session
+    for (let i = 0; i < 10; i++) {
+      const code = `${base}-${dateStamp()}-${randomBase36(6)}`;
+      if (!usedCodesRef.current.has(code)) {
+        usedCodesRef.current.add(code);
+        return code;
+      }
+    }
+    // fallback
+    return `${base}-${dateStamp()}-${randomBase36(8)}`;
+  };
+
+  const handleGenerateProductCode = () => {
+    const code = generateUniqueProductCode();
+    productForm.setData("product_no", code);
+
+    setErrors((prev) => {
+      const ne = { ...prev };
+      delete ne.product_no;
+      return ne;
+    });
+
+    toast.success(t("product.code_generated", "Product code generated"));
+  };
+
+  // =========================
+  // Variants
+  // =========================
   const handleVariantAttributeSelect = (variantIndex, attributeCode, value, checked) => {
     setVariants((prev) => {
       const updated = [...prev];
@@ -174,12 +234,12 @@ export default function AddProduct({ category, update, brand, attributes }) {
       newErrors.product_no = t("product.product_code_required", "Product code is required");
     }
 
-    // ✅ photo required only when creating
-    const isCreating = !update;
-    if (isCreating && !productForm.data.photo) {
-      hasError = true;
-      newErrors.photo = t("product.photo_required", "Product photo is required");
-    }
+    // ✅ Photo is now OPTIONAL - removed the required validation
+    // const isCreating = !update;
+    // if (isCreating && !productForm.data.photo) {
+    //   hasError = true;
+    //   newErrors.photo = t("product.photo_required", "Product photo is required");
+    // }
 
     if (productType === "in_house") {
       if (!productForm.data.in_house_cost || productForm.data.in_house_cost <= 0) {
@@ -196,7 +256,10 @@ export default function AddProduct({ category, update, brand, attributes }) {
       }
       if (!productForm.data.in_house_shadow_sale_price || productForm.data.in_house_shadow_sale_price <= 0) {
         hasError = true;
-        newErrors.in_house_shadow_sale_price = t("product.shadow_sale_price_required", "Shadow sale price is required");
+        newErrors.in_house_shadow_sale_price = t(
+          "product.shadow_sale_price_required",
+          "Shadow sale price is required"
+        );
       }
       if (productForm.data.in_house_initial_stock < 0) {
         hasError = true;
@@ -231,19 +294,22 @@ export default function AddProduct({ category, update, brand, attributes }) {
     const url = update ? route("product.update.post") : route("product.add.post");
 
     // ✅ Put variants into form state
-    productForm.setData("variants", variants.map((v) => ({
-      id: v.id,
-      attribute_values: v.attribute_values || {},
-    })));
+    productForm.setData(
+      "variants",
+      variants.map((v) => ({
+        id: v.id,
+        attribute_values: v.attribute_values || {},
+      }))
+    );
 
-    // ✅ Submit as FormData automatically (photo is File)
     productForm.post(url, {
       forceFormData: true,
       preserveScroll: true,
       onSuccess: () => {
-        toast.success(update
-          ? t("product.product_updated_success", "Product updated successfully!")
-          : t("product.product_added_success", "Product added successfully!")
+        toast.success(
+          update
+            ? t("product.product_updated_success", "Product updated successfully!")
+            : t("product.product_added_success", "Product added successfully!")
         );
 
         if (!update) {
@@ -255,7 +321,6 @@ export default function AddProduct({ category, update, brand, attributes }) {
         }
       },
       onError: (serverErrors) => {
-        // server side validation errors (optional)
         toast.error(t("product.something_went_wrong", "Something went wrong. Please try again!"));
         console.error("Form errors:", serverErrors);
       },
@@ -287,15 +352,16 @@ export default function AddProduct({ category, update, brand, attributes }) {
       });
 
       if (update.variants?.length > 0) {
-        setVariants(update.variants.map((v) => ({
-          id: v.id || null,
-          attribute_values: v.attribute_values || {},
-        })));
+        setVariants(
+          update.variants.map((v) => ({
+            id: v.id || null,
+            attribute_values: v.attribute_values || {},
+          }))
+        );
       } else {
         setVariants([{ attribute_values: {} }]);
       }
 
-      // reset new preview when opening edit
       setPhotoFile(null);
       setPhotoPreview(null);
 
@@ -315,40 +381,34 @@ export default function AddProduct({ category, update, brand, attributes }) {
       />
 
       <form onSubmit={formSubmit}>
-        {/* ✅ PHOTO SECTION */}
         <div className="mb-6 border border-base-300 rounded-box p-4">
           <div className="flex items-center gap-2 mb-3">
             <ImageIcon size={18} />
-            <h3 className="font-semibold">{t("product.photo", "Product Photo")}{!update ? " *" : ""}</h3>
+            <h3 className="font-semibold">
+              {t("product.photo", "Product Photo")}
+              <span className="text-sm font-normal text-gray-500 ml-2">(Optional)</span>
+            </h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
             <div>
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
+                accept="image/*"
                 className={`file-input file-input-bordered w-full ${errors.photo ? "file-input-error" : ""}`}
                 onChange={handlePhotoChange}
               />
               {errors.photo && <p className="text-sm text-error mt-1">{errors.photo}</p>}
 
-              <p className="text-xs text-gray-500 mt-2">
-                {t("product.photo_tip", "PNG/JPG/WEBP, max 5MB")}
-              </p>
+              <p className="text-xs text-gray-500 mt-2">{t("product.photo_tip", "PNG/JPG/WEBP, max 5MB")}</p>
             </div>
 
             <div className="border border-base-300 rounded-box p-3 bg-base-100">
               <div className="text-sm font-medium mb-2">{t("product.preview", "Preview")}</div>
               {previewSrc ? (
-                <img
-                  src={previewSrc}
-                  alt="preview"
-                  className="w-full max-h-56 object-contain rounded"
-                />
+                <img src={previewSrc} alt="preview" className="w-full max-h-56 object-contain rounded" />
               ) : (
-                <div className="text-sm text-gray-500 italic">
-                  {t("product.no_photo_selected", "No photo selected")}
-                </div>
+                <div className="text-sm text-gray-500 italic">{t("product.no_photo_selected", "No photo selected")}</div>
               )}
             </div>
           </div>
@@ -356,16 +416,12 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
         {/* Product Type Selection */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3">
-            {t("product.product_type", "Product Type")} *
-          </h3>
+          <h3 className="text-lg font-semibold mb-3">{t("product.product_type", "Product Type")} *</h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <label
               className={`card cursor-pointer border-2 ${
-                productType === "regular"
-                  ? "border-primary bg-[#1e4d2b] text-white"
-                  : "border-base-300 hover:border-primary/50"
+                productType === "regular" ? "border-primary bg-[#1e4d2b] text-white" : "border-base-300 hover:border-primary/50"
               }`}
             >
               <div className="card-body p-4">
@@ -393,9 +449,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
             <label
               className={`card cursor-pointer border-2 ${
-                productType === "in_house"
-                  ? "border-warning bg-warning/5"
-                  : "border-base-300 hover:border-warning/50"
+                productType === "in_house" ? "border-warning bg-warning/5" : "border-base-300 hover:border-warning/50"
               }`}
             >
               <div className="card-body p-4">
@@ -411,9 +465,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                   <div className="ml-3 flex-1">
                     <div className="flex items-center gap-2">
                       <Factory size={20} className="text-warning" />
-                      <h4 className="font-semibold text-warning">
-                        {t("product.in_house_product", "In-House Production")}
-                      </h4>
+                      <h4 className="font-semibold text-warning">{t("product.in_house_product", "In-House Production")}</h4>
                     </div>
                     <p className="text-sm text-gray-500 mt-2">
                       {t("product.in_house_desc", "Internally produced, auto-stock management in In-House warehouse")}
@@ -428,9 +480,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
         {/* Product Basic Information */}
         <div className="grid grid-cols-1 gap-4 mb-6">
           <fieldset className="fieldset">
-            <legend className="fieldset-legend">
-              {t("product.from_product_name", "Product Name")}*
-            </legend>
+            <legend className="fieldset-legend">{t("product.from_product_name", "Product Name")}*</legend>
             <input
               type="text"
               className={`input ${errors.product_name ? "input-error" : ""}`}
@@ -441,18 +491,34 @@ export default function AddProduct({ category, update, brand, attributes }) {
             {errors.product_name && <p className="text-sm text-error mt-1">{errors.product_name}</p>}
           </fieldset>
 
+          {/* ✅ Product Code with Generate Button */}
           <fieldset className="fieldset">
-            <legend className="fieldset-legend">
-              {t("product.from_product_code", "Product Code")}*
-            </legend>
-            <input
-              type="text"
-              className={`input ${errors.product_no ? "input-error" : ""}`}
-              value={productForm.data.product_no}
-              onChange={(e) => productForm.setData("product_no", e.target.value)}
-              placeholder={t("product.enter_product_code", "Enter product code")}
-            />
+            <legend className="fieldset-legend">{t("product.from_product_code", "Product Code")}*</legend>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                className={`input flex-1 ${errors.product_no ? "input-error" : ""}`}
+                value={productForm.data.product_no}
+                onChange={(e) => productForm.setData("product_no", e.target.value)}
+                placeholder={t("product.enter_product_code", "Enter product code")}
+              />
+
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={handleGenerateProductCode}
+                title={t("product.generate_code", "Generate code")}
+              >
+                <RefreshCw size={16} />
+                {t("product.generate", "Generate")}
+              </button>
+            </div>
+
             {errors.product_no && <p className="text-sm text-error mt-1">{errors.product_no}</p>}
+            <p className="text-xs text-gray-500 mt-2">
+              {t("product.code_tip", "Click Generate to auto-create a unique code. You can edit it anytime.")}
+            </p>
           </fieldset>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -502,10 +568,9 @@ export default function AddProduct({ category, update, brand, attributes }) {
           </fieldset>
         </div>
 
-        {/* In-House settings (same as your code) */}
+        {/* In-House settings */}
         {productType === "in_house" && (
           <div className="border border-warning rounded-box p-4 mb-6 bg-warning/5">
-            {/* keep your existing in-house UI here (no change needed) */}
             <h3 className="text-lg font-semibold text-warning mb-4 flex items-center gap-2">
               <Factory size={20} />
               {t("product.in_house_settings", "In-House Production Settings")}
@@ -541,9 +606,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                   onChange={(e) => productForm.setData("in_house_shadow_cost", parseFloat(e.target.value) || 0)}
                   required
                 />
-                {errors.in_house_shadow_cost && (
-                  <p className="text-sm text-error mt-1">{errors.in_house_shadow_cost}</p>
-                )}
+                {errors.in_house_shadow_cost && <p className="text-sm text-error mt-1">{errors.in_house_shadow_cost}</p>}
               </div>
 
               <div className="form-control">
@@ -572,9 +635,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                   step="0.01"
                   className={`input input-bordered ${errors.in_house_shadow_sale_price ? "input-error" : ""}`}
                   value={productForm.data.in_house_shadow_sale_price}
-                  onChange={(e) =>
-                    productForm.setData("in_house_shadow_sale_price", parseFloat(e.target.value) || 0)
-                  }
+                  onChange={(e) => productForm.setData("in_house_shadow_sale_price", parseFloat(e.target.value) || 0)}
                   required
                 />
                 {errors.in_house_shadow_sale_price && (
@@ -594,15 +655,13 @@ export default function AddProduct({ category, update, brand, attributes }) {
                   onChange={(e) => productForm.setData("in_house_initial_stock", parseInt(e.target.value) || 0)}
                   required
                 />
-                {errors.in_house_initial_stock && (
-                  <p className="text-sm text-error mt-1">{errors.in_house_initial_stock}</p>
-                )}
+                {errors.in_house_initial_stock && <p className="text-sm text-error mt-1">{errors.in_house_initial_stock}</p>}
               </div>
             </div>
           </div>
         )}
 
-        {/* Variants Section (same as your code, unchanged logic) */}
+        {/* Variants Section */}
         <div className="border-t pt-6">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">
@@ -660,7 +719,9 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
                 <div className="mb-3">
                   <label className="label py-1">
-                    <span className="label-text font-medium">{t("product.variant_attributes", "Variant Attributes")}</span>
+                    <span className="label-text font-medium">
+                      {t("product.variant_attributes", "Variant Attributes")}
+                    </span>
                   </label>
 
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -712,7 +773,10 @@ export default function AddProduct({ category, update, brand, attributes }) {
                               >
                                 <input
                                   type="checkbox"
-                                  checked={variant.attribute_values && variant.attribute_values[attribute.code] === value.value}
+                                  checked={
+                                    variant.attribute_values &&
+                                    variant.attribute_values[attribute.code] === value.value
+                                  }
                                   onChange={(e) =>
                                     handleVariantAttributeSelect(index, attribute.code, value.value, e.target.checked)
                                   }
@@ -727,7 +791,11 @@ export default function AddProduct({ category, update, brand, attributes }) {
                     </div>
 
                     <div className="flex justify-end items-center mt-4">
-                      <button type="button" className="btn bg-[#1e4d2b] text-white btn-sm" onClick={closeVariantAttributeSelector}>
+                      <button
+                        type="button"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
+                        onClick={closeVariantAttributeSelector}
+                      >
                         {t("product.done", "Done")}
                       </button>
                     </div>
@@ -752,9 +820,7 @@ export default function AddProduct({ category, update, brand, attributes }) {
                   {t("product.saving", "Saving...")}
                 </>
               ) : (
-                <>
-                  {update ? t("product.update_product", "Update Product") : t("product.save_product", "Save Product")}
-                </>
+                <>{update ? t("product.update_product", "Update Product") : t("product.save_product", "Save Product")}</>
               )}
             </button>
           </div>

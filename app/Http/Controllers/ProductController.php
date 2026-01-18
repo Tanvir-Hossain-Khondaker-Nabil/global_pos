@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
@@ -41,6 +42,7 @@ class ProductController extends Controller
             'product' => $products
         ]);
     }
+    
 
     public function add_index(Request $request)
     {
@@ -78,6 +80,8 @@ class ProductController extends Controller
         ]);
     }
 
+
+    // update or store will be here by this function 
     public function update(Request $request)
     {
         $isUpdate = !empty($request->id);
@@ -92,12 +96,9 @@ class ProductController extends Controller
             'variants.*.attribute_values' => 'required|array',
             'brand_id'     => 'nullable|exists:brands,id',
 
-            // ✅ Photo rules
-            // Create: required
-            // Update: optional
             'photo' => $isUpdate
-                ? 'nullable|image|mimes:jpg,jpeg,png,webp|max:5120'
-                : 'required|image|mimes:jpg,jpeg,png,webp|max:5120',
+                ? 'nullable'
+                : 'nullable',
         ]);
 
         if ($request->product_type === 'in_house') {
@@ -131,12 +132,11 @@ class ProductController extends Controller
             $product->category_id = $request->category_id;
             $product->description = $request->description;
             $product->product_type = $request->product_type;
-            $product->created_by = auth()->id();
+            $product->created_by = Auth::id();
 
             // ✅ outlet_id (keep your logic if you use OutletScope or auth outlet)
-            // If you already set outlet_id automatically via model booted/scope, remove this.
-            if (!$product->outlet_id && auth()->user() && isset(auth()->user()->outlet_id)) {
-                $product->outlet_id = auth()->user()->outlet_id;
+            if (!$product->outlet_id && Auth::user() && isset(Auth::user()->outlet_id)) {
+                $product->outlet_id = Auth::user()->outlet_id;
             }
 
             // ✅ Photo upload
@@ -224,6 +224,7 @@ class ProductController extends Controller
         }
     }
 
+
     private function createInHouseStock(Product $product, Variant $variant)
     {
         $inHouseWarehouse = Warehouse::where('code', 'IN-HOUSE')->first();
@@ -261,6 +262,7 @@ class ProductController extends Controller
         }
     }
 
+
     private function generateSku(Product $product, array $attributeValues): string
     {
         $shortCodes = [];
@@ -279,6 +281,7 @@ class ProductController extends Controller
 
         return $product->product_no . '_' . implode('_', $shortCodes);
     }
+
 
     public function del($id)
     {

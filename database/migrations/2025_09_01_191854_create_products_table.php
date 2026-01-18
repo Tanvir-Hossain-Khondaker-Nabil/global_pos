@@ -14,8 +14,8 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->string('product_no');
-            $table->string('photo');
-            $table->unsignedBigInteger('category_id');
+            $table->string('photo')->nullable();
+            $table->unsignedBigInteger('category_id')->nullable();
             $table->text('description')->nullable();
 
             $table->enum('product_type', ['regular', 'in_house'])->default('regular');
@@ -26,7 +26,7 @@ return new class extends Migration {
             $table->integer('in_house_initial_stock')->default(0);
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
-            $table->unsignedBigInteger('outlet_id');
+            $table->unsignedBigInteger('outlet_id')->nullable();
             $table->timestamps();
         });
 
