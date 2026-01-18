@@ -152,6 +152,10 @@ class SalesController extends Controller
     {
         $type = $request->input('type', 'pos');
 
+        if($request->filled('discount_type')) {
+            $rules['discount_type'] = 'nullable|string|max:255';
+        }
+
         $rules = [
             'customer_id' => 'nullable|exists:customers,id',
             'customer_name' => 'nullable|string|max:255',
@@ -162,6 +166,14 @@ class SalesController extends Controller
             'items.*.variant_id' => 'required|exists:variants,id',
             'items.*.quantity' => 'required|integer|min:1',
         ];
+
+        $discountType = $request->input('discount_type');
+
+        if ($discountType == 'percentage') {
+            $discount  =  $request->discount_rate;
+        } elseif ($discountType == 'flat') {
+            $discount  =  $request->flat_discount;
+        }
 
         if($request->paid_amount > 0){
             $rules['account_id'] = 'required|exists:accounts,id';
@@ -227,7 +239,7 @@ class SalesController extends Controller
                             'customer_name' => $name,
                             'phone' => $phone,
                             'advance_amount' => 0,
-                            'due_amount' => 0,
+                            'due_amount' => $request->customer_due_amount,
                             'is_active' => 1,
                             'created_by' => Auth::id(),
                         ])->id;
@@ -273,7 +285,8 @@ class SalesController extends Controller
                 'customer_id' => $customerId ?? null,
                 'invoice_no' => $this->generateInvoiceNo(),
                 'sub_total' => $request->sub_amount ?? 0,
-                'discount' => $request->discount_rate ?? 0,
+                'discount' =>  $discount ?? 0,
+                'discount_type' => $discountType ?? 'percentage',
                 'vat_tax' => $request->vat_rate ?? 0,
                 'grand_total' => $request->grand_amount ?? 0,
                 'paid_amount' => $paidAmount ?? 0,

@@ -22,4 +22,7 @@ return [
     'get_started' => 'আপনার প্রথম বৈশিষ্ট্য তৈরি করে শুরু করুন',
     'confirm_delete_attribute' => 'আপনি কি নিশ্চিত যে আপনি ":name" ডিলিট করতে চান?',
     'confirm_delete_value' => 'আপনি কি নিশ্চিত যে আপনি এই মানটি ডিলিট করতে চান?',
+    'regenerate_all' => 'সব পুনরায় তৈরি করুন',
+    'auto_generated' => 'স্বয়ংক্রিয়ভাবে তৈরি',
+    'code_auto_generation' => 'কোড স্বয়ংক্রিয় উৎপাদন'
 ];

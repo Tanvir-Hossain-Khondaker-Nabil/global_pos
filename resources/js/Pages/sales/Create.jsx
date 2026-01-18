@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Warehouse,
   Edit,
+  DollarSign,
 } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -32,7 +33,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   const [filteredProducts, setFilteredProducts] = useState([]);
 
   const [vatRate, setVatRate] = useState(0);
-  const [discountRate, setDiscountRate] = useState(0);
+  const [discountRate, setDiscountRate] = useState(0); // percentage discount
+  const [flatDiscount, setFlatDiscount] = useState(0); // flat discount
+  const [discountType, setDiscountType] = useState("percentage"); // 'percentage' or 'flat'
 
   const [paidAmount, setPaidAmount] = useState(0);
   const [shadowPaidAmount, setShadowPaidAmount] = useState(0);
@@ -49,6 +52,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   const [adjustFromAdvance, setAdjustFromAdvance] = useState(false);
   const [customerNameInput, setCustomerNameInput] = useState("");
   const [customerPhoneInput, setCustomerPhoneInput] = useState("");
+  const [customerDueAmountInput, setCustomerDueAmountInput] = useState(0); // New state for due amount
   const [availableAdvance, setAvailableAdvance] = useState(0);
 
   // NEW: State to control customer fields visibility
@@ -81,12 +85,15 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   const form = useForm({
     customer_id: "",
     customer_name: "",
+    customer_due_amount: 0,
     phone: "",
     sale_date: new Date().toISOString().split("T")[0],
     notes: "",
     items: [],
     vat_rate: 0,
     discount_rate: 0,
+    flat_discount: 0,
+    discount_type: "percentage",
     paid_amount: 0,
     grand_amount: 0,
     due_amount: 0,
@@ -123,8 +130,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
   const calculateDiscountAmount = useCallback(() => {
     const subtotal = calculateTotalSubTotal();
-    return (subtotal * (Number(discountRate) || 0)) / 100;
-  }, [calculateTotalSubTotal, discountRate]);
+    if (discountType === "percentage") {
+      return (subtotal * (Number(discountRate) || 0)) / 100;
+    } else {
+      // flat discount
+      return Math.min(subtotal, Number(flatDiscount) || 0);
+    }
+  }, [calculateTotalSubTotal, discountRate, flatDiscount, discountType]);
 
   const calculateGrandTotal = useCallback(() => {
     const subtotal = calculateTotalSubTotal();
@@ -188,6 +200,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setSelectedCustomer(null);
       setCustomerNameInput("");
       setCustomerPhoneInput("");
+      setCustomerDueAmountInput(0);
       setAvailableAdvance(0);
 
       form.setData({
@@ -195,6 +208,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         customer_id: "",
         customer_name: "",
         phone: "",
+        customer_due_amount: 0
       });
 
       setPaymentStatus("unpaid");
@@ -208,6 +222,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setSelectedCustomer(null);
       setCustomerNameInput("");
       setCustomerPhoneInput("");
+      setCustomerDueAmountInput(0);
       setAvailableAdvance(0);
 
       form.setData({
@@ -215,6 +230,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         customer_id: "",
         customer_name: "",
         phone: "",
+        customer_due_amount: 0
       });
       return;
     }
@@ -226,6 +242,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     if (customer) {
       setCustomerNameInput(customer.customer_name || "");
       setCustomerPhoneInput(customer.phone || "");
+      setCustomerDueAmountInput(parseFloat(customer.due_amount) || 0);
 
       const advance = parseFloat(customer.advance_amount) || 0;
       const due = parseFloat(customer.due_amount) || 0;
@@ -236,6 +253,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         customer_id: customer.id,
         customer_name: customer.customer_name,
         phone: customer.phone,
+        customer_due_amount: parseFloat(customer.due_amount) || 0
       });
     }
   };
@@ -249,6 +267,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setCustomerSelectValue("new");
       form.setData("customer_id", "");
       setAvailableAdvance(0);
+      setCustomerDueAmountInput(0);
     }
   };
 
@@ -261,7 +280,14 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setCustomerSelectValue("new");
       form.setData("customer_id", "");
       setAvailableAdvance(0);
+      setCustomerDueAmountInput(0);
     }
+  };
+
+  const handleCustomerDueAmountChange = (value) => {
+    const dueAmount = parseFloat(value) || 0;
+    setCustomerDueAmountInput(dueAmount);
+    form.setData("customer_due_amount", dueAmount);
   };
 
   // ---------------- Payment status logic ----------------
@@ -348,6 +374,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     setSelectedCustomer(null);
     setCustomerNameInput("");
     setCustomerPhoneInput("");
+    setCustomerDueAmountInput(0);
     setAvailableAdvance(0);
     
     form.setData({
@@ -355,6 +382,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       customer_id: "",
       customer_name: "",
       phone: "",
+      customer_due_amount: 0
     });
   };
 
@@ -716,6 +744,8 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       pickup_items: formattedPickupItems,
       vat_rate: Number(vatRate) || 0,
       discount_rate: Number(discountRate) || 0,
+      flat_discount: Number(flatDiscount) || 0,
+      discount_type: discountType,
       paid_amount: Number(paidAmount) || 0,
       shadow_paid_amount: Number(shadowPaidAmount) || 0,
       grand_amount: grandTotal,
@@ -730,12 +760,15 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       account_id: selectedAccount,
       customer_name: customerNameInput,
       phone: customerPhoneInput,
+      customer_due_amount: Number(customerDueAmountInput) || 0,
     });
   }, [
     selectedItems,
     pickupItems,
     vatRate,
     discountRate,
+    flatDiscount,
+    discountType,
     paidAmount,
     shadowPaidAmount,
     usePartialPayment,
@@ -746,6 +779,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     paymentStatus,
     customerNameInput,
     customerPhoneInput,
+    customerDueAmountInput,
     calculateRealSubTotal,
     calculatePickupSubTotal,
     calculateTotalSubTotal,
@@ -861,6 +895,11 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     <span>{selectedCustomer.phone}</span>
                   </div>
 
+                  <div className="flex items-center gap-2 text-sm">
+                    <DollarSign size={12} className="text-gray-500" />
+                    <span>Due Amount: ৳{formatCurrency(selectedCustomer.due_amount || 0)}</span>
+                  </div>
+
                   {availableAdvance > 0 && (
                     <div className="flex items-center gap-2 text-sm">
                       <span className="font-medium">Available Advance:</span>
@@ -942,6 +981,24 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                   value={customerPhoneInput}
                   onChange={(e) => handleCustomerPhoneChange(e.target.value)}
                   required={showCustomerFields || customerSelectValue === "new"}
+                />
+              </div>
+            )}
+
+            {/* Customer Due Amount Field - Conditionally shown for new customers */}
+            {(showCustomerFields || customerSelectValue === "new") && (
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Customer Due Amount</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input input-bordered"
+                  value={customerDueAmountInput}
+                  onChange={(e) => handleCustomerDueAmountChange(e.target.value)}
+                  placeholder="Enter due amount if any"
                 />
               </div>
             )}
@@ -1455,16 +1512,43 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <span>Discount:</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      className="input input-bordered input-sm w-20"
-                      value={discountRate}
-                      onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
-                    />
-                    <span>%</span>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className="select select-bordered select-sm"
+                        value={discountType}
+                        onChange={(e) => setDiscountType(e.target.value)}
+                      >
+                        <option value="percentage">Percentage</option>
+                        <option value="flat">Flat</option>
+                      </select>
+                      
+                      {discountType === "percentage" ? (
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            step="0.01"
+                            className="input input-bordered input-sm w-20"
+                            value={discountRate}
+                            onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
+                          />
+                          <span>%</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <span>৳</span>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            className="input input-bordered input-sm w-20"
+                            value={flatDiscount}
+                            onChange={(e) => setFlatDiscount(parseFloat(e.target.value) || 0)}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                   <span>{formatWithSymbol(discountAmount)}</span>
                 </div>

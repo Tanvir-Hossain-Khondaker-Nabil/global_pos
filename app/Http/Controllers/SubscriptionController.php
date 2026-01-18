@@ -49,7 +49,6 @@ class SubscriptionController extends Controller
      */
     public function store(SubscriptionStore $request)
     {
-
         $validity = Plan::where('id', $request->plan_id)->value('validity');
         $product_range = Plan::where('id', $request->plan_id)->value('product_range');
         $validated = $request->validated();
@@ -88,6 +87,7 @@ class SubscriptionController extends Controller
         return to_route('subscriptions.index')->with('success', 'Subscription created successfully.');
     }
 
+    
     /**
      * edit the specified resource.
      */

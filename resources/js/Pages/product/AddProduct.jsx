@@ -122,14 +122,14 @@ export default function AddProduct({ category, update, brand, attributes }) {
 
     // Try a few times to avoid duplicates in the current session
     for (let i = 0; i < 10; i++) {
-      const code = `${base}-${dateStamp()}-${randomBase36(6)}`;
+      const code = `${base}-${dateStamp()}-${randomBase36(3)}`;
       if (!usedCodesRef.current.has(code)) {
         usedCodesRef.current.add(code);
         return code;
       }
     }
     // fallback
-    return `${base}-${dateStamp()}-${randomBase36(8)}`;
+    return `${base}-${dateStamp()}-${randomBase36(3)}`;
   };
 
   const handleGenerateProductCode = () => {
