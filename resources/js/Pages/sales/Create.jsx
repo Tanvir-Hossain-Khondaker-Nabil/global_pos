@@ -51,6 +51,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   const [customerPhoneInput, setCustomerPhoneInput] = useState("");
   const [availableAdvance, setAvailableAdvance] = useState(0);
 
+  // NEW: State to control customer fields visibility
+  const [showCustomerFields, setShowCustomerFields] = useState(false);
+
   // Pickup sale states
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
@@ -270,13 +273,32 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setPaidAmount(grandTotal);
       setManualPaymentOverride(false);
       setAdjustFromAdvance(false);
+      // Enable account_id when paid is selected
+      if (grandTotal > 0 && !selectedAccount) {
+        // Auto-select first account if available
+        if (accounts && accounts.length > 0) {
+          handleAccountSelect(accounts[0].id);
+        }
+      }
+      // Hide customer fields initially when paid/partial
+      setShowCustomerFields(false);
     } else if (status === "unpaid") {
       setPaidAmount(0);
       setManualPaymentOverride(false);
       setAdjustFromAdvance(false);
+      // Reset account when unpaid
+      handleAccountSelect("");
     } else if (status === "partial") {
       setManualPaymentOverride(true);
       setAdjustFromAdvance(false);
+      // Enable account_id when partial is selected
+      if (!selectedAccount) {
+        if (accounts && accounts.length > 0) {
+          handleAccountSelect(accounts[0].id);
+        }
+      }
+      // Hide customer fields initially when paid/partial
+      setShowCustomerFields(false);
     }
   };
 
@@ -285,9 +307,22 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const grandTotal = calculateGrandTotal();
     setPaidAmount(value);
 
-    if (value === 0) setPaymentStatus("unpaid");
-    else if (value >= grandTotal) setPaymentStatus("paid");
-    else setPaymentStatus("partial");
+    if (value === 0) {
+      setPaymentStatus("unpaid");
+      handleAccountSelect("");
+    } else if (value >= grandTotal) {
+      setPaymentStatus("paid");
+      // Enable account selection if not already selected
+      if (!selectedAccount && accounts && accounts.length > 0) {
+        handleAccountSelect(accounts[0].id);
+      }
+    } else {
+      setPaymentStatus("partial");
+      // Enable account selection if not already selected
+      if (!selectedAccount && accounts && accounts.length > 0) {
+        handleAccountSelect(accounts[0].id);
+      }
+    }
   };
 
   const enableManualPaymentOverride = () => {
@@ -300,6 +335,27 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const grandTotal = calculateGrandTotal();
     setPaidAmount(grandTotal);
     setPaymentStatus("paid");
+    // Enable account selection
+    if (!selectedAccount && accounts && accounts.length > 0) {
+      handleAccountSelect(accounts[0].id);
+    }
+  };
+
+  // Handle new customer button click
+  const handleNewCustomerClick = () => {
+    setShowCustomerFields(true);
+    setCustomerSelectValue("new");
+    setSelectedCustomer(null);
+    setCustomerNameInput("");
+    setCustomerPhoneInput("");
+    setAvailableAdvance(0);
+    
+    form.setData({
+      ...form.data,
+      customer_id: "",
+      customer_name: "",
+      phone: "",
+    });
   };
 
   useEffect(() => {
@@ -311,8 +367,20 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         const autoPaidAmount = Math.min(maxAdjustable, grandTotal);
         setPaidAmount(autoPaidAmount);
 
-        if (autoPaidAmount >= grandTotal) setPaymentStatus("paid");
-        else if (autoPaidAmount > 0) setPaymentStatus("partial");
+        if (autoPaidAmount >= grandTotal) {
+          setPaymentStatus("paid");
+          // Enable account when paid
+          if (!selectedAccount && accounts && accounts.length > 0) {
+            handleAccountSelect(accounts[0].id);
+          }
+        }
+        else if (autoPaidAmount > 0) {
+          setPaymentStatus("partial");
+          // Enable account when partial
+          if (!selectedAccount && accounts && accounts.length > 0) {
+            handleAccountSelect(accounts[0].id);
+          }
+        }
         else setPaymentStatus("unpaid");
       }
     }
@@ -706,21 +774,22 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       return;
     }
 
-    // ✅ Inventory: must provide name + phone (new OR existing customer)
-    if (!form.data.customer_name || !form.data.phone) {
+    // ✅ Inventory: must provide name + phone when customer fields are shown
+    if (showCustomerFields && (!form.data.customer_name || !form.data.phone)) {
       alert("Please provide customer name and phone number");
       return;
     }
 
-    if (!selectedAccount) {
+    // Require account selection when paid amount > 0
+    if (paidAmount > 0 && !selectedAccount) {
       alert("Please select a payment account");
       return;
     }
 
-    if (pickupItems.length > 0 && !selectedSupplier) {
-      alert("Please select a supplier for pickup items");
-      return;
-    }
+    // if (pickupItems.length > 0 && !selectedSupplier) {
+    //   alert("Please select a supplier for pickup items");
+    //   return;
+    // }
 
     form.post(route("sales.store"), {
       onSuccess: () => router.visit(route("sales.index")),
@@ -766,7 +835,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                 value={customerSelectValue}
                 onChange={(e) => handleCustomerSelect(e.target.value)}
               >
-                <option value="">Select Existing Customer</option>
+                <option value="">Walk In Customer</option>
                 <option value="new">+ New Customer</option>
                 {customers.map((c) => (
                   <option key={c.id} value={String(c.id)}>
@@ -830,33 +899,52 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
               </div>
             )}
 
-            {/* Name */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Customer Name *</span>
-              </label>
-              <input
-                type="text"
-                className="input input-bordered"
-                value={customerNameInput}
-                onChange={(e) => handleCustomerNameChange(e.target.value)}
-                required
-              />
-            </div>
+            {/* NEW CUSTOMER BUTTON - Show only when payment is partial or paid */}
+            {/* {(paymentStatus === "partial" || paymentStatus === "paid") && !showCustomerFields && !selectedCustomer && (
+              <div className="border border-dashed border-gray-300 rounded-box p-4 text-center">
+                <p className="text-sm text-gray-600 mb-3">Customer information required for paid/partial payments</p>
+                <button
+                  type="button"
+                  onClick={handleNewCustomerClick}
+                  className="btn btn-sm btn-outline btn-primary"
+                >
+                  <Plus size={14} className="mr-1" />
+                  New Customer
+                </button>
+              </div>
+            )} */}
 
-            {/* Phone */}
-            <div className="form-control">
-              <label className="label">
-                <span className="label-text">Customer Phone *</span>
-              </label>
-              <input
-                type="text"
-                className="input input-bordered"
-                value={customerPhoneInput}
-                onChange={(e) => handleCustomerPhoneChange(e.target.value)}
-                required
-              />
-            </div>
+            {/* Customer Name Field - Conditionally shown */}
+            {(showCustomerFields || selectedCustomer || customerSelectValue === "new") && (
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Customer Name *</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={customerNameInput}
+                  onChange={(e) => handleCustomerNameChange(e.target.value)}
+                  required={showCustomerFields || customerSelectValue === "new"}
+                />
+              </div>
+            )}
+
+            {/* Customer Phone Field - Conditionally shown */}
+            {(showCustomerFields || selectedCustomer || customerSelectValue === "new") && (
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Customer Phone *</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered"
+                  value={customerPhoneInput}
+                  onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+                  required={showCustomerFields || customerSelectValue === "new"}
+                />
+              </div>
+            )}
 
             {/* ✅✅ PAYMENT CARD — SAME DESIGN AS PURCHASE (DESIGN ONLY) */}
             <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl shadow-lg">
@@ -889,7 +977,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     value={selectedAccount}
                     onChange={(e) => handleAccountSelect(e.target.value)}
                     required={paidAmount > 0}
-                    disabled={paidAmount <= 0}
+                    disabled={paymentStatus === "unpaid"}
                   >
                     <option value="">Select Account</option>
                     {accounts?.map((account) => (
@@ -901,6 +989,10 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
                   {paidAmount > 0 && !selectedAccount && (
                     <div className="text-red-400 text-xs mt-1">Please select a payment account</div>
+                  )}
+
+                  {paymentStatus === "unpaid" && (
+                    <div className="text-gray-400 text-xs mt-1">Account selection disabled for unpaid status</div>
                   )}
 
                   {/* Selected Account Info */}
@@ -968,8 +1060,8 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             </div>
 
             {/* Supplier for pickup */}
-            {pickupItems.length > 0 && (
-              <div className="form-control">
+            {/* {pickupItems.length > 0 && (
+              <div className="form-control ">
                 <label className="label">
                   <span className="label-text font-bold">Supplier for Pickup Items *</span>
                 </label>
@@ -996,7 +1088,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                   </button>
                 </div>
               </div>
-            )}
+            )} */}
 
             {/* Sale date */}
             <div className="form-control">
@@ -1395,7 +1487,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
           <button
             type="submit"
             className="btn bg-[#1e4d2b] text-white"
-            disabled={form.processing || (selectedItems.length === 0 && pickupItems.length === 0) || !selectedAccount}
+            disabled={form.processing || (selectedItems.length === 0 && pickupItems.length === 0) || (paidAmount > 0 && !selectedAccount)}
           >
             {form.processing ? "Creating Sale..." : "Create Sale"}
           </button>

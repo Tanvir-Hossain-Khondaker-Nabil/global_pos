@@ -265,7 +265,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
           <Link
             href={route("purchase.create")}
             className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${
-              isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-red-600 text-white hover:bg-red-700"
+              isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"
             }`}
           >
             <Plus size={15} /> {t("purchase.new_purchase", "New Entry")}
@@ -280,7 +280,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold text-blue-700 uppercase tracking-wider">Total Purchases</h3>
-                <p className="text-xl font-black text-blue-900 mt-1">{safePurchases.length}</p>
+                <p className="text-lg font-black text-blue-900 mt-1">{safePurchases.length}</p>
               </div>
               <FileBarChart className="text-blue-600" size={20} />
             </div>
@@ -292,7 +292,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold text-green-700 uppercase tracking-wider">With Barcodes</h3>
-                <p className="text-xl font-black text-green-900 mt-1">
+                <p className="text-lg font-black text-green-900 mt-1">
                   {safePurchases.filter(p => p.has_barcode).length}
                 </p>
               </div>
@@ -306,7 +306,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold text-amber-700 uppercase tracking-wider">Barcode Items</h3>
-                <p className="text-xl font-black text-amber-900 mt-1">
+                <p className="text-lg font-black text-amber-900 mt-1">
                   {safePurchases.reduce((total, p) => total + (p.barcode_count || 0), 0)}
                 </p>
               </div>
@@ -320,7 +320,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold text-purple-700 uppercase tracking-wider">Total Value</h3>
-                <p className="text-xl font-black text-purple-900 mt-1">
+                <p className="text-lg font-black text-purple-900 mt-1">
                   {formatCurrency(safePurchases.reduce((total, p) => total + parseFloat(p.grand_total || 0), 0))}
                 </p>
               </div>
@@ -334,8 +334,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-xs font-bold text-red-700 uppercase tracking-wider">Total Due</h3>
-                <p className="text-xl font-black text-red-900 mt-1">
-                  {formatCurrency(safePurchases.reduce((total, p) => total + parseFloat(p.due_amount || 0), 0))}
+                <p className="text-lg font-black text-red-900 mt-1">
+                  {formatCurrency(safePurchases.reduce((total, p) => total + parseFloat((p.grand_total - p.paid_amount) || 0), 0))}
                 </p>
               </div>
               <AlertCircle className="text-red-600" size={20} />
