@@ -306,7 +306,11 @@ export default function SaleShow({ sale }) {
                             {sale.discount > 0 && (
                                 <div className="flex justify-between text-lg print:text-base">
                                     <span className="text-gray-600">Discount:</span>
-                                    <span className="font-semibold text-error print:font-normal">{formatCurrency(sale.discount)} %</span>
+                                    <span className="font-semibold text-error print:font-normal">{formatCurrency(sale.discount)}
+                                        {sale.discount_type == 'flat'
+                                         ? ' Tk'
+                                         : ' %'}
+                                         </span>
                                 </div>
                             )}
 

@@ -187,7 +187,7 @@ export default function Invoice({ sale }) {
                 ${sale.discount > 0 ? `
                 <div style="display: flex; justify-content: space-between;">
                     <span>Discount:</span>
-                    <span>-${formatCurrency(sale.discount)} Tk</span>
+                    <span>-${formatCurrency(sale.discount)}   ${sale.discount_type == 'flat' ? ' Tk' : ' %'} </span>
                 </div>
                 ` : ''}
                 ${sale.tax > 0 ? `
@@ -366,7 +366,9 @@ export default function Invoice({ sale }) {
                         {sale.discount > 0 && (
                             <div className="flex justify-between">
                                 <span>Discount:</span>
-                                <span>-{formatCurrency(sale.discount)} Tk</span>
+                                <span>{formatCurrency(sale.discount)}
+                                     {sale.discount_type == 'flat' ? ' Tk' : ' %'}
+                                     </span>
                             </div>
                         )}
                         {sale.tax > 0 && (
