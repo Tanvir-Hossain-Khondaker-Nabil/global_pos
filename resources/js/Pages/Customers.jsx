@@ -775,7 +775,7 @@ export default function Customers({ customers, filters, accounts }) {
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center gap-2 text-gray-400 uppercase text-[10px] font-black">
-                                                        <span className="text-gray-400">📍</span>
+                                                        <span className="text-gray-400"></span>
                                                         {t('customer.no_address', 'No address')}
                                                     </div>
                                                 )}

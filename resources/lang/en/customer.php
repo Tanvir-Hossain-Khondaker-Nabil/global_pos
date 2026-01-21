@@ -14,7 +14,8 @@ return [
     'no_address' => 'No Address',
     'join_at' => 'Join At',
     'actions' => 'Actions',
-    
+    'current_balance' => 'Current Balance',
+
     // Form Fields
     'customer_name' => 'Customer Name',
     'no_customers_found' => 'No customers found',

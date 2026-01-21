@@ -58,8 +58,6 @@ class SalesReturnController extends Controller
         $sale = null;
         $saleItems = [];
 
-
-
         if ($saleId) {
 
             $sale = Sale::with(['items.product', 'items.variant', 'customer', 'items.warehouse'])
@@ -97,7 +95,6 @@ class SalesReturnController extends Controller
                 ];
             }
         }
-
 
         $recentSales = Sale::with(['customer'])
             ->whereHas('items', function ($query) {

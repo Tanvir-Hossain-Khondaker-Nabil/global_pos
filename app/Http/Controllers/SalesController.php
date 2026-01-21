@@ -941,8 +941,6 @@ class SalesController extends Controller
     }
 
 
-
-
     private function transformToShadowData($sale)
     {
         $sale->sub_total = $sale->shadow_sub_total;
