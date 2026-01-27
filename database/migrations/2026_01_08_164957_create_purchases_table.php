@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('purchase_no')->unique();
             $table->unsignedBigInteger('supplier_id');
-            $table->unsignedBigInteger('warehouse_id');
+            $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->date('purchase_date');
             $table->decimal('grand_total', 12, 2);
             $table->decimal('shadow_grand_total', 12, 2)->default(0);
