@@ -104,7 +104,6 @@ export default function AddSale({
         vat_rate: 0,
         discount_rate: 0,
         paid_amount: 0,
-        shadow_paid_amount: 0,
         grand_amount: 0,
         due_amount: 0,
         sub_amount: 0,
@@ -708,19 +707,9 @@ export default function AddSale({
 
         // Get product details
         const pDetails = getProductDetails(product.id);
-
-        // ✅ FIXED: fallback: product থেকেও unit info নিন
-        const unitType = pDetails?.unit_type || product.unit_type || "piece";
-
         setProductDetails((prev) => ({
             ...prev,
-            [product.id]: {
-                ...pDetails,
-                unit_type: unitType,
-                default_unit: pDetails?.default_unit || product.default_unit || "piece",
-                min_sale_unit: pDetails?.min_sale_unit || product.min_sale_unit || null,
-                is_fraction_allowed: pDetails?.is_fraction_allowed ?? product.is_fraction_allowed ?? false,
-            },
+            [product.id]: pDetails,
         }));
 
         // Get available units for this specific stock
@@ -730,25 +719,30 @@ export default function AddSale({
         );
 
         // Determine default sale unit
-        let defaultUnit =
-            pDetails?.min_sale_unit || product.min_sale_unit || product.default_unit || "piece";
+        let defaultUnit = pDetails?.min_sale_unit || product.default_unit || "piece";
         if (!availableUnitsForStock.includes(defaultUnit)) {
             defaultUnit = availableUnitsForStock[0] || "piece";
         }
 
-        // ✅ ALWAYS: base price per base unit (unit_type = piece হলেও কাজ করবে)
-        const basePricePerBaseUnit = calculateBasePricePerBaseUnit(
-            selectedSalePrice,
-            unit,       // purchase unit (stock unit)
-            unitType
-        );
+        // Calculate base price per base unit
+        let basePricePerBaseUnit = selectedSalePrice;
+        if (pDetails?.unit_type && pDetails.unit_type !== "piece") {
+            basePricePerBaseUnit = calculateBasePricePerBaseUnit(
+                selectedSalePrice,
+                unit,
+                pDetails.unit_type
+            );
+        }
 
-        // ✅ price for selected sale unit
-        const unitPriceInSaleUnit = calculatePriceForUnit(
-            basePricePerBaseUnit,
-            defaultUnit,
-            unitType
-        );
+        // Calculate price in sale unit using base price
+        let unitPriceInSaleUnit = selectedSalePrice;
+        if (unit !== defaultUnit && pDetails?.unit_type) {
+            unitPriceInSaleUnit = calculatePriceForUnit(
+                basePricePerBaseUnit,
+                defaultUnit,
+                pDetails.unit_type
+            );
+        }
 
         // Create unique key with batch number
         const itemKey = `${product.id}-${variant.id}-${selectedStock.batch_no || "default"}`;
@@ -780,48 +774,45 @@ export default function AddSale({
                 variant_id: variant.id,
                 batch_no: selectedStock.batch_no,
                 product_name: product.name,
-                product_code: product.product_no || "",
-                sku: variant.sku || "Default SKU",
-
                 variant_attribute:
-                    selectedBrand || Object.keys(variant.attribute_values || {})[0] || "Default",
+                    selectedBrand ||
+                    Object.keys(variant.attribute_values || {})[0] ||
+                    "Default",
+                product_code: product.product_no || "",
                 variant_value: selectedBrand
                     ? variant.attribute_values?.[selectedBrand] || "Default"
                     : Object.values(variant.attribute_values || {})[0] || "Default",
-
-                unit: defaultUnit,
                 quantity: 1,
                 unit_quantity: 1,
-
+                unit: defaultUnit,
+                sku: variant.sku || "Default SKU",
                 stockQuantity: Number(selectedStock.quantity) || 0,
                 stockBaseQuantity: Number(selectedStock.base_quantity) || Number(selectedStock.quantity) || 0,
                 stockId: selectedStock.id,
-                stockDetails: selectedStock,
-
                 original_purchase_unit: unit,
                 original_sale_price: selectedSalePrice,
-
-                // ✅ auto-calculated
                 unit_price: unitPriceInSaleUnit,
                 sell_price: unitPriceInSaleUnit,
                 total_price: unitPriceInSaleUnit,
-
                 shadow_sell_price: selectedShadowSalePrice,
-
-                // ✅ IMPORTANT: correct unit type set here
-                product_unit_type: unitType,
-                is_fraction_allowed: pDetails?.is_fraction_allowed ?? product.is_fraction_allowed ?? false,
-
-                // ✅ store base price
+                product_unit_type: pDetails?.unit_type || "piece",
+                is_fraction_allowed: pDetails?.is_fraction_allowed || false,
+                stockDetails: selectedStock,
                 base_price_per_base_unit: basePricePerBaseUnit,
             };
 
             setSelectedItems([...selectedItems, newItem]);
             setSelectedUnits((prev) => ({ ...prev, [itemKey]: defaultUnit }));
             setUnitQuantities((prev) => ({ ...prev, [itemKey]: 1 }));
-            setAvailableUnits((prev) => ({ ...prev, [itemKey]: availableUnitsForStock }));
+            setAvailableUnits((prev) => ({
+                ...prev,
+                [itemKey]: availableUnitsForStock,
+            }));
             setStockDetails((prev) => ({ ...prev, [itemKey]: selectedStock }));
-            setBasePrices((prev) => ({ ...prev, [itemKey]: basePricePerBaseUnit }));
+            setBasePrices((prev) => ({
+                ...prev,
+                [itemKey]: basePricePerBaseUnit,
+            }));
         }
 
         resetSelectionFlow();
@@ -857,47 +848,63 @@ export default function AddSale({
             return;
         }
 
-        const unitType = item.product_unit_type || "piece";
-
-        // Convert quantity to new unit (যদি conversion থাকে)
+        // Convert quantity to new unit
         let newQuantity = item.unit_quantity;
 
-        // ✅ stock validation always using base units (conversion থাকলে)
-        const requestedBaseQty = convertToBase(newQuantity, oldUnit, unitType);
-        const availableBaseQty = item.stockDetails?.base_quantity || item.stockBaseQuantity;
-
-        // oldUnit -> newUnit quantity conversion
-        newQuantity = convertUnitQuantity(newQuantity, oldUnit, newUnit, unitType);
-
-        const requestedBaseQty2 = convertToBase(newQuantity, newUnit, unitType);
-        if (requestedBaseQty2 > availableBaseQty) {
-            const availableInUnit = convertFromBase(availableBaseQty, newUnit, unitType);
-            alert(
-                `Cannot change unit. Exceeds available stock! Available: ${availableInUnit.toFixed(3)} ${newUnit.toUpperCase()}`
+        if (item.product_unit_type && item.product_unit_type !== "piece") {
+            newQuantity = convertUnitQuantity(
+                item.unit_quantity,
+                oldUnit,
+                newUnit,
+                item.product_unit_type
             );
-            return;
+
+            // Validate stock in new unit
+            const requestedBaseQty = convertToBase(
+                newQuantity,
+                newUnit,
+                item.product_unit_type
+            );
+            const availableBaseQty =
+                item.stockDetails?.base_quantity || item.stockBaseQuantity;
+
+            if (requestedBaseQty > availableBaseQty) {
+                const availableInUnit = convertFromBase(
+                    availableBaseQty,
+                    newUnit,
+                    item.product_unit_type
+                );
+                alert(
+                    `Cannot change unit. Exceeds available stock! Available: ${availableInUnit.toFixed(
+                        3
+                    )} ${newUnit.toUpperCase()}`
+                );
+                return;
+            }
         }
 
-        // ✅ ALWAYS recalc price based on stored base price
-        const basePrice =
-            Number(item.base_price_per_base_unit) ||
-            Number(basePrices[itemKey]) ||
-            calculateBasePricePerBaseUnit(item.original_sale_price, item.original_purchase_unit, unitType);
+        // ✅ AUTO CALCULATE NEW PRICE BASED ON BASE PRICE
+        let newPrice = item.unit_price;
 
-        const newPrice = calculatePriceForUnit(basePrice, newUnit, unitType);
+        if (item.product_unit_type && item.product_unit_type !== "piece") {
+            // Calculate price in new unit based on base price per base unit
+            newPrice = calculatePriceForUnit(
+                item.base_price_per_base_unit, // Base unit price
+                newUnit, // New sale unit
+                item.product_unit_type
+            );
+        }
 
+        // Update item
         const updatedItems = [...selectedItems];
         updatedItems[itemIndex] = {
             ...item,
             unit: newUnit,
             unit_quantity: newQuantity,
             quantity: newQuantity,
-            unit_price: newPrice,
+            unit_price: newPrice, // Auto-calculated price
             sell_price: newPrice,
             total_price: newQuantity * newPrice,
-
-            // keep base price
-            base_price_per_base_unit: basePrice,
         };
 
         setSelectedItems(updatedItems);
@@ -1499,7 +1506,6 @@ export default function AddSale({
                                     <select
                                         className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
                                         value={selectedAccount}
-
                                         onChange={(e) => handleAccountSelect(e.target.value)}
                                         required={paidAmount > 0}
                                         disabled={paidAmount <= 0}
@@ -1953,7 +1959,7 @@ export default function AddSale({
                                                                 </span>
                                                             </label>
                                                             <select
-                                                                className="select select-bordered select-sm" readOnly
+                                                                className="select select-bordered select-sm"
                                                                 value={
                                                                     selectedUnit
                                                                 }
