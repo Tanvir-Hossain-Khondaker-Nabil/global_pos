@@ -61,7 +61,7 @@ export default function Edit({ brand }) {
         const file = e.target.files[0];
         if (file) {
             setData("logo", file);
-            
+
             // Create preview
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -99,7 +99,7 @@ export default function Edit({ brand }) {
     const handleNameChange = (e) => {
         const name = e.target.value;
         setData("name", name);
-        
+
         // Auto-generate slug if slug is empty or matches the previous name
         if (!data.slug || data.slug === generateSlug(data.name)) {
             setData("slug", generateSlug(name));
@@ -158,7 +158,11 @@ export default function Edit({ brand }) {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Basic Information Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4">
+                        <div className=" px-6 py-4"
+                            style={{
+                                background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
+                            }}
+                        >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
                                     <Edit2 className="text-white" size={24} />
@@ -236,7 +240,7 @@ export default function Edit({ brand }) {
                                     <Image size={16} className="text-blue-600" />
                                     {t('brand.logo', 'Brand Logo')}
                                 </label>
-                                
+
                                 <div className="flex flex-col md:flex-row gap-6">
                                     {/* Current Logo */}
                                     {existingLogo && (
@@ -246,9 +250,9 @@ export default function Edit({ brand }) {
                                             </p>
                                             <div className="relative">
                                                 <div className="w-48 h-48 border-2 border-blue-200 rounded-xl overflow-hidden bg-gray-50">
-                                                    <img 
-                                                        src={existingLogo} 
-                                                        alt="Current logo" 
+                                                    <img
+                                                        src={existingLogo}
+                                                        alt="Current logo"
                                                         className="w-full h-full object-contain p-4"
                                                     />
                                                 </div>
@@ -268,13 +272,13 @@ export default function Edit({ brand }) {
                                         <p className="text-sm font-medium text-gray-700 mb-3">
                                             {t('brand.new_logo', 'New Logo')}:
                                         </p>
-                                        
+
                                         {logoPreview ? (
                                             <div className="relative inline-block">
                                                 <div className="w-48 h-48 border-2 border-dashed border-green-200 rounded-xl overflow-hidden bg-gray-50">
-                                                    <img 
-                                                        src={logoPreview} 
-                                                        alt="New logo preview" 
+                                                    <img
+                                                        src={logoPreview}
+                                                        alt="New logo preview"
                                                         className="w-full h-full object-contain p-4"
                                                     />
                                                 </div>
@@ -318,7 +322,7 @@ export default function Edit({ brand }) {
                                         )}
                                     </div>
                                 </div>
-                                
+
                                 <p className="text-xs text-gray-500 mt-2">
                                     {t('brand.logo_hint', 'Upload a new logo image for the brand. PNG, JPG, SVG up to 2MB. Leave empty to keep current logo.')}
                                 </p>
@@ -359,70 +363,6 @@ export default function Edit({ brand }) {
                         </div>
                     </div>
 
-                    {/* Brand Statistics Card */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-4">
-                            <div className="flex items-center gap-3">
-                                <Tag className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">
-                                    {t('brand.statistics', 'Brand Statistics')}
-                                </h2>
-                            </div>
-                        </div>
-                        <div className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                                    <div className="text-2xl font-bold text-purple-700 mb-1">
-                                        {brand.products_count || 0}
-                                    </div>
-                                    <div className="text-sm font-medium text-purple-600">
-                                        {t('brand.total_products', 'Total Products')}
-                                    </div>
-                                    <p className="text-xs text-purple-500 mt-2">
-                                        {t('brand.products_hint', 'Number of products under this brand')}
-                                    </p>
-                                </div>
-                                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
-                                    <div className="text-2xl font-bold text-blue-700 mb-1">
-                                        {new Date(brand.created_at).toLocaleDateString()}
-                                    </div>
-                                    <div className="text-sm font-medium text-blue-600">
-                                        {t('brand.created_at', 'Created Date')}
-                                    </div>
-                                    <p className="text-xs text-blue-500 mt-2">
-                                        {t('brand.created_hint', 'When this brand was created')}
-                                    </p>
-                                </div>
-                                <div className="bg-green-50 p-4 rounded-xl border border-green-100">
-                                    <div className="text-2xl font-bold text-green-700 mb-1">
-                                        {new Date(brand.updated_at).toLocaleDateString()}
-                                    </div>
-                                    <div className="text-sm font-medium text-green-600">
-                                        {t('brand.last_updated', 'Last Updated')}
-                                    </div>
-                                    <p className="text-xs text-green-500 mt-2">
-                                        {t('brand.updated_hint', 'Last time this brand was modified')}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Guidelines Card */}
-                    {/* <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                        <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                            <FileText size={18} />
-                            {t('brand.edit_guidelines', 'Brand Update Guidelines')}
-                        </h4>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                            <li>• {t('brand.guideline_name_edit', 'Update brand name carefully as it affects SEO')}</li>
-                            <li>• {t('brand.guideline_slug_edit', 'Changing slug will break existing links. Consider setting up redirects')}</li>
-                            <li>• {t('brand.guideline_logo_edit', 'New logo will replace the existing one permanently')}</li>
-                            <li>• {t('brand.guideline_description_edit', 'Update description to reflect current brand positioning')}</li>
-                            <li>• {t('brand.guideline_changes', 'All changes are saved immediately upon update')}</li>
-                        </ul>
-                    </div> */}
-
                     {/* Action Buttons */}
                     <div className="flex justify-between items-center">
                         <button
@@ -456,10 +396,13 @@ export default function Edit({ brand }) {
                                     group flex items-center gap-3 px-8 py-3 rounded-xl font-semibold text-white
                                     transition-all duration-200 transform hover:scale-105 active:scale-95
                                     ${processing
-                                        ? 'bg-gray-400 cursor-not-allowed'
-                                        : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                                        ? 'cursor-not-allowed'
+                                        : ' shadow-lg hover:shadow-xl'
                                     }
                                 `}
+                                style={{
+                                    background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
+                                }}
                             >
                                 <Save size={20} className={processing ? 'animate-pulse' : 'group-hover:animate-bounce'} />
                                 {processing ? t('brand.updating', 'Updating...') : t('brand.update', 'Update Brand')}

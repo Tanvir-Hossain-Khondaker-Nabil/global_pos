@@ -37,7 +37,7 @@ export default function Create() {
         const file = e.target.files[0];
         if (file) {
             setData("logo", file);
-            
+
             // Create preview
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -67,7 +67,7 @@ export default function Create() {
     const handleNameChange = (e) => {
         const name = e.target.value;
         setData("name", name);
-        
+
         // Auto-generate slug if slug is empty or matches the previous name
         if (!data.slug || data.slug === generateSlug(data.name)) {
             setData("slug", generateSlug(name));
@@ -97,7 +97,10 @@ export default function Create() {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Basic Information Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className="bg-green-600 px-6 py-4">
+                        <div className=" px-6 py-4"
+                            style={{
+                                background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
+                            }}>
                             <div className="flex items-center gap-3">
                                 <Tag className="text-white" size={24} />
                                 <h2 className="text-xl font-semibold text-white">
@@ -159,13 +162,13 @@ export default function Create() {
                                     <Image size={16} className="text-blue-600" />
                                     {t('brand.logo', 'Brand Logo')}
                                 </label>
-                                
+
                                 {logoPreview ? (
                                     <div className="relative">
                                         <div className="w-48 h-48 border-2 border-dashed border-blue-200 rounded-xl overflow-hidden bg-gray-50">
-                                            <img 
-                                                src={logoPreview} 
-                                                alt="Logo preview" 
+                                            <img
+                                                src={logoPreview}
+                                                alt="Logo preview"
                                                 className="w-full h-full object-contain p-4"
                                             />
                                         </div>
@@ -204,7 +207,7 @@ export default function Create() {
                                         </label>
                                     </div>
                                 )}
-                                
+
                                 <p className="text-xs text-gray-500 mt-2">
                                     {t('brand.logo_hint', 'Upload a logo image for the brand. PNG, JPG, SVG up to 2MB.')}
                                 </p>
@@ -242,7 +245,11 @@ export default function Create() {
 
                     {/* Preview Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
+                        <div className=" px-6 py-4"
+                            style={{
+                                background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
+                            }}
+                        >
                             <div className="flex items-center gap-3">
                                 <Image className="text-white" size={24} />
                                 <h2 className="text-xl font-semibold text-white">
@@ -254,9 +261,9 @@ export default function Create() {
                             <div className="flex items-start gap-6 p-4 bg-gray-50 rounded-xl">
                                 <div className="w-24 h-24 flex-shrink-0 border border-gray-200 rounded-lg bg-white flex items-center justify-center overflow-hidden">
                                     {logoPreview ? (
-                                        <img 
-                                            src={logoPreview} 
-                                            alt="Brand logo preview" 
+                                        <img
+                                            src={logoPreview}
+                                            alt="Brand logo preview"
                                             className="w-full h-full object-contain p-2"
                                         />
                                     ) : (
@@ -286,20 +293,6 @@ export default function Create() {
                         </div>
                     </div>
 
-                    {/* Guidelines Card */}
-                    <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
-                        <h4 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
-                            <FileText size={18} />
-                            {t('brand.guidelines', 'Brand Creation Guidelines')}
-                        </h4>
-                        <ul className="text-sm text-blue-700 space-y-1">
-                            <li>• {t('brand.guideline_name', 'Brand name should be unique and descriptive')}</li>
-                            <li>• {t('brand.guideline_slug', 'Slug will be used in URLs. Use hyphens instead of spaces')}</li>
-                            <li>• {t('brand.guideline_logo', 'Logo should be high-quality and recognizable')}</li>
-                            <li>• {t('brand.guideline_description', 'Description helps customers understand brand values')}</li>
-                            <li>• {t('brand.guideline_required', 'Fields marked with * are required')}</li>
-                        </ul>
-                    </div>
 
                     {/* Submit Button */}
                     <div className="flex justify-end gap-4">
@@ -317,10 +310,13 @@ export default function Create() {
                                 group flex items-center gap-3 px-8 py-3 rounded-xl font-semibold text-white
                                 transition-all duration-200 transform hover:scale-105 active:scale-95
                                 ${processing
-                                    ? 'bg-gray-400 cursor-not-allowed'
-                                    : 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl'
+                                    ? 'cursor-not-allowed'
+                                    : 'shadow-lg hover:shadow-xl'
                                 }
                             `}
+                            style={{
+                                background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
+                            }}
                         >
                             <Save size={20} className={processing ? 'animate-pulse' : 'group-hover:animate-bounce'} />
                             {processing ? t('brand.creating', 'Creating Brand...') : t('brand.create', 'Create Brand')}
