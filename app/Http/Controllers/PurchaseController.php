@@ -47,7 +47,7 @@ class PurchaseController extends Controller
                     ->orWhereHas('items', function ($q) use ($request) {
                         $q->whereHas('stock', function ($q) use ($request) {
                             $q->where('barcode', 'like', '%' . $request->search . '%')
-                              ->orWhere('batch_no', 'like', '%' . $request->search . '%');
+                                ->orWhere('batch_no', 'like', '%' . $request->search . '%');
                         });
                     });
             });
@@ -893,6 +893,29 @@ class PurchaseController extends Controller
             'purchaseItems' => $purchaseItems,
             'filters' => $request->only(['product_id', 'date_from', 'date_to']),
             'isShadowUser' => $isShadowUser,
+        ]);
+    }
+
+
+    //show purchase items
+    public function showPurchasesItem($id)
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse'])
+            ->findOrFail($id);
+
+        if ($isShadowUser) {
+            $purchaseItem = $this->transformToShadowItemData($purchaseItem);
+        }
+
+        $business = BusinessProfile::where('user_id', $user->id)->first();
+
+        return Inertia::render('Purchase/PurchaseItemShow', [
+            'purchaseItem' => $purchaseItem,
+            'isShadowUser' => $isShadowUser,
+            'business' => $business,
         ]);
     }
 }

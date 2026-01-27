@@ -11,5 +11,8 @@ return [
     'back' => 'Back',
     'next' => 'Next',
     'previous' => 'Previous',
-    'tk' => 'tk'
+    'tk' => 'tk',
+    'auto' => 'auto',
+    'manual' => 'manual',
+    
 ];

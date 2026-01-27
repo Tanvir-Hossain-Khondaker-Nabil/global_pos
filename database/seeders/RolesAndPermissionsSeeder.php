@@ -2,10 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\Customer;
+use App\Models\Supplier;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -419,6 +422,43 @@ class RolesAndPermissionsSeeder extends Seeder
             ['name' => 'Admin User', 'password' => bcrypt('password123'), 'email_verified_at' => now()]
         );
         $adminUser->syncRoles(['Admin']);
+
+
+                // === Supplier Create ======
+
+        Supplier::updateOrCreate(
+            ['email' => 'pickup@mail.com'],
+            [
+                'name'            => 'Supplier Pick Up',
+                'contact_person'  => 'Supplier User',
+                'email'           => 'pickup@mail.com',
+                'phone'           => '0123456789',
+                'company'         => 'Pickup Supplier',
+                'address'         => 'N/A',
+                'advance_amount'  => 0,
+                'due_amount'      => 0,
+                'is_active'       => 1,
+                'created_by'      => Auth::id() ?? 1,
+                'outlet_id'       => 1 ?? null,
+                'dealership_id'   => null,
+            ]
+        );
+
+        // === Customer Create ======
+
+        Customer::updateOrCreate(
+            ['phone' => '100100100'], 
+            [
+                'customer_name'   => 'walk-in-customer',
+                'address'         => 'N/A',
+                'phone'           => '100100100',
+                'is_active'       => 1,
+                'advance_amount'  => 0,
+                'due_amount'      => 0,
+                'created_by'      => Auth::id() ?? 1,
+                'outlet_id'       => 1 ?? null,
+            ]
+        );
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
     }

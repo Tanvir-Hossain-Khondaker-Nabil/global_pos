@@ -119,6 +119,9 @@ Route::middleware('auth')->group(function () {
     });
 
 
+    Route::get('api/sales/{batch_no}', [SalesController::class, 'stockInvoice']);
+
+
     // customer manage
     Route::controller(CustomerController::class)->prefix('customer')->group(function () {
         Route::get('/', 'index')->middleware('permission:customer.view')->name('customer.index');
@@ -448,7 +451,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/ledgers/supplier/{id?}', [LedgerController::class, 'supplierLedger'])->middleware('permission:ledger.supplier_view')->name('ledgers.supplier');
     Route::post('/ledgers/clear-due/{id}', [LedgerController::class, 'clearDueStore'])->middleware('permission:ledger.clear_due')->name('clearDue.store');
     Route::post('/ledgers/advance-payment/{id}', [LedgerController::class, 'advancePaymentStore'])->middleware('permission:ledger.advance_payment')->name('advancePayment.store');
-
+    Route::get('/product-ledger', [LedgerController::class, 'ProductLedger'])->name('product-ledger.index');
+    
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->middleware('permission:subscriptions.renew')->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->middleware('permission:subscriptions.payments_view')->name('subscriptions.payments');
     Route::get('/subscriptions_payments/view/{id}', [SubscriptionController::class, 'paymentView'])->middleware('permission:subscriptions.payments_view')->name('subscriptions.payments.view');

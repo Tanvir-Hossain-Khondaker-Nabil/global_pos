@@ -39,7 +39,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
     piece: ['piece']
   });
 
-  // ✅ photo states
+  // ✅ photo states (optional)
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
 
@@ -261,7 +261,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
     });
   };
 
-  // ✅ photo change
+  // ✅ photo change (optional)
   const handlePhotoChange = (e) => {
     const file = e.target.files?.[0] || null;
     setPhotoFile(file);
@@ -289,6 +289,72 @@ export default function AddProduct({ category, update, brand, attributes, errors
     };
   }, [photoPreview]);
 
+  // =========================
+  // ✅ Product code generator
+  // =========================
+  const usedCodesRef = useRef(new Set());
+
+  const slugifyShort = (text) =>
+    String(text || "")
+      .trim()
+      .toUpperCase()
+      .replace(/[^A-Z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "")
+      .slice(0, 8);
+
+  const randomBase36 = (len = 6) => {
+    // crypto if available, else Math.random
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+      const arr = new Uint32Array(2);
+      crypto.getRandomValues(arr);
+      const s = (arr[0].toString(36) + arr[1].toString(36)).toUpperCase();
+      return s.replace(/[^A-Z0-9]/g, "").slice(0, len).padEnd(len, "X");
+    }
+    return Math.random().toString(36).slice(2, 2 + len).toUpperCase();
+  };
+
+  const dateStamp = () => {
+    const d = new Date();
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yy}${mm}${dd}`; // yymmdd
+  };
+
+  const generateUniqueProductCode = () => {
+    const baseFromName = slugifyShort(productForm.data.product_name);
+    const baseFromCategory =
+      categories.find((c) => String(c.id) === String(productForm.data.category_id))?.name || "";
+    const base = baseFromName || slugifyShort(baseFromCategory) || "PRD";
+
+    // Try a few times to avoid duplicates in the current session
+    for (let i = 0; i < 10; i++) {
+      const code = `${base}-${dateStamp()}-${randomBase36(3)}`;
+      if (!usedCodesRef.current.has(code)) {
+        usedCodesRef.current.add(code);
+        return code;
+      }
+    }
+    // fallback
+    return `${base}-${dateStamp()}-${randomBase36(3)}`;
+  };
+
+  const handleGenerateProductCode = () => {
+    const code = generateUniqueProductCode();
+    productForm.setData("product_no", code);
+
+    setErrors((prev) => {
+      const ne = { ...prev };
+      delete ne.product_no;
+      return ne;
+    });
+
+    toast.success(t("product.code_generated", "Product code generated"));
+  };
+
+  // =========================
+  // Variants
+  // =========================
   const handleVariantAttributeSelect = (variantIndex, attributeCode, value, checked) => {
     setVariants((prev) => {
       const updated = [...prev];
@@ -438,15 +504,15 @@ export default function AddProduct({ category, update, brand, attributes, errors
     // Clear all errors before submission
     setFormErrors({});
 
-    // ✅ Submit as FormData automatically (photo is File)
     productForm.post(url, {
       data: finalFormData,
       forceFormData: true,
       preserveScroll: true,
       onSuccess: () => {
-        toast.success(update
-          ? t("product.product_updated_success", "Product updated successfully!")
-          : t("product.product_added_success", "Product added successfully!")
+        toast.success(
+          update
+            ? t("product.product_updated_success", "Product updated successfully!")
+            : t("product.product_added_success", "Product added successfully!")
         );
 
         if (!update) {
@@ -517,15 +583,16 @@ export default function AddProduct({ category, update, brand, attributes, errors
       setProductType(update.product_type || "regular");
 
       if (update.variants?.length > 0) {
-        setVariants(update.variants.map((v) => ({
-          id: v.id || null,
-          attribute_values: v.attribute_values || {},
-        })));
+        setVariants(
+          update.variants.map((v) => ({
+            id: v.id || null,
+            attribute_values: v.attribute_values || {},
+          }))
+        );
       } else {
         setVariants([{ attribute_values: {} }]);
       }
 
-      // reset new preview when opening edit
       setPhotoFile(null);
       setPhotoPreview(null);
     } else {
@@ -595,7 +662,6 @@ export default function AddProduct({ category, update, brand, attributes, errors
       )}
 
       <form onSubmit={formSubmit}>
-        {/* ✅ PHOTO SECTION */}
         <div className="mb-6 border border-base-300 rounded-box p-4">
           <div className="flex items-center gap-2 mb-3">
             <ImageIcon size={18} />
@@ -620,15 +686,9 @@ export default function AddProduct({ category, update, brand, attributes, errors
             <div className="border border-base-300 rounded-box p-3 bg-base-100">
               <div className="text-sm font-medium mb-2">{t("product.preview", "Preview")}</div>
               {previewSrc ? (
-                <img
-                  src={previewSrc}
-                  alt="preview"
-                  className="w-full max-h-56 object-contain rounded"
-                />
+                <img src={previewSrc} alt="preview" className="w-full max-h-56 object-contain rounded" />
               ) : (
-                <div className="text-sm text-gray-500 italic">
-                  {t("product.no_photo_selected", "No photo selected")}
-                </div>
+                <div className="text-sm text-gray-500 italic">{t("product.no_photo_selected", "No photo selected")}</div>
               )}
             </div>
           </div>
@@ -845,9 +905,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                   <div className="ml-3 flex-1">
                     <div className="flex items-center gap-2">
                       <Factory size={20} className="text-warning" />
-                      <h4 className="font-semibold text-warning">
-                        {t("product.in_house_product", "In-House Production")}
-                      </h4>
+                      <h4 className="font-semibold text-warning">{t("product.in_house_product", "In-House Production")}</h4>
                     </div>
                     <p className="text-sm text-gray-500 mt-2">
                       {t("product.in_house_desc", "Internally produced, auto-stock management in In-House warehouse")}
@@ -862,9 +920,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
         {/* Product Basic Information */}
         <div className="grid grid-cols-1 gap-4 mb-6">
           <fieldset className="fieldset">
-            <legend className="fieldset-legend">
-              {t("product.from_product_name", "Product Name")}*
-            </legend>
+            <legend className="fieldset-legend">{t("product.from_product_name", "Product Name")}*</legend>
             <input
               type="text"
               name="product_name"
@@ -877,6 +933,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
             {renderError('product_name')}
           </fieldset>
 
+          {/* ✅ Product Code with Generate Button */}
           <fieldset className="fieldset">
             <legend className="fieldset-legend">
               <div className="flex items-center justify-between">
@@ -1236,7 +1293,9 @@ export default function AddProduct({ category, update, brand, attributes, errors
 
                 <div className="mb-3">
                   <label className="label py-1">
-                    <span className="label-text font-medium">{t("product.variant_attributes", "Variant Attributes")}</span>
+                    <span className="label-text font-medium">
+                      {t("product.variant_attributes", "Variant Attributes")}
+                    </span>
                   </label>
 
                   <div className="flex flex-wrap gap-2 mb-2">
@@ -1288,7 +1347,10 @@ export default function AddProduct({ category, update, brand, attributes, errors
                               >
                                 <input
                                   type="checkbox"
-                                  checked={variant.attribute_values && variant.attribute_values[attribute.code] === value.value}
+                                  checked={
+                                    variant.attribute_values &&
+                                    variant.attribute_values[attribute.code] === value.value
+                                  }
                                   onChange={(e) =>
                                     handleVariantAttributeSelect(index, attribute.code, value.value, e.target.checked)
                                   }
@@ -1303,7 +1365,11 @@ export default function AddProduct({ category, update, brand, attributes, errors
                     </div>
 
                     <div className="flex justify-end items-center mt-4">
-                      <button type="button" className="btn bg-[#1e4d2b] text-white btn-sm" onClick={closeVariantAttributeSelector}>
+                      <button
+                        type="button"
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
+                        onClick={closeVariantAttributeSelector}
+                      >
                         {t("product.done", "Done")}
                       </button>
                     </div>
@@ -1328,9 +1394,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                   {t("product.saving", "Saving...")}
                 </>
               ) : (
-                <>
-                  {update ? t("product.update_product", "Update Product") : t("product.save_product", "Save Product")}
-                </>
+                <>{update ? t("product.update_product", "Update Product") : t("product.save_product", "Save Product")}</>
               )}
             </button>
           </div>

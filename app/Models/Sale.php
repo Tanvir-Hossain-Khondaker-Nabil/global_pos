@@ -32,7 +32,8 @@ class Sale extends Model
         'type',
         'sale_type',
         'created_by',
-        'outlet_id'
+        'outlet_id',
+        'discount_type'
     ];
 
 

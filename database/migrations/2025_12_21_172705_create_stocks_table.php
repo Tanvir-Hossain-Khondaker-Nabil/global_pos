@@ -29,7 +29,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unsignedBigInteger('outlet_id');
-            $table->unsignedBigInteger('purchase_id');
+            $table->unsignedBigInteger('purchase_id')->nullable();
 
             $table->decimal('base_quantity', 12, 4)->default(0); // Base unit এ মোট পরিমাণ
             $table->decimal('available_base_quantity', 12, 4)->default(0); // Base unit এ অবশিষ্ট পরিমাণ

@@ -11,7 +11,14 @@ return [
     'edit' => 'Edit',
     'delete' => 'Delete',
     'delete_confirmation' => 'Are you sure you want to delete this product? This action cannot be undone.',
-    
+    'photo' => 'Photo',
+    'preview' => 'Preview',
+    'no_photo_selected' => 'No Photo Selected',
+    'photo_tip' => 'Upload a product photo',
+    'from_brand' => 'From Brand',
+    'generate' => 'Generate',
+    'code_tip' => 'Generate a unique product code',
+
     // Table headers
     'product_code' => 'Product Code',
     'product_name' => 'Product Name',

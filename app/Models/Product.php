@@ -68,6 +68,12 @@ class Product extends Model
         });
     }
 
+
+    public function stocks()
+    {
+        return $this->hasMany(Stock::class);
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);
@@ -81,6 +87,11 @@ class Product extends Model
     public function brand()
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     // Scope for filtering

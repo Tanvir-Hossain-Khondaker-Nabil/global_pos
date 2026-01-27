@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'title' => 'Supplier Contacts',
+    'title' => 'Global Supplier Contacts',
     'subtitle' => 'Manage your all supplier contacts from here.',
     'search_placeholder' => 'Search suppliers...',
     'add_new' => 'Add New',
@@ -71,7 +71,15 @@ return [
     'address_placeholder' => 'Enter full address',
     'description_field' => 'Description',
     'description_placeholder' => 'Enter description or notes',
-    
+    'financial_status' => 'Financial Status',
+    'command' => 'Command',
+    'due_amount' => 'Due Amount',
+    'due' => 'Due',
+    'advance' => 'Advance',
+    'clear_due' => 'Clear Due',
+    'clear_advance' => 'Clear Advance',
+    'add_supplier' => 'Add Supplier',
+
     // Buttons
     'edit' => 'Edit',
     'delete' => 'Delete',
@@ -88,42 +96,4 @@ return [
     
     // Required field indicator
     'required_field' => '*',
-    'add_supplier' => 'Add Supplier',
-    'all_status' => 'All Statuses',
-    'advance_payment' => 'Advance Payment',
-    'advance' => 'Advance',
-    'payment' => 'Payment',
-    'due' => 'Due',
-    'company_details' => 'Company Details',
-    'financial_status' => 'Financial Status',
-    'command' => 'Command',
-    'payment_account' => 'Payment Account',
-    'payment_date' => 'Payment Date',
-    'optional' => 'Optional',
-    'additional_information' => 'Additional Information',
-    'new_supplier' => 'New Supplier',
-    'add_new_supplier' => 'Add New Supplier',
-    'supplier_name' => 'Supplier Name',
-    'basic_information' => 'Basic Information',
-    'financial_information' => 'Financial Information',
-    'contact_information' => 'Contact Information',
-    'default_account' => 'Default Account',
-    'create_supplier' => 'Create Supplier',
-    'active_supplier' => 'Active Supplier',
-    'select_account_optional' => 'Select Account (Optional)',
-    'full_payment' => 'Full Payment',
-    'payment_summary' => 'Payment Summary',
-    'not_selected' => 'Not Selected',
-    'amount_to_pay' => 'Amount to Pay',
-    'payment_reference' => 'Payment Reference',
-    'select_account' => 'Select Account',
-    'add_new_supplier' => 'Add New Supplier',
-    'update_supplier' => 'Update Supplier',
-    'default_dealership' => 'Default Dealership',
-    'select_dealership_optional' => 'Select Dealership (Optional)',
-    'no_matching_suppliers' => 'No matching suppliers found.',
-    'clear' => 'Clear',
-    'add_first_supplier' => 'Add First Supplier',
-    'read_only_edit' => 'Read Only Edit'
-
 ];

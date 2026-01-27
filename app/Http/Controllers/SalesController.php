@@ -177,7 +177,8 @@ class SalesController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $customers = Customer::active()->get();
+        $customers = Customer::orWhere('phone','!=','100100100')
+        ->active()->get();
 
         $stock = Stock::with(['warehouse', 'product.category', 'product.brand', 'variant'])
             ->where('quantity', '>', 0)
@@ -204,7 +205,8 @@ class SalesController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $customers = Customer::all();
+         $customers = Customer::orWhere('phone','!=','100100100')
+        ->active()->get();
 
         $stock = Stock::with(['warehouse', 'product.category', 'product.brand', 'variant'])
             ->where('quantity', '>', 0)
@@ -223,6 +225,29 @@ class SalesController extends Controller
             'isShadowUser' => $isShadowUser,
             'suppliers' => $supplier,
             'unitConversions' => $this->getUnitConversions()
+        ]);
+    }
+
+
+    public function stockInvoice($batchno)
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $sales = Stock::with(['warehouse', 'product.category', 'product.brand', 'variant'])
+            ->where('quantity', '>', 0)
+             ->where('batch_no', $batchno)
+            ->first();
+
+        if ($isShadowUser) {
+            $sales->transform(function ($sale) {
+                return $this->transformToShadowData($sale);
+            });
+        }
+
+        return response()->json([
+            'sales' => $sales,
+            'isShadowUser' => $isShadowUser,
         ]);
     }
 
@@ -251,7 +276,7 @@ class SalesController extends Controller
         }
 
         if ($request->has('pickup_items') && is_array($request->pickup_items) && count($request->pickup_items) > 0) {
-            $rules['supplier_id'] = 'required|exists:suppliers,id';
+            $rules['supplier_id'] = 'nullable|exists:suppliers,id';
         }
 
         // dd($request->all());
@@ -263,20 +288,27 @@ class SalesController extends Controller
         try {
             $adjust_amount = (bool) $request->adjust_from_advance;
             $paid_amount = (float) ($request->paid_amount ?? 0);
-            $account_id = $request->account_id;
 
-            $supplier_id = $request->supplier_id ?? null;
             $pickup_items = $request->pickup_items ?? [];
             $regular_items = $request->items ?? [];
 
             // Validate account
-            $account = Account::find($account_id);
-            if (!$account || !$account->is_active) {
-                throw new \Exception('Selected account is not active or not found.');
+            if ($request->paid_amount > 0) {
+                $account_id = $request->account_id;
+
+                $account = Account::find($account_id);
+                if (!$account || !$account->is_active) {
+                    throw new \Exception('Selected account is not active or not found.');
+                }
+
+                $payment_type = $account->type ?? 'unpaid';
             }
 
-            // Validate supplier for pickup items
+
             if (count($pickup_items) > 0) {
+
+                $supplier_id = $request->supplier_id ?? Supplier::where('email', 'pickup@mail.com')->first()->id;
+
                 if (!$supplier_id)
                     throw new \Exception('Supplier is required for pickup items.');
                 $supplier = Supplier::find($supplier_id);
@@ -321,8 +353,7 @@ class SalesController extends Controller
                 throw new \Exception('Customer is required for inventory sale.');
             }
 
-            // Handle advance adjustment (only if customer exists)
-            $payment_type = $account->type;
+
 
             if ($adjust_amount === true && $customerId) {
                 $customer = Customer::find($customerId);
@@ -334,6 +365,7 @@ class SalesController extends Controller
                 }
 
                 $payment_type = 'advance_adjustment';
+
                 $customer->update([
                     'advance_amount' => $customer->advance_amount - $paid_amount,
                 ]);
@@ -342,11 +374,11 @@ class SalesController extends Controller
             // paid amount logic
             $paidAmount = ($type === 'inventory')
                 ? (float) ($request->paid_amount ?? 0)
-                : (float) ($request->grand_amount ?? 0);
+                : (float) ($request->paid_amount ?? 0);
 
             // status
-            if ($type === 'inventory') {
-                $status = ((float) $request->paid_amount === (float) $request->grand_amount) ? 'paid' : 'pending';
+            if ($type === 'inventory' || ($type === 'pos')) {
+                $status = ((float) $request->paid_amount === (float) $request->grand_amount) ? 'paid' : 'partial';
             } else {
                 $status = 'paid';
             }
@@ -355,12 +387,12 @@ class SalesController extends Controller
                 'customer_id' => $customerId,
                 'invoice_no' => $this->generateInvoiceNo(),
                 'sub_total' => $request->sub_amount ?? 0,
-                'discount' => $request->discount_rate ?? 0,
+                'discount' =>  $discount ?? 0,
+                'discount_type' => $discountType ?? 'percentage',
                 'vat_tax' => $request->vat_rate ?? 0,
                 'grand_total' => $request->grand_amount ?? 0,
                 'paid_amount' => $paidAmount ?? 0,
-                'due_amount' => $request->due_amount ?? 0,
-
+                'due_amount' => $request->due_amount ??  ($request->grand_amount - ($paidAmount ?? 0)),
                 'shadow_vat_tax' => $request->vat_rate ?? 0,
                 'shadow_discount' => $request->discount_rate ?? 0,
                 'shadow_sub_total' => $request->sub_amount ?? 0,
@@ -743,10 +775,19 @@ class SalesController extends Controller
 
     private function generateInvoiceNo()
     {
-        $last = Sale::latest()->first();
-        $num = $last ? intval(substr($last->invoice_no, -4)) + 1 : 1;
-        return 'INV-' . date('Y-m') . '-' . str_pad($num, 4, '0', STR_PAD_LEFT);
+        $prefix = 'INV-' . date('Y-m') . '-';
+
+        $last = Sale::where('invoice_no', 'like', $prefix . '%')
+            ->latest('id')
+            ->first();
+
+        $num = $last
+            ? intval(substr($last->invoice_no, -4)) + 1
+            : 1;
+
+        return $prefix . str_pad($num, 4, '0', STR_PAD_LEFT);
     }
+
 
     private function transformToShadowData($sale)
     {

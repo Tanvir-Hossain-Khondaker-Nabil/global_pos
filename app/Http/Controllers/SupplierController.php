@@ -14,6 +14,7 @@ use App\Services\SmsService;
 use Illuminate\Support\Facades\Log;
 use App\Models\Account;
 use App\Models\DillerShip;
+use App\Models\Purchase;
 
 class SupplierController extends Controller
 {
@@ -51,15 +52,50 @@ class SupplierController extends Controller
     {
         $validated = $request->validated();
 
-        $validated['created_by'] = Auth::id();
-        $account = Account::find($request->input('account_id'));
-        $dealership = DillerShip::find($request->input('dealership_id'));
-
-        if ($dealership) {
-            $validated['dealership_id'] = $dealership->id;
+        if ($request->type) {
+            $request->merge(['type' => 'local']);
+        } else {
+            $request->merge(['type' => 'global']);
         }
 
-        $supplier = Supplier::create($validated);
+
+        $account = null;
+
+        $validated['type'] = $request->type;
+        $validated['advance_amount'] = $validated['advance_amount'] ?? 0;
+        $validated['due_amount'] = $validated['due_amount'] ?? 0;
+        $validated['is_active'] = $validated['is_active'] ?? true;
+        $validated['created_by'] = Auth::id();
+
+
+        if ($request->advance_amount > 0) {
+
+            if ($request->account_id != null) {
+                $account = Account::find($request->account_id);
+
+                if ($request->advance_amount > $account->current_balance) {
+                    return redirect()->back()->with(['error' => 'Insufficient account balance for advance payment.']);
+                }
+            } else {
+                return redirect()->back()->with(['error' => 'Please select an account for advance payment.']);
+            }
+        }
+
+        $supplier =  Supplier::create($validated);
+
+        if ($request->due_amount > 0) {
+            Purchase::create([
+                'supplier_id' => $supplier->id,
+                'purchase_no' => 'ISD-' . Str::random(8),
+                'grand_total' => $request->due_amount,
+                'paid_amount' => 0,
+                'due_amount' => $request->due_amount ?? 0,
+                'status' => 'pending',
+                'created_by' => Auth::id(),
+                'purchase_date' => Carbon::now(),
+                'type' => $request->type
+            ]);
+        }
 
         // Send welcome SMS if requested
         $smsSent = false;
@@ -87,22 +123,22 @@ class SupplierController extends Controller
         }
 
         // if advance amount is given, create a payment record
-        if ($request->advance_amount && $request->advance_amount > 0 && $account) {
+        if ($account) {
+            $account->updateBalance($request->advance_amount, 'withdraw');
 
-            Payment::create([
-                'supplier_id' => $supplier->id ?? null,
-                'amount' => -$request->advance_amount ?? 0,
-                'shadow_amount' => 0,
-                'payment_method' => $account->type ?? 'Cash',
-                'txn_ref' => $request->input('transaction_id') ?? ('nexoryn-' . Str::random(10)),
-                'note' => 'Initial advance amount payment of supplier',
-                'paid_at' => Carbon::now(),
-                'created_by' => Auth::id(),
-                'account_id'  => $account->id ?? null,
-                'status' => 'completed'
-            ]);
-
-            $account->updateBalance($request->advance_amount ?? 0 , 'withdraw');
+            if ($request->advance_amount && $request->advance_amount > 0) {
+                Payment::create([
+                    'supplier_id'    => $supplier->id ?? null,
+                    'amount'         => ($request->advance_amount * -1) ?? 0,
+                    'shadow_amount'  => 0,
+                    'payment_method' => $account->type ?? 'Cash',
+                    'txn_ref'        => $request->input('transaction_id') ?? ('SAP-' . Str::random(8)),
+                    'note'           => 'Initial advance amount payment of supplier',
+                    'status'         => 'completed',
+                    'paid_at'        => Carbon::now(),
+                    'created_by'     => Auth::id()
+                ]);
+            }
         }
 
 

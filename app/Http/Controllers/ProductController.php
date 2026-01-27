@@ -10,6 +10,7 @@ use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
@@ -127,6 +128,7 @@ class ProductController extends Controller
             'unitConversions' => $this->getUnitConversions()
         ]);
     }
+    
 
     public function add_index(Request $request)
     {
@@ -165,6 +167,8 @@ class ProductController extends Controller
         ]);
     }
 
+
+    // update or store will be here by this function 
     public function update(Request $request)
     {
         // dd($request->all());
@@ -236,7 +240,7 @@ class ProductController extends Controller
             $product->category_id = $request->category_id;
             $product->description = $request->description;
             $product->product_type = $request->product_type;
-            $product->created_by = auth()->id();
+            $product->created_by = Auth::id();
 
             // ✅ ইউনিট ফিল্ডস
             $product->unit_type = $request->unit_type;
@@ -339,6 +343,7 @@ class ProductController extends Controller
         }
     }
 
+
     private function createInHouseStock(Product $product, Variant $variant)
     {
         $inHouseWarehouse = Warehouse::where('code', 'IN-HOUSE')->first();
@@ -435,6 +440,7 @@ class ProductController extends Controller
 
         return $product->product_no . '_' . implode('_', $shortCodes);
     }
+
 
     public function del($id)
     {

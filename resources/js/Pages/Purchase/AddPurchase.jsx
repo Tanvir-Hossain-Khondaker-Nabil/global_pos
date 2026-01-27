@@ -118,8 +118,6 @@ export default function AddPurchase({
     return selectedItems.reduce((total, item) => total + (item.total_price || 0), 0);
   }, [selectedItems]);
 
-  console.log(calculateTotal);
-
   const getDueAmount = useCallback(() => {
     const totalAmount = calculateTotal();
     return Math.max(0, totalAmount - paidAmount);

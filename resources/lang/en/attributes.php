@@ -22,4 +22,7 @@ return [
     'get_started' => 'Get started by creating your first attribute',
     'confirm_delete_attribute' => 'Are you sure you want to delete ":name"?',
     'confirm_delete_value' => 'Are you sure you want to delete this value?',
+    'regenerate_all' => 'Regenerate All',
+    'auto_generated' => 'Auto Generated',
+    'code_auto_generation' => 'Code Auto Generation'
 ];

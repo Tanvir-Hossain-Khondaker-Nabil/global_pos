@@ -14,8 +14,8 @@ return new class extends Migration {
             $table->id();
             $table->string('name');
             $table->string('product_no');
-            $table->string('photo');
-            $table->unsignedBigInteger('category_id');
+            $table->string('photo')->nullable();
+            $table->unsignedBigInteger('category_id')->nullable();
             $table->text('description')->nullable();
 
             $table->enum('product_type', ['regular', 'in_house'])->default('regular');

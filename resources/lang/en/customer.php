@@ -14,7 +14,32 @@ return [
     'no_address' => 'No Address',
     'join_at' => 'Join At',
     'actions' => 'Actions',
-    
+    'account_number' => 'Account Number',
+    'account_details' => 'Account Details',
+    'current_balance' => 'Current Balance',
+    'mobile_banking' => 'Mobile Banking',
+    'bank_name' => 'Bank Name',
+    'cash' => 'Cash',
+    'bank' => 'Bank',
+    'update_customer_info' => 'Update Customer Information',
+    'balance_after_payment' => 'Balance After Payment',
+    'bank' => 'Bank',
+    'clear_due' => 'Clear Due',
+    'available_advance' => 'Available Advance',
+    'clear_due_payment' => 'Clear Due Payment',
+    'clear_due_desc' => 'Clearing due payment for the selected customer.',
+    'due_invoices' => 'Due Invoices',
+    'advance_adjustment' => 'Advance Adjustment',
+    'use_customer_advance' => 'Use Customer Advance',
+    'account_adjustment' => 'Account Adjustment',
+    'transaction_reference' => 'Transaction Reference',
+    'payment_amount' => 'Payment Amount',
+    'full_payment' => 'Full Payment',
+    'payment_method' => 'Payment Method',
+    'selected_account' => 'Selected Account',
+    'advance_after_payment' => 'Advance After Payment',
+    'auto_generated_ref' => 'Auto Generated Reference',
+
     // Form Fields
     'customer_name' => 'Customer Name',
     'no_customers_found' => 'No customers found',
@@ -92,8 +117,11 @@ return [
     'add_now' => 'Add Now',
     'save' => 'Save',
     'cancel' => 'Cancel',
+    'clear' => 'Clear',
     'saving' => 'Saving...',
-    
+    'all_status' => 'All Status',
+    'advance_payment_desc' => 'Advance payment allows you to pay for services before they are rendered.',
+
     // Messages
     'data_not_found' => 'Data not found!',
     'delete_confirmation' => 'Are you sure you want to delete this customer?',
@@ -105,5 +133,4 @@ return [
 
     // Required field
     'required_field' => '*',
-    'all_status' => 'All Status'
 ];
