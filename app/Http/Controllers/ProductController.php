@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Inertia\Inertia;
+use App\Models\Brand;
 use App\Models\Stock;
 use App\Models\Product;
 use App\Models\Variant;
@@ -10,10 +11,10 @@ use App\Models\Category;
 use App\Models\Attribute;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
@@ -48,11 +49,11 @@ class ProductController extends Controller
     private function convertToBase($quantity, $fromUnit, $unitType)
     {
         $conversions = $this->getUnitConversions();
-        
+
         if (!isset($conversions[$unitType][$fromUnit])) {
             return $quantity;
         }
-        
+
         return $quantity * $conversions[$unitType][$fromUnit];
     }
 
@@ -60,11 +61,11 @@ class ProductController extends Controller
     private function convertFromBase($quantity, $toUnit, $unitType)
     {
         $conversions = $this->getUnitConversions();
-        
+
         if (!isset($conversions[$unitType][$toUnit])) {
             return $quantity;
         }
-        
+
         $conversion = $conversions[$unitType][$toUnit];
         return $conversion != 0 ? $quantity / $conversion : $quantity;
     }
@@ -80,14 +81,14 @@ class ProductController extends Controller
         // Calculate total stock including variants
         $totalStock = 0;
         $totalBaseStock = 0;
-        
+
         foreach ($product->variants as $variant) {
             if ($variant->stock) {
                 $totalStock += $variant->stock->quantity;
                 $totalBaseStock += $variant->stock->base_quantity ?? $variant->stock->quantity;
             }
         }
-        
+
         $product->total_stock = $totalStock;
         $product->total_base_stock = $totalBaseStock;
 
@@ -108,17 +109,17 @@ class ProductController extends Controller
         $products->getCollection()->transform(function ($product) {
             $totalStock = 0;
             $totalBaseStock = 0;
-            
+
             foreach ($product->variants as $variant) {
                 if ($variant->stock) {
                     $totalStock += $variant->stock->quantity;
                     $totalBaseStock += $variant->stock->base_quantity ?? $variant->stock->quantity;
                 }
             }
-            
+
             $product->total_stock = $totalStock;
             $product->total_base_stock = $totalBaseStock;
-            
+
             return $product;
         });
 
@@ -128,7 +129,7 @@ class ProductController extends Controller
             'unitConversions' => $this->getUnitConversions()
         ]);
     }
-    
+
 
     public function add_index(Request $request)
     {
@@ -158,47 +159,75 @@ class ProductController extends Controller
             ];
         });
 
+        // Get categories with proper structure
+        $categories = Category::all()->map(function ($category) {
+            return [
+                'id' => $category->id,
+                'name' => $category->name,
+            ];
+        });
+
+        // Get brands with proper structure
+        $brands = Brand::all()->map(function ($brand) {
+            return [
+                'id' => $brand->id,
+                'name' => $brand->name,
+            ];
+        });
+
         return Inertia::render('product/AddProduct', [
-            'category' => Category::pluck('name', 'id'),
-            'brand' => \App\Models\Brand::pluck('name', 'id'),
+            'category' => $categories,
+            'brand' => $brands,
             'update' => $update ? $update->toArray() : null,
             'attributes' => $attributes,
             'unitConversions' => $this->getUnitConversions()
         ]);
     }
 
-
+    // update or store will be here by this function 
     // update or store will be here by this function 
     public function update(Request $request)
     {
-        // dd($request->all());
         $isUpdate = !empty($request->id);
+
+        // Check if variants is sent as JSON string and decode it
+        if ($request->has('variants') && is_string($request->variants)) {
+            try {
+                $variantsData = json_decode($request->variants, true);
+                if ($variantsData !== null && is_array($variantsData)) {
+                    $request->merge(['variants' => $variantsData]);
+                } else {
+                    $request->merge(['variants' => []]);
+                }
+            } catch (\Exception $e) {
+                $request->merge(['variants' => []]);
+            }
+        }
 
         // ভ্যালিডেশন রুলস
         $rules = [
             'product_name' => 'required|string|max:255',
-            'category_id'  => 'required|exists:categories,id',
-            'product_no'   => 'nullable|string|max:100|unique:products,product_no,' . ($request->id ?? 'NULL'),
-            'description'  => 'nullable|string',
+            'category_id' => 'required|exists:categories,id',
+            'product_no' => 'nullable|string|max:100|unique:products,product_no,' . ($request->id ?? 'NULL'),
+            'description' => 'nullable|string',
             'product_type' => 'required|in:regular,in_house',
-            'variants'     => 'nullable|array|min:1',
-            'variants.*.attribute_values' => 'nullable|array',
-            'brand_id'     => 'nullable|exists:brands,id',
-            
+            'variants' => 'nullable|array',
+            'variants.*.attribute_values' => 'nullable',
+            'brand_id' => 'nullable|exists:brands,id',
+
             'unit_type' => 'required|in:piece,weight,volume,length',
             'default_unit' => 'required|string|max:20',
-            'is_fraction_allowed' => 'boolean',
             'min_sale_unit' => 'nullable|string|max:20',
             'photo' => 'nullable'
         ];
 
         if ($request->product_type === 'in_house') {
             $rules = array_merge($rules, [
-                'in_house_cost'              => 'required|numeric|min:0',
-                'in_house_shadow_cost'       => 'required|numeric|min:0',
-                'in_house_sale_price'        => 'required|numeric|min:0',
+                'in_house_cost' => 'required|numeric|min:0',
+                'in_house_shadow_cost' => 'required|numeric|min:0',
+                'in_house_sale_price' => 'required|numeric|min:0',
                 'in_house_shadow_sale_price' => 'required|numeric|min:0',
-                'in_house_initial_stock'     => 'required|integer|min:0',
+                'in_house_initial_stock' => 'required|integer|min:0',
             ]);
         }
 
@@ -286,50 +315,75 @@ class ProductController extends Controller
             $existingVariantIds = $product->variants()->pluck('id')->toArray();
             $newVariantIds = [];
 
-            foreach ($request->variants as $variantData) {
-                if (empty($variantData['attribute_values']) || !is_array($variantData['attribute_values'])) {
-                    // allow empty attributes but still keep the variant
-                    $variantData['attribute_values'] = [];
-                }
+            if ($request->has('variants') && is_array($request->variants) && count($request->variants) > 0) {
+                foreach ($request->variants as $variantData) {
+                    if (!is_array($variantData)) {
+                        continue;
+                    }
 
-                $sku = $this->generateSku($product, $variantData['attribute_values']);
+                    // Handle attribute_values
+                    $attributeValues = [];
+                    if (isset($variantData['attribute_values'])) {
+                        if (is_array($variantData['attribute_values'])) {
+                            $attributeValues = $variantData['attribute_values'];
+                        } elseif (is_string($variantData['attribute_values'])) {
+                            // Try to decode if it's a JSON string
+                            try {
+                                $decoded = json_decode($variantData['attribute_values'], true);
+                                if ($decoded !== null && is_array($decoded)) {
+                                    $attributeValues = $decoded;
+                                }
+                            } catch (\Exception $e) {
+                                $attributeValues = [];
+                            }
+                        }
+                    }
 
-                if (!empty($variantData['id'])) {
-                    $variant = Variant::where('id', $variantData['id'])
-                        ->where('product_id', $product->id)
-                        ->first();
+                    $sku = $this->generateSku($product, $attributeValues);
 
-                    if ($variant) {
-                        $variant->update([
-                            'attribute_values' => $variantData['attribute_values'],
+                    if (!empty($variantData['id'])) {
+                        $variant = Variant::where('id', $variantData['id'])
+                            ->where('product_id', $product->id)
+                            ->first();
+
+                        if ($variant) {
+                            $variant->update([
+                                'attribute_values' => $attributeValues,
+                                'sku' => $sku,
+                            ]);
+                            $newVariantIds[] = $variant->id;
+
+                            // Update stock if in-house product
+                            if ($product->product_type === 'in_house') {
+                                $this->updateInHouseStock($product, $variant);
+                            }
+                        }
+                    } else {
+                        $variant = Variant::create([
+                            'product_id' => $product->id,
+                            'attribute_values' => $attributeValues,
                             'sku' => $sku,
                         ]);
                         $newVariantIds[] = $variant->id;
-                        
-                        // Update stock if in-house product
+
                         if ($product->product_type === 'in_house') {
-                            $this->updateInHouseStock($product, $variant);
+                            $this->createInHouseStock($product, $variant);
                         }
                     }
-                } else {
-                    $variant = Variant::create([
-                        'product_id' => $product->id,
-                        'attribute_values' => $variantData['attribute_values'],
-                        'sku' => $sku,
-                    ]);
-                    $newVariantIds[] = $variant->id;
-
-                    if ($product->product_type === 'in_house') {
-                        $this->createInHouseStock($product, $variant);
-                    }
                 }
-            }
 
-            // Delete removed variants + their stock
-            $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
-            if (!empty($variantsToDelete)) {
-                Variant::whereIn('id', $variantsToDelete)->delete();
-                Stock::whereIn('variant_id', $variantsToDelete)->delete();
+                // Delete removed variants + their stock
+                $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
+                if (!empty($variantsToDelete)) {
+                    Variant::whereIn('id', $variantsToDelete)->delete();
+                    Stock::whereIn('variant_id', $variantsToDelete)->delete();
+                }
+            } else {
+                // If no variants provided in request, delete all existing variants
+                if (!empty($existingVariantIds)) {
+                    Variant::whereIn('id', $existingVariantIds)->delete();
+                    Stock::whereIn('variant_id', $existingVariantIds)->delete();
+                }
             }
 
             DB::commit();
@@ -393,7 +447,7 @@ class ProductController extends Controller
     private function updateInHouseStock(Product $product, Variant $variant)
     {
         $inHouseWarehouse = Warehouse::where('code', 'IN-HOUSE')->first();
-        
+
         if (!$inHouseWarehouse) {
             return;
         }
@@ -427,8 +481,8 @@ class ProductController extends Controller
         $shortCodes = [];
 
         foreach ($attributeValues as $attribute => $value) {
-            $attrShort = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', (string)$attribute), 0, 3));
-            $valShort  = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', (string)$value), 0, 3));
+            $attrShort = strtoupper(substr(preg_replace('/[^a-zA-Z]/', '', (string) $attribute), 0, 3));
+            $valShort = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', (string) $value), 0, 3));
             $shortCodes[] = $attrShort . $valShort;
         }
 
@@ -451,7 +505,7 @@ class ProductController extends Controller
             // Check if product has any sales or purchases
             $hasSales = DB::table('sale_items')->where('product_id', $id)->exists();
             $hasPurchases = DB::table('purchase_items')->where('product_id', $id)->exists();
-            
+
             if ($hasSales || $hasPurchases) {
                 return redirect()->back()->with('error', "Cannot delete product. It has associated sales or purchases.");
             }
@@ -483,25 +537,25 @@ class ProductController extends Controller
     {
         try {
             $product = Product::findOrFail($productId);
-            
+
             $conversions = $this->getUnitConversions();
             $unitType = $product->unit_type ?? 'piece';
-            
+
             $units = [];
             if (isset($conversions[$unitType])) {
                 $units = array_keys($conversions[$unitType]);
             }
-            
+
             // Get available stocks for this product to determine available sale units
             $stocks = Stock::where('product_id', $productId)
                 ->where('quantity', '>', 0)
                 ->get();
-            
+
             $availableUnits = [];
             foreach ($stocks as $stock) {
                 if ($stock->unit && !in_array($stock->unit, $availableUnits)) {
                     $availableUnits[] = $stock->unit;
-                    
+
                     // Also add smaller units
                     if (isset($conversions[$unitType][$stock->unit])) {
                         $stockFactor = $conversions[$unitType][$stock->unit];
@@ -513,12 +567,12 @@ class ProductController extends Controller
                     }
                 }
             }
-            
+
             // If no stocks found, use product's default unit
             if (empty($availableUnits)) {
                 $availableUnits = [$product->default_unit ?? 'piece'];
             }
-            
+
             return response()->json([
                 'units' => $availableUnits,
                 'default_unit' => $product->default_unit ?? 'piece',
@@ -543,18 +597,18 @@ class ProductController extends Controller
     {
         try {
             $product = Product::with(['variants.stock'])->findOrFail($productId);
-            
+
             // Calculate total available stock
             $totalStock = 0;
             $totalBaseStock = 0;
-            
+
             foreach ($product->variants as $variant) {
                 if ($variant->stock) {
                     $totalStock += $variant->stock->quantity;
                     $totalBaseStock += $variant->stock->base_quantity ?? $variant->stock->quantity;
                 }
             }
-            
+
             $response = [
                 'product' => $product,
                 'total_stock' => $totalStock,
@@ -564,18 +618,18 @@ class ProductController extends Controller
                 'min_sale_unit' => $product->min_sale_unit ?? null,
                 'is_fraction_allowed' => $product->is_fraction_allowed ?? false,
             ];
-            
+
             if ($variantId) {
                 $variant = Variant::with('stock')->where('product_id', $productId)
                     ->where('id', $variantId)
                     ->first();
-                
+
                 if ($variant) {
                     $response['variant'] = $variant;
                     $response['variant_stock'] = $variant->stock;
                 }
             }
-            
+
             return response()->json($response);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Product not found'], 404);
@@ -597,28 +651,28 @@ class ProductController extends Controller
         try {
             $product = Product::findOrFail($id);
             $variant = Variant::findOrFail($request->variant_id);
-            
+
             // Verify variant belongs to product
             if ($variant->product_id != $product->id) {
                 throw new \Exception('Variant does not belong to this product');
             }
-            
+
             $warehouseId = $request->warehouse_id ?? Warehouse::where('code', 'IN-HOUSE')->value('id');
-            
+
             if (!$warehouseId) {
                 throw new \Exception('Warehouse not found');
             }
-            
+
             // Calculate base quantity
             $unitType = $product->unit_type ?? 'piece';
             $baseQuantity = $this->convertToBase($request->quantity, $request->unit, $unitType);
-            
+
             // Find or create stock record
             $stock = Stock::where('warehouse_id', $warehouseId)
                 ->where('product_id', $product->id)
                 ->where('variant_id', $variant->id)
                 ->first();
-            
+
             if ($stock) {
                 $stock->update([
                     'quantity' => $request->quantity,
@@ -637,7 +691,7 @@ class ProductController extends Controller
                     'created_by' => auth()->id(),
                 ]);
             }
-            
+
             // Record stock movement
             \App\Models\StockMovement::create([
                 'warehouse_id' => $warehouseId,
@@ -651,9 +705,9 @@ class ProductController extends Controller
                 'notes' => $request->notes ?? 'Manual stock adjustment',
                 'created_by' => auth()->id(),
             ]);
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Stock updated successfully',
@@ -672,12 +726,12 @@ class ProductController extends Controller
     public function stockHistory($id)
     {
         $product = Product::findOrFail($id);
-        
+
         $history = \App\Models\StockMovement::with(['warehouse', 'variant'])
             ->where('product_id', $id)
             ->orderBy('created_at', 'desc')
             ->paginate(20);
-        
+
         return Inertia::render('product/StockHistory', [
             'product' => $product,
             'history' => $history
@@ -693,14 +747,14 @@ class ProductController extends Controller
             ->map(function ($product) {
                 $totalStock = 0;
                 $totalBaseStock = 0;
-                
+
                 foreach ($product->variants as $variant) {
                     if ($variant->stock) {
                         $totalStock += $variant->stock->quantity;
                         $totalBaseStock += $variant->stock->base_quantity ?? $variant->stock->quantity;
                     }
                 }
-                
+
                 return [
                     'ID' => $product->id,
                     'Name' => $product->name,
@@ -721,29 +775,29 @@ class ProductController extends Controller
                     'Created At' => $product->created_at->format('Y-m-d H:i:s'),
                 ];
             });
-        
+
         $headers = [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="products_' . date('Y-m-d') . '.csv"',
         ];
-        
-        $callback = function() use ($products) {
+
+        $callback = function () use ($products) {
             $file = fopen('php://output', 'w');
-            
+
             // Add BOM for UTF-8
             fputs($file, $bom = (chr(0xEF) . chr(0xBB) . chr(0xBF)));
-            
+
             // Headers
             fputcsv($file, array_keys($products->first() ?? []));
-            
+
             // Data
             foreach ($products as $product) {
                 fputcsv($file, $product);
             }
-            
+
             fclose($file);
         };
-        
+
         return response()->stream($callback, 200, $headers);
     }
 
@@ -753,12 +807,12 @@ class ProductController extends Controller
         $request->validate([
             'file' => 'required|mimes:csv,txt,xlsx,xls',
         ]);
-        
+
         // This is a simplified version. In real implementation, you would use:
         // 1. Laravel Excel package or similar
         // 2. Queue jobs for large imports
         // 3. Proper validation and error handling
-        
+
         return redirect()->back()->with('error', 'Import feature not implemented yet. Please use the web interface.');
     }
 
@@ -768,19 +822,19 @@ class ProductController extends Controller
         $products = Product::with(['category', 'brand', 'variants.stock'])
             ->filter($request->only('search'))
             ->paginate($request->get('per_page', 20));
-        
+
         // Calculate stock for each product
         $products->getCollection()->transform(function ($product) {
             $totalStock = 0;
             $totalBaseStock = 0;
-            
+
             foreach ($product->variants as $variant) {
                 if ($variant->stock) {
                     $totalStock += $variant->stock->quantity;
                     $totalBaseStock += $variant->stock->base_quantity ?? $variant->stock->quantity;
                 }
             }
-            
+
             return [
                 'id' => $product->id,
                 'name' => $product->name,
@@ -814,7 +868,7 @@ class ProductController extends Controller
                 'created_at' => $product->created_at->toISOString(),
             ];
         });
-        
+
         return response()->json($products);
     }
 
@@ -827,23 +881,23 @@ class ProductController extends Controller
             'field' => 'required|in:unit_type,default_unit,min_sale_unit,is_fraction_allowed',
             'value' => 'required',
         ]);
-        
+
         DB::beginTransaction();
         try {
             $updatedCount = 0;
-            
+
             foreach ($request->products as $productData) {
                 $product = Product::find($productData['id']);
-                
+
                 if ($product) {
                     $field = $request->field;
                     $value = $request->value;
-                    
+
                     // Validate based on field
                     if ($field === 'unit_type' && !in_array($value, ['piece', 'weight', 'volume', 'length'])) {
                         continue;
                     }
-                    
+
                     if ($field === 'default_unit') {
                         // Validate based on current unit_type
                         $unitType = $product->unit_type;
@@ -852,18 +906,18 @@ class ProductController extends Controller
                             continue;
                         }
                     }
-                    
+
                     if ($field === 'is_fraction_allowed') {
                         $value = filter_var($value, FILTER_VALIDATE_BOOLEAN);
                     }
-                    
+
                     $product->update([$field => $value]);
                     $updatedCount++;
                 }
             }
-            
+
             DB::commit();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => "Updated {$updatedCount} products successfully",

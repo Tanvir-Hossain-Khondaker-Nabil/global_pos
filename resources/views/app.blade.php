@@ -5,11 +5,18 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Total Biz Pos</title>
-    <link rel="shortcut icon" href="https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png" type="image/x-icon">
+    <link rel="shortcut icon" href="https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png"
+        type="image/x-icon">
     @routes
     @viteReactRefresh
     @vite('resources/js/app.jsx')
     @inertiaHead
+
+    <style>
+        .no-scroll::-webkit-scrollbar {
+            width: 0px;
+        }
+    </style>
 
     {{-- <link rel="stylesheet" href="{{ asset('build/assetsrW/app-D7r9q3gj.css') }}">
     <script src="{{ asset('build/assets/app-BBbR3OcA.js') }}" type="module"></script> --}}
@@ -17,7 +24,7 @@
 
 
 <style>
-    ::-webkit-scrollbar-thumb{
+    ::-webkit-scrollbar-thumb {
         width: 0px
     }
 </style>

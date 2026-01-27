@@ -136,16 +136,19 @@ export default function AddSale({
         [unitConversions]
     );
 
+    // ✅ FIXED: Convert from base to unit - prevent division by zero issues
     const convertFromBase = useCallback(
         (quantity, toUnit, unitType) => {
             const conversions = unitConversions[unitType];
             if (!conversions || !conversions[toUnit]) return quantity;
             const conversion = conversions[toUnit];
-            return conversion !== 0 ? quantity / conversion : quantity;
+            if (conversion === 0) return quantity; // Prevent division by zero
+            return quantity / conversion;
         },
         [unitConversions]
     );
 
+    // ✅ FIXED: Better unit quantity conversion with validation
     const convertUnitQuantity = useCallback(
         (quantity, fromUnit, toUnit, unitType) => {
             if (fromUnit === toUnit) return quantity;
@@ -153,21 +156,25 @@ export default function AddSale({
             const conversions = unitConversions[unitType];
             if (!conversions || !conversions[fromUnit] || !conversions[toUnit]) return quantity;
 
-            const baseQuantity = quantity * conversions[fromUnit];
-            return baseQuantity / conversions[toUnit];
+            const fromFactor = conversions[fromUnit];
+            const toFactor = conversions[toUnit];
+            
+            if (toFactor === 0) return quantity; // Prevent division by zero
+            
+            // Convert quantity to base units first
+            const baseQuantity = quantity * fromFactor;
+            // Then convert from base to target unit
+            return baseQuantity / toFactor;
         },
         [unitConversions]
     );
 
-    const calculatePriceInUnit = useCallback(
-        (priceInPurchaseUnit, fromUnit, toUnit, unitType) => {
-            if (fromUnit === toUnit) return priceInPurchaseUnit;
-
+    // ✅ FIXED: Calculate price for unit based on base price
+    const calculatePriceForUnit = useCallback(
+        (basePricePerBaseUnit, targetUnit, unitType) => {
             const conversions = unitConversions[unitType];
-            if (!conversions || !conversions[fromUnit] || !conversions[toUnit]) return priceInPurchaseUnit;
-
-            const pricePerBaseUnit = priceInPurchaseUnit / conversions[fromUnit];
-            return pricePerBaseUnit * conversions[toUnit];
+            if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
+            return basePricePerBaseUnit * conversions[targetUnit];
         },
         [unitConversions]
     );
@@ -247,7 +254,7 @@ export default function AddSale({
                 warehouse_id: s.warehouse_id,
                 product_unit_type: item.unit_type || "piece",
                 is_fraction_allowed: item.is_fraction_allowed || false,
-                sku: s.variant?.sku || null, // ✅ needed for scan
+                sku: s.variant?.sku || null,
             });
         }
 
@@ -315,8 +322,6 @@ export default function AddSale({
     }, [customerId, customers]);
 
     // ---------------- Cart Operations ----------------
-
-    // ✅ Hoisted function: avoids "Cannot access before initialization"
     function handleVariantSelect(product, variant) {
         addToCart(product, variant);
     }
@@ -340,26 +345,25 @@ export default function AddSale({
                 product.min_sale_unit || product.default_unit || availableUnitsForStock[0] || "piece";
             if (!availableUnitsForStock.includes(defaultUnit)) defaultUnit = availableUnitsForStock[0] || "piece";
 
+            // ✅ Calculate base price per base unit
+            const unitType = product.unit_type || "piece";
             let basePricePerBaseUnit = variant.sale_price;
-            if (product.unit_type && product.unit_type !== "piece") {
+            
+            if (unitType !== "piece") {
                 basePricePerBaseUnit = calculateBasePricePerBaseUnit(
                     variant.sale_price,
                     variant.purchase_unit,
-                    product.unit_type
+                    unitType
                 );
             }
 
+            // ✅ Calculate price in sale unit using base price
             let unitPrice = variant.sale_price;
-            if (
-                variant.purchase_unit !== defaultUnit &&
-                product.unit_type &&
-                product.unit_type !== "piece"
-            ) {
-                unitPrice = calculatePriceInUnit(
-                    variant.sale_price,
-                    variant.purchase_unit,
+            if (variant.purchase_unit !== defaultUnit && unitType !== "piece") {
+                unitPrice = calculatePriceForUnit(
+                    basePricePerBaseUnit,
                     defaultUnit,
-                    product.unit_type
+                    unitType
                 );
             }
 
@@ -378,7 +382,7 @@ export default function AddSale({
                 shadow_unit_price: n(variant.shadow_sale_price) || unitPrice,
                 maxQty: n(variant.quantity),
                 total_price: unitPrice,
-                product_unit_type: product.unit_type || "piece",
+                product_unit_type: unitType,
                 is_fraction_allowed: product.is_fraction_allowed || false,
                 original_purchase_unit: variant.purchase_unit,
                 original_sale_price: variant.sale_price,
@@ -395,7 +399,7 @@ export default function AddSale({
             setUnitPrices((prev) => ({ ...prev, [key]: unitPrice }));
             setBasePrices((prev) => ({ ...prev, [key]: basePricePerBaseUnit }));
         },
-        [cart, getAvailableUnitsForStock, calculateBasePricePerBaseUnit, calculatePriceInUnit]
+        [cart, getAvailableUnitsForStock, calculateBasePricePerBaseUnit, calculatePriceForUnit]
     );
 
     const removeCartItem = (key) => {
@@ -471,6 +475,7 @@ export default function AddSale({
         setUnitQuantities((prev) => ({ ...prev, [key]: q }));
     };
 
+    // ✅ FIXED: Handle unit change with proper validation
     const handleUnitChange = (key, newUnit) => {
         const item = cart.find((x) => x.key === key);
         if (!item) return;
@@ -478,43 +483,68 @@ export default function AddSale({
         const oldUnit = selectedUnits[key] || item.unit;
         const oldQty = unitQuantities[key] || item.qty;
 
+        if (oldUnit === newUnit) return;
+
         const availableUnitsList = availableUnits[key] || [item.unit];
         if (!availableUnitsList.includes(newUnit)) {
             alert(`Cannot sell in ${newUnit.toUpperCase()} unit for this product`);
             return;
         }
 
-        let newPrice = item.unit_price;
-        if (item.product_unit_type && item.product_unit_type !== "piece") {
-            const basePricePerBaseUnit =
-                basePrices[key] || item.base_price_per_base_unit || item.original_sale_price;
+        const unitType = item.product_unit_type || "piece";
 
-            const conversions = unitConversions[item.product_unit_type];
-            if (conversions && conversions[newUnit]) newPrice = basePricePerBaseUnit * conversions[newUnit];
+        // ✅ Convert quantity to new unit
+        let newQty = oldQty;
+        if (unitType !== "piece") {
+            newQty = convertUnitQuantity(oldQty, oldUnit, newUnit, unitType);
         }
 
-        let newQty = oldQty;
-        if (item.product_unit_type && item.product_unit_type !== "piece") {
-            newQty = convertUnitQuantity(oldQty, oldUnit, newUnit, item.product_unit_type);
-
-            const requestedBaseQty = convertToBase(newQty, newUnit, item.product_unit_type);
-            if (requestedBaseQty > item.base_quantity) {
-                const availableInUnit = convertFromBase(item.base_quantity, newUnit, item.product_unit_type);
-                alert(`Cannot change unit. Exceeds available stock! Available: ${availableInUnit.toFixed(3)} ${newUnit.toUpperCase()}`);
+        // ✅ Validate stock availability in new unit
+        let availableInNewUnit = item.maxQty;
+        if (unitType !== "piece") {
+            const baseQtyAvailable = item.base_quantity;
+            availableInNewUnit = convertFromBase(baseQtyAvailable, newUnit, unitType);
+            
+            // Check if requested quantity exceeds available stock
+            const requestedBaseQty = convertToBase(newQty, newUnit, unitType);
+            if (requestedBaseQty > baseQtyAvailable) {
+                alert(`Cannot change unit. Exceeds available stock! Available: ${availableInNewUnit.toFixed(3)} ${newUnit.toUpperCase()}`);
                 return;
             }
+        } else if (newQty > item.maxQty) {
+            alert(`Cannot change unit. Exceeds available stock! Available: ${item.maxQty} ${newUnit.toUpperCase()}`);
+            return;
         }
 
+        // ✅ Calculate new price based on base price
+        const basePricePerBaseUnit = 
+            basePrices[key] || 
+            item.base_price_per_base_unit || 
+            calculateBasePricePerBaseUnit(item.original_sale_price, item.original_purchase_unit, unitType);
+
+        // ✅ Calculate price for the selected unit
+        const newPrice = calculatePriceForUnit(basePricePerBaseUnit, newUnit, unitType);
+
+        // Update cart item
         setCart((prev) =>
             prev.map((x) => {
                 if (x.key !== key) return x;
-                return { ...x, unit: newUnit, qty: newQty, unit_price: newPrice, total_price: newQty * n(newPrice) };
+                return { 
+                    ...x, 
+                    unit: newUnit, 
+                    qty: newQty, 
+                    unit_price: newPrice, 
+                    total_price: newQty * n(newPrice),
+                    base_price_per_base_unit: basePricePerBaseUnit
+                };
             })
         );
 
+        // Update state
         setSelectedUnits((prev) => ({ ...prev, [key]: newUnit }));
         setUnitQuantities((prev) => ({ ...prev, [key]: newQty }));
         setUnitPrices((prev) => ({ ...prev, [key]: newPrice }));
+        setBasePrices((prev) => ({ ...prev, [key]: basePricePerBaseUnit }));
         setUnitDropdownOpen((prev) => ({ ...prev, [key]: false }));
     };
 
@@ -530,9 +560,8 @@ export default function AddSale({
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // ---------------- Barcode Scanner (FIXED VERSION) ----------------
+    // ---------------- Barcode Scanner ----------------
     const barcodeRef = useRef(null);
-    const [barcodeValue, setBarcodeValue] = useState("");
     const [scanError, setScanError] = useState("");
     const [autoFocusScanner, setAutoFocusScanner] = useState(true);
 
@@ -596,27 +625,23 @@ export default function AddSale({
         [scanIndex, addToCart]
     );
 
-    // ✅ FIXED: Barcode scanning - only intercept when not focused on input field
     const SCAN_TIMEOUT = 100;
     const barcodeRefNew = useRef("");
     const lastScanTimeRef = useRef(0);
 
     useEffect(() => {
         const handleKeydown = (e) => {
-            // Check if user is typing in an input field
             const isInputElement = 
                 e.target.tagName === 'INPUT' || 
                 e.target.tagName === 'TEXTAREA' || 
                 e.target.tagName === 'SELECT';
             
-            // If user is typing in an input field, don't interfere
             if (isInputElement) {
                 return;
             }
 
             const now = Date.now();
 
-            // Ignore control and navigation keys
             if (
                 e.key === "Shift" ||
                 e.key === "Alt" ||
@@ -631,7 +656,6 @@ export default function AddSale({
                 return;
             }
 
-            // Barcode finished
             if (e.key === "Enter") {
                 if (barcodeRefNew.current.length > 0) {
                     handleBarcodeScan(barcodeRefNew.current);
@@ -640,7 +664,6 @@ export default function AddSale({
                 return;
             }
 
-            // Reset buffer if delay is big (manual typing)
             if (now - lastScanTimeRef.current > SCAN_TIMEOUT) {
                 barcodeRefNew.current = e.key;
             } else {
@@ -723,7 +746,6 @@ export default function AddSale({
         payment_status: "unpaid",
     });
 
-    // ✅ Sync form data with UI states
     useEffect(() => {
         const formattedItems = cart.map((i) => ({
             product_id: i.product_id,
@@ -913,7 +935,6 @@ export default function AddSale({
         if (paymentStatus !== "unpaid" && !selectedAccount)
             return alert("Select a payment account for payment");
 
-        // If typed name/phone, require both (unless walk-in fully empty)
         const hasOne =
             (!!customerName.trim() && !customerPhone.trim()) ||
             (!customerName.trim() && !!customerPhone.trim());
@@ -1349,7 +1370,7 @@ export default function AddSale({
                                                             className="p-3 border border-gray-200 rounded-lg hover:border-primary/50 hover:bg-gray-50 transition-colors"
                                                         >
                                                             <div className="flex items-start justify-between gap-3">
-                                                                <div className="flex-1 min-w-0">
+                                                                <div className="flex-1 min-w-0 no-scroll">
                                                                     <div className="font-semibold text-gray-900 truncate">{i.name}</div>
                                                                     <div className="text-xs text-gray-600 truncate mt-1">
                                                                         {i.variant_label}
@@ -1411,62 +1432,41 @@ export default function AddSale({
                                                                             type="number"
                                                                             value={unitQuantity}
                                                                             onChange={(e) => changeQty(i.key, Number(e.target.value))}
+                                                                            step={i.is_fraction_allowed ? "0.001" : "1"}
+                                                                            min="0.001"
                                                                         />
 
                                                                         <button
                                                                             type="button"
                                                                             className="btn btn-xs btn-square btn-outline border-gray-300 hover:bg-gray-100"
-                                                                            onClick={() => changeQty(i.key, n(i.qty) + 1)}
+                                                                            onClick={() => changeQty(i.key, n(i.qty) + (i.is_fraction_allowed ? 0.001 : 1))}
                                                                         >
                                                                             <Plus size={12} className="text-gray-700" />
                                                                         </button>
                                                                     </div>
 
-                                                                    <div className="text-xs text-gray-500 mt-1">
+                                                                    <div className="text-xs  text-gray-500 mt-1">
                                                                         Available: {formatCurrency(i.maxQty)}{" "}
                                                                         {i.original_purchase_unit?.toUpperCase()}
+                                                                        {i.product_unit_type && i.product_unit_type !== "piece" && (
+                                                                            <span className="ml-1">
+                                                                                ({formatCurrency(i.base_quantity)} base units)
+                                                                            </span>
+                                                                        )}
                                                                     </div>
-
-                                                                    {/* Unit info for non-piece */}
-                                                                    {i.product_unit_type && i.product_unit_type !== "piece" && (
-                                                                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs min-w-[200px]">
-                                                                            <div className="text-blue-800">
-                                                                                <div className="flex items-center gap-1 mb-1">
-                                                                                    <Calculator size={10} />
-                                                                                    <strong>Unit Information</strong>
-                                                                                </div>
-                                                                                <div className="grid grid-cols-2 gap-1">
-                                                                                    <div>Base Price:</div>
-                                                                                    <div className="font-medium">
-                                                                                        {money(basePricePerBaseUnit || i.original_sale_price)}/base
-                                                                                    </div>
-
-                                                                                    <div>Sale Price:</div>
-                                                                                    <div className="font-medium">
-                                                                                        {money(unitPrice)} / {selectedUnit.toUpperCase()}
-                                                                                    </div>
-
-                                                                                    <div>Available:</div>
-                                                                                    <div>
-                                                                                        {formatCurrency(
-                                                                                            convertFromBase(i.base_quantity, selectedUnit, i.product_unit_type)
-                                                                                        )}{" "}
-                                                                                        {selectedUnit.toUpperCase()}
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
                                                                 </div>
 
                                                                 <div className="text-right">
                                                                     <div className="font-bold text-gray-900 text-lg">{money(i.total_price)}</div>
                                                                     <div className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded mt-1">
                                                                         {money(unitPrice)}/{selectedUnit.toUpperCase()}
+                                                                        <div className="text-[10px] text-gray-500 mt-0.5">
+                                                                            (Auto Calculated)
+                                                                        </div>
                                                                     </div>
                                                                     <button
                                                                         type="button"
-                                                                        className="btn btn-ghost btn-xs text-red-600 hover:text-red-700 hover:bg-red-50 mt-2"
+                                                                        className="btn btn-ghost mt-10 me-1 btn-xs text-red-600 hover:text-red-700 hover:bg-red-50"
                                                                         onClick={() => removeCartItem(i.key)}
                                                                     >
                                                                         <Trash2 size={12} />
@@ -1744,7 +1744,7 @@ export default function AddSale({
                                         </>
                                     ) : (
                                         <>
-                                            Complete Sale
+                                            Sale
                                             <span className="ml-2 font-bold">{money(grandTotal)}</span>
                                         </>
                                     )}
