@@ -136,19 +136,16 @@ export default function AddSale({
         [unitConversions]
     );
 
-    // ✅ FIXED: Convert from base to unit - prevent division by zero issues
     const convertFromBase = useCallback(
         (quantity, toUnit, unitType) => {
             const conversions = unitConversions[unitType];
             if (!conversions || !conversions[toUnit]) return quantity;
             const conversion = conversions[toUnit];
-            if (conversion === 0) return quantity; // Prevent division by zero
-            return quantity / conversion;
+            return conversion !== 0 ? quantity / conversion : quantity;
         },
         [unitConversions]
     );
 
-    // ✅ FIXED: Better unit quantity conversion with validation
     const convertUnitQuantity = useCallback(
         (quantity, fromUnit, toUnit, unitType) => {
             if (fromUnit === toUnit) return quantity;
@@ -156,25 +153,17 @@ export default function AddSale({
             const conversions = unitConversions[unitType];
             if (!conversions || !conversions[fromUnit] || !conversions[toUnit]) return quantity;
 
-            const fromFactor = conversions[fromUnit];
-            const toFactor = conversions[toUnit];
-            
-            if (toFactor === 0) return quantity; // Prevent division by zero
-            
-            // Convert quantity to base units first
-            const baseQuantity = quantity * fromFactor;
-            // Then convert from base to target unit
-            return baseQuantity / toFactor;
+            const baseQuantity = quantity * conversions[fromUnit];
+            return baseQuantity / conversions[toUnit];
         },
         [unitConversions]
     );
 
-    // ✅ FIXED: Calculate price for unit based on base price
-    const calculatePriceForUnit = useCallback(
-        (basePricePerBaseUnit, targetUnit, unitType) => {
+    const calculatePriceInUnit = useCallback(
+        (basePricePerBaseUnit, toUnit, unitType) => {
             const conversions = unitConversions[unitType];
-            if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
-            return basePricePerBaseUnit * conversions[targetUnit];
+            if (!conversions || !conversions[toUnit]) return basePricePerBaseUnit;
+            return basePricePerBaseUnit * conversions[toUnit];
         },
         [unitConversions]
     );
@@ -187,6 +176,13 @@ export default function AddSale({
         },
         [unitConversions]
     );
+
+    // ✅ FIXED: Calculate price based on base price and unit conversion
+    const calculatePriceForUnit = useCallback((basePricePerBaseUnit, targetUnit, unitType) => {
+        const conversions = unitConversions[unitType];
+        if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
+        return basePricePerBaseUnit * conversions[targetUnit];
+    }, [unitConversions]);
 
     // ---------------- Catalog (from productstocks) ----------------
     const catalog = useMemo(() => {
@@ -345,10 +341,11 @@ export default function AddSale({
                 product.min_sale_unit || product.default_unit || availableUnitsForStock[0] || "piece";
             if (!availableUnitsForStock.includes(defaultUnit)) defaultUnit = availableUnitsForStock[0] || "piece";
 
-            // ✅ Calculate base price per base unit
+            // ✅ FIXED: Always calculate base price per base unit
             const unitType = product.unit_type || "piece";
             let basePricePerBaseUnit = variant.sale_price;
             
+            // ✅ Calculate base price correctly
             if (unitType !== "piece") {
                 basePricePerBaseUnit = calculateBasePricePerBaseUnit(
                     variant.sale_price,
@@ -475,7 +472,7 @@ export default function AddSale({
         setUnitQuantities((prev) => ({ ...prev, [key]: q }));
     };
 
-    // ✅ FIXED: Handle unit change with proper validation
+    // ✅ FIXED: Handle unit change with auto price calculation
     const handleUnitChange = (key, newUnit) => {
         const item = cart.find((x) => x.key === key);
         if (!item) return;
@@ -497,32 +494,23 @@ export default function AddSale({
         let newQty = oldQty;
         if (unitType !== "piece") {
             newQty = convertUnitQuantity(oldQty, oldUnit, newUnit, unitType);
-        }
 
-        // ✅ Validate stock availability in new unit
-        let availableInNewUnit = item.maxQty;
-        if (unitType !== "piece") {
-            const baseQtyAvailable = item.base_quantity;
-            availableInNewUnit = convertFromBase(baseQtyAvailable, newUnit, unitType);
-            
-            // Check if requested quantity exceeds available stock
+            // Validate stock in new unit
             const requestedBaseQty = convertToBase(newQty, newUnit, unitType);
-            if (requestedBaseQty > baseQtyAvailable) {
-                alert(`Cannot change unit. Exceeds available stock! Available: ${availableInNewUnit.toFixed(3)} ${newUnit.toUpperCase()}`);
+            if (requestedBaseQty > item.base_quantity) {
+                const availableInUnit = convertFromBase(item.base_quantity, newUnit, unitType);
+                alert(`Cannot change unit. Exceeds available stock! Available: ${availableInUnit.toFixed(3)} ${newUnit.toUpperCase()}`);
                 return;
             }
-        } else if (newQty > item.maxQty) {
-            alert(`Cannot change unit. Exceeds available stock! Available: ${item.maxQty} ${newUnit.toUpperCase()}`);
-            return;
         }
 
-        // ✅ Calculate new price based on base price
+        // ✅ ALWAYS recalc price based on stored base price
         const basePricePerBaseUnit = 
             basePrices[key] || 
             item.base_price_per_base_unit || 
             calculateBasePricePerBaseUnit(item.original_sale_price, item.original_purchase_unit, unitType);
 
-        // ✅ Calculate price for the selected unit
+        // ✅ Calculate new price for the selected unit
         const newPrice = calculatePriceForUnit(basePricePerBaseUnit, newUnit, unitType);
 
         // Update cart item
@@ -1370,7 +1358,7 @@ export default function AddSale({
                                                             className="p-3 border border-gray-200 rounded-lg hover:border-primary/50 hover:bg-gray-50 transition-colors"
                                                         >
                                                             <div className="flex items-start justify-between gap-3">
-                                                                <div className="flex-1 min-w-0 no-scroll">
+                                                                <div className="flex-1 min-w-0">
                                                                     <div className="font-semibold text-gray-900 truncate">{i.name}</div>
                                                                     <div className="text-xs text-gray-600 truncate mt-1">
                                                                         {i.variant_label}
@@ -1445,15 +1433,11 @@ export default function AddSale({
                                                                         </button>
                                                                     </div>
 
-                                                                    <div className="text-xs  text-gray-500 mt-1">
+                                                                    <div className="text-xs text-gray-500 mt-1">
                                                                         Available: {formatCurrency(i.maxQty)}{" "}
                                                                         {i.original_purchase_unit?.toUpperCase()}
-                                                                        {i.product_unit_type && i.product_unit_type !== "piece" && (
-                                                                            <span className="ml-1">
-                                                                                ({formatCurrency(i.base_quantity)} base units)
-                                                                            </span>
-                                                                        )}
                                                                     </div>
+
                                                                 </div>
 
                                                                 <div className="text-right">
@@ -1466,7 +1450,7 @@ export default function AddSale({
                                                                     </div>
                                                                     <button
                                                                         type="button"
-                                                                        className="btn btn-ghost mt-10 me-1 btn-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                        className="btn btn-ghost btn-xs mt-10 text-red-600 hover:text-red-700 hover:bg-red-50 me-1"
                                                                         onClick={() => removeCartItem(i.key)}
                                                                     >
                                                                         <Trash2 size={12} />
@@ -1744,7 +1728,7 @@ export default function AddSale({
                                         </>
                                     ) : (
                                         <>
-                                            Sale
+                                            Complete Sale
                                             <span className="ml-2 font-bold">{money(grandTotal)}</span>
                                         </>
                                     )}

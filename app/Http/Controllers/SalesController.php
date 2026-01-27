@@ -570,97 +570,111 @@ class SalesController extends Controller
 
     // Get available stock in base units
     private function getAvailableStockInBase($productId, $variantId, $stockId = null)
-    {
-        $query = Stock::where('product_id', $productId)
-            ->where('variant_id', $variantId)
-            ->where('quantity', '>', 0);
-            
-        if ($stockId) {
-            $query->where('id', $stockId);
-        }
-        
-        $stocks = $query->get();
-        
-        $totalBase = 0;
-        foreach ($stocks as $stock) {
-            $totalBase += $stock->base_quantity ?? $stock->quantity;
-        }
-        
-        return $totalBase;
+{
+    $product = Product::find($productId);
+    $unitType = $product?->unit_type ?? 'piece';
+
+    $query = Stock::where('product_id', $productId)
+        ->when($variantId, function ($q) use ($variantId) {
+            $q->where('variant_id', $variantId);
+        }, function ($q) {
+            // ✅ variantId null হলে stock.variant_id NULL খুঁজবে
+            $q->whereNull('variant_id');
+        })
+        ->where('quantity', '>', 0);
+
+    if ($stockId) {
+        $query->where('id', $stockId);
     }
+
+    $stocks = $query->get();
+
+    $totalBase = 0;
+    foreach ($stocks as $stock) {
+        $stockUnit = $stock->unit ?? ($product?->default_unit ?? 'piece');
+        // ✅ base_quantity এর উপর depend না করে quantity+unit থেকে base হিসাব
+        $totalBase += $this->convertToBase((float)$stock->quantity, $stockUnit, $unitType);
+    }
+
+    return $totalBase;
+}
 
     // FIFO stock deduction in base units
     private function fifoOutInBase($productId, $variantId, $neededBaseQty, $saleId, $stockId = null, $saleUnit = null)
-    {
-        $query = Stock::where('product_id', $productId)
-            ->where('variant_id', $variantId)
-            ->where('quantity', '>', 0);
-            
-        if ($stockId) {
-            $query->where('id', $stockId);
-        }
-        
-        $stocks = $query->orderBy('created_at', 'asc')->get();
+{
+    $product = Product::find($productId);
+    $unitType = $product?->unit_type ?? 'piece';
 
-        $stockUsed = [
-            'warehouse_id' => null,
-            'stock_id' => null
-        ];
+    $query = Stock::where('product_id', $productId)
+        ->when($variantId, function ($q) use ($variantId) {
+            $q->where('variant_id', $variantId);
+        }, function ($q) {
+            $q->whereNull('variant_id');
+        })
+        ->where('quantity', '>', 0);
 
-        foreach ($stocks as $stock) {
-            if ($neededBaseQty <= 0) break;
-
-            $availableBaseQty = $stock->base_quantity ?? $stock->quantity;
-            $takeBase = min($availableBaseQty, $neededBaseQty);
-            
-            // Update stock in base units
-            $remainingBaseQty = $availableBaseQty - $takeBase;
-            
-            if ($stock->unit) {
-                // Convert back to original unit for display
-                $product = Product::find($productId);
-                $unitType = $product->unit_type ?? 'piece';
-                $remainingUnitQty = $this->convertFromBase($remainingBaseQty, $stock->unit, $unitType);
-                
-                $stock->update([
-                    'quantity' => $remainingUnitQty,
-                    'base_quantity' => $remainingBaseQty
-                ]);
-            } else {
-                $stock->decrement('quantity', $takeBase);
-                $stock->decrement('base_quantity', $takeBase);
-            }
-
-            $neededBaseQty -= $takeBase;
-            
-            // Record which stock was used
-            if (!$stockUsed['warehouse_id']) {
-                $stockUsed['warehouse_id'] = $stock->warehouse_id;
-                $stockUsed['stock_id'] = $stock->id;
-            }
-            
-            // Stock movement record
-            StockMovement::create([
-                'warehouse_id' => $stock->warehouse_id ?? null,
-                'product_id' => $productId,
-                'variant_id' => $variantId,
-                'type' => 'out',
-                'qty' => $takeBase,
-                'unit' => 'base',
-                'sale_unit' => $saleUnit,
-                'reference_type' => Sale::class,
-                'reference_id' => $saleId,
-                'created_by' => Auth::id(),
-                'notes' => 'Sale deduction in base units. Sold in unit: ' . $saleUnit
-            ]);
-        }
-
-        if ($neededBaseQty > 0) {
-            throw new \Exception("Not enough stock for product ID $productId.");
-        }
-
-        return $stockUsed;
+    if ($stockId) {
+        $query->where('id', $stockId);
     }
+
+    $stocks = $query->orderBy('created_at', 'asc')->lockForUpdate()->get();
+
+    $stockUsed = [
+        'warehouse_id' => null,
+        'stock_id' => null
+    ];
+
+    foreach ($stocks as $stock) {
+        if ($neededBaseQty <= 0) break;
+
+        $stockUnit = $stock->unit ?? ($product?->default_unit ?? 'piece');
+
+        // ✅ available base from stock.quantity not base_quantity
+        $availableBaseQty = $this->convertToBase((float)$stock->quantity, $stockUnit, $unitType);
+
+        if ($availableBaseQty <= 0) continue;
+
+        $takeBase = min($availableBaseQty, $neededBaseQty);
+        $remainingBaseQty = $availableBaseQty - $takeBase;
+
+        // ✅ convert remaining base back to stock unit and update quantity
+        $remainingUnitQty = $this->convertFromBase($remainingBaseQty, $stockUnit, $unitType);
+
+        $stock->update([
+            'quantity' => $remainingUnitQty,
+            // optional: keep base_quantity synced too
+            'base_quantity' => $remainingBaseQty,
+        ]);
+
+        $neededBaseQty -= $takeBase;
+
+        if (!$stockUsed['warehouse_id']) {
+            $stockUsed['warehouse_id'] = $stock->warehouse_id;
+            $stockUsed['stock_id'] = $stock->id;
+        }
+
+        StockMovement::create([
+            'warehouse_id' => $stock->warehouse_id ?? null,
+            'product_id' => $productId,
+            'variant_id' => $variantId,
+            'type' => 'out',
+            'qty' => $takeBase,
+            'unit' => 'base',
+            'sale_unit' => $saleUnit,
+            'reference_type' => Sale::class,
+            'reference_id' => $saleId,
+            'created_by' => Auth::id(),
+            'notes' => 'Sale deduction in base units. Sold in unit: ' . $saleUnit
+        ]);
+    }
+
+    if ($neededBaseQty > 0) {
+        throw new \Exception("Not enough stock for product ID {$productId}.");
+    }
+
+    return $stockUsed;
+}
+
 
     // Get product with stock info
     public function getProductWithStock($productId, $variantId = null)
