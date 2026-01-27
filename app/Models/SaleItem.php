@@ -28,6 +28,14 @@ class SaleItem extends Model
         'brand',               // Add this
         'variant_name',        // Add this
         'purchase_item_id',    // Add this
+        'unit_id',
+        'sale_quantity',
+        'base_quantity',
+        'unit_price',
+        'converted_unit_price',
+        'unit', // Sale unit (kg, gram, etc.)
+        'unit_quantity', // Quantity in sale unit
+        'total_price',
     ];
 
 
@@ -36,20 +44,20 @@ class SaleItem extends Model
     {
         static::addGlobalScope(new UserScope);
         static::addGlobalScope(new OutletScope);
-        
+
         // Automatically set outlet_id and created_by when creating
         static::creating(function ($attribute) {
             if (Auth::check()) {
                 $user = Auth::user();
                 $attribute->created_by = $user->id;
-                
+
                 // Get current outlet ID from user
                 if ($user->current_outlet_id) {
                     $attribute->outlet_id = $user->current_outlet_id;
                 }
             }
         });
-        
+
         // Prevent updating outlet_id once set
         static::updating(function ($attribute) {
             $originalOutletId = $attribute->getOriginal('outlet_id');
@@ -68,7 +76,7 @@ class SaleItem extends Model
     //relation to sale
     public function sale()
     {
-        return $this->belongsTo(Sale::class, 'sale_id')->with('customer','creator');
+        return $this->belongsTo(Sale::class, 'sale_id')->with('customer', 'creator');
     }
 
     //relation to purchase
@@ -100,16 +108,16 @@ class SaleItem extends Model
     public function scopeSearch($query, $term)
     {
         $search = "%$term%";
-            $query->where(function ($q) use ($search) {
+        $query->where(function ($q) use ($search) {
             $q->whereHas('product', function ($q1) use ($search) {
                 $q1->where('name', 'like', $search)
-                ->orWhere('product_no', 'like', $search);
+                    ->orWhere('product_no', 'like', $search);
             })->orWhereHas('sale', function ($q1) use ($search) {
                 $q1->where('invoice_no', 'like', $search)
-                ->orWhereHas('customer', function ($q2) use ($search) {
-                    $q2->where('customer_name', 'like', $search)
-                        ->orWhere('phone', 'like', $search);
-                });
+                    ->orWhereHas('customer', function ($q2) use ($search) {
+                        $q2->where('customer_name', 'like', $search)
+                            ->orWhere('phone', 'like', $search);
+                    });
             })->orWhereHas('variant', function ($q1) use ($search) {
                 $q1->where('sku', 'like', $search);
             })->orWhereHas('warehouse', function ($q1) use ($search) {
@@ -129,14 +137,14 @@ class SaleItem extends Model
             ->when($filters['customer_id'] ?? null, function ($query, $customerId) {
                 $query->whereHas('sale.customer', function ($q) use ($customerId) {
                     $q->where('customer_name', 'like', "%{$customerId}%")
-                    ->orWhere('phone', 'like', "%{$customerId}%");
+                        ->orWhere('phone', 'like', "%{$customerId}%");
                 });
             })
 
             ->when($filters['product_id'] ?? null, function ($query, $productId) {
                 $query->whereHas('product', function ($q) use ($productId) {
                     $q->where('name', 'like', "%{$productId}%")
-                    ->orWhere('product_no', 'like', "%{$productId}%");
+                        ->orWhere('product_no', 'like', "%{$productId}%");
                 });
             })
 
@@ -160,5 +168,69 @@ class SaleItem extends Model
         return $this->belongsTo(PurchaseItem::class);
     }
 
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    public function calculateBaseQuantity()
+    {
+        if (!$this->unit) {
+            $this->base_quantity = $this->sale_quantity;
+            return;
+        }
+
+        $baseUnit = Unit::getBaseWeightUnit();
+        if ($baseUnit && $this->unit_id !== $baseUnit->id) {
+            $this->base_quantity = $this->sale_quantity * $this->unit->conversion_factor;
+        } else {
+            $this->base_quantity = $this->sale_quantity;
+        }
+    }
+
+    public function calculateConvertedUnitPrice($variantUnitPrice)
+    {
+        if (!$this->unit || !$this->variant) {
+            $this->converted_unit_price = $variantUnitPrice;
+            return;
+        }
+
+        // Convert price based on unit conversion
+        $variantUnit = $this->variant->unit;
+        if ($variantUnit && $this->unit->id !== $variantUnit->id) {
+            // Convert variant unit price to selected sale unit
+            $this->converted_unit_price = $variantUnitPrice / $this->unit->conversion_factor;
+        } else {
+            $this->converted_unit_price = $variantUnitPrice;
+        }
+    }
+
+
+    public function getUnitOptions()
+    {
+        if (!$this->purchaseItem) {
+            return ['piece'];
+        }
+
+        return $this->purchaseItem->getAvailableUnitsForSale();
+    }
+
+    public function convertToBase($quantity, $fromUnit)
+    {
+        if (!$this->product) {
+            return $quantity;
+        }
+
+        return $this->product->convertToBase($quantity, $fromUnit);
+    }
+
+    public function convertFromBase($quantity, $toUnit)
+    {
+        if (!$this->product) {
+            return $quantity;
+        }
+
+        return $this->product->convertFromBase($quantity, $toUnit);
+    }
 
 }

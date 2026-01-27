@@ -17,8 +17,6 @@ return new class extends Migration
 
             $table->unsignedBigInteger('warehouse_id')->nullable();
             $table->integer('quantity')->default(1);
-            $table->decimal('unit_price', 10, 2)->default(0);
-            $table->decimal('total_price', 10, 2)->default(0);
             $table->unsignedBigInteger('stock_id')->nullable();
 
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('completed');
@@ -42,6 +40,19 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
+
+            $table->unsignedBigInteger('unit_id')->nullable();
+            $table->decimal('sale_quantity', 15, 6)->default(1);
+            $table->decimal('base_quantity', 15, 6)->default(1);
+
+            $table->string('unit')->default('piece'); 
+
+            $table->decimal('unit_quantity', 15, 6)->default(1);
+
+            $table->string('unit_price')->default(0);
+            $table->string('converted_unit_price')->default(0);
+
+            $table->decimal('total_price', 15, 4)->default(0);
             $table->softDeletes();
             $table->timestamps();
         });

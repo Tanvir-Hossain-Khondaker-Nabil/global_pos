@@ -11,8 +11,8 @@
     @vite('resources/js/app.jsx')
     @inertiaHead
 
-    {{-- <link rel="stylesheet" href="{{ asset('build/assets/app-DOipQ79u.css') }}">
-    <script src="{{ asset('build/assets/app-BnDW16vU.js') }}" type="module"></script> --}}
+    {{-- <link rel="stylesheet" href="{{ asset('build/assetsrW/app-D7r9q3gj.css') }}">
+    <script src="{{ asset('build/assets/app-BBbR3OcA.js') }}" type="module"></script> --}}
 </head>
 
 

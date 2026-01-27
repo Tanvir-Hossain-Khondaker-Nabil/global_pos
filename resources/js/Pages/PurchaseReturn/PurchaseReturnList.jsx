@@ -679,7 +679,7 @@ export default function PurchaseReturnList({
                     </div>
                 </div>
 
-                <div className="card card-compact bg-[#1e4d2b] text-white/10 border border-primary">
+                <div className="card card-compact bg-[#1e4d2b] text-white border border-primary">
                     <div className="card-body">
                         <div className="flex items-center justify-between">
                             <div>

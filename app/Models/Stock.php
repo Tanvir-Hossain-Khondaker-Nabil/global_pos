@@ -26,7 +26,9 @@ class Stock extends Model
         'batch_no',
         'outlet_id',
         'barcode',
-        'barcode_path'
+        'barcode_path',
+        'base_quantity',
+        'available_base_quantity'
 
     ];
 
@@ -72,7 +74,7 @@ class Stock extends Model
 
     public function product()
     {
-        return $this->belongsTo(Product::class)->with('brand');
+        return $this->belongsTo(Product::class)->with(['brand','variants']);
     }
 
     public function variant()
@@ -83,5 +85,25 @@ class Stock extends Model
     public function getStockValueAttribute()
     {
         return $this->quantity * $this->purchase_price;
+    }
+
+    public function updateBaseQuantities()
+    {
+        $variant = $this->variant;
+        if (!$variant || !$variant->unit) {
+            $this->base_quantity = $this->quantity;
+            $this->available_base_quantity = $this->quantity;
+            return;
+        }
+
+        $baseUnit = Unit::getBaseWeightUnit();
+        if ($baseUnit && $variant->unit_id !== $baseUnit->id) {
+            $conversion = $variant->unit->conversion_factor;
+            $this->base_quantity = $this->quantity * $conversion;
+            $this->available_base_quantity = $this->quantity * $conversion;
+        } else {
+            $this->base_quantity = $this->quantity;
+            $this->available_base_quantity = $this->quantity;
+        }
     }
 }

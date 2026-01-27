@@ -37,6 +37,12 @@ return new class extends Migration
 
             $table->foreign('purchase_id')->references('id')->on('purchases')->onDelete('cascade');
             $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
+
+            $table->unsignedBigInteger('unit_id')->nullable(); 
+            $table->string('unit')->default(1);
+            $table->decimal('purchase_quantity', 16, 6)->default(1);
+            $table->decimal('base_quantity', 16, 6)->default(1);
+            $table->decimal('unit_quantity', 16, 6)->default(1);
         });
     }
 

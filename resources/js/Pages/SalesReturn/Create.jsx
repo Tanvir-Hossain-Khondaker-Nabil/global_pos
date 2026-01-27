@@ -2,10 +2,11 @@ import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
 import toast from "react-hot-toast";
 import {
-    ArrowLeft, Plus, Trash2, Search, Shield, DollarSign, User,
-    Building, Phone, Mail, MapPin, Info, Edit, X, RefreshCw,
+    ArrowLeft, Plus, Trash2, Search, DollarSign, User,
+    Building, Phone, Info, Edit, X, RefreshCw,
     Package, AlertCircle, CheckCircle, Clock, ShoppingCart,
-    Calculator, AlertTriangle, Users, CreditCard, Wallet
+    Calculator, AlertTriangle, CreditCard, Wallet,
+    Ruler, Shield
 } from "lucide-react";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -15,10 +16,14 @@ export default function AddSalesReturn({
     saleItems,
     sales,
     customers,
-    warehouses,
     products,
-    isShadowUser,
-    accounts
+    accounts,
+    unitConversions = {
+        weight: { ton: 1000, kg: 1, gram: 0.001, pound: 0.453592 },
+        volume: { liter: 1, ml: 0.001 },
+        piece: { piece: 1, dozen: 12, box: 1 },
+        length: { meter: 1, cm: 0.01, mm: 0.001 }
+    }
 }) {
     const { t, locale } = useTranslation();
     const [selectedItems, setSelectedItems] = useState([]);
@@ -27,29 +32,17 @@ export default function AddSalesReturn({
     const [showReplacementSearch, setShowReplacementSearch] = useState(false);
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
-    const [refundedAmount, setRefundedAmount] = useState(0);
-    const [shadowRefundedAmount, setShadowRefundedAmount] = useState(0);
     const [paymentType, setPaymentType] = useState('cash');
+    const [selectedAccount, setSelectedAccount] = useState("");
     const [selectedSaleId, setSelectedSaleId] = useState(sale?.id || '');
     const [validationErrors, setValidationErrors] = useState({});
-    
+    const [showUnitInfo, setShowUnitInfo] = useState({});
+
     const searchRef = useRef(null);
     const dropdownRef = useRef(null);
-    const [urlSaleId, setUrlSaleId] = useState(null);
-
-    // Get sale_id from URL on component mount
-    useEffect(() => {
-        const params = new URLSearchParams(window.location.search);
-        const saleIdFromUrl = params.get("sale_id");
-        setUrlSaleId(saleIdFromUrl);
-        
-        if (saleIdFromUrl && !sale?.id) {
-            setSelectedSaleId(saleIdFromUrl);
-        }
-    }, [sale?.id]);
 
     const form = useForm({
-        sale_id: sale?.id || urlSaleId || '',
+        sale_id: sale?.id || "",
         is_damaged: false,
         return_type: 'money_back',
         return_date: new Date().toISOString().split('T')[0],
@@ -60,66 +53,75 @@ export default function AddSalesReturn({
         shadow_refunded_amount: 0,
         items: [],
         replacement_products: [],
-        account_id: null,
+        account_id: "",
+        auto_approve: true
     });
 
-    // Update form sale_id when sale or urlSaleId changes
-    useEffect(() => {
-        if (sale?.id) {
-            form.setData('sale_id', sale.id);
-            setSelectedSaleId(sale.id);
-        } else if (urlSaleId) {
-            form.setData('sale_id', urlSaleId);
-            setSelectedSaleId(urlSaleId);
+    // ইউনিট কনভার্সন হেল্পার ফাংশন
+    const convertToBase = useCallback((quantity, fromUnit, unitType) => {
+        const conversions = unitConversions[unitType];
+        if (!conversions || !conversions[fromUnit]) return quantity;
+        return quantity * conversions[fromUnit];
+    }, [unitConversions]);
+
+    const convertFromBase = useCallback((quantity, toUnit, unitType) => {
+        const conversions = unitConversions[unitType];
+        if (!conversions || !conversions[toUnit]) return quantity;
+        const conversion = conversions[toUnit];
+        return conversion !== 0 ? quantity / conversion : quantity;
+    }, [unitConversions]);
+
+    const getAvailableUnits = useCallback((product) => {
+        if (!product) return ['piece'];
+        
+        const unitType = product.unit_type || 'piece';
+        const conversions = unitConversions[unitType];
+        
+        if (!conversions) return [product.default_unit || 'piece'];
+        
+        const purchaseUnit = product.default_unit || 'piece';
+        const purchaseFactor = conversions[purchaseUnit] || 1;
+        
+        const available = [];
+        for (const [unit, factor] of Object.entries(conversions)) {
+            if (factor <= purchaseFactor) {
+                available.push(unit);
+            }
         }
-    }, [sale?.id, urlSaleId]);
+        
+        return available.sort((a, b) => (conversions[a] || 1) - (conversions[b] || 1));
+    }, [unitConversions]);
 
-    const formatDate = (date) => {
-        if (!date) return '';
+    const convertUnitQuantity = useCallback((quantity, fromUnit, toUnit, unitType) => {
+        if (fromUnit === toUnit) return quantity;
+        
+        const conversions = unitConversions[unitType];
+        if (!conversions || !conversions[fromUnit] || !conversions[toUnit]) return quantity;
+        
+        const baseQuantity = quantity * conversions[fromUnit];
+        return baseQuantity / conversions[toUnit];
+    }, [unitConversions]);
 
-        return new Date(date).toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: 'short',
-            year: 'numeric',
-        });
-    };
-
+    // টোটাল রিটার্ন ভ্যালু ক্যালকুলেট
     const calculateTotalReturn = useCallback(() => {
         return selectedItems.reduce((total, item) => {
             if (item.return_quantity > 0) {
-                const itemTotal = item.return_quantity * (item.sale_price || 0);
-                return total + itemTotal;
+                return total + (item.return_quantity * item.sale_price);
             }
             return total;
         }, 0);
     }, [selectedItems]);
 
-    const calculateShadowTotalReturn = useCallback(() => {
-        return selectedItems.reduce((total, item) => {
-            if (item.return_quantity > 0) {
-                const itemTotal = item.return_quantity * (item.shadow_sale_price || item.sale_price || 0);
-                return total + itemTotal;
-            }
-            return total;
-        }, 0);
-    }, [selectedItems]);
-
+    // টোটাল রিপ্লেসমেন্ট ভ্যালু ক্যালকুলেট
     const calculateReplacementTotal = useCallback(() => {
         return replacementProducts.reduce((total, product) => {
-            const quantity = parseFloat(product.quantity) || 1;
+            const quantity = parseFloat(product.quantity) || 0;
             const salePrice = parseFloat(product.sale_price) || 0;
             return total + (quantity * salePrice);
         }, 0);
     }, [replacementProducts]);
 
-    const calculateShadowReplacementTotal = useCallback(() => {
-        return replacementProducts.reduce((total, product) => {
-            const quantity = parseFloat(product.quantity) || 1;
-            const salePrice = parseFloat(product.shadow_sale_price) || 0;
-            return total + (quantity * salePrice);
-        }, 0);
-    }, [replacementProducts]);
-
+    // নেট ডিফারেন্স
     const calculateNetDifference = useCallback(() => {
         const totalReturn = calculateTotalReturn();
         const replacementTotal = calculateReplacementTotal();
@@ -134,237 +136,17 @@ export default function AddSalesReturn({
         }).format(numValue);
     };
 
-    const getVariantDisplayName = (variant) => {
-        if (!variant) return 'Default Variant';
-
-        const parts = [];
-
-        if (variant.attribute_values) {
-            if (typeof variant.attribute_values === 'object') {
-                const attrs = Object.values(variant.attribute_values)
-                    .map(value => ` ${value}`)
-                    .join(', ');
-
-                parts.push(` ${attrs}`);
-            } else {
-                parts.push(`Attribute: ${variant.attribute_values}`);
-            }
-        }
-        if (variant.sku) {
-            parts.push(`Sku: ${variant.sku}`);
-        }
-
-        return parts.length ? parts.join(', ') : 'Default Variant';
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
     };
 
-    const getBrandName = (variant) => {
-        if (!variant) return 'Default Brand';
-
-        const parts = [];
-
-        if (variant.attribute_values) {
-            if (typeof variant.attribute_values === 'object') {
-                const attrs = Object.values(variant.attribute_values)
-                    .map(key => ` ${key}`)
-                    .join(', ');
-
-                parts.push(` ${attrs}`);
-            }
-        }
-
-        return parts.length ? parts.join(', ') : 'Default Brand';
-    };
-
-    // Sync form data
-    useEffect(() => {
-        const totalReturn = calculateTotalReturn();
-        const shadowTotalReturn = calculateShadowTotalReturn();
-
-        if (returnType === 'money_back') {
-            setRefundedAmount(totalReturn);
-            setShadowRefundedAmount(shadowTotalReturn);
-        } else {
-            setRefundedAmount(0);
-            setShadowRefundedAmount(0);
-        }
-
-        const formData = {
-            ...form.data,
-            return_type: returnType,
-            payment_type: returnType === 'money_back' ? paymentType : null,
-            refunded_amount: returnType === 'money_back' ? totalReturn : 0,
-            shadow_refunded_amount: returnType === 'money_back' ? shadowTotalReturn : 0,
-            items: selectedItems.filter(item => item.return_quantity > 0).map(item => ({
-                sale_item_id: item.sale_item_id || item.id,
-                return_quantity: item.return_quantity,
-                reason: item.reason || 'Return requested'
-            })),
-            replacement_products: returnType === 'product_replacement' ? replacementProducts.map(product => ({
-                product_id: product.product_id,
-                variant_id: product.variant_id,
-                quantity: parseFloat(product.quantity) || 1,
-                unit_price: parseFloat(product.unit_price) || 0,
-                shadow_unit_price: parseFloat(product.shadow_unit_price) || 0,
-                sale_price: parseFloat(product.sale_price) || 0,
-                shadow_sale_price: parseFloat(product.shadow_sale_price) || 0
-            })) : []
-        };
-
-        form.setData(formData);
-    }, [returnType, paymentType, selectedItems, replacementProducts]);
-
-    // Initialize selected items from sale items
-    useEffect(() => {
-        if (saleItems && saleItems.length > 0) {
-            const initialItems = saleItems.map(item => ({
-                sale_item_id: item.id,
-                product_id: item.product_id,
-                product_name: item.product_name,
-                product_code: item.product_code,
-                variant_id: item.variant_id,
-                variant_name: item.variant_name,
-                brand_name: item.brand_name,
-                return_quantity: 0,
-                max_quantity: item.max_quantity,
-                unit_price: parseFloat(item.unit_price) || 0,
-                shadow_unit_price: parseFloat(item.shadow_unit_price) || 0,
-                sale_price: parseFloat(item.unit_price) || 0,
-                shadow_sale_price: parseFloat(item.shadow_sale_price) || 0,
-                sale_quantity: item.sale_quantity,
-                discount: parseFloat(item.discount) || 0,
-                reason: ""
-            }));
-            setSelectedItems(initialItems);
-        }
-    }, [saleItems]);
-
-    // Filter products for replacement search
-    useEffect(() => {
-        if (productSearch.trim() && showReplacementSearch) {
-            const filtered = products.filter(product =>
-                product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-                (product.product_no && product.product_no.toLowerCase().includes(productSearch.toLowerCase()))
-            );
-            setFilteredProducts(filtered);
-        } else {
-            setFilteredProducts([]);
-        }
-    }, [productSearch, products, showReplacementSearch]);
-
-    // Add return item
-    const updateReturnItem = (index, field, value) => {
-        const updated = [...selectedItems];
-
-        if (field === 'return_quantity') {
-            const quantity = parseInt(value) || 0;
-            const maxQuantity = updated[index].max_quantity;
-
-            if (quantity > maxQuantity) {
-                setValidationErrors(prev => ({
-                    ...prev,
-                    quantity: `Cannot return more than ${maxQuantity} items (available for return)`
-                }));
-                return;
-            }
-
-            updated[index].return_quantity = quantity;
-
-            if (validationErrors.quantity) {
-                setValidationErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors.quantity;
-                    return newErrors;
-                });
-            }
-        } else {
-            updated[index][field] = value;
-        }
-
-        setSelectedItems(updated);
-    };
-
-    // Add replacement product
-    const addReplacementProduct = (product, variant) => {
-        const existingProduct = replacementProducts.find(
-            item => item.product_id === product.id && item.variant_id === variant.id
-        );
-
-        const defaultUnitPrice = parseFloat(variant.unit_cost || variant.purchase_price || 0);
-        const defaultShadowUnitPrice = parseFloat(variant.shadow_unit_cost || variant.shadow_purchase_price || 0);
-        const defaultSalePrice = parseFloat(variant.selling_price || variant?.stock?.sale_price);
-        const defaultShadowSalePrice = parseFloat(variant.shadow_selling_price || variant.shadow_sale_price || defaultShadowUnitPrice * 1.2);
-
-        if (existingProduct) {
-            setReplacementProducts(replacementProducts.map(item =>
-                item.product_id === product.id && item.variant_id === variant.id
-                    ? {
-                        ...item,
-                        quantity: item.quantity + 1,
-                        total_price: (item.quantity + 1) * item.sale_price,
-                        shadow_total_price: (item.quantity + 1) * item.shadow_sale_price
-                    }
-                    : item
-            ));
-        } else {
-            setReplacementProducts([
-                ...replacementProducts,
-                {
-                    product_id: product.id,
-                    variant_id: variant.id,
-                    product_name: product.name,
-                    variant_name: getVariantDisplayName(variant),
-                    product_code: product.product_no,
-                    brand_name: getBrandName(variant),
-                    quantity: 1,
-                    unit_price: defaultUnitPrice,
-                    shadow_unit_price: defaultShadowUnitPrice,
-                    sale_price: defaultSalePrice,
-                    shadow_sale_price: defaultShadowSalePrice,
-                    total_price: defaultSalePrice,
-                    shadow_total_price: defaultShadowSalePrice
-                }
-            ]);
-        }
-
-        setProductSearch("");
-        setShowReplacementSearch(false);
-    };
-
-    const updateReplacementProduct = (index, field, value) => {
-        const updated = [...replacementProducts];
-        const numericValue = parseFloat(value) || 0;
-
-        updated[index][field] = numericValue;
-
-        if (field === 'quantity' || field === 'sale_price' || field === 'shadow_sale_price') {
-            const quantity = parseFloat(updated[index].quantity) || 1;
-            const salePrice = parseFloat(updated[index].sale_price) || 0;
-            const shadowSalePrice = parseFloat(updated[index].shadow_sale_price) || 0;
-
-            updated[index].total_price = quantity * salePrice;
-            updated[index].shadow_total_price = quantity * shadowSalePrice;
-        }
-
-        setReplacementProducts(updated);
-    };
-
-    const removeReplacementProduct = (index) => {
-        const updated = [...replacementProducts];
-        updated.splice(index, 1);
-        setReplacementProducts(updated);
-    };
-
-    const handleReturnTypeChange = (type) => {
-        setReturnType(type);
-        if (type === 'money_back') {
-            setReplacementProducts([]);
-            setPaymentType('cash');
-        } else {
-            setRefundedAmount(0);
-            setShadowRefundedAmount(0);
-        }
-    };
-
+    // সেল সিলেকশন হ্যান্ডলার
     const handleSaleSelect = (e) => {
         const saleId = e.target.value;
         setSelectedSaleId(saleId);
@@ -376,148 +158,319 @@ export default function AddSalesReturn({
         }
     };
 
+    // ফর্ম ডেটা সিঙ্ক
+    useEffect(() => {
+        const totalReturn = calculateTotalReturn();
+        const replacementTotal = calculateReplacementTotal();
+        const netDifference = calculateNetDifference();
+
+        const itemsToSubmit = selectedItems
+            .filter(item => item.return_quantity > 0)
+            .map(item => ({
+                sale_item_id: item.sale_item_id,
+                return_quantity: parseFloat(item.return_quantity),
+                unit: item.unit,
+                reason: item.reason || 'Return requested'
+            }));
+
+        const replacementToSubmit = returnType === 'product_replacement' 
+            ? replacementProducts.map(product => ({
+                product_id: product.product_id,
+                variant_id: product.variant_id,
+                quantity: parseFloat(product.quantity),
+                unit: product.unit,
+                unit_price: parseFloat(product.unit_price) || 0,
+                shadow_unit_price: parseFloat(product.shadow_unit_price) || 0,
+                sale_price: parseFloat(product.sale_price) || 0,
+                shadow_sale_price: parseFloat(product.shadow_sale_price) || 0
+            }))
+            : [];
+
+        form.setData({
+            ...form.data,
+            sale_id: selectedSaleId,
+            return_type: returnType,
+            refunded_amount: returnType === 'money_back' ? totalReturn : 0,
+            shadow_refunded_amount: returnType === 'money_back' ? totalReturn : 0,
+            payment_type: returnType === 'money_back' ? paymentType : null,
+            account_id: selectedAccount,
+            items: itemsToSubmit,
+            replacement_products: replacementToSubmit
+        });
+    }, [
+        selectedSaleId,
+        returnType,
+        paymentType,
+        selectedAccount,
+        selectedItems,
+        replacementProducts,
+        calculateTotalReturn,
+        calculateNetDifference
+    ]);
+
+    // সেল আইটেমস ইনিশিয়ালাইজ
+    useEffect(() => {
+        if (saleItems && saleItems.length > 0) {
+            const initialItems = saleItems.map(item => ({
+                sale_item_id: item.id,
+                product_id: item.product_id,
+                product_name: item.product_name,
+                product_code: item.product_code,
+                variant_id: item.variant_id,
+                variant_name: item.variant_name,
+                brand_name: item.brand_name,
+                unit: item.unit || 'piece',
+                available_units: item.available_units || ['piece'],
+                return_quantity: 0,
+                max_quantity: item.max_quantity,
+                sale_price: parseFloat(item.sale_price) || 0,
+                shadow_sale_price: parseFloat(item.shadow_sale_price) || 0,
+                sale_quantity: item.sale_quantity,
+                stock_quantity: item.stock_quantity || 0,
+                base_stock_quantity: item.base_stock_quantity || 0,
+                already_returned: item.already_returned || 0,
+                reason: "",
+                unit_type: item.unit_type || 'piece',
+                default_unit: item.default_unit || 'piece',
+                is_fraction_allowed: item.is_fraction_allowed || false
+            }));
+            setSelectedItems(initialItems);
+        }
+    }, [saleItems]);
+
+    // প্রোডাক্ট সার্চ ফিল্টার
+    useEffect(() => {
+        if (productSearch.trim() && showReplacementSearch) {
+            const filtered = products.filter(product =>
+                product.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+                product.product_no.toLowerCase().includes(productSearch.toLowerCase()) ||
+                (product.brand?.name && product.brand.name.toLowerCase().includes(productSearch.toLowerCase()))
+            );
+            setFilteredProducts(filtered);
+        } else {
+            setFilteredProducts([]);
+        }
+    }, [productSearch, products, showReplacementSearch]);
+
+    // রিটার্ন আইটেম আপডেট
+    const updateReturnItem = (index, field, value) => {
+        const updated = [...selectedItems];
+        const item = updated[index];
+
+        if (field === 'return_quantity') {
+            const quantity = parseFloat(value) || 0;
+            
+            // ফ্র্যাকশন চেক
+            if (!item.is_fraction_allowed && quantity % 1 !== 0) {
+                toast.error('Fractions are not allowed for this product');
+                return;
+            }
+            
+            // ম্যাক্সিমাম চেক
+            if (quantity > item.max_quantity) {
+                toast.error(`Cannot return more than ${item.max_quantity} ${item.unit}`);
+                return;
+            }
+            
+            updated[index].return_quantity = quantity;
+        } 
+        else if (field === 'unit') {
+            // ইউনিট চেঞ্জ ভ্যালিডেশন
+            if (!item.available_units.includes(value)) {
+                toast.error(`Cannot return in ${value.toUpperCase()} unit for this product`);
+                return;
+            }
+            
+            // কনভার্ট কোয়ান্টিটি
+            const oldUnit = item.unit;
+            const newUnit = value;
+            
+            if (oldUnit !== newUnit && item.return_quantity > 0) {
+                const convertedQuantity = convertUnitQuantity(
+                    item.return_quantity,
+                    oldUnit,
+                    newUnit,
+                    item.unit_type || 'piece'
+                );
+                
+                // স্টক চেক নতুন ইউনিটে
+                const baseStock = item.base_stock_quantity;
+                const requestedBase = convertToBase(convertedQuantity, newUnit, item.unit_type || 'piece');
+                
+                if (requestedBase > baseStock) {
+                    toast.error('Exceeds available stock in new unit');
+                    return;
+                }
+                
+                updated[index].return_quantity = convertedQuantity;
+            }
+            
+            updated[index].unit = value;
+        }
+        else {
+            updated[index][field] = value;
+        }
+
+        setSelectedItems(updated);
+    };
+
+    // রিপ্লেসমেন্ট প্রোডাক্ট অ্যাড
+    const addReplacementProduct = (product, variant) => {
+        const availableUnits = getAvailableUnits(product);
+        const defaultUnit = product.default_unit || availableUnits[0] || 'piece';
+        
+        const existing = replacementProducts.find(
+            p => p.product_id === product.id && p.variant_id === variant.id
+        );
+
+        if (existing) {
+            setReplacementProducts(replacementProducts.map(p =>
+                p.product_id === product.id && p.variant_id === variant.id
+                    ? { ...p, quantity: p.quantity + 1 }
+                    : p
+            ));
+        } else {
+            const variantName = variant.attribute_values 
+                ? Object.values(variant.attribute_values).join(', ')
+                : 'Default Variant';
+
+            setReplacementProducts([
+                ...replacementProducts,
+                {
+                    product_id: product.id,
+                    variant_id: variant.id,
+                    product_name: product.name,
+                    product_code: product.product_no,
+                    variant_name: variantName,
+                    brand_name: product.brand?.name || 'No Brand',
+                    unit: defaultUnit,
+                    available_units: availableUnits,
+                    quantity: 1,
+                    unit_price: variant.unit_cost || 0,
+                    shadow_unit_price: variant.shadow_unit_cost || 0,
+                    sale_price: variant.sale_price || variant.unit_cost || 0,
+                    shadow_sale_price: variant.shadow_sale_price || variant.shadow_unit_cost || 0,
+                    unit_type: product.unit_type || 'piece',
+                    is_fraction_allowed: product.is_fraction_allowed || false
+                }
+            ]);
+        }
+
+        setProductSearch("");
+        setShowReplacementSearch(false);
+    };
+
+    // রিপ্লেসমেন্ট প্রোডাক্ট আপডেট
+    const updateReplacementProduct = (index, field, value) => {
+        const updated = [...replacementProducts];
+        const item = updated[index];
+
+        if (field === 'quantity' || field === 'unit_price' || field === 'sale_price') {
+            const numValue = parseFloat(value) || 0;
+            
+            if (field === 'quantity' && !item.is_fraction_allowed && numValue % 1 !== 0) {
+                toast.error('Fractions are not allowed for this product');
+                return;
+            }
+            
+            updated[index][field] = numValue;
+        } 
+        else if (field === 'unit') {
+            if (!item.available_units.includes(value)) {
+                toast.error(`Invalid unit ${value.toUpperCase()} for this product`);
+                return;
+            }
+            updated[index].unit = value;
+        }
+        else {
+            updated[index][field] = value;
+        }
+
+        setReplacementProducts(updated);
+    };
+
+    const removeReplacementProduct = (index) => {
+        const updated = [...replacementProducts];
+        updated.splice(index, 1);
+        setReplacementProducts(updated);
+    };
+
+    // ইউনিট ইনফো টগল
+    const toggleUnitInfo = (itemKey) => {
+        setShowUnitInfo(prev => ({
+            ...prev,
+            [itemKey]: !prev[itemKey]
+        }));
+    };
+
+    // ভ্যালিডেশন
     const validateForm = () => {
         const errors = {};
 
-        // Ensure sale_id is present
         if (!form.data.sale_id) {
-            errors.sale = 'Please select a sale';
+            errors.sale_id = 'Please select a sale';
         }
 
-        if (!form.data.reason.trim()) {
-            errors.reason = 'Please provide a reason for the return';
-        }
+        // if (!form.data.reason.trim()) {
+        //     errors.reason = 'Please provide a reason for return';
+        // }
 
         const hasReturnItems = selectedItems.some(item => item.return_quantity > 0);
         if (!hasReturnItems) {
             errors.items = 'Please select at least one item to return';
         }
 
-        const invalidItems = selectedItems.filter(item =>
-            item.return_quantity > item.max_quantity
-        );
-
-        if (invalidItems.length > 0) {
-            errors.quantity = 'Cannot return more than available quantity for some items';
-        }
+        // কোয়ান্টিটি ভ্যালিডেশন
+        selectedItems.forEach((item, index) => {
+            if (item.return_quantity > item.max_quantity) {
+                errors[`item_${index}`] = `Quantity exceeds available stock (max: ${item.max_quantity})`;
+            }
+        });
 
         if (returnType === 'product_replacement') {
             if (replacementProducts.length === 0) {
                 errors.replacement = 'Please add replacement products';
             }
-
-            replacementProducts.forEach((product, index) => {
-                if (parseFloat(product.sale_price) <= 0) {
-                    errors[`replacement_price_${index}`] = 'Sale price must be greater than 0';
-                }
-                if (parseFloat(product.quantity) <= 0) {
-                    errors[`replacement_quantity_${index}`] = 'Quantity must be greater than 0';
-                }
-            });
         }
 
-        // Validate account for money back returns
-        if (returnType === 'money_back' && !form.data.account_id) {
-            errors.account = 'Please select an account for refund';
+        if (returnType === 'money_back' && form.data.refunded_amount > 0) {
+            if (!selectedAccount) {
+                errors.account = 'Please select a payment account for refund';
+            }
         }
 
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
     };
 
+    // সাবমিট
     const submit = (e) => {
         e.preventDefault();
 
         if (!validateForm()) {
-            console.log('Validation errors:', validationErrors);
-            toast.error('Please fix the form errors before submitting');
+            const firstError = Object.values(validationErrors)[0];
+            toast.error(firstError);
             return;
         }
-
-        // Calculate final amounts
-        const totalReturn = calculateTotalReturn();
-        const shadowTotalReturn = calculateShadowTotalReturn();
-        const replacementTotal = calculateReplacementTotal();
-        const shadowReplacementTotal = calculateShadowReplacementTotal();
-
-        // Prepare items for submission
-        const itemsToSubmit = selectedItems
-            .filter(item => item.return_quantity > 0)
-            .map(item => ({
-                sale_item_id: item.sale_item_id || item.id,
-                return_quantity: item.return_quantity,
-                reason: item.reason || 'Return requested'
-            }));
-
-        // Prepare replacement products for submission
-        const replacementToSubmit = returnType === 'product_replacement' ?
-            replacementProducts.map(product => ({
-                product_id: product.product_id,
-                variant_id: product.variant_id,
-                quantity: parseFloat(product.quantity) || 1,
-                unit_price: parseFloat(product.unit_price) || 0,
-                shadow_unit_price: parseFloat(product.shadow_unit_price) || 0,
-                sale_price: parseFloat(product.sale_price) || 0,
-                shadow_sale_price: parseFloat(product.shadow_sale_price) || 0,
-                total_price: parseFloat(product.total_price) || 0,
-                shadow_total_price: parseFloat(product.shadow_total_price) || 0
-            })) : [];
-
-        // Ensure sale_id is included
-        const saleIdToUse = form.data.sale_id || sale?.id || urlSaleId || selectedSaleId;
-        
-        if (!saleIdToUse) {
-            toast.error('Sale ID is required');
-            return;
-        }
-
-        const submitData = {
-            sale_id: saleIdToUse,
-            account_id: form.data.account_id,
-            return_type: returnType,
-            return_date: form.data.return_date,
-            reason: form.data.reason,
-            notes: form.data.notes,
-            payment_type: returnType === 'money_back' ? paymentType : null,
-            refunded_amount: returnType === 'money_back' ? totalReturn : 0,
-            shadow_refunded_amount: returnType === 'money_back' ? shadowTotalReturn : 0,
-            items: itemsToSubmit,
-            replacement_products: replacementToSubmit,
-            replacement_total: replacementTotal,
-            shadow_replacement_total: shadowReplacementTotal
-        };
-
-        console.log('Submitting data:', submitData); // Debug log
 
         form.post(route("return.store"), {
             preserveScroll: true,
-            data: submitData,
             onSuccess: () => {
-                toast.success("Sales return created successfully");
+                toast.success('Sales return created successfully');
                 router.visit(route("salesReturn.list"));
             },
             onError: (errors) => {
                 console.error("Form errors:", errors);
-                let errorMessage = errors.error ||
-                    errors.message ||
-                    "There was an error creating the sales return.";
-
-                if (errors.sale_id) errorMessage = errors.sale_id;
-                else if (errors.return_type) errorMessage = errors.return_type;
-                else if (errors.items) errorMessage = errors.items;
-                else if (errors.replacement_products) errorMessage = errors.replacement_products;
-                else if (errors.reason) errorMessage = errors.reason;
-
+                const errorMessage = errors.message || errors.error || "Failed to create sales return";
                 toast.error(errorMessage);
                 setValidationErrors(errors);
-            },
+            }
         });
     };
 
+    // ক্যালকুলেটেড ভ্যালু
     const totalReturn = calculateTotalReturn();
-    const shadowTotalReturn = calculateShadowTotalReturn();
     const replacementTotal = calculateReplacementTotal();
-    const shadowReplacementTotal = calculateShadowReplacementTotal();
     const netDifference = calculateNetDifference();
 
     return (
@@ -526,32 +479,30 @@ export default function AddSalesReturn({
                 title={t('sales_return.create_title', 'Create Sales Return')}
                 subtitle={t('sales_return.create_subtitle', 'Process return for sold items')}
             >
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={() => router.visit(route("salesReturn.list"))}
-                        className="btn btn-sm btn-ghost"
-                    >
-                        <ArrowLeft size={15} /> {t('sales_return.back_to_list', 'Back to List')}
-                    </button>
-                </div>
+                <button
+                    onClick={() => router.visit(route("salesReturn.list"))}
+                    className="btn btn-sm btn-ghost"
+                >
+                    <ArrowLeft size={15} /> {t('sales_return.back_to_list', 'Back to List')}
+                </button>
             </PageHeader>
 
-            {/* Validation Errors */}
+            {/* ভ্যালিডেশন এররস */}
             {Object.keys(validationErrors).length > 0 && (
                 <div className="alert alert-error mb-6">
                     <AlertTriangle size={20} />
-                    <div>
+                    <div className="ml-2">
                         <h3 className="font-bold">Please fix the following errors:</h3>
                         <ul className="list-disc pl-5 mt-1">
                             {Object.values(validationErrors).map((error, index) => (
-                                <li key={index}>{error}</li>
+                                <li key={index} className="text-sm">{error}</li>
                             ))}
                         </ul>
                     </div>
                 </div>
             )}
 
-            {/* Sale Selection */}
+            {/* সেল সিলেকশন */}
             {!sale && (
                 <div className="card card-compact bg-base-100 border border-base-300 mb-6">
                     <div className="card-body">
@@ -559,76 +510,67 @@ export default function AddSalesReturn({
                             <ShoppingCart size={16} className="mr-2" />
                             {t('sales_return.select_sale', 'Select Sale')}
                         </h3>
-                        <div className="form-control">
-                            <select
-                                className="select select-bordered w-full"
-                                value={selectedSaleId}
-                                onChange={handleSaleSelect}
-                            >
-                                <option value="">{t('sales_return.select_sale_placeholder', 'Select a sale to return')}</option>
-                                {sales?.map(s => (
-                                    <option key={s.id} value={s.id}>
-                                        {s.invoice_no} - {s.customer?.customer_name} - {formatDate(s.created_at)} - ৳{formatCurrency(s.grand_total || s.total_amount)}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-2">
-                            {t('sales_return.select_sale_help', 'Select a sale to view items available for return')}
-                        </p>
+                        <select
+                            className="select select-bordered w-full"
+                            value={selectedSaleId}
+                            onChange={handleSaleSelect}
+                        >
+                            <option value="">{t('sales_return.select_sale_placeholder', 'Select a sale to return')}</option>
+                            {sales?.map(s => (
+                                <option key={s.id} value={s.id}>
+                                    {s.invoice_no} - {s.customer?.customer_name} - {formatDate(s.created_at)} - ৳{formatCurrency(s.grand_total)}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                 </div>
             )}
 
-            {(sale || urlSaleId || selectedSaleId) && (
+            {sale && (
                 <form onSubmit={submit}>
-                    {/* Sale Information */}
-                    {sale && (
-                        <div className="card card-compact bg-base-100 border border-base-300 mb-6">
-                            <div className="card-body">
-                                <h3 className="card-title text-sm font-semibold">
-                                    {t('sales_return.sale_info', 'Sale Information')}
-                                </h3>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                    <div>
-                                        <span className="font-medium">Sale No:</span>
-                                        <span className="ml-2 font-mono">{sale.invoice_no}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Customer:</span>
-                                        <span className="ml-2">{sale.customer?.customer_name}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Customer Phone:</span>
-                                        <span className="ml-2">{sale.customer?.phone}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Date:</span>
-                                        <span className="ml-2">{sale.created_at}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Total:</span>
-                                        <span className="ml-2 font-semibold">৳{formatCurrency(sale.grand_total)}</span>
-                                    </div>
-                                    <div>
-                                        <span className="font-medium">Payment Status:</span>
-                                        <span className={`badge badge-sm ml-2 rounded ${sale.status === 'paid' ? 'badge-success' :
-                                                sale.status === 'partial' ? 'badge-warning' : 'badge-error'
-                                            }`}>
-                                            {sale.status}
-                                        </span>
-                                    </div>
+                    {/* সেল ইনফো */}
+                    <div className="card card-compact bg-base-100 border border-base-300 mb-6">
+                        <div className="card-body">
+                            <h3 className="card-title text-sm font-semibold">
+                                {t('sales_return.sale_info', 'Sale Information')}
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                <div>
+                                    <span className="font-medium">Invoice No:</span>
+                                    <span className="ml-2 font-mono">{sale.invoice_no}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium">Customer:</span>
+                                    <span className="ml-2">{sale.customer?.customer_name}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium">Date:</span>
+                                    <span className="ml-2">{formatDate(sale.created_at)}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium">Total Amount:</span>
+                                    <span className="ml-2 font-semibold">৳{formatCurrency(sale.grand_total)}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium">Paid Amount:</span>
+                                    <span className="ml-2">৳{formatCurrency(sale.paid_amount)}</span>
+                                </div>
+                                <div>
+                                    <span className="font-medium">Due Amount:</span>
+                                    <span className={`ml-2 ${sale.due_amount > 0 ? 'text-error' : 'text-success'}`}>
+                                        ৳{formatCurrency(sale.due_amount)}
+                                    </span>
                                 </div>
                             </div>
                         </div>
-                    )}
+                    </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        {/* Left Column - Return Details */}
+                        {/* লেফট কলাম - রিটার্ন ডিটেইলস */}
                         <div className="lg:col-span-1 space-y-4">
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">{t('sales_return.return_type', 'Return Type')} *</span>
+                                    <span className="label-text font-semibold">{t('sales_return.return_type', 'Return Type')} *</span>
                                 </label>
                                 <div className="grid grid-cols-2 gap-2">
                                     <label className={`card card-compact cursor-pointer ${returnType === 'money_back'
@@ -638,16 +580,16 @@ export default function AddSalesReturn({
                                         <div className="card-body p-3">
                                             <input
                                                 type="radio"
-                                                className="radio radio-primary"
+                                                className="radio"
                                                 checked={returnType === 'money_back'}
-                                                onChange={() => handleReturnTypeChange('money_back')}
+                                                onChange={() => setReturnType('money_back')}
                                             />
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 mt-1">
                                                 <DollarSign size={16} />
                                                 <span className="font-medium">Money Back</span>
                                             </div>
-                                            <p className="text-xs text-gray-500">
-                                                {t('sales_return.money_back_desc', 'Refund amount to customer')}
+                                            <p className="text-xs opacity-80 mt-1">
+                                                Refund amount to customer
                                             </p>
                                         </div>
                                     </label>
@@ -660,14 +602,14 @@ export default function AddSalesReturn({
                                                 type="radio"
                                                 className="radio radio-warning"
                                                 checked={returnType === 'product_replacement'}
-                                                onChange={() => handleReturnTypeChange('product_replacement')}
+                                                onChange={() => setReturnType('product_replacement')}
                                             />
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-2 mt-1">
                                                 <RefreshCw size={16} />
                                                 <span className="font-medium">Product Replacement</span>
                                             </div>
-                                            <p className="text-xs text-gray-500">
-                                                {t('sales_return.replacement_desc', 'Replace with other products')}
+                                            <p className="text-xs text-gray-500 mt-1">
+                                                Replace with other products
                                             </p>
                                         </div>
                                     </label>
@@ -676,7 +618,7 @@ export default function AddSalesReturn({
 
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">{t('sales_return.return_date', 'Return Date')} *</span>
+                                    <span className="label-text font-semibold">{t('sales_return.return_date', 'Return Date')} *</span>
                                 </label>
                                 <input
                                     type="date"
@@ -687,76 +629,107 @@ export default function AddSalesReturn({
                                 />
                             </div>
 
-                            {/* {returnType === 'money_back' && ( */}
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">{t('sales_return.account_id', 'Select Account')} *</span>
-                                    </label>
-                                    <select
-                                        className="select select-bordered w-full"
-                                        value={form.data.account_id || ''}
-                                        onChange={(e) => form.setData("account_id", e.target.value)}
-                                        required={returnType === 'money_back'}
-                                    >
-                                        <option value="">Select an Account</option>
-                                        {accounts.map((account) => (
-                                            <option key={account.id} value={account.id}>
-                                                {account.name} ({account.current_balance || 0} tk only)
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {validationErrors.account && (
-                                        <span className="text-error text-xs mt-1">{validationErrors.account}</span>
-                                    )}
-                                </div>
-                            {/* )} */}
-
                             <div className="form-control">
                                 <label className="label cursor-pointer">
-                                    <span className="label-text text-primary font-bold">{t('sales_return.damaged_product', 'Damaged Product')}</span>
+                                    <span className="label-text font-semibold text-primary">
+                                        {t('sales_return.damaged_product', 'Damaged Product')}
+                                    </span>
                                     <input
                                         type="checkbox"
-                                        className="checkbox text-primary"
+                                        className="checkbox checkbox-primary"
                                         checked={form.data.is_damaged}
                                         onChange={(e) => form.setData("is_damaged", e.target.checked)}
                                     />
                                 </label>
+                                <div className="text-xs text-gray-500 mt-1">
+                                    Check if products are damaged/warranty return
+                                </div>
                             </div>
+
+                            {returnType === 'money_back' && (
+                                <div className="space-y-4">
+                                    {/* <div className="form-control">
+                                        <label className="label">
+                                            <span className="label-text font-semibold">{t('sales_return.payment_type', 'Payment Type')} *</span>
+                                        </label>
+                                        <select
+                                            className="select select-bordered w-full"
+                                            value={paymentType}
+                                            onChange={(e) => setPaymentType(e.target.value)}
+                                        >
+                                            <option value="cash">Cash</option>
+                                            <option value="card">Card</option>
+                                            <option value="mobile_banking">Mobile Banking</option>
+                                            <option value="adjust_to_due">Adjust to Customer Due</option>
+                                        </select>
+                                    </div> */}
+
+                                    {paymentType !== 'adjust_to_due' && (
+                                        <div className="form-control">
+                                            <label className="label">
+                                                <span className="label-text font-semibold">{t('sales_return.payment_account', 'Payment Account')} *</span>
+                                            </label>
+                                            <select
+                                                className="select select-bordered w-full"
+                                                value={selectedAccount}
+                                                onChange={(e) => setSelectedAccount(e.target.value)}
+                                                required={totalReturn > 0}
+                                            >
+                                                <option value="">Select Account</option>
+                                                {accounts?.map(account => (
+                                                    <option key={account.id} value={account.id}>
+                                                        <div className="flex items-center gap-2">
+                                                            {account.type === 'cash' && <Wallet size={14} className="text-green-600" />}
+                                                            {account.type === 'bank' && <Building size={14} className="text-blue-600" />}
+                                                            {account.type === 'mobile_banking' && <CreditCard size={14} className="text-purple-600" />}
+                                                            <span>{account.name}</span>
+                                                            <span className="ml-auto text-xs">
+                                                                ৳{formatCurrency(account.current_balance)}
+                                                            </span>
+                                                        </div>
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {validationErrors.account && (
+                                                <div className="text-error text-xs mt-1">{validationErrors.account}</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">{t('sales_return.reason', 'Reason for Return')} *</span>
+                                    <span className="label-text font-semibold">{t('sales_return.reason', 'Reason for Return')} *</span>
                                 </label>
                                 <textarea
                                     className="textarea textarea-bordered w-full"
                                     rows="3"
                                     value={form.data.reason}
                                     onChange={(e) => form.setData("reason", e.target.value)}
-                                    placeholder={t('sales_return.reason_placeholder', 'Explain why customer is returning these items...')}
-                                    required
+                                    placeholder="Explain why customer is returning these items..."
+                                    // required
                                 />
                                 {validationErrors.reason && (
-                                    <span className="text-error text-xs mt-1">{validationErrors.reason}</span>
+                                    <div className="text-error text-xs mt-1">{validationErrors.reason}</div>
                                 )}
                             </div>
 
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">{t('sales_return.notes', 'Additional Notes')}</span>
+                                    <span className="label-text font-semibold">{t('sales_return.notes', 'Additional Notes')}</span>
                                 </label>
                                 <textarea
                                     className="textarea textarea-bordered w-full"
                                     rows="2"
                                     value={form.data.notes}
                                     onChange={(e) => form.setData("notes", e.target.value)}
-                                    placeholder={t('sales_return.notes_placeholder', 'Any additional information...')}
+                                    placeholder="Any additional information..."
                                 />
                             </div>
                         </div>
 
-                        {/* Right Column - Items & Replacement */}
                         <div className="lg:col-span-2 space-y-6">
-                            {/* Items to Return */}
                             <div>
                                 <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
                                     {t('sales_return.items_to_return', 'Items to Return')}
@@ -772,23 +745,30 @@ export default function AddSalesReturn({
                                                 <div className="card-body">
                                                     <div className="flex justify-between items-start mb-3">
                                                         <div className="flex-1">
-                                                            <h4 className="font-medium text-bold">{item.product_name}({item.product_code})</h4>
-                                                            <p className="text-sm text-gray-600"> <strong>Variant</strong> : {item.variant_name}</p>
-                                                            <p className="text-sm text-gray-600"> <strong>Brand</strong> : {item?.brand_name}</p>
-                                                            <p className="text-xs text-gray-500 text-bold">
-                                                                <strong>{t('sales_return.available_stock', 'Available for Return')}:</strong> {item.max_quantity} |
-                                                                <strong>{t('sales_return.sold', 'Sold')}:</strong> {item.sale_quantity}
-                                                            </p>
+                                                            <h4 className="font-medium text-base">{item.product_name}</h4>
+                                                            <div className="text-sm text-gray-600 space-y-1">
+                                                                <div>
+                                                                    <strong>Variant:</strong> {item.variant_name}
+                                                                </div>
+                                                                <div>
+                                                                    <strong>Brand:</strong> {item.brand_name}
+                                                                </div>
+                                                                <div className="text-xs text-gray-500">
+                                                                    Sold: {item.sale_quantity} {item.unit} • 
+                                                                    Available for return: {item.max_quantity} {item.unit}
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
 
-                                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                                                         <div className="form-control">
                                                             <label className="label py-1">
-                                                                <span className="label-text text-xs">{t('sales_return.quantity', 'Quantity')} *</span>
+                                                                <span className="label-text text-xs font-semibold">Quantity *</span>
                                                             </label>
                                                             <input
                                                                 type="number"
+                                                                step={item.is_fraction_allowed ? "0.001" : "1"}
                                                                 min="0"
                                                                 max={item.max_quantity}
                                                                 className="input input-bordered input-sm w-full"
@@ -799,7 +779,24 @@ export default function AddSalesReturn({
 
                                                         <div className="form-control">
                                                             <label className="label py-1">
-                                                                <span className="label-text text-xs">{t('sales_return.sale_price', 'Sale Price')}</span>
+                                                                <span className="label-text text-xs font-semibold">Unit</span>
+                                                            </label>
+                                                            <select
+                                                                className="select select-bordered select-sm w-full"
+                                                                value={item.unit}
+                                                                onChange={(e) => updateReturnItem(index, 'unit', e.target.value)}
+                                                            >
+                                                                {item.available_units?.map(unit => (
+                                                                    <option key={unit} value={unit}>
+                                                                        {unit.toUpperCase()}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+
+                                                        <div className="form-control">
+                                                            <label className="label py-1">
+                                                                <span className="label-text text-xs font-semibold">Sale Price</span>
                                                             </label>
                                                             <input
                                                                 type="text"
@@ -811,7 +808,7 @@ export default function AddSalesReturn({
 
                                                         <div className="form-control">
                                                             <label className="label py-1">
-                                                                <span className="label-text text-xs">{t('sales_return.item_total', 'Item Total')}</span>
+                                                                <span className="label-text text-xs font-semibold">Total</span>
                                                             </label>
                                                             <input
                                                                 type="text"
@@ -823,17 +820,46 @@ export default function AddSalesReturn({
 
                                                         <div className="form-control">
                                                             <label className="label py-1">
-                                                                <span className="label-text text-xs">{t('sales_return.reason', 'Reason')}</span>
+                                                                <span className="label-text text-xs font-semibold">Reason</span>
                                                             </label>
                                                             <input
                                                                 type="text"
                                                                 className="input input-bordered input-sm w-full"
                                                                 value={item.reason}
                                                                 onChange={(e) => updateReturnItem(index, 'reason', e.target.value)}
-                                                                placeholder={t('sales_return.reason_short', 'Why return?')}
+                                                                placeholder="Why return?"
                                                             />
                                                         </div>
                                                     </div>
+
+                                                    {/* ইউনিট ইনফো */}
+                                                    {item.unit_type && item.unit_type !== 'piece' && (
+                                                        <div className="mt-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Ruler size={14} className="text-blue-600" />
+                                                                    <span className="text-sm font-medium text-blue-800">
+                                                                        Unit Information
+                                                                    </span>
+                                                                </div>
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-xs btn-ghost"
+                                                                    onClick={() => toggleUnitInfo(`item_${index}`)}
+                                                                >
+                                                                    {showUnitInfo[`item_${index}`] ? 'Hide' : 'Show'}
+                                                                </button>
+                                                            </div>
+                                                            {showUnitInfo[`item_${index}`] && (
+                                                                <div className="mt-2 text-xs text-blue-700">
+                                                                    <div>Unit Type: {item.unit_type.toUpperCase()}</div>
+                                                                    <div>Default Unit: {item.default_unit.toUpperCase()}</div>
+                                                                    <div>Available Units: {item.available_units.map(u => u.toUpperCase()).join(', ')}</div>
+                                                                    <div>Fractions Allowed: {item.is_fraction_allowed ? 'Yes' : 'No'}</div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -841,23 +867,17 @@ export default function AddSalesReturn({
                                 ) : (
                                     <div className="card card-compact bg-base-100 border-2 border-dashed border-base-300">
                                         <div className="card-body text-center py-8">
-                                            <p className="text-gray-500">{t('sales_return.no_items_available', 'No items available for return')}</p>
+                                            <p className="text-gray-500">No items available for return</p>
                                         </div>
-                                    </div>
-                                )}
-
-                                {validationErrors.items && (
-                                    <div className="alert alert-error mt-2">
-                                        <span>{validationErrors.items}</span>
                                     </div>
                                 )}
 
                                 <div className="mt-4 p-3 bg-base-100 border border-base-300 rounded-box">
                                     <div className="flex justify-between items-center">
                                         <div>
-                                            <span className="font-medium">{t('sales_return.total_return_value', 'Total Return Value')}:</span>
+                                            <span className="font-medium">Total Return Value:</span>
                                             <p className="text-sm text-gray-500 mt-1">
-                                                Total Items: {selectedItems.filter(item => item.return_quantity > 0).length}
+                                                Items: {selectedItems.filter(item => item.return_quantity > 0).length}
                                             </p>
                                         </div>
                                         <div className="text-right">
@@ -867,13 +887,13 @@ export default function AddSalesReturn({
                                 </div>
                             </div>
 
-                            {/* Replacement Products (only for product_replacement type) */}
+                            {/* রিপ্লেসমেন্ট প্রোডাক্টস */}
                             {returnType === 'product_replacement' && (
                                 <div>
                                     <div className="flex justify-between items-center mb-4">
                                         <h3 className="font-semibold text-lg flex items-center gap-2">
                                             <Package size={20} />
-                                            {t('sales_return.replacement_products', 'Replacement Products')}
+                                            Replacement Products
                                             <span className="badge badge-warning badge-sm">
                                                 {replacementProducts.length}
                                             </span>
@@ -884,17 +904,11 @@ export default function AddSalesReturn({
                                             onClick={() => setShowReplacementSearch(!showReplacementSearch)}
                                         >
                                             <Plus size={14} />
-                                            {t('sales_return.add_replacement', 'Add Replacement')}
+                                            Add Replacement
                                         </button>
                                     </div>
 
-                                    {validationErrors.replacement && (
-                                        <div className="alert alert-warning mb-4">
-                                            <span>{validationErrors.replacement}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Replacement Product Search */}
+                                    {/* প্রোডাক্ট সার্চ */}
                                     {showReplacementSearch && (
                                         <div className="mb-4 relative" ref={searchRef}>
                                             <div className="relative">
@@ -903,7 +917,7 @@ export default function AddSalesReturn({
                                                     className="input input-bordered w-full pr-10"
                                                     value={productSearch}
                                                     onChange={(e) => setProductSearch(e.target.value)}
-                                                    placeholder={t('sales_return.search_products', 'Search replacement products...')}
+                                                    placeholder="Search products..."
                                                     autoFocus
                                                 />
                                                 <Search size={16} className="absolute right-3 top-3 text-gray-400" />
@@ -924,7 +938,7 @@ export default function AddSalesReturn({
                                                                     </span>
                                                                 </div>
                                                             </div>
-                                                            {product.variants && product.variants.map(variant => (
+                                                            {product.variants?.map(variant => (
                                                                 <div
                                                                     key={variant.id}
                                                                     className="p-3 hover:bg-base-100 cursor-pointer border-b last:border-b-0"
@@ -933,10 +947,12 @@ export default function AddSalesReturn({
                                                                     <div className="flex justify-between items-center">
                                                                         <div>
                                                                             <div className="font-medium">
-                                                                                {getVariantDisplayName(variant)}
+                                                                                {variant.attribute_values 
+                                                                                    ? Object.values(variant.attribute_values).join(', ')
+                                                                                    : 'Default Variant'}
                                                                             </div>
                                                                             <div className="text-xs text-gray-500 mt-1">
-                                                                                Sale Price: ৳{formatCurrency(variant?.stock?.sale_price || 0)}
+                                                                                Price: ৳{formatCurrency(variant.sale_price || variant.unit_cost || 0)}
                                                                             </div>
                                                                         </div>
                                                                         <Plus size={16} className="text-warning" />
@@ -950,7 +966,7 @@ export default function AddSalesReturn({
                                         </div>
                                     )}
 
-                                    {/* Replacement Products List */}
+                                    {/* রিপ্লেসমেন্ট লিস্ট */}
                                     {replacementProducts.length > 0 ? (
                                         <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
                                             {replacementProducts.map((product, index) => (
@@ -958,64 +974,91 @@ export default function AddSalesReturn({
                                                     <div className="card-body">
                                                         <div className="flex justify-between items-start mb-2">
                                                             <div className="flex-1">
-                                                                <h4 className="font-medium text-base">{product.product_name} ({product.product_code})</h4>
-                                                                <p className="text-sm text-gray-600">Varient : {product.variant_name}</p>
-                                                                <p className="text-sm text-gray-600">Brand : {product.brand_name}</p>
+                                                                <h4 className="font-medium text-base">{product.product_name}</h4>
+                                                                <div className="text-sm text-gray-600 space-y-1">
+                                                                    <div>
+                                                                        <strong>Variant:</strong> {product.variant_name}
+                                                                    </div>
+                                                                    <div>
+                                                                        <strong>Brand:</strong> {product.brand_name}
+                                                                    </div>
+                                                                </div>
                                                             </div>
                                                             <button
                                                                 type="button"
                                                                 className="btn btn-xs btn-error btn-outline"
                                                                 onClick={() => removeReplacementProduct(index)}
                                                             >
-                                                                <Trash2 size={12} /><span className="sr-only">Remove</span>
+                                                                <Trash2 size={12} />
                                                             </button>
                                                         </div>
 
-                                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                                                             <div className="form-control">
                                                                 <label className="label py-1">
-                                                                    <span className="label-text text-xs">{t('sales_return.quantity', 'Quantity')}</span>
+                                                                    <span className="label-text text-xs font-semibold">Quantity</span>
                                                                 </label>
                                                                 <input
                                                                     type="number"
-                                                                    min="1"
-                                                                    step="1"
+                                                                    step={product.is_fraction_allowed ? "0.001" : "1"}
+                                                                    min="0.001"
                                                                     className="input input-bordered input-sm w-full border-warning"
                                                                     value={product.quantity}
                                                                     onChange={(e) => updateReplacementProduct(index, 'quantity', e.target.value)}
                                                                 />
-                                                                {validationErrors[`replacement_quantity_${index}`] && (
-                                                                    <span className="text-error text-xs">{validationErrors[`replacement_quantity_${index}`]}</span>
-                                                                )}
                                                             </div>
 
                                                             <div className="form-control">
                                                                 <label className="label py-1">
-                                                                    <span className="label-text text-xs">{t('sales_return.sale_price', 'Sale Price')}</span>
+                                                                    <span className="label-text text-xs font-semibold">Unit</span>
+                                                                </label>
+                                                                <select
+                                                                    className="select select-bordered select-sm w-full border-warning"
+                                                                    value={product.unit}
+                                                                    onChange={(e) => updateReplacementProduct(index, 'unit', e.target.value)}
+                                                                >
+                                                                    {product.available_units?.map(unit => (
+                                                                        <option key={unit} value={unit}>
+                                                                            {unit.toUpperCase()}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+
+                                                            <div className="form-control">
+                                                                <label className="label py-1">
+                                                                    <span className="label-text text-xs font-semibold">Unit Price</span>
                                                                 </label>
                                                                 <input
                                                                     type="number"
-                                                                    min="0.01"
+                                                                    step="0.01"
+                                                                    className="input input-bordered input-sm w-full border-warning"
+                                                                    value={product.unit_price}
+                                                                    onChange={(e) => updateReplacementProduct(index, 'unit_price', e.target.value)}
+                                                                />
+                                                            </div>
+
+                                                            <div className="form-control">
+                                                                <label className="label py-1">
+                                                                    <span className="label-text text-xs font-semibold">Sale Price</span>
+                                                                </label>
+                                                                <input
+                                                                    type="number"
                                                                     step="0.01"
                                                                     className="input input-bordered input-sm w-full border-warning"
                                                                     value={product.sale_price}
                                                                     onChange={(e) => updateReplacementProduct(index, 'sale_price', e.target.value)}
                                                                 />
-                                                                {validationErrors[`replacement_price_${index}`] && (
-                                                                    <span className="text-error text-xs">{validationErrors[`replacement_price_${index}`]}</span>
-                                                                )}
                                                             </div>
 
                                                             <div className="form-control">
                                                                 <label className="label py-1">
-                                                                    <span className="label-text text-xs">
-                                                                        {t('sales_return.item_total', 'Item Total')}
-                                                                    </span>
+                                                                    <span className="label-text text-xs font-semibold">Total</span>
                                                                 </label>
                                                                 <input
                                                                     type="text"
                                                                     className="input input-bordered input-sm w-full bg-warning/10 font-semibold"
-                                                                    value={`৳${formatCurrency(product.total_price)}`}
+                                                                    value={`৳${formatCurrency(product.quantity * product.sale_price)}`}
                                                                     readOnly
                                                                 />
                                                             </div>
@@ -1028,10 +1071,7 @@ export default function AddSalesReturn({
                                         <div className="card card-compact bg-warning/5 border-2 border-dashed border-warning/30">
                                             <div className="card-body text-center py-8">
                                                 <Package size={32} className="mx-auto text-warning/50 mb-2" />
-                                                <p className="text-gray-500">{t('sales_return.no_replacement_added', 'No replacement products added')}</p>
-                                                <p className="text-sm text-gray-400 mt-1">
-                                                    {t('sales_return.click_add_replacement', 'Click "Add Replacement" to add products')}
-                                                </p>
+                                                <p className="text-gray-500">No replacement products added</p>
                                             </div>
                                         </div>
                                     )}
@@ -1039,7 +1079,7 @@ export default function AddSalesReturn({
                                     <div className="mt-4 p-3 bg-warning/5 border border-warning/20 rounded-box">
                                         <div className="flex justify-between items-center">
                                             <div>
-                                                <span className="font-medium">{t('sales_return.total_replacement_value', 'Total Replacement Value')}:</span>
+                                                <span className="font-medium">Total Replacement Value:</span>
                                                 <p className="text-sm text-gray-500 mt-1">
                                                     Items: {replacementProducts.length}
                                                 </p>
@@ -1054,40 +1094,40 @@ export default function AddSalesReturn({
                         </div>
                     </div>
 
-                    {/* Summary and Actions */}
+                    {/* সামারি */}
                     <div className="border-t border-base-300 pt-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                             <div className="card card-compact bg-base-100 border border-base-300">
                                 <div className="card-body">
                                     <h4 className="card-title text-sm font-semibold">
                                         <Calculator size={16} className="inline mr-2" />
-                                        {t('sales_return.return_summary', 'Return Summary')}
+                                        Return Summary
                                     </h4>
                                     <div className="space-y-2 text-sm mt-2">
                                         <div className="flex justify-between">
-                                            <span>{t('sales_return.total_items_return', 'Total Items to Return')}:</span>
+                                            <span>Total Items to Return:</span>
                                             <span className="font-medium">
                                                 {selectedItems.filter(item => item.return_quantity > 0).length}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span>{t('sales_return.total_return_value', 'Total Return Value')}:</span>
+                                            <span>Total Return Value:</span>
                                             <span className="font-semibold">৳{formatCurrency(totalReturn)}</span>
                                         </div>
                                         {returnType === 'money_back' && (
                                             <div className="flex justify-between pt-2 border-t border-base-300">
-                                                <span>{t('sales_return.refund_amount', 'Refund Amount')}:</span>
+                                                <span>Refund Amount:</span>
                                                 <span className="font-semibold text-primary">৳{formatCurrency(totalReturn)}</span>
                                             </div>
                                         )}
                                         {returnType === 'product_replacement' && (
                                             <>
                                                 <div className="flex justify-between">
-                                                    <span>{t('sales_return.replacement_items', 'Replacement Items')}:</span>
+                                                    <span>Replacement Items:</span>
                                                     <span className="font-medium">{replacementProducts.length}</span>
                                                 </div>
                                                 <div className="flex justify-between">
-                                                    <span>{t('sales_return.replacement_value', 'Replacement Value')}:</span>
+                                                    <span>Replacement Value:</span>
                                                     <span className="font-semibold text-warning">৳{formatCurrency(replacementTotal)}</span>
                                                 </div>
                                             </>
@@ -1100,42 +1140,31 @@ export default function AddSalesReturn({
                                 <div className="card-body">
                                     <h4 className="card-title text-sm font-semibold">
                                         <RefreshCw size={16} className="inline mr-2" />
-                                        {t('sales_return.value_difference', 'Value Difference')}
+                                        Value Difference
                                     </h4>
-                                    {returnType === 'product_replacement' && (
+                                    {returnType === 'product_replacement' ? (
                                         <div className="space-y-2 text-sm mt-2">
                                             <div className="flex justify-between">
-                                                <span>{t('sales_return.return_value', 'Return Value')}:</span>
+                                                <span>Return Value:</span>
                                                 <span className="text-gray-600">৳{formatCurrency(totalReturn)}</span>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span>{t('sales_return.replacement_value', 'Replacement Value')}:</span>
+                                                <span>Replacement Value:</span>
                                                 <span className="text-gray-600">৳{formatCurrency(replacementTotal)}</span>
                                             </div>
                                             <div className="flex justify-between pt-2 border-t border-base-300 font-semibold">
-                                                <span>{t('sales_return.net_difference', 'Net Difference')}:</span>
-                                                <span className={`${netDifference > 0 ? 'text-error' : 'text-success'}`}>
+                                                <span>Net Difference:</span>
+                                                <span className={`${netDifference > 0 ? 'text-error' : netDifference < 0 ? 'text-success' : 'text-gray-600'}`}>
                                                     ৳{formatCurrency(Math.abs(netDifference))}
-                                                    {netDifference > 0 ? ' (Customer Pays More)' : ' (We Refund Difference)'}
+                                                    {netDifference > 0 ? ' (Customer Pays More)' : 
+                                                     netDifference < 0 ? ' (We Refund Difference)' : ' (Equal)'}
                                                 </span>
                                             </div>
-                                            <div className="text-xs text-gray-500 mt-1">
-                                                {netDifference > 0 ? (
-                                                    <span>Replacement value exceeds return value by ৳{formatCurrency(netDifference)}</span>
-                                                ) : netDifference < 0 ? (
-                                                    <span>Return value exceeds replacement value by ৳{formatCurrency(Math.abs(netDifference))}</span>
-                                                ) : (
-                                                    <span>Values are equal - no payment adjustment needed</span>
-                                                )}
-                                            </div>
                                         </div>
-                                    )}
-                                    {returnType === 'money_back' && (
+                                    ) : (
                                         <div className="text-center py-4">
                                             <DollarSign size={32} className="mx-auto text-primary/50 mb-2" />
-                                            <p className="text-gray-600">
-                                                {t('sales_return.full_refund', 'Full refund to customer')}
-                                            </p>
+                                            <p className="text-gray-600">Full refund to customer</p>
                                             <p className="text-sm font-semibold mt-2">৳{formatCurrency(totalReturn)}</p>
                                         </div>
                                     )}
@@ -1152,21 +1181,21 @@ export default function AddSalesReturn({
                                 {form.processing ? (
                                     <span className="flex items-center gap-2">
                                         <div className="loading loading-spinner loading-sm"></div>
-                                        {t('sales_return.creating', 'Creating Return...')}
+                                        Creating Return...
                                     </span>
                                 ) : (
                                     <>
                                         <RefreshCw size={18} className="mr-2" />
-                                        {t('sales_return.create_return', 'Create Sales Return')}
+                                        Create Sales Return
                                     </>
                                 )}
                             </button>
                             <button
                                 type="button"
-                                onClick={() => router.visit(route("sales-return.list"))}
+                                onClick={() => router.visit(route("salesReturn.list"))}
                                 className="btn btn-lg btn-ghost"
                             >
-                                {t('sales_return.cancel', 'Cancel')}
+                                Cancel
                             </button>
                         </div>
                     </div>

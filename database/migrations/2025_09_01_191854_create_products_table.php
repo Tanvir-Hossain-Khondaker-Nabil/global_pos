@@ -27,10 +27,16 @@ return new class extends Migration {
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('outlet_id');
+
+            $table->unsignedBigInteger('unit_id')->nullable();
+            $table->string('unit_type')->default('piece');
+            $table->string('default_unit')->default('piece');
+            $table->boolean('is_fraction_allowed')->default(false);
+            $table->string('min_sale_unit')->nullable();
             $table->timestamps();
         });
 
-        
+
     }
 
     /**

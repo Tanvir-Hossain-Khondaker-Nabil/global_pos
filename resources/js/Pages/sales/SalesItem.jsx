@@ -441,7 +441,7 @@ export default function AllSalesItems({ salesItems }) {
             {/* Summary Stats */}
             {safeSalesItems.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-                    <div className="stat bg-[#1e4d2b] text-white/10 rounded-box">
+                    <div className="stat bg-[#1e4d2b] text-white rounded-box">
                         <div className="stat-title">Total Items</div>
                         <div className="stat-value text-primary text-lg">
                             {salesItems.total || 0}
