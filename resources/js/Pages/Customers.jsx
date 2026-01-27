@@ -272,7 +272,6 @@ export default function Customers({ customers, filters, accounts }) {
                 parseFloat(selectedCustomer.advance_amount) || 0;
             if (advanceAmount < amount) {
                 errors.paid_amount = t(
-                    "customer.advance_insufficient",
                     "Advance amount is insufficient for this payment",
                 );
             }

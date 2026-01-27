@@ -614,7 +614,6 @@ class LedgerController extends Controller
         $account = Account::where('id', $request->account_id)->first();
 
 
-
         // ------------------------------------------------------------
         // CUSTOMER DUE CLEARING
         // ------------------------------------------------------------
@@ -647,22 +646,23 @@ class LedgerController extends Controller
 
             foreach ($sales as $sale) {
 
-                if ($paid_amount <= 0) break;
+                if ($paid_amount <= 0)
+                    break;
 
                 $saleDue = $sale->due_amount;
                 $applied = min($saleDue, $paid_amount);
                 //  Record Payment
                 Payment::create([
-                    'sale_id'        => $sale->id,
-                    'customer_id'    => $customer->id,
-                    'amount'         => $applied,
-                    'shadow_amount'  => 0,
+                    'sale_id' => $sale->id,
+                    'customer_id' => $customer->id,
+                    'amount' => $applied,
+                    'shadow_amount' => 0,
                     'payment_method' => $account->type ?? $paymentMethod ?? 'cash',
-                    'txn_ref'        => $request->txn_ref ?? ('CDA-' . Str::random(10)),
-                    'note'           => $request->notes ?? 'clearing due payment',
-                    'paid_at'        => Carbon::now(),
-                    'created_by'     => Auth::id(),
-                    'status'         => 'completed'
+                    'txn_ref' => $request->txn_ref ?? ('CDA-' . Str::random(10)),
+                    'note' => $request->notes ?? 'clearing due payment',
+                    'paid_at' => Carbon::now(),
+                    'created_by' => Auth::id(),
+                    'status' => 'completed'
                 ]);
 
                 //  Update Sale
@@ -678,6 +678,7 @@ class LedgerController extends Controller
                 $paid_amount -= $applied;
             }
         }
+
 
         // ------------------------------------------------------------
         // SUPPLIER DUE CLEARING
@@ -703,6 +704,7 @@ class LedgerController extends Controller
 
             if ($paymentMethod == 'account_adjustment' && $account) {
 
+
                 if ($account->current_balance < $paid_amount) {
                     return back()->withErrors(['account_id' => 'Paid amount exceeds account balance']);
                 }
@@ -712,7 +714,7 @@ class LedgerController extends Controller
 
             //  Get all due purchases
             $purchases = $supplier->purchases()
-                ->where('due_amount', '>', 0)
+                ->where('grand_total', '>', 'paid_amount')
                 ->orderBy('created_at')
                 ->get();
 
@@ -720,37 +722,48 @@ class LedgerController extends Controller
 
             foreach ($purchases as $purchase) {
 
-                if ($paid_amount <= 0) break;
+                if ($paid_amount <= 0)
+                    break;
 
                 $purchaseDue = $purchase->grand_total - $purchase->paid_amount;
                 $applied = min($purchaseDue, $paid_amount);
 
-
                 //  Record Payment
                 Payment::create([
-                    'purchase_id'    => $purchase->id,
-                    'supplier_id'    => $supplier->id,
-                    'amount'         => $applied,
-                    'shadow_amount'  => 0,
+                    'purchase_id' => $purchase->id,
+                    'supplier_id' => $supplier->id,
+                    'amount' => -$applied,
+                    'shadow_amount' => 0,
                     'payment_method' => $paymentMethod ?? 'cash',
-                    'txn_ref'        => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
-                    'note'           => $request->notes ?? 'clearing due payment',
-                    'paid_at'        => Carbon::now(),
-                    'created_by'     => Auth::id(),
+                    'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+                    'note' => $request->notes ?? 'clearing due payment',
+                    'paid_at' => Carbon::now(),
+                    'created_by' => Auth::id(),
                 ]);
 
-                // Update Purchase
-                $purchase->paid_amount += $applied;
-                $purchase->due_amount -= $applied;
 
+
+                // Update Purchase
+
+
+                $purchase->update([
+                    'paid_amount' => $purchase->paid_amount + $applied,
+                    'due_amount' => ($purchase->grand_total - ($purchase->paid_amount + $applied)),
+                ]);
+
+                // $purchase->paid_amount += $applied;
+                // $purchase->due_amount -= $applied;
 
 
                 if ($purchase->due_amount <= 0) {
-                    $purchase->due_amount = 0;
-                    $purchase->status = 'completed';
+
+                    $purchase->update([
+                        'status' => 'completed',
+                        'due_amount' => 0,
+                    ]);
                 }
-                $purchase->save();
-                $paid_amount -= $applied;
+                // $purchase->save();
+                // $paid_amount -= $applied;
             }
         }
 

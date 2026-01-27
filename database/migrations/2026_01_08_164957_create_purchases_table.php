@@ -28,6 +28,7 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
             $table->enum('user_type', ['shadow', 'general'])->default('general');
+            $table->enum('type', ['global', 'local'])->default('global');
             $table->enum('payment_type', ['cash', 'bank' ,'mobile_banking','advance_adjustment'])->default('cash');
             $table->timestamps();
 

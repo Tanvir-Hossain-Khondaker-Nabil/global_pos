@@ -30,8 +30,9 @@ class Purchase extends Model
         'created_by',
         'payment_type',
         'is_pickup_sale_purchase',
-        'pickup_sale_id'
-        , 'outlet_id'
+        'pickup_sale_id',
+        'outlet_id',
+        'type'
     ];
 
     // protected $casts = [
