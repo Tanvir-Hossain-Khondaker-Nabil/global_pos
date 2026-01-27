@@ -20,18 +20,18 @@ import {
   Edit,
   DollarSign,
 } from "lucide-react";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+
+
 
 export default function AddSale({ customers, productstocks, suppliers, accounts }) {
   const { t, locale } = useTranslation();
 
   const [selectedItems, setSelectedItems] = useState([]);
   const [pickupItems, setPickupItems] = useState([]);
-
   const [productSearch, setProductSearch] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
-
   const [vatRate, setVatRate] = useState(0);
   const [discountRate, setDiscountRate] = useState(0); // percentage discount
   const [flatDiscount, setFlatDiscount] = useState(0); // flat discount
@@ -376,7 +376,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     setCustomerPhoneInput("");
     setCustomerDueAmountInput(0);
     setAvailableAdvance(0);
-    
+
     form.setData({
       ...form.data,
       customer_id: "",
@@ -413,6 +413,8 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       }
     }
   }, [adjustFromAdvance, availableAdvance, calculateGrandTotal, manualPaymentOverride, paidAmount]);
+
+
 
   // ---------------- Account ----------------
   const handleAccountSelect = (accountId) => {
@@ -486,6 +488,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     return variants.sort((a, b) => b.totalQuantity - a.totalQuantity);
   };
 
+
   const handleProductSelect = (product) => {
     setSelectedProduct(product);
     setSelectedBrand(null);
@@ -547,7 +550,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
   const handleVariantSelect = (variantWithStocks) => {
     const { variant, stocks, totalQuantity, sale_price, shadow_sale_price } = variantWithStocks;
-    const availableStock = stocks.find((s) => s.quantity > 0) || stocks[0];
+    let availableStock = stocks.find((s) => s.quantity > 0) || stocks[0];
     if (!availableStock) return;
 
     const salePrice = Number(sale_price) || Number(availableStock.sale_price) || 0;
@@ -592,6 +595,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
     resetSelectionFlow();
   };
+
 
   const removeItem = (index) => {
     const updated = [...selectedItems];
@@ -1003,7 +1007,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
               </div>
             )}
 
-            {/* ✅✅ PAYMENT CARD — SAME DESIGN AS PURCHASE (DESIGN ONLY) */}
+            {/*  PAYMENT CARD — SAME DESIGN AS PURCHASE (DESIGN ONLY) */}
             <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl shadow-lg">
               <div className="card-body">
                 <div className="flex justify-between items-center mb-2">
@@ -1521,13 +1525,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                         <option value="percentage">Percentage</option>
                         <option value="flat">Flat</option>
                       </select>
-                      
+
                       {discountType === "percentage" ? (
                         <div className="flex items-center gap-1">
                           <input
                             type="number"
                             min="0"
-                            max="100"
+                            max="30"
                             step="0.01"
                             className="input input-bordered input-sm w-20"
                             value={discountRate}
@@ -1541,6 +1545,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                           <input
                             type="number"
                             min="0"
+                            max="100"
                             step="0.01"
                             className="input input-bordered input-sm w-20"
                             value={flatDiscount}
@@ -1691,7 +1696,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         </div>
       )}
 
-      {/* Supplier Modal */}
       {showSupplierModal && (
         <div className="modal modal-open">
           <div className="modal-box max-w-lg">

@@ -124,7 +124,8 @@ class SalesController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $customers = Customer::orWhere('phone','!=','100100100')->get();
+         $customers = Customer::orWhere('phone','!=','100100100')
+        ->active()->get();
 
         $stock = Stock::with(['warehouse', 'product.category', 'product.brand', 'variant'])
             ->where('quantity', '>', 0)
@@ -145,6 +146,29 @@ class SalesController extends Controller
         ]);
     }
 
+
+    public function stockInvoice($batchno)
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $sales = Stock::with(['warehouse', 'product.category', 'product.brand', 'variant'])
+            ->where('quantity', '>', 0)
+             ->where('batch_no', $batchno)
+            ->first();
+
+        if ($isShadowUser) {
+            $sales->transform(function ($sale) {
+                return $this->transformToShadowData($sale);
+            });
+        }
+
+        return response()->json([
+            'sales' => $sales,
+            'isShadowUser' => $isShadowUser,
+        ]);
+    }
+
     /**
      *  Store sale (FIXED: inventory new customer works)
      */
@@ -152,7 +176,7 @@ class SalesController extends Controller
     {
         $type = $request->input('type', 'pos');
 
-        if($request->filled('discount_type')) {
+        if ($request->filled('discount_type')) {
             $rules['discount_type'] = 'nullable|string|max:255';
         }
 
@@ -175,7 +199,8 @@ class SalesController extends Controller
             $discount  =  $request->flat_discount;
         }
 
-        if($request->paid_amount > 0){
+
+        if ($request->paid_amount > 0) {
             $rules['account_id'] = 'required|exists:accounts,id';
         }
 
@@ -190,14 +215,13 @@ class SalesController extends Controller
         try {
             $adjust_amount = (bool) $request->adjust_from_advance;
             $paid_amount = (float) ($request->paid_amount ?? 0);
-            $account_id = $request->account_id;
 
-            $supplier_id = $request->supplier_id ?? Supplier::where('email','pickup@mail.com')->first()->id;
             $pickup_items = $request->pickup_items ?? [];
             $regular_items = $request->items ?? [];
 
             // Validate account
-            if($request->paid_amount > 0){
+            if ($request->paid_amount > 0) {
+                $account_id = $request->account_id;
 
                 $account = Account::find($account_id);
                 if (!$account || !$account->is_active) {
@@ -207,7 +231,11 @@ class SalesController extends Controller
                 $payment_type = $account->type ?? 'unpaid';
             }
 
+
             if (count($pickup_items) > 0) {
+
+                $supplier_id = $request->supplier_id ?? Supplier::where('email', 'pickup@mail.com')->first()->id;
+
                 if (!$supplier_id)
                     throw new \Exception('Supplier is required for pickup items.');
                 $supplier = Supplier::find($supplier_id);
@@ -217,12 +245,14 @@ class SalesController extends Controller
 
             $customerId = null;
 
+
             if (
                 !$request->filled('customer_id') &&
                 !$request->filled('customer_name') &&
                 !$request->filled('phone')
             ) {
-                $customerId = Customer::where('phone','100100100')->first()->id ?? 1;
+                $customerId = Customer::where('phone', '100100100')->first()->id ?? 1;
+
             } elseif (!empty($request->customer_id)) {
                 $customerId = (int) $request->customer_id;
             } else {
@@ -239,7 +269,7 @@ class SalesController extends Controller
                             'customer_name' => $name,
                             'phone' => $phone,
                             'advance_amount' => 0,
-                            'due_amount' => $request->customer_due_amount,
+                            'due_amount' => $request->customer_due_amount ?? 0,
                             'is_active' => 1,
                             'created_by' => Auth::id(),
                         ])->id;
@@ -251,7 +281,7 @@ class SalesController extends Controller
                 throw new \Exception('Customer is required for inventory sale.');
             }
 
-            
+
 
             if ($adjust_amount === true && $customerId) {
                 $customer = Customer::find($customerId);
