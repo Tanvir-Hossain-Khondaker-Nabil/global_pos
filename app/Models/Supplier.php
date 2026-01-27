@@ -29,6 +29,7 @@ class Supplier extends Model
         'created_by',
         'outlet_id',
         'dealership_id',
+        'type'
         // 'send_welcome_sms'
     ];
 

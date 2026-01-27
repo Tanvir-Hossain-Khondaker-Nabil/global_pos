@@ -104,13 +104,13 @@ export default function AllSalesItems({ salesItems }) {
     const hasActiveFilters = filterForm.data.search || filterForm.data.customer || filterForm.data.product || filterForm.data.warehouse;
 
     return (
-        <div className="bg-white rounded-box p-3 md:p-4">
+        <div className="bg-white rounded-box p-2 md:p-2">
             <PageHeader
                 title="All Sales Items"
                 description="Comprehensive list of all sold items with detailed information"
             >
                 {/* Responsive Filter Section */}
-                <div className="mb-4">
+                <div>
                     {/* Desktop/Tablet View (md and up) */}
                     <div className="hidden md:flex flex-col lg:flex-row items-start lg:items-center gap-3">
                         {/* Main filter row */}

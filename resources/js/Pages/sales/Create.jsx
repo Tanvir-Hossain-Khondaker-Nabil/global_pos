@@ -338,13 +338,11 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       handleAccountSelect("");
     } else if (value >= grandTotal) {
       setPaymentStatus("paid");
-      // Enable account selection if not already selected
       if (!selectedAccount && accounts && accounts.length > 0) {
         handleAccountSelect(accounts[0].id);
       }
     } else {
       setPaymentStatus("partial");
-      // Enable account selection if not already selected
       if (!selectedAccount && accounts && accounts.length > 0) {
         handleAccountSelect(accounts[0].id);
       }
@@ -1008,78 +1006,60 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             )}
 
             {/*  PAYMENT CARD — SAME DESIGN AS PURCHASE (DESIGN ONLY) */}
-            <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl shadow-lg">
-              <div className="card-body">
-                <div className="flex justify-between items-center mb-2">
-                  <h3 className="card-title text-sm font-black uppercase text-red-500 flex items-center gap-2">
-                    <CreditCard size={16} /> Payment
-                  </h3>
+            <div className="bg-[#F8FAF5] rounded-xl border border-gray-200">
+              <div className="p-3 space-y-3">
 
-                  <button
-                    type="button"
-                    onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
-                    className="btn btn-xs bg-red-600 hover:bg-red-700 border-none text-white font-black text-[10px] uppercase"
-                  >
-                    {manualPaymentOverride ? <X size={10} /> : <Edit size={10} />}
-                    {manualPaymentOverride ? "Cancel" : "Manual"}
-                  </button>
+                {/* Header */}
+                <div className="flex items-center gap-2 text-[#235E33] font-semibold text-sm">
+                  <CreditCard size={14} />
+                  Payment
                 </div>
 
-                {/* Account Selection */}
-                <div className="form-control mb-3">
-                  <label className="label py-0">
-                    <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
-                      Payment Account {paidAmount > 0 && "*"}
-                    </span>
+                {/* Account */}
+                <div className="space-y-1">
+                  <label className="text-[11px] text-gray-600">
+                    Payment Account {paidAmount > 0 && "*"}
                   </label>
 
                   <select
-                    className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
+                    className="select select-sm w-full bg-white border-gray-300 text-gray-800"
                     value={selectedAccount}
                     onChange={(e) => handleAccountSelect(e.target.value)}
-                    required={paidAmount > 0}
                     disabled={paymentStatus === "unpaid"}
+                    required={paidAmount > 0}
                   >
-                    <option value="">Select Account</option>
-                    {accounts?.map((account) => (
-                      <option key={account.id} value={account.id}>
-                        {account.name} — ৳{formatCurrency(account.current_balance)}
+                    <option value="">Select account</option>
+                    {accounts?.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name} — ৳{formatCurrency(a.current_balance)}
                       </option>
                     ))}
                   </select>
 
                   {paidAmount > 0 && !selectedAccount && (
-                    <div className="text-red-400 text-xs mt-1">Please select a payment account</div>
-                  )}
-
-                  {paymentStatus === "unpaid" && (
-                    <div className="text-gray-400 text-xs mt-1">Account selection disabled for unpaid status</div>
-                  )}
-
-                  {/* Selected Account Info */}
-                  {selectedAccountObj && (
-                    <div className="mt-2 p-2 bg-gray-800 rounded-lg border border-gray-700">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          {getAccountIcon(selectedAccountObj.type)}
-                          <span className="text-xs font-bold">{selectedAccountObj.name}</span>
-                          <span className="text-xs text-gray-400 capitalize">({selectedAccountObj.type})</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-[10px] text-gray-400">Balance</div>
-                          <div className="text-xs font-mono font-bold">
-                            ৳{formatCurrency(selectedAccountObj.current_balance)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <p className="text-[11px] text-red-500">Account required</p>
                   )}
                 </div>
 
-                {/* Payment status */}
-                <div className="form-control mb-3">
+                {/* Selected account info */}
+                {selectedAccountObj && (
+                  <div className="flex justify-between text-xs bg-white p-2 rounded-md border">
+                    <span className="font-medium">
+                      {selectedAccountObj.name}
+                      <span className="text-gray-400 ml-1">
+                        ({selectedAccountObj.type})
+                      </span>
+                    </span>
+                    <span className="font-mono">
+                      ৳{formatCurrency(selectedAccountObj.current_balance)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Status + amount */}
+                <div className="grid grid-cols-2 gap-2">
                   <select
-                    className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
+                    className="select select-sm bg-white border-gray-300"
                     value={paymentStatus}
                     onChange={(e) => handlePaymentStatusChange(e.target.value)}
                   >
@@ -1087,38 +1067,32 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     <option value="partial">Partial</option>
                     <option value="paid">Paid</option>
                   </select>
-                </div>
 
-                {/* Paid amount */}
-                <div className="form-control mb-3">
-                  <label className="label py-1">
-                    <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
-                      Paid Amount
-                    </span>
-                  </label>
                   <input
                     type="number"
-                    step="0.01"
-                    className="input input-bordered input-sm w-full bg-gray-800 border-gray-700 font-mono"
+                    className="input input-sm bg-white border-gray-300 font-mono"
                     value={paidAmount}
                     onChange={handleManualPaymentInput}
                     disabled={!manualPaymentOverride && adjustFromAdvance}
+                    placeholder="Paid"
                   />
                 </div>
 
                 {/* Totals */}
-                <div className="space-y-1 text-xs pt-2 border-t border-gray-800 mt-2 font-bold uppercase tracking-tighter">
-                  <div className="flex justify-between">
-                    <span>Gross:</span>
+                <div className="pt-2 border-t text-xs space-y-1">
+                  <div className="flex justify-between text-gray-600">
+                    <span>Gross</span>
                     <span>৳{formatCurrency(grandTotal)}</span>
                   </div>
-                  <div className="flex justify-between text-red-500 font-black">
-                    <span>Due:</span>
+                  <div className="flex justify-between font-semibold text-[#235E33]">
+                    <span>Due</span>
                     <span>৳{formatCurrency(dueAmount)}</span>
                   </div>
                 </div>
+
               </div>
             </div>
+
 
             {/* Supplier for pickup */}
             {/* {pickupItems.length > 0 && (

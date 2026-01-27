@@ -17,7 +17,7 @@ class SupplierStore extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'contact_person' => 'required|string|max:255',
+            'contact_person' => 'nullable|string|max:255',
             'email' => 'required|email',
             'phone' => 'required|string|max:20',
             'company' => 'nullable|string|max:255',

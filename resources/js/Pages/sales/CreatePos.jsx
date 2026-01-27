@@ -202,7 +202,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
     const pickupSubTotal = useMemo(() => pickupItems.reduce((sum, i) => sum + n(i.quantity) * n(i.sale_price), 0), [pickupItems]);
     const totalSubTotal = useMemo(() => subTotal + pickupSubTotal, [subTotal, pickupSubTotal]);
     const taxAmount = useMemo(() => (totalSubTotal * n(taxRate)) / 100, [totalSubTotal, taxRate]);
-    
+
     // Calculate discount based on type
     const discountAmount = useMemo(() => {
         if (discountType === "percentage") {
@@ -211,7 +211,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
             return n(flatDiscount);
         }
     }, [totalSubTotal, discountType, discountRate, flatDiscount]);
-    
+
     const grandTotal = useMemo(
         () => totalSubTotal + taxAmount - discountAmount + n(shippingValue),
         [totalSubTotal, taxAmount, discountAmount, shippingValue]
@@ -847,7 +847,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                     <span className="text-xs text-gray-500">%</span>
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Discount Section - UPDATED */}
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">DISCOUNT:</span>
@@ -860,7 +860,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                         <option value="percentage">%</option>
                                                         <option value="flat">Flat</option>
                                                     </select>
-                                                    
+
                                                     {discountType === "percentage" ? (
                                                         <div className="flex items-center gap-1">
                                                             <input
@@ -891,12 +891,12 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">DISCOUNT AMOUNT:</span>
                                                 <span className="font-medium text-red-600">-{money(discountAmount)}</span>
                                             </div>
-                                            
+
                                             <div className="flex justify-between items-center">
                                                 <span className="text-sm text-gray-600">SHIPPING:</span>
                                                 <div className="flex items-center gap-2">
@@ -926,137 +926,108 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                             </div>
 
                             {/* Payment Card */}
-                            <div className="card border border-gray-800 bg-[#1e4d2b] text-white rounded-2xl shadow-lg">
-                                <div className="card-body p-4">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-lg font-bold flex items-center gap-2">
-                                            <CreditCard size={20} /> Payment Details
-                                        </h3>
+                            <div className="bg-[#F8FAF5] rounded-xl border border-[#333]">
+                                <div className="p-3 space-y-3 text-[#333]">
 
-                                        <button
-                                            type="button"
-                                            onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
-                                            className="btn btn-xs bg-red-600 hover:bg-red-700 border-none text-white font-bold"
+                                    {/* Header */}
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-[#235E33]">
+                                        <CreditCard size={14} />
+                                        Payment Details
+                                    </div>
+
+                                    {/* Status + Paid */}
+                                    <div className="grid grid-cols-2 gap-2">
+                                        <select
+                                            className="select select-sm bg-white border border-[#333] text-[#333]"
+                                            value={paymentStatus}
+                                            onChange={(e) => handlePaymentStatusChange(e.target.value)}
                                         >
-                                            {manualPaymentOverride ? <X size={12} /> : <Edit size={12} />}
-                                            {manualPaymentOverride ? "Cancel" : "Edit"}
-                                        </button>
+                                            <option value="unpaid">Unpaid</option>
+                                            <option value="partial">Partial</option>
+                                            <option value="paid">Paid</option>
+                                        </select>
+
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            className="input input-sm bg-white border border-[#333] text-[#333] font-mono"
+                                            value={paidAmount}
+                                            onChange={(e) => handlePaidAmountChange(e.target.value)}
+                                            // disabled={!manualPaymentOverride && paymentStatus === "unpaid"}
+                                            placeholder="Paid"
+                                            min={0}
+                                            max={grandTotal}
+                                        />
                                     </div>
 
-                                    <div className="space-y-4">
-                                        {/* Payment Status Dropdown */}
-                                        <div className="form-control">
-                                            <label className="label py-0">
-                                                <span className="label-text text-sm text-gray-300">Payment Status *</span>
-                                            </label>
-                                            <select
-                                                className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
-                                                value={paymentStatus}
-                                                onChange={(e) => handlePaymentStatusChange(e.target.value)}
-                                            >
-                                                <option value="unpaid">Unpaid</option>
-                                                <option value="partial">Partial</option>
-                                                <option value="paid">Paid</option>
-                                            </select>
-                                        </div>
+                                    {/* Account */}
+                                    <div className="space-y-1">
+                                        <label className="text-[11px] text-[#333]">
+                                            Payment Account
+                                        </label>
 
-                                        {/* Account Selection */}
-                                        <div className="form-control">
-                                            <label className="label py-0">
-                                                <span className="label-text text-sm text-gray-300">Payment Account *</span>
-                                            </label>
-                                            <select
-                                                className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
-                                                value={selectedAccount}
-                                                onChange={(e) => setSelectedAccount(e.target.value)}
-                                                required={paymentStatus !== "unpaid"}
-                                                disabled={isAccountDisabled}
-                                            >
-                                                <option value="">Select Account</option>
-                                                {accounts.map((account) => (
-                                                    <option key={account.id} value={account.id}>
-                                                        {account.name} — ৳{formatCurrency(account.current_balance)}
-                                                    </option>
-                                                ))}
-                                            </select>
-                                            {isAccountDisabled && (
-                                                <div className="text-xs text-gray-400 mt-1">
-                                                    Account selection is disabled for unpaid status
-                                                </div>
-                                            )}
-                                        </div>
+                                        <select
+                                            className="select select-sm bg-white border border-[#333] text-[#333]"
+                                            value={selectedAccount}
+                                            onChange={(e) => setSelectedAccount(e.target.value)}
+                                            disabled={isAccountDisabled}
+                                        >
+                                            <option value="">Select account</option>
+                                            {accounts.map((a) => (
+                                                <option key={a.id} value={a.id}>
+                                                    {a.name} — ৳{formatCurrency(a.current_balance)}
+                                                </option>
+                                            ))}
+                                        </select>
 
-                                        {/* Selected Account Info */}
-                                        {selectedAccountObj && !isAccountDisabled && (
-                                            <div className="p-3 bg-gray-800 rounded-lg border border-gray-700">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
-                                                        {getAccountIcon(selectedAccountObj.type)}
-                                                        <span className="font-medium">{selectedAccountObj.name}</span>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="text-xs text-gray-400">Balance</div>
-                                                        <div className="text-sm font-bold">
-                                                            ৳{formatCurrency(selectedAccountObj.current_balance)}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Paid Amount Input */}
-                                        <div className="form-control">
-                                            <label className="label py-0">
-                                                <span className="label-text text-sm text-gray-300">Paid Amount</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="input input-bordered w-full bg-gray-800 border-gray-700"
-                                                value={paidAmount}
-                                                onChange={(e) => handlePaidAmountChange(e.target.value)}
-                                                disabled={!manualPaymentOverride && paymentStatus === "unpaid"}
-                                                min={0}
-                                                max={grandTotal}
-                                            />
-                                        </div>
-
-                                        {/* Payment Summary */}
-                                        <div className="space-y-2 pt-3 border-t border-gray-700">
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-300">Grand Total:</span>
-                                                <span className="font-bold">৳{formatCurrency(grandTotal)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-300">Paid Amount:</span>
-                                                <span className="font-bold text-green-400">৳{formatCurrency(paidAmount)}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className="text-sm text-gray-300">Due Amount:</span>
-                                                <span className="font-bold text-red-400">৳{formatCurrency(dueAmount)}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Partial Payment Indicator */}
-                                        {paymentStatus === "partial" && (
-                                            <div className="mt-3 p-2 bg-yellow-900/30 border border-yellow-700 rounded-lg">
-                                                <div className="flex items-center justify-center">
-                                                    <span className="text-yellow-300 text-sm font-medium">Partial Payment Active</span>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Unpaid Status Indicator */}
-                                        {paymentStatus === "unpaid" && (
-                                            <div className="mt-3 p-2 bg-red-900/30 border border-red-700 rounded-lg">
-                                                <div className="flex items-center justify-center">
-                                                    <span className="text-red-300 text-sm font-medium">Unpaid - No Account Required</span>
-                                                </div>
-                                            </div>
+                                        {isAccountDisabled && (
+                                            <p className="text-[11px] text-gray-600">
+                                                Disabled for unpaid
+                                            </p>
                                         )}
                                     </div>
+
+                                    {/* Selected Account */}
+                                    {selectedAccountObj && !isAccountDisabled && (
+                                        <div className="flex justify-between items-center text-xs bg-white p-2 rounded border border-[#333]">
+                                            <span className="flex items-center gap-1">
+                                                {getAccountIcon(selectedAccountObj.type)}
+                                                {selectedAccountObj.name}
+                                            </span>
+                                            <span className="font-mono">
+                                                ৳{formatCurrency(selectedAccountObj.current_balance)}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    {/* Totals */}
+                                    <div className="pt-2 border-t border-[#333] text-xs space-y-1">
+                                        <div className="flex justify-between">
+                                            <span>Total</span>
+                                            <span>৳{formatCurrency(grandTotal)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-green-600">
+                                            <span>Paid</span>
+                                            <span>৳{formatCurrency(paidAmount)}</span>
+                                        </div>
+                                        <div className="flex justify-between text-red-600 font-semibold">
+                                            <span>Due</span>
+                                            <span>৳{formatCurrency(dueAmount)}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Status hint */}
+                                    {paymentStatus !== "paid" && (
+                                        <div className="text-center text-[11px] text-gray-600">
+                                            {paymentStatus === "partial" && "Partial payment active"}
+                                            {paymentStatus === "unpaid" && "No account required"}
+                                        </div>
+                                    )}
+
                                 </div>
                             </div>
+
+
 
                             {/* Action Buttons */}
                             <div className="space-y-3">
@@ -1128,7 +1099,7 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                 onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                                             />
 
-                                        
+
                                         </div>
 
 
@@ -1150,8 +1121,8 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                                                         }}
                                                     />
                                                 ) : (
-                                                     <img
-                                                        src= "/media/uploads/logo.png"
+                                                    <img
+                                                        src="/media/uploads/logo.png"
                                                         alt={p.name}
                                                         className="h-full w-full object-contain p-3"
                                                         onError={(e) => {
@@ -1427,6 +1398,6 @@ export default function AddSale({ customers = [], productstocks = [], suppliers 
                 </div>
             )}
         </div>
-        
+
     );
 }
