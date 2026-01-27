@@ -14,98 +14,223 @@ use App\Models\SalesReturn;
 use App\Models\SalesReturnItem;
 use App\Models\Stock;
 use App\Models\StockMovement;
-use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Str;
-use Illuminate\Support\Facades\Log;
-
 
 class SalesReturnController extends Controller
 {
-
-
-    //  index function
-    public function index()
+    // ইউনিট কনভার্সন ফ্যাক্টর
+    private function getUnitConversions()
     {
-        $salesReturns = SalesReturn::with([
+        return [
+            'weight' => [
+                'ton' => 1000,
+                'kg' => 1,
+                'gram' => 0.001,
+                'pound' => 0.453592
+            ],
+            'volume' => [
+                'liter' => 1,
+                'ml' => 0.001
+            ],
+            'piece' => [
+                'piece' => 1,
+                'dozen' => 12,
+                'box' => 1
+            ],
+            'length' => [
+                'meter' => 1,
+                'cm' => 0.01,
+                'mm' => 0.001
+            ]
+        ];
+    }
+
+    // কনভার্ট টু বেস ইউনিট
+    private function convertToBase($quantity, $fromUnit, $unitType)
+    {
+        $conversions = $this->getUnitConversions();
+        
+        if (!isset($conversions[$unitType][$fromUnit])) {
+            return $quantity;
+        }
+        
+        return $quantity * $conversions[$unitType][$fromUnit];
+    }
+
+    // কনভার্ট ফ্রম বেস ইউনিট
+    private function convertFromBase($quantity, $toUnit, $unitType)
+    {
+        $conversions = $this->getUnitConversions();
+        
+        if (!isset($conversions[$unitType][$toUnit])) {
+            return $quantity;
+        }
+        
+        $conversion = $conversions[$unitType][$toUnit];
+        return $conversion != 0 ? $quantity / $conversion : $quantity;
+    }
+
+    // ইনডেক্স ফাংশন
+    public function index(Request $request)
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $query = SalesReturn::with([
             'sale.customer',
             'customer',
             'sale.items.product',
             'sale.items.variant',
-        ])
-            ->search(request('search'))
-            ->status(request('status'))
-            ->dateBetween(request('from_date'), request('to_date'))
-            ->type(request('type'))
-            ->orderByDesc('created_at')
+        ]);
+
+        // সার্চ ফিল্টার
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('return_no', 'like', '%' . $request->search . '%')
+                    ->orWhereHas('sale', function ($q) use ($request) {
+                        $q->where('invoice_no', 'like', '%' . $request->search . '%');
+                    })
+                    ->orWhereHas('customer', function ($q) use ($request) {
+                        $q->where('customer_name', 'like', '%' . $request->search . '%')
+                            ->orWhere('phone', 'like', '%' . $request->search . '%');
+                    });
+            });
+        }
+
+        // স্ট্যাটাস ফিল্টার
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        // তারিখ ফিল্টার
+        if ($request->filled('date_from') && $request->filled('date_to')) {
+            $query->whereBetween('return_date', [
+                $request->date_from,
+                $request->date_to
+            ]);
+        }
+
+        // টাইপ ফিল্টার
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        $salesReturns = $query->orderBy('created_at', 'desc')
             ->paginate(15);
+
+        // শ্যাডো ইউজারের জন্য ডেটা ট্রান্সফর্ম
+        if ($isShadowUser) {
+            $salesReturns->getCollection()->transform(function ($return) {
+                return $this->transformToShadowData($return);
+            });
+        }
 
         return Inertia::render('SalesReturn/Index', [
             'salesReturns' => $salesReturns,
+            'filters' => $request->only(['search', 'status', 'date_from', 'date_to', 'type'])
         ]);
     }
 
-
-
-    // create a function salesReturnCreate to show sales return create page
+    // ক্রিয়েট পেজ
     public function create(Request $request)
     {
-        $saleId = $request->sale_id;
+        $saleId = $request->query('sale_id');
         $sale = null;
         $saleItems = [];
 
         if ($saleId) {
+            $sale = Sale::with([
+                'items.product',
+                'items.variant',
+                'customer',
+                'items.stock'
+            ])->findOrFail($saleId);
 
-            $sale = Sale::with(['items.product', 'items.variant', 'customer', 'items.warehouse'])
-                    ->whereHas('items', function ($query) {
-                        $query->whereNotNull('product_id');
-                    })
-                    ->findOrFail($saleId);
-
-
+            // শুধু ইনভেন্টরি আইটেমগুলো নিন (পিকআপ আইটেম নয়)
             foreach ($sale->items as $item) {
-
-                if (is_null($item->product_id)) {
+                if (is_null($item->product_id) || $item->item_type === 'pickup') {
                     continue;
                 }
 
-                $saleItems[] = [
-                    'id' => $item->id,
-                    'product_id' => $item->product_id ?? null,
-                    'product_name' => $item->product->name ?? $item->product_name,
-                    'product_code' => $item->product->product_no ?? $item->product_name,
-                    'variant_id' => $item->variant_id ?? null,
-                    'brand_name' => $this->getBrandName($item->variant) ?? $item->brand,
-                    'variant_name' => $this->getVariantDisplayName($item->variant) ?? $item->variant_name,
-                    'stock_quantity' => $item->stock->quantity ?? 0,
-                    'max_quantity' =>  max($item->quantity, $item->stock->quantity ?? 0),
-                    'unit_price' => $item->unit_price,
-                    'shadow_unit_price' => $item->shadow_unit_price,
-                    'sale_price' =>  $item->unit_price,
-                    'batch_no' => $item->stock->batch_no,
-                    'shadow_sale_price' => $item->shadow_sale_price,
-                    'sale_quantity' => $item->quantity ?? 0,
-                    'total_price' => $item->total_price,
-                    'shadow_total_price' => $item->shadow_total_price,
-                    'discount' => $item->discount_amount ?? 0
-                ];
+                // ইউনিট কনভার্সন জন্য প্রোডাক্ট ডিটেইলস
+                $product = $item->product;
+                $unitType = $product->unit_type ?? 'piece';
+                $availableUnits = $this->getAvailableSaleUnits($product);
+
+                // স্টক ক্যালকুলেশন (ইউনিট কনভার্সন সহ)
+                $stock = $item->stock;
+                $availableStock = 0;
+                $availableBaseStock = 0;
+
+                if ($stock) {
+                    // বেস ইউনিটে কনভার্ট করে স্টক চেক করুন
+                    $availableBaseStock = $stock->base_quantity ?? $stock->quantity;
+                    
+                    // আইটেমের ইউনিটে কনভার্ট করুন
+                    if ($item->unit && $item->unit !== $stock->unit) {
+                        $availableStock = $this->convertFromBase(
+                            $availableBaseStock,
+                            $item->unit,
+                            $unitType
+                        );
+                    } else {
+                        $availableStock = $availableBaseStock;
+                    }
+                }
+
+                // ইতিমধ্যে রিটার্ন করা পরিমাণ
+                $alreadyReturned = SalesReturnItem::where('sale_item_id', $item->id)
+                    ->where('status', 'completed')
+                    ->sum('return_quantity');
+
+                // সর্বোচ্চ রিটার্ন করতে পারবে
+                $maxQuantity = max(0, $item->quantity - $alreadyReturned);
+                $maxQuantity = min($maxQuantity, $availableStock);
+
+                if ($maxQuantity > 0) {
+                    $saleItems[] = [
+                        'id' => $item->id,
+                        'sale_item_id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'product_name' => $item->product->name,
+                        'product_code' => $item->product->product_no,
+                        'variant_id' => $item->variant_id,
+                        'variant_name' => $this->getVariantDisplayName($item->variant),
+                        'brand_name' => $item->product->brand->name ?? 'No Brand',
+                        'max_quantity' => $maxQuantity,
+                        'unit' => $item->unit ?? 'piece',
+                        'available_units' => $availableUnits,
+                        'unit_price' => $item->unit_price,
+                        'shadow_unit_price' => $item->shadow_unit_price,
+                        'sale_price' => $item->unit_price, // বিক্রয় মূল্য
+                        'shadow_sale_price' => $item->shadow_unit_price,
+                        'sale_quantity' => $item->quantity,
+                        'total_price' => $item->total_price,
+                        'shadow_total_price' => $item->shadow_total_price,
+                        'stock_quantity' => $availableStock,
+                        'base_stock_quantity' => $availableBaseStock,
+                        'already_returned' => $alreadyReturned,
+                        'warehouse_id' => $item->warehouse_id
+                    ];
+                }
             }
         }
 
+        // সাম্প্রতিক বিক্রয়গুলো (ইনভেন্টরি শুধু)
         $recentSales = Sale::with(['customer'])
             ->whereHas('items', function ($query) {
-                $query->where('type', 'inventory')
+                $query->where('item_type', 'real')
                     ->whereNotNull('product_id');
             })
-            ->whereDate('created_at', '>=', now()->subDays(7))
+            ->whereDate('created_at', '>=', now()->subDays(30))
             ->orderBy('created_at', 'desc')
-            // ->take(20)
+            ->limit(20)
             ->get();
-
 
         return Inertia::render('SalesReturn/Create', [
             'sale' => $sale,
@@ -113,293 +238,585 @@ class SalesReturnController extends Controller
             'sales' => $recentSales,
             'accounts' => Account::where('is_active', true)->get(),
             'customers' => Customer::all(),
-            'warehouses' => Warehouse::where('is_active', true)->get(),
-            'products' => Product::with('variants')->get()
+            'products' => Product::with(['variants', 'brand'])->get(),
+            'unitConversions' => $this->getUnitConversions()
         ]);
     }
 
-
-
-
+    // ভেরিয়েন্ট ডিসপ্লে নাম
     private function getVariantDisplayName($variant)
     {
-        if (is_null($variant)) {
-            return 'Default Variant';
-        }
+        if (!$variant) return 'Default Variant';
 
         $parts = [];
 
-        if (!empty($variant->attribute_values)) {
-            if (is_array($variant->attribute_values)) {
-                $attrs = collect($variant->attribute_values)
-                    ->map(fn($value) => " {$value}")
-                    ->implode(', ');
-                $parts[] = " {$attrs}";
-            } else {
-                $parts[] = "Attribute: {$variant->attribute_values}";
+        if ($variant->attribute_values && is_array($variant->attribute_values)) {
+            foreach ($variant->attribute_values as $key => $value) {
+                $parts[] = "$key: $value";
             }
         }
 
-        // sku
-        if (!empty($variant->sku)) {
-            $parts[] = "Sku: {$variant->sku}";
+        if ($variant->sku) {
+            $parts[] = "SKU: {$variant->sku}";
         }
 
         return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
     }
 
-
-
-    //brand name function
-    private function getBrandName($variant)
+    // উপলব্ধ বিক্রয় ইউনিট
+    private function getAvailableSaleUnits($product)
     {
-        if (is_null($variant)) {
-            return 'Default Variant';
+        $unitType = $product->unit_type ?? 'piece';
+        $conversions = $this->getUnitConversions();
+        
+        if (!isset($conversions[$unitType])) {
+            return [$product->default_unit ?? 'piece'];
         }
-
-        $parts = [];
-
-        if (!empty($variant->attribute_values)) {
-            if (is_array($variant->attribute_values)) {
-                $attrs = collect($variant->attribute_values)
-                    ->keys()
-                    ->map(fn($key) => "{$key}")
-                    ->implode(', ');
-                $parts[] = " {$attrs}";
+        
+        // পুচ্ছেজ ইউনিট (ডিফল্ট ইউনিট)
+        $purchaseUnit = $product->default_unit ?? 'piece';
+        $purchaseFactor = $conversions[$unitType][$purchaseUnit] ?? 1;
+        
+        // ছোট বা সমান ইউনিটগুলো
+        $available = [];
+        foreach ($conversions[$unitType] as $unit => $factor) {
+            if ($factor <= $purchaseFactor) {
+                $available[] = $unit;
             }
         }
-
-        return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
+        
+        // সর্ট করুন (ছোট থেকে বড়)
+        usort($available, function($a, $b) use ($conversions, $unitType) {
+            return ($conversions[$unitType][$a] ?? 0) <=> ($conversions[$unitType][$b] ?? 0);
+        });
+        
+        return $available;
     }
 
-
-
-
-
-    // create a function salesReturnIndex to show sales return index page
-
+    // স্টোর ফাংশন (ইউনিট কনভার্সন সহ)
     public function store(SalesReturnStore $request)
     {
 
-        $validated = $request->validated();
+        $request->validated();
 
-        if (SalesReturn::orWhere('sale_id', $request->sale_id)->exists()) {
-            return back()->withErrors(['error' => 'Sales return for this sale already exists.']);
-        }
 
-        $request->is_damaged ? $type = 'damaged' : $type = 'sale_return';
-        $account = Account::find($request->account_id);
-
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-            $stock = SaleItem::where('sale_id', $request->sale_id)->first();
-            $customer_id = Sale::where('id', $request->sale_id)->value('customer_id');
+            // রিটার্ন নম্বর জেনারেট
+            $returnCount = SalesReturn::whereDate('created_at', today())->count();
+            $returnNo = 'SRT-' . date('Ymd') . '-' . str_pad($returnCount + 1, 4, '0', STR_PAD_LEFT);
 
+            $sale = Sale::with(['customer', 'items'])->findOrFail($request->sale_id);
+            $isDamaged = $request->input('is_damaged', false);
+            $type = $isDamaged ? 'damaged' : 'sale_return';
 
+            // কাস্টমার ডেটা
+            $customerId = $sale->customer_id;
+            $customer = $sale->customer;
+
+            // টোটাল রিটার্ন ভ্যালু ক্যালকুলেট
+            $totalReturnValue = 0;
+            $shadowTotalReturnValue = 0;
+
+            foreach ($request->items as $itemData) {
+                $saleItem = SaleItem::with(['product', 'variant'])->findOrFail($itemData['sale_item_id']);
+                
+                $quantity = $itemData['return_quantity'];
+                $unit = $itemData['unit'];
+                
+                // প্রোডাক্ট ইউনিট টাইপ
+                $product = $saleItem->product;
+                $unitType = $product->unit_type ?? 'piece';
+                
+                // ইউনিট ভ্যালিডেশন
+                $availableUnits = $this->getAvailableSaleUnits($product);
+                if (!in_array($unit, $availableUnits)) {
+                    throw new \Exception("Invalid unit {$unit} for product {$product->name}. Allowed units: " . implode(', ', $availableUnits));
+                }
+                
+                // বেস ইউনিটে কনভার্ট
+                $baseQuantity = $this->convertToBase($quantity, $unit, $unitType);
+                
+                // টোটাল ক্যালকুলেট
+                $totalReturnValue += $quantity * $saleItem->unit_price;
+                $shadowTotalReturnValue += $quantity * $saleItem->shadow_unit_price;
+            }
+
+            // রিপ্লেসমেন্ট টোটাল
+            $replacementTotal = 0;
+            $shadowReplacementTotal = 0;
+            
+            if ($request->return_type === 'product_replacement' && !empty($request->replacement_products)) {
+                foreach ($request->replacement_products as $replacement) {
+                    $quantity = $replacement['quantity'] ?? 1;
+                    $salePrice = $replacement['sale_price'] ?? 0;
+                    $shadowSalePrice = $replacement['shadow_sale_price'] ?? $salePrice;
+                    
+                    $replacementTotal += $quantity * $salePrice;
+                    $shadowReplacementTotal += $quantity * $shadowSalePrice;
+                }
+            }
+
+            // রিফান্ড আমাউন্ট
+            $refundedAmount = $request->refunded_amount ?? 0;
+            $shadowRefundedAmount = $request->shadow_refunded_amount ?? 0;
+            
+            if ($request->return_type === 'money_back') {
+                $refundedAmount = $totalReturnValue;
+                $shadowRefundedAmount = $shadowTotalReturnValue;
+            }
+
+            // সেলস রিটার্ন ক্রিয়েট
             $salesReturn = SalesReturn::create([
-                'sale_id' => $request->sale_id ,
-                'customer_id' => $customer_id,
-                'return_type' => $validated['return_type'],
-                'return_date' => Carbon::parse($validated['return_date'])->format('Y-m-d'),
-                'reason' => $validated['reason'],
-                'notes' => $validated['notes'] ?? null,
-                'refunded_amount' => $validated['refunded_amount'] ?? 0,
-                'shadow_refunded_amount' => $validated['shadow_refunded_amount'] ?? 0,
-                'shadow_replacement_total' => 0,
-                'replacement_total' => 0,
-                'status' => 'completed',
+                'return_no' => $returnNo,
+                'sale_id' => $request->sale_id,
+                'customer_id' => $customerId,
+                'return_type' => $request->return_type,
+                'return_date' => $request->return_date,
+                'reason' => $request->reason,
+                'notes' => $request->notes,
+                'refunded_amount' => $refundedAmount,
+                'shadow_refunded_amount' => $shadowRefundedAmount,
+                'replacement_total' => $replacementTotal,
+                'shadow_replacement_total' => $shadowReplacementTotal,
+                'total_return_value' => $totalReturnValue,
+                'shadow_total_return_value' => $shadowTotalReturnValue,
+                'status' => 'pending',
                 'type' => $type,
-                'created_by' => Auth::id(),
+                'created_by' => Auth::id()
             ]);
 
-
-
-            // money refund process
-            if (count($request->replacement_products) == 0) {
-
-                if ($type == 'sale_return') {
-                    foreach ($validated['items'] as $itemData) {
-
-                        $saleItem = SaleItem::where('id', $itemData['sale_item_id'])->firstOrFail();
-
-                        $stock = Stock::where('warehouse_id', $saleItem->warehouse_id)
-                            ->where('product_id', $saleItem->product_id)
-                            ->where('variant_id', $saleItem->variant_id)
-                            ->first();
-
-                        if ($stock) {
-                            $stock->quantity += $itemData['return_quantity'];
-                            $stock->save();
-                        }
-                    }
-
-                    $details = 'Refund issued to customer for sales return.';
-                }
-
-                $expense = Expense::create([
-                    'amount' => $validated['refunded_amount'] ?? 0,
-                    'sh_amount' => $validated['shadow_refunded_amount'] ?? 0,
-                    'date' => Carbon::parse($validated['return_date'])->format('Y-m-d') ?? Carbon::now()->format('Y-m-d'),
-                    'details' =>  $details ?? 'Refund issued to customer for sales product damage.',
-                    'created_by' => Auth::id(),
-                    'payment_id' => null
+            // আইটেমস প্রসেস
+            foreach ($request->items as $itemData) {
+                $saleItem = SaleItem::with(['product', 'variant', 'stock'])->findOrFail($itemData['sale_item_id']);
+                
+                $quantity = $itemData['return_quantity'];
+                $unit = $itemData['unit'];
+                $product = $saleItem->product;
+                $unitType = $product->unit_type ?? 'piece';
+                
+                // বেস ইউনিটে কনভার্ট
+                $baseQuantity = $this->convertToBase($quantity, $unit, $unitType);
+                
+                // সেলস রিটার্ন আইটেম ক্রিয়েট
+                SalesReturnItem::create([
+                    'sales_return_id' => $salesReturn->id,
+                    'sale_item_id' => $saleItem->id,
+                    'product_id' => $saleItem->product_id,
+                    'variant_id' => $saleItem->variant_id,
+                    'warehouse_id' => $saleItem->warehouse_id,
+                    'return_quantity' => $quantity,
+                    'base_return_quantity' => $baseQuantity,
+                    'unit' => $unit,
+                    'unit_price' => $saleItem->unit_price,
+                    'shadow_unit_price' => $saleItem->shadow_unit_price,
+                    'sale_price' => $saleItem->unit_price,
+                    'shadow_sale_price' => $saleItem->shadow_unit_price,
+                    'total_price' => $quantity * $saleItem->unit_price,
+                    'shadow_total_price' => $quantity * $saleItem->shadow_unit_price,
+                    'status' => 'pending',
+                    'reason' => $itemData['reason'] ?? $request->reason ?? 'reason not provided',
+                    'created_by' => Auth::id()
                 ]);
-
-                if ($account) {
-
-                    $account->updateBalance($validated['refunded_amount'] ?? 0, 'withdraw');
-
-                    $payment = Payment::create([
-                        'account_id' => $account->id,
-                        'amount' =>   $validated['refunded_amount'] * (-1) ?? 0,
-                        'note' =>  $request->notes ?? 'Refund issued to customer for sales product damage.',
-                        'created_by' => Auth::id(),
-                        'txn_ref' => 'EXP-' . Str::random(10),
-                        'payment_method' => $account->type,
-                        'paid_at' => Carbon::now(),
-                        'status' => 'completed',
-                    ]);
-
-                    $expense->update([
-                        'payment_id' => $payment->id
-                    ]);
-                }
             }
 
-
-            $totalReturn = 0;
-            $shadowTotalReturn = 0;
-
-            // Process returned items
-            foreach ($validated['items'] as $itemData) {
-                $saleItem = SaleItem::where('id', $itemData['sale_item_id'])
-                    ->where('sale_id', $validated['sale_id'])
-                    ->firstOrFail();
-
-                $totalReturn += $saleItem['unit_price'] * $itemData['return_quantity'];
-                $shadowTotalReturn += $saleItem['unit_price'] * $itemData['return_quantity'];
-            }
-
-
-            if ($validated['return_type'] === 'product_replacement' && !empty($validated['replacement_products'])) {
-
-                $replacementTotal = 0;
-                $shadowReplacementTotal = 0;
-
-                foreach ($validated['replacement_products'] as $productData) {
-
-                    if ($type == 'damaged') {
-                        $stock = Stock::where('warehouse_id',  $stock->warehouse_id)
-                            ->where('product_id', $productData['product_id'])
-                            ->where('variant_id', $productData['variant_id'])
-                            ->firstOrFail();
-
-
-                        $stock->quantity -= $productData['quantity'];
-                        $stock->save();
-
-                        Expense::create([
-                            'amount' => $productData['sale_price'] * $productData['quantity'] ?? 0,
-                            'sh_amount' => $productData['sale_price'] * $productData['quantity'] ?? 0,
-                            'date' => Carbon::parse($validated['return_date'])->format('Y-m-d'),
-                            'details' =>  $details ?? 'Replacement product issued to customer for sales product damage.',
-                            'created_by' => Auth::id(),
-                        ]);
+            // রিপ্লেসমেন্ট প্রোডাক্টস
+            if ($request->return_type === 'product_replacement' && !empty($request->replacement_products)) {
+                foreach ($request->replacement_products as $replacement) {
+                    $product = Product::with('variants')->findOrFail($replacement['product_id']);
+                    $variant = $product->variants()->find($replacement['variant_id']);
+                    
+                    $quantity = $replacement['quantity'] ?? 1;
+                    $unit = $replacement['unit'];
+                    $unitType = $product->unit_type ?? 'piece';
+                    
+                    // ইউনিট ভ্যালিডেশন
+                    $availableUnits = $this->getAvailableSaleUnits($product);
+                    if (!in_array($unit, $availableUnits)) {
+                        throw new \Exception("Invalid unit {$unit} for replacement product {$product->name}");
                     }
+                    
+                    // বেস ইউনিটে কনভার্ট
+                    $baseQuantity = $this->convertToBase($quantity, $unit, $unitType);
+                    
+                    $salePrice = $replacement['sale_price'] ?? 0;
+                    $shadowSalePrice = $replacement['shadow_sale_price'] ?? $salePrice;
+                    $unitPrice = $replacement['unit_price'] ?? $salePrice;
+                    $shadowUnitPrice = $replacement['shadow_unit_price'] ?? $shadowSalePrice;
 
-                    $replacementItem = SalesReturnItem::create([
+                    // রিপ্লেসমেন্ট আইটেম ক্রিয়েট
+                    SalesReturnItem::create([
                         'sales_return_id' => $salesReturn->id,
-                        'sale_item_id' => $validated['sale_id'],
-                        'product_id' => $productData['product_id'],
-                        'variant_id' => $productData['variant_id'],
-                        'warehouse_id' => $stock->warehouse_id,
-                        'return_quantity' => $productData['quantity'],
-                        'unit_price' => $productData['sale_price'],
-                        'shadow_unit_price' => $productData['shadow_unit_price'] ?? $productData['sale_price'],
-                        'sale_price' => $productData['sale_price'],
-                        'shadow_sale_price' => $productData['shadow_sale_price'] ?? $productData['sale_price'],
-                        'total_price' => $productData['quantity'] * $productData['sale_price'],
-                        'shadow_total_price' => $productData['quantity'] * ($productData['shadow_unit_price'] ?? $productData['unit_price']),
-                        'status' => 'processed',
-                        'type' => $type,
-                        'reason' => $productData['reason'] ?? 'Product replacement',
-                        'created_by' => Auth::id(),
+                        'sale_item_id' => null,
+                        'product_id' => $product->id,
+                        'variant_id' => $variant->id ?? null,
+                        'warehouse_id' => $sale->warehouse_id ?? null,
+                        'return_quantity' => $quantity,
+                        'base_return_quantity' => $baseQuantity,
+                        'unit' => $unit,
+                        'unit_price' => $unitPrice,
+                        'shadow_unit_price' => $shadowUnitPrice,
+                        'sale_price' => $salePrice,
+                        'shadow_sale_price' => $shadowSalePrice,
+                        'total_price' => $quantity * $unitPrice,
+                        'shadow_total_price' => $quantity * $shadowUnitPrice,
+                        'status' => 'pending',
+                        'reason' => 'Replacement product',
+                        'is_replacement' => true,
+                        'created_by' => Auth::id()
                     ]);
-
-
-                    StockMovement::create([
-                        'warehouse_id' =>   $stock->warehouse_id,
-                        'product_id' =>  $stock->product_id,
-                        'variant_id' =>  $stock->variant_id ?? null,
-                        'type' => $type,
-                        'qty' => $productData['quantity'],
-                        'reason' => 'Product replacement for sales return ID: ' . $salesReturn->id,
-                        'created_by' => Auth::id(),
-                        'reference_type' => SalesReturn::class ?? null,
-                        'reference_id' => $salesReturn->id ?? null,
-                    ]);
-
-
-                    $replacementTotal += $replacementItem->sale_price * $replacementItem->return_quantity;
-                    $shadowReplacementTotal += $replacementItem->sale_price * $replacementItem->return_quantity;
-                }
-
-
-                if ($replacementTotal >  $totalReturn) {
-
-                    $amount =  $replacementTotal -  $totalReturn;
-
-                    if ($account) {
-
-                        $account->updateBalance($amount ?? 0, 'credit');
-
-                        Payment::create([
-                            'customer_id' => $customer_id,
-                            'sale_id' => $validated['sale_id'],
-                            'amount' => $amount,
-                            'shadow_amount' => 0,
-                            'txn_ref' => 'adjustment-' . Str::random(8),
-                            'date' => Carbon::parse($validated['return_date']),
-                            'payment_method' => $validated['payment_type'] ?? 'cash',
-                            'created_by' => Auth::id(),
-                            'paid_at' => Carbon::parse($validated['return_date']),
-                            'status' => 'completed',
-                            'note' => 'Payment for product replacement or damage exceeding return amount in sales return ID: ' . $salesReturn->id,
-                        ]);
-                    }
                 }
             }
 
-
-
-            $salesReturn->update([
-                'replacement_total' => $replacementTotal ?? 0,
-                'shadow_replacement_total' => $shadowReplacementTotal ?? 0,
-                'return_quantity' => $itemData['return_quantity'] ?? 0,
-                'refunded_amount' => $totalReturn,
-                'shadow_refunded_amount' => $shadowTotalReturn,
-            ]);
-
-
-
-            $sale = Sale::where('id', $request->input('sale_id'))->first();
-
-            $totalReturnedItems = SalesReturn::whereIn('sale_id', $sale->items->pluck('id'))->sum('return_quantity');
-            $totalSoldItems = $sale->items->sum('quantity');
-
-            if ($totalReturnedItems >= $totalSoldItems) {
-                $sale->update(['status' => 'fully_returned']);
-            } elseif ($totalReturnedItems > 0) {
-                $sale->update(['status' => 'partially_returned']);
+            if ($request->input('auto_approve', false)) {
+                $this->approve($salesReturn, $request == null);
             }
-
 
             DB::commit();
 
-            return to_route('salesReturn.list')->with('success', 'Sales return created successfully.');
+            return to_route('salesReturn.list')
+                ->with('success', 'Sales return created successfully. Awaiting approval.');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Failed to create sales return: ' . $e->getMessage());
+            return redirect()->back();
+        }
+    }
+
+    // রিটার্ন এপ্রুভ
+    public function approve($id)
+    {
+        DB::beginTransaction();
+        try {
+            $salesReturn = SalesReturn::with([
+                'items.saleItem',
+                'items.product',
+                'sale.customer'
+            ])->findOrFail($id);
+
+            if ($salesReturn->status !== 'pending') {
+                throw new \Exception('This return cannot be approved.');
+            }
+
+            $customer = $salesReturn->sale->customer;
+
+            // রিটার্ন আইটেমস প্রসেস
+            foreach ($salesReturn->items as $item) {
+                if ($item->is_replacement) {
+                    // রিপ্লেসমেন্ট: স্টক ডিক্রিজ
+                    $this->processReplacementItem($item);
+                } else {
+                    // রিটার্ন: স্টক ইনক্রিজ
+                    $this->processReturnItem($item);
+                }
+                
+                $item->update(['status' => 'completed']);
+            }
+
+            // ফাইনান্সিয়াল প্রসেস
+            $this->processFinancials($salesReturn, $customer);
+
+            // স্ট্যাটাস আপডেট
+            $salesReturn->update(['status' => 'completed']);
+
+            // সেল স্ট্যাটাস আপডেট
+            $this->updateSaleStatus($salesReturn->sale_id);
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Sales return approved successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back();
+        }
+    }
+
+    // রিটার্ন আইটেম প্রসেস
+    private function processReturnItem($item)
+    {
+        $saleItem = $item->saleItem;
+        $product = $item->product;
+        $unitType = $product->unit_type ?? 'piece';
+        
+        // বেস ইউনিটে কনভার্ট
+        $baseQuantity = $this->convertToBase(
+            $item->return_quantity,
+            $item->unit,
+            $unitType
+        );
+
+        // স্টক খুঁজুন
+        $stock = Stock::where('warehouse_id', $item->warehouse_id)
+            ->where('product_id', $item->product_id)
+            ->where('variant_id', $item->variant_id)
+            ->first();
+
+        if ($stock) {
+            // স্টক আপডেট
+            $stock->increment('quantity', $item->return_quantity);
+            $stock->increment('base_quantity', $baseQuantity);
+        } else {
+            // নতুন স্টক ক্রিয়েট
+            Stock::create([
+                'warehouse_id' => $item->warehouse_id,
+                'product_id' => $item->product_id,
+                'variant_id' => $item->variant_id,
+                'quantity' => $item->return_quantity,
+                'base_quantity' => $baseQuantity,
+                'unit' => $item->unit,
+                'sale_price' => $item->sale_price,
+                'shadow_sale_price' => $item->shadow_sale_price,
+                'batch_no' => 'RTN-' . $item->sales_return_id . '-' . Str::random(4),
+                'created_by' => Auth::id()
+            ]);
+        }
+
+        // স্টক মুভমেন্ট
+        StockMovement::create([
+            'warehouse_id' => $item->warehouse_id,
+            'product_id' => $item->product_id,
+            'variant_id' => $item->variant_id,
+            'type' => 'in',
+            'qty' => $baseQuantity,
+            'unit' => 'base',
+            'sale_unit' => $item->unit,
+            'reference_type' => 'App\\Models\\SalesReturn',
+            'reference_id' => $item->sales_return_id,
+            'notes' => 'Stock returned from sales return #' . $item->salesReturn->return_no,
+            'created_by' => Auth::id()
+        ]);
+    }
+
+    // রিপ্লেসমেন্ট আইটেম প্রসেস
+    private function processReplacementItem($item)
+    {
+        $product = $item->product;
+        $unitType = $product->unit_type ?? 'piece';
+        
+        // বেস ইউনিটে কনভার্ট
+        $baseQuantity = $this->convertToBase(
+            $item->return_quantity,
+            $item->unit,
+            $unitType
+        );
+
+        // স্টক খুঁজুন
+        $stock = Stock::where('warehouse_id', $item->warehouse_id)
+            ->where('product_id', $item->product_id)
+            ->where('variant_id', $item->variant_id)
+            ->first();
+
+        if ($stock) {
+            // স্টক ডিক্রিজ
+            if ($stock->quantity < $item->return_quantity) {
+                throw new \Exception('Insufficient stock for replacement product: ' . $product->name);
+            }
+            
+            $stock->decrement('quantity', $item->return_quantity);
+            $stock->decrement('base_quantity', $baseQuantity);
+        } else {
+            throw new \Exception('Stock not found for replacement product: ' . $product->name);
+        }
+
+        // স্টক মুভমেন্ট
+        StockMovement::create([
+            'warehouse_id' => $item->warehouse_id,
+            'product_id' => $item->product_id,
+            'variant_id' => $item->variant_id,
+            'type' => 'out',
+            'qty' => $baseQuantity,
+            'unit' => 'base',
+            'sale_unit' => $item->unit,
+            'reference_type' => 'App\\Models\\SalesReturn',
+            'reference_id' => $item->sales_return_id,
+            'notes' => 'Stock used for replacement in sales return #' . $item->salesReturn->return_no,
+            'created_by' => Auth::id()
+        ]);
+    }
+
+    // ফাইনান্সিয়াল প্রসেস
+    private function processFinancials($salesReturn, $customer)
+    {
+        // মানি ব্যাক রিটার্ন
+        if ($salesReturn->return_type === 'money_back') {
+            // রিফান্ড প্রসেস
+            if ($salesReturn->refunded_amount > 0) {
+                // কাস্টমার ডিউ আপডেট
+                if ($customer->due_amount > 0) {
+                    // ডিউ কমাতে হবে
+                    $deduction = min($salesReturn->refunded_amount, $customer->due_amount);
+                    $customer->decrement('due_amount', $deduction);
+                    
+                    // বাকি থাকলে অ্যাডভান্সে যোগ
+                    $remaining = $salesReturn->refunded_amount - $deduction;
+                    if ($remaining > 0) {
+                        $customer->increment('advance_amount', $remaining);
+                    }
+                } else {
+                    // সরাসরি অ্যাডভান্সে যোগ
+                    $customer->increment('advance_amount', $salesReturn->refunded_amount);
+                }
+                
+                $customer->save();
+                
+                // পেমেন্ট রেকর্ড
+                Payment::create([
+                    'sale_id' => $salesReturn->sale_id,
+                    'customer_id' => $customer->id,
+                    'amount' => $salesReturn->refunded_amount,
+                    'shadow_amount' => $salesReturn->shadow_refunded_amount,
+                    'payment_method' => $salesReturn->payment_type ?? 'cash',
+                    'txn_ref' => 'RFND-' . Str::random(10),
+                    'note' => 'Refund for sales return #' . $salesReturn->return_no,
+                    'paid_at' => Carbon::now(),
+                    'created_by' => Auth::id(),
+                    'type' => 'refund'
+                ]);
+            }
+        }
+        
+        // প্রোডাক্ট রিপ্লেসমেন্ট
+        if ($salesReturn->return_type === 'product_replacement') {
+            $netDifference = $salesReturn->replacement_total - $salesReturn->total_return_value;
+            
+            if ($netDifference > 0) {
+                // কাস্টমারকে অতিরিক্ত পেতে হবে
+                $customer->increment('due_amount', $netDifference);
+                $customer->save();
+                
+                Payment::create([
+                    'sale_id' => $salesReturn->sale_id,
+                    'customer_id' => $customer->id,
+                    'amount' => -$netDifference, // নেগেটিভ = কাস্টমার ডিউ
+                    'shadow_amount' => -($salesReturn->shadow_replacement_total - $salesReturn->shadow_total_return_value),
+                    'payment_method' => 'adjustment',
+                    'txn_ref' => 'ADJ-' . Str::random(10),
+                    'note' => 'Adjustment for replacement return #' . $salesReturn->return_no,
+                    'paid_at' => null, // এখনো পেইড নয়
+                    'created_by' => Auth::id(),
+                    'type' => 'due_adjustment',
+                    'status' => 'pending'
+                ]);
+            } elseif ($netDifference < 0) {
+                // আমরা রিফান্ড দিতে হবে
+                $refundAmount = abs($netDifference);
+                
+                if ($customer->due_amount > 0) {
+                    $deduction = min($refundAmount, $customer->due_amount);
+                    $customer->decrement('due_amount', $deduction);
+                    
+                    $remaining = $refundAmount - $deduction;
+                    if ($remaining > 0) {
+                        $customer->increment('advance_amount', $remaining);
+                    }
+                } else {
+                    $customer->increment('advance_amount', $refundAmount);
+                }
+                
+                $customer->save();
+                
+                Payment::create([
+                    'sale_id' => $salesReturn->sale_id,
+                    'customer_id' => $customer->id,
+                    'amount' => $refundAmount,
+                    'shadow_amount' => abs($salesReturn->shadow_replacement_total - $salesReturn->shadow_total_return_value),
+                    'payment_method' => 'adjustment',
+                    'txn_ref' => 'RFND-ADJ-' . Str::random(10),
+                    'note' => 'Refund adjustment for replacement return #' . $salesReturn->return_no,
+                    'paid_at' => Carbon::now(),
+                    'created_by' => Auth::id(),
+                    'type' => 'refund'
+                ]);
+            }
+        }
+    }
+
+    // সেল স্ট্যাটাস আপডেট
+    private function updateSaleStatus($saleId)
+    {
+        $sale = Sale::with('items')->find($saleId);
+        if (!$sale) return;
+
+        $totalSold = $sale->items->sum('quantity');
+        $totalReturned = SalesReturnItem::whereIn('sale_item_id', $sale->items->pluck('id'))
+            ->where('status', 'completed')
+            ->where('is_replacement', false)
+            ->sum('return_quantity');
+
+        if ($totalReturned >= $totalSold) {
+            $sale->status = 'fully_returned';
+        } elseif ($totalReturned > 0) {
+            $sale->status = 'partially_returned';
+        } else {
+            $sale->status = 'completed';
+        }
+
+        $sale->save();
+    }
+
+    // শ্যাডো ডেটা ট্রান্সফর্ম
+    private function transformToShadowData($salesReturn)
+    {
+        $salesReturn->refunded_amount = $salesReturn->shadow_refunded_amount;
+        $salesReturn->replacement_total = $salesReturn->shadow_replacement_total;
+        $salesReturn->total_return_value = $salesReturn->shadow_total_return_value;
+
+        if ($salesReturn->items) {
+            $salesReturn->items->transform(function ($item) {
+                $item->unit_price = $item->shadow_unit_price;
+                $item->sale_price = $item->shadow_sale_price;
+                $item->total_price = $item->shadow_total_price;
+                return $item;
+            });
+        }
+
+        return $salesReturn;
+    }
+
+    // শো ফাংশন
+    public function show($id)
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $salesReturn = SalesReturn::with([
+            'sale.customer',
+            'customer',
+            'items.product',
+            'items.variant',
+            'items.saleItem',
+            'creator'
+        ])->findOrFail($id);
+
+        if ($isShadowUser) {
+            $salesReturn = $this->transformToShadowData($salesReturn);
+        }
+
+        return Inertia::render('SalesReturn/Show', [
+            'salesReturn' => $salesReturn,
+            'isShadowUser' => $isShadowUser
+        ]);
+    }
+
+    // ডিলিট ফাংশন
+    public function destroy($id)
+    {
+        DB::beginTransaction();
+        try {
+            $salesReturn = SalesReturn::with(['items'])->findOrFail($id);
+
+            if ($salesReturn->status !== 'pending') {
+                throw new \Exception('Only pending returns can be deleted.');
+            }
+
+            $salesReturn->delete();
+
+            DB::commit();
+            return redirect()->route('sales-return.list')
+                ->with('success', 'Sales return deleted successfully.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()
+                ->with('error', 'Error deleting sales return: ' . $e->getMessage());
         }
     }
 }

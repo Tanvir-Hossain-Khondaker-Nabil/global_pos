@@ -328,7 +328,7 @@ export default function PurchaseItemShow({ purchaseItem, isShadowUser,business }
                         <div className="card bg-base-100 border">
                             <div className="card-body">
                                 <div className="flex items-center gap-3 mb-4">
-                                    <div className="p-2 bg-[#1e4d2b] text-white/10 rounded-box">
+                                    <div className="p-2 bg-[#1e4d2b] text-white rounded-box">
                                         <Package className="w-6 h-6 text-primary" />
                                     </div>
                                     <h2 className="card-title">Product Information</h2>

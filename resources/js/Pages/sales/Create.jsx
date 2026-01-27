@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import PageHeader from "../../components/PageHeader";
 import { useForm, router } from "@inertiajs/react";
 import {
@@ -7,8 +8,6 @@ import {
   Search,
   User,
   Phone,
-  Mail,
-  MapPin,
   Wallet,
   CreditCard,
   Landmark,
@@ -18,47 +17,41 @@ import {
   ChevronRight,
   Warehouse,
   Edit,
-  DollarSign,
+  Ruler,
+  AlertCircle,
+  Calculator
 } from "lucide-react";
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useTranslation } from "../../hooks/useTranslation";
 
-
-
-export default function AddSale({ customers, productstocks, suppliers, accounts }) {
-  const { t, locale } = useTranslation();
-
+export default function AddSale({ 
+  customers, 
+  productstocks, 
+  suppliers, 
+  accounts, 
+  unitConversions = {
+    weight: { ton: 1000, kg: 1, gram: 0.001, pound: 0.453592 },
+    volume: { liter: 1, ml: 0.001 },
+    piece: { piece: 1, dozen: 12, box: 1 },
+    length: { meter: 1, cm: 0.01, mm: 0.001 }
+  } 
+}) {
   const [selectedItems, setSelectedItems] = useState([]);
   const [pickupItems, setPickupItems] = useState([]);
   const [productSearch, setProductSearch] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [vatRate, setVatRate] = useState(0);
-  const [discountRate, setDiscountRate] = useState(0); // percentage discount
-  const [flatDiscount, setFlatDiscount] = useState(0); // flat discount
-  const [discountType, setDiscountType] = useState("percentage"); // 'percentage' or 'flat'
-
+  const [discountRate, setDiscountRate] = useState(0);
   const [paidAmount, setPaidAmount] = useState(0);
   const [shadowPaidAmount, setShadowPaidAmount] = useState(0);
-
   const [selectedAccount, setSelectedAccount] = useState("");
-
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [manualPaymentOverride, setManualPaymentOverride] = useState(false);
-
-  // ✅ Customer selection state (FIXED)
   const [customerSelectValue, setCustomerSelectValue] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [usePartialPayment, setUsePartialPayment] = useState(false);
   const [adjustFromAdvance, setAdjustFromAdvance] = useState(false);
   const [customerNameInput, setCustomerNameInput] = useState("");
   const [customerPhoneInput, setCustomerPhoneInput] = useState("");
-  const [customerDueAmountInput, setCustomerDueAmountInput] = useState(0); // New state for due amount
   const [availableAdvance, setAvailableAdvance] = useState(0);
-
-  // NEW: State to control customer fields visibility
-  const [showCustomerFields, setShowCustomerFields] = useState(false);
-
-  // Pickup sale states
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [showSupplierModal, setShowSupplierModal] = useState(false);
   const [pickupProductName, setPickupProductName] = useState("");
@@ -67,13 +60,10 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   const [pickupQuantity, setPickupQuantity] = useState(1);
   const [pickupUnitPrice, setPickupUnitPrice] = useState(0);
   const [pickupSalePrice, setPickupSalePrice] = useState(0);
-
   const [selectedSupplier, setSelectedSupplier] = useState(null);
   const [newSupplierName, setNewSupplierName] = useState("");
   const [newSupplierCompany, setNewSupplierCompany] = useState("");
   const [newSupplierPhone, setNewSupplierPhone] = useState("");
-
-  // Product selection flow states
   const [showProductDropdown, setShowProductDropdown] = useState(false);
   const [showBrandDropdown, setShowBrandDropdown] = useState(false);
   const [showVariantDropdown, setShowVariantDropdown] = useState(false);
@@ -81,19 +71,22 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [availableBrands, setAvailableBrands] = useState([]);
   const [availableVariants, setAvailableVariants] = useState([]);
+  const [selectedUnits, setSelectedUnits] = useState({});
+  const [unitQuantities, setUnitQuantities] = useState({});
+  const [availableUnits, setAvailableUnits] = useState({});
+  const [productDetails, setProductDetails] = useState({});
+  const [stockDetails, setStockDetails] = useState({});
+  const [basePrices, setBasePrices] = useState({}); // Store base unit price for auto-calculation
 
   const form = useForm({
     customer_id: "",
     customer_name: "",
-    customer_due_amount: 0,
     phone: "",
     sale_date: new Date().toISOString().split("T")[0],
     notes: "",
     items: [],
     vat_rate: 0,
     discount_rate: 0,
-    flat_discount: 0,
-    discount_type: "percentage",
     paid_amount: 0,
     grand_amount: 0,
     due_amount: 0,
@@ -108,48 +101,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     account_id: 0,
   });
 
-  // ---------------- Calculations ----------------
-  const calculateRealSubTotal = useCallback(() => {
-    if (!selectedItems || selectedItems.length === 0) return 0;
-    return selectedItems.reduce((total, item) => total + (Number(item.total_price) || 0), 0);
-  }, [selectedItems]);
-
-  const calculatePickupSubTotal = useCallback(() => {
-    if (!pickupItems || pickupItems.length === 0) return 0;
-    return pickupItems.reduce((total, item) => total + (Number(item.quantity) * Number(item.sale_price)), 0);
-  }, [pickupItems]);
-
-  const calculateTotalSubTotal = useCallback(() => {
-    return calculateRealSubTotal() + calculatePickupSubTotal();
-  }, [calculateRealSubTotal, calculatePickupSubTotal]);
-
-  const calculateVatAmount = useCallback(() => {
-    const subtotal = calculateTotalSubTotal();
-    return (subtotal * (Number(vatRate) || 0)) / 100;
-  }, [calculateTotalSubTotal, vatRate]);
-
-  const calculateDiscountAmount = useCallback(() => {
-    const subtotal = calculateTotalSubTotal();
-    if (discountType === "percentage") {
-      return (subtotal * (Number(discountRate) || 0)) / 100;
-    } else {
-      // flat discount
-      return Math.min(subtotal, Number(flatDiscount) || 0);
-    }
-  }, [calculateTotalSubTotal, discountRate, flatDiscount, discountType]);
-
-  const calculateGrandTotal = useCallback(() => {
-    const subtotal = calculateTotalSubTotal();
-    return subtotal + calculateVatAmount() - calculateDiscountAmount();
-  }, [calculateTotalSubTotal, calculateVatAmount, calculateDiscountAmount]);
-
-  const calculateDueAmount = useCallback(() => {
-    const grandTotal = calculateGrandTotal();
-    const paid = Number(paidAmount) || 0;
-    return Math.max(0, grandTotal - paid);
-  }, [calculateGrandTotal, paidAmount]);
-
-  // ---------------- Helpers ----------------
+  // ========== HELPER FUNCTIONS ==========
   const formatCurrency = (value) => (Number(value) || 0).toFixed(2);
   const formatWithSymbol = (value) => `৳${formatCurrency(value)}`;
 
@@ -166,6 +118,126 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     }
   };
 
+  // ইউনিট কনভার্সন হেল্পার ফাংশন
+  const getAvailableUnitsForProduct = (product, stock) => {
+    if (!product) return ["piece"];
+    
+    const unitType = product.unit_type || "piece";
+    const conversions = unitConversions[unitType];
+    
+    if (!conversions) return [product.default_unit || "piece"];
+    
+    // Purchase unit থেকে smaller বা equal unit গুলো খুঁজে বের করি
+    const purchaseUnit = stock?.unit || product.default_unit || "piece";
+    const purchaseFactor = conversions[purchaseUnit] || 1;
+    
+    const available = [];
+    
+    for (const [unit, factor] of Object.entries(conversions)) {
+      if (factor <= purchaseFactor) {
+        available.push(unit);
+      }
+    }
+    
+    // ছোট থেকে বড় সাজাই (gram < kg < ton)
+    return available.sort((a, b) => (conversions[a] || 1) - (conversions[b] || 1));
+  };
+
+  const getProductDetails = (productId) => {
+    const product = allProducts.find(p => p.id === productId);
+    if (!product) return null;
+    
+    return {
+      unit_type: product.unit_type || "piece",
+      default_unit: product.default_unit || "piece",
+      min_sale_unit: product.min_sale_unit || null,
+      is_fraction_allowed: product.is_fraction_allowed || false
+    };
+  };
+
+  // ✅ UPDATED: Base unit এ convert করা
+  const convertToBase = (quantity, fromUnit, unitType) => {
+    const conversions = unitConversions[unitType];
+    if (!conversions || !conversions[fromUnit]) return quantity;
+    
+    return quantity * conversions[fromUnit];
+  };
+
+  // ✅ UPDATED: Base unit থেকে নির্দিষ্ট unit এ convert করা
+  const convertFromBase = (quantity, toUnit, unitType) => {
+    const conversions = unitConversions[unitType];
+    if (!conversions || !conversions[toUnit]) return quantity;
+    
+    const conversion = conversions[toUnit];
+    return conversion !== 0 ? quantity / conversion : quantity;
+  };
+
+  // ✅ UPDATED: Unit থেকে unit এ convert করা
+  const convertUnitQuantity = (quantity, fromUnit, toUnit, unitType) => {
+    if (fromUnit === toUnit) return quantity;
+    
+    const conversions = unitConversions[unitType];
+    if (!conversions || !conversions[fromUnit] || !conversions[toUnit]) return quantity;
+    
+    const baseQuantity = quantity * conversions[fromUnit];
+    return baseQuantity / conversions[toUnit];
+  };
+
+  // ✅ UPDATED: Auto Price Calculator - Unit change হলে price auto calculate হবে
+  const calculatePriceForUnit = (basePricePerBaseUnit, targetUnit, unitType) => {
+    const conversions = unitConversions[unitType];
+    if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
+    
+    // Base unit price * target unit conversion factor
+    return basePricePerBaseUnit * conversions[targetUnit];
+  };
+
+  // ✅ NEW: Calculate base price per base unit (সবচেয়ে ছোট unit)
+  const calculateBasePricePerBaseUnit = (price, unit, unitType) => {
+    const conversions = unitConversions[unitType];
+    if (!conversions || !conversions[unit]) return price;
+    
+    // Price কে base unit price এ convert করি
+    return price / conversions[unit];
+  };
+
+  // ========== CALCULATIONS ==========
+  const calculateRealSubTotal = useCallback(() => {
+    if (!selectedItems || selectedItems.length === 0) return 0;
+    return selectedItems.reduce((total, item) => total + (Number(item.total_price) || 0), 0);
+  }, [selectedItems]);
+
+  const calculatePickupSubTotal = useCallback(() => {
+    if (!pickupItems || pickupItems.length === 0) return 0;
+    return pickupItems.reduce((total, item) => total + (Number(item.total_price) || 0), 0);
+  }, [pickupItems]);
+
+  const calculateTotalSubTotal = useCallback(() => {
+    return calculateRealSubTotal() + calculatePickupSubTotal();
+  }, [calculateRealSubTotal, calculatePickupSubTotal]);
+
+  const calculateVatAmount = useCallback(() => {
+    const subtotal = calculateTotalSubTotal();
+    return (subtotal * (Number(vatRate) || 0)) / 100;
+  }, [calculateTotalSubTotal, vatRate]);
+
+  const calculateDiscountAmount = useCallback(() => {
+    const subtotal = calculateTotalSubTotal();
+    return (subtotal * (Number(discountRate) || 0)) / 100;
+  }, [calculateTotalSubTotal, discountRate]);
+
+  const calculateGrandTotal = useCallback(() => {
+    const subtotal = calculateTotalSubTotal();
+    return subtotal + calculateVatAmount() - calculateDiscountAmount();
+  }, [calculateTotalSubTotal, calculateVatAmount, calculateDiscountAmount]);
+
+  const calculateDueAmount = useCallback(() => {
+    const grandTotal = calculateGrandTotal();
+    const paid = Number(paidAmount) || 0;
+    return Math.max(0, grandTotal - paid);
+  }, [calculateGrandTotal, paidAmount]);
+
+  // ========== PRODUCT DATA ==========
   const allProducts = useMemo(() => {
     if (!productstocks || productstocks.length === 0) return [];
     const productMap = new Map();
@@ -178,12 +250,14 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         productMap.set(productId, {
           ...stock.product,
           totalStock: Number(stock.quantity) || 0,
+          totalBaseStock: Number(stock.base_quantity) || Number(stock.quantity) || 0,
           variantsCount: 1,
           stocks: [stock],
         });
       } else {
         const existing = productMap.get(productId);
         existing.totalStock += Number(stock.quantity) || 0;
+        existing.totalBaseStock += Number(stock.base_quantity) || Number(stock.quantity) || 0;
         existing.variantsCount += 1;
         existing.stocks.push(stock);
       }
@@ -192,7 +266,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     return Array.from(productMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [productstocks]);
 
-  // ---------------- Customer (FIXED) ----------------
+  // ========== CUSTOMER HANDLING ==========
   const handleCustomerSelect = (value) => {
     setCustomerSelectValue(value);
 
@@ -200,7 +274,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setSelectedCustomer(null);
       setCustomerNameInput("");
       setCustomerPhoneInput("");
-      setCustomerDueAmountInput(0);
       setAvailableAdvance(0);
 
       form.setData({
@@ -208,7 +281,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         customer_id: "",
         customer_name: "",
         phone: "",
-        customer_due_amount: 0
       });
 
       setPaymentStatus("unpaid");
@@ -222,7 +294,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setSelectedCustomer(null);
       setCustomerNameInput("");
       setCustomerPhoneInput("");
-      setCustomerDueAmountInput(0);
       setAvailableAdvance(0);
 
       form.setData({
@@ -230,7 +301,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         customer_id: "",
         customer_name: "",
         phone: "",
-        customer_due_amount: 0
       });
       return;
     }
@@ -242,18 +312,16 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     if (customer) {
       setCustomerNameInput(customer.customer_name || "");
       setCustomerPhoneInput(customer.phone || "");
-      setCustomerDueAmountInput(parseFloat(customer.due_amount) || 0);
 
       const advance = parseFloat(customer.advance_amount) || 0;
       const due = parseFloat(customer.due_amount) || 0;
-      setAvailableAdvance(advance - due);
+      setAvailableAdvance(Math.max(0, advance - due));
 
       form.setData({
         ...form.data,
         customer_id: customer.id,
         customer_name: customer.customer_name,
         phone: customer.phone,
-        customer_due_amount: parseFloat(customer.due_amount) || 0
       });
     }
   };
@@ -267,7 +335,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setCustomerSelectValue("new");
       form.setData("customer_id", "");
       setAvailableAdvance(0);
-      setCustomerDueAmountInput(0);
     }
   };
 
@@ -280,17 +347,10 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setCustomerSelectValue("new");
       form.setData("customer_id", "");
       setAvailableAdvance(0);
-      setCustomerDueAmountInput(0);
     }
   };
 
-  const handleCustomerDueAmountChange = (value) => {
-    const dueAmount = parseFloat(value) || 0;
-    setCustomerDueAmountInput(dueAmount);
-    form.setData("customer_due_amount", dueAmount);
-  };
-
-  // ---------------- Payment status logic ----------------
+  // ========== PAYMENT HANDLING ==========
   const handlePaymentStatusChange = (status) => {
     setPaymentStatus(status);
     const grandTotal = calculateGrandTotal();
@@ -299,32 +359,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       setPaidAmount(grandTotal);
       setManualPaymentOverride(false);
       setAdjustFromAdvance(false);
-      // Enable account_id when paid is selected
-      if (grandTotal > 0 && !selectedAccount) {
-        // Auto-select first account if available
-        if (accounts && accounts.length > 0) {
-          handleAccountSelect(accounts[0].id);
-        }
-      }
-      // Hide customer fields initially when paid/partial
-      setShowCustomerFields(false);
     } else if (status === "unpaid") {
       setPaidAmount(0);
       setManualPaymentOverride(false);
       setAdjustFromAdvance(false);
-      // Reset account when unpaid
-      handleAccountSelect("");
     } else if (status === "partial") {
       setManualPaymentOverride(true);
       setAdjustFromAdvance(false);
-      // Enable account_id when partial is selected
-      if (!selectedAccount) {
-        if (accounts && accounts.length > 0) {
-          handleAccountSelect(accounts[0].id);
-        }
-      }
-      // Hide customer fields initially when paid/partial
-      setShowCustomerFields(false);
     }
   };
 
@@ -333,20 +374,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const grandTotal = calculateGrandTotal();
     setPaidAmount(value);
 
-    if (value === 0) {
-      setPaymentStatus("unpaid");
-      handleAccountSelect("");
-    } else if (value >= grandTotal) {
-      setPaymentStatus("paid");
-      if (!selectedAccount && accounts && accounts.length > 0) {
-        handleAccountSelect(accounts[0].id);
-      }
-    } else {
-      setPaymentStatus("partial");
-      if (!selectedAccount && accounts && accounts.length > 0) {
-        handleAccountSelect(accounts[0].id);
-      }
-    }
+    if (value === 0) setPaymentStatus("unpaid");
+    else if (value >= grandTotal) setPaymentStatus("paid");
+    else setPaymentStatus("partial");
   };
 
   const enableManualPaymentOverride = () => {
@@ -359,69 +389,15 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     const grandTotal = calculateGrandTotal();
     setPaidAmount(grandTotal);
     setPaymentStatus("paid");
-    // Enable account selection
-    if (!selectedAccount && accounts && accounts.length > 0) {
-      handleAccountSelect(accounts[0].id);
-    }
   };
 
-  // Handle new customer button click
-  const handleNewCustomerClick = () => {
-    setShowCustomerFields(true);
-    setCustomerSelectValue("new");
-    setSelectedCustomer(null);
-    setCustomerNameInput("");
-    setCustomerPhoneInput("");
-    setCustomerDueAmountInput(0);
-    setAvailableAdvance(0);
-
-    form.setData({
-      ...form.data,
-      customer_id: "",
-      customer_name: "",
-      phone: "",
-      customer_due_amount: 0
-    });
-  };
-
-  useEffect(() => {
-    if (adjustFromAdvance && availableAdvance > 0 && !manualPaymentOverride) {
-      const grandTotal = calculateGrandTotal();
-      const maxAdjustable = Math.min(availableAdvance, grandTotal);
-
-      if (paidAmount == 0 || paidAmount > grandTotal) {
-        const autoPaidAmount = Math.min(maxAdjustable, grandTotal);
-        setPaidAmount(autoPaidAmount);
-
-        if (autoPaidAmount >= grandTotal) {
-          setPaymentStatus("paid");
-          // Enable account when paid
-          if (!selectedAccount && accounts && accounts.length > 0) {
-            handleAccountSelect(accounts[0].id);
-          }
-        }
-        else if (autoPaidAmount > 0) {
-          setPaymentStatus("partial");
-          // Enable account when partial
-          if (!selectedAccount && accounts && accounts.length > 0) {
-            handleAccountSelect(accounts[0].id);
-          }
-        }
-        else setPaymentStatus("unpaid");
-      }
-    }
-  }, [adjustFromAdvance, availableAdvance, calculateGrandTotal, manualPaymentOverride, paidAmount]);
-
-
-
-  // ---------------- Account ----------------
   const handleAccountSelect = (accountId) => {
     const id = accountId ? parseInt(accountId) : "";
     setSelectedAccount(id);
     form.setData("account_id", id);
   };
 
-  // ---------------- Search products ----------------
+  // ========== PRODUCT SELECTION FLOW ==========
   useEffect(() => {
     if (!productSearch.trim()) {
       setFilteredProducts(allProducts);
@@ -471,13 +447,18 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                 variant,
                 stocks: [stock],
                 totalQuantity: Number(stock.quantity) || 0,
+                totalBaseQuantity: Number(stock.base_quantity) || Number(stock.quantity) || 0,
                 batch_no: stock.batch_no,
                 sale_price: stock.sale_price,
                 shadow_sale_price: stock.shadow_sale_price,
+                unit: stock.unit || (stock.product?.default_unit || "piece"),
+                product: stock.product,
+                stockId: stock.id,
               });
             } else {
               existingVariant.stocks.push(stock);
               existingVariant.totalQuantity += Number(stock.quantity) || 0;
+              existingVariant.totalBaseQuantity += Number(stock.base_quantity) || Number(stock.quantity) || 0;
             }
           }
         }
@@ -485,7 +466,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
     return variants.sort((a, b) => b.totalQuantity - a.totalQuantity);
   };
-
 
   const handleProductSelect = (product) => {
     setSelectedProduct(product);
@@ -547,75 +527,253 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   };
 
   const handleVariantSelect = (variantWithStocks) => {
-    const { variant, stocks, totalQuantity, sale_price, shadow_sale_price } = variantWithStocks;
-    let availableStock = stocks.find((s) => s.quantity > 0) || stocks[0];
+    const { variant, stocks, totalQuantity, totalBaseQuantity, sale_price, shadow_sale_price, unit, product, stockId } = variantWithStocks;
+    const availableStock = stocks.find((s) => s.quantity > 0) || stocks[0];
     if (!availableStock) return;
 
     const salePrice = Number(sale_price) || Number(availableStock.sale_price) || 0;
     const shadowSalePrice = Number(shadow_sale_price) || Number(availableStock.shadow_sale_price) || 0;
+    
+    // Get product details
+    const productDetails = getProductDetails(product.id);
+    setProductDetails(prev => ({ ...prev, [product.id]: productDetails }));
 
-    const itemKey = `${selectedProduct.id}-${variant.id}-${availableStock.batch_no || "default"}`;
+    // Get available units for this stock
+    const availableUnitsForStock = getAvailableUnitsForProduct(product, availableStock);
+    
+    // Determine default sale unit
+    let defaultUnit = productDetails?.min_sale_unit || product.default_unit || "piece";
+    if (!availableUnitsForStock.includes(defaultUnit)) {
+      defaultUnit = availableUnitsForStock[0] || "piece";
+    }
+
+    // ✅ NEW: Calculate base price per base unit (store for auto-calculation)
+    let basePricePerBaseUnit = salePrice;
+    if (productDetails?.unit_type && productDetails.unit_type !== 'piece') {
+      basePricePerBaseUnit = calculateBasePricePerBaseUnit(
+        salePrice,
+        unit,
+        productDetails.unit_type
+      );
+    }
+
+    // ✅ NEW: Calculate price in sale unit using base price
+    let unitPriceInSaleUnit = salePrice;
+    if (unit !== defaultUnit && productDetails?.unit_type) {
+      unitPriceInSaleUnit = calculatePriceForUnit(
+        basePricePerBaseUnit,
+        defaultUnit,
+        productDetails.unit_type
+      );
+    }
+
+    const itemKey = `${product.id}-${variant.id}-${availableStock.batch_no || "default"}`;
     const existingItem = selectedItems.find((item) => item.uniqueKey === itemKey);
 
     if (existingItem) {
+      // Update existing item
+      const newQuantity = (existingItem.unit_quantity || 1) + 1;
+      const newTotalPrice = newQuantity * existingItem.unit_price;
+      
       setSelectedItems(
         selectedItems.map((item) =>
           item.uniqueKey === itemKey
-            ? { ...item, quantity: item.quantity + 1, total_price: (item.quantity + 1) * item.unit_price }
+            ? {
+                ...item,
+                unit_quantity: newQuantity,
+                quantity: newQuantity,
+                total_price: newTotalPrice
+              }
             : item
         )
       );
+      setUnitQuantities(prev => ({ ...prev, [itemKey]: newQuantity }));
     } else {
-      setSelectedItems([
-        ...selectedItems,
-        {
-          uniqueKey: itemKey,
-          product_id: selectedProduct.id,
-          variant_id: variant.id,
-          batch_no: availableStock.batch_no,
-          product_name: selectedProduct.name,
-          variant_attribute: selectedBrand || Object.keys(variant.attribute_values || {})[0] || "Default",
-          product_code: selectedProduct.product_no || "",
-          variant_value: selectedBrand
-            ? variant.attribute_values?.[selectedBrand] || "Default"
-            : Object.values(variant.attribute_values || {})[0] || "Default",
-          quantity: 1,
-          sku: variant.sku || "Default SKU",
-          stockQuantity: totalQuantity,
-          stockId: availableStock.id,
-          unit_price: salePrice,
-          sell_price: salePrice,
-          total_price: salePrice,
-          shadow_sell_price: shadowSalePrice,
-        },
-      ]);
+      // Add new item
+      const newItem = {
+        uniqueKey: itemKey,
+        product_id: product.id,
+        variant_id: variant.id,
+        batch_no: availableStock.batch_no,
+        product_name: product.name,
+        variant_attribute: selectedBrand || Object.keys(variant.attribute_values || {})[0] || "Default",
+        product_code: product.product_no || "",
+        variant_value: selectedBrand
+          ? variant.attribute_values?.[selectedBrand] || "Default"
+          : Object.values(variant.attribute_values || {})[0] || "Default",
+        quantity: 1,
+        unit_quantity: 1,
+        unit: defaultUnit,
+        sku: variant.sku || "Default SKU",
+        stockQuantity: totalQuantity,
+        stockBaseQuantity: totalBaseQuantity,
+        stockId: stockId,
+        original_purchase_unit: unit,
+        original_sale_price: salePrice, // Price in purchase unit
+        unit_price: unitPriceInSaleUnit, // Price in sale unit (auto-calculated)
+        sell_price: unitPriceInSaleUnit,
+        total_price: unitPriceInSaleUnit,
+        shadow_sell_price: shadowSalePrice,
+        product_unit_type: productDetails?.unit_type || "piece",
+        is_fraction_allowed: productDetails?.is_fraction_allowed || false,
+        stockDetails: availableStock,
+        // ✅ NEW: Store base price for auto-calculation
+        base_price_per_base_unit: basePricePerBaseUnit
+      };
+
+      setSelectedItems([...selectedItems, newItem]);
+      setSelectedUnits(prev => ({ ...prev, [itemKey]: defaultUnit }));
+      setUnitQuantities(prev => ({ ...prev, [itemKey]: 1 }));
+      setAvailableUnits(prev => ({ ...prev, [itemKey]: availableUnitsForStock }));
+      setStockDetails(prev => ({ ...prev, [itemKey]: availableStock }));
+      // ✅ NEW: Store base price for this item
+      setBasePrices(prev => ({ ...prev, [itemKey]: basePricePerBaseUnit }));
     }
 
     resetSelectionFlow();
   };
 
+  // ✅ UPDATED: Handle unit change with auto price calculation
+  const handleUnitChange = (itemKey, newUnit) => {
+    const itemIndex = selectedItems.findIndex(item => item.uniqueKey === itemKey);
+    if (itemIndex === -1) return;
+
+    const item = selectedItems[itemIndex];
+    const oldUnit = item.unit;
+    
+    if (oldUnit === newUnit) return;
+    
+    const availableUnitsList = availableUnits[itemKey] || [item.unit];
+    if (!availableUnitsList.includes(newUnit)) {
+      alert(`Cannot sell in ${newUnit.toUpperCase()} unit for this product`);
+      return;
+    }
+
+    // Convert quantity to new unit
+    let newQuantity = item.unit_quantity;
+    
+    if (item.product_unit_type && item.product_unit_type !== 'piece') {
+      newQuantity = convertUnitQuantity(
+        item.unit_quantity,
+        oldUnit,
+        newUnit,
+        item.product_unit_type
+      );
+      
+      // Validate stock in new unit
+      const requestedBaseQty = convertToBase(newQuantity, newUnit, item.product_unit_type);
+      const availableBaseQty = item.stockDetails?.base_quantity || item.stockBaseQuantity;
+      
+      if (requestedBaseQty > availableBaseQty) {
+        const availableInUnit = convertFromBase(availableBaseQty, newUnit, item.product_unit_type);
+        alert(`Cannot change unit. Exceeds available stock! Available: ${availableInUnit.toFixed(3)} ${newUnit.toUpperCase()}`);
+        return;
+      }
+    }
+
+    // ✅ AUTO CALCULATE NEW PRICE BASED ON BASE PRICE
+    let newPrice = item.unit_price;
+    
+    if (item.product_unit_type && item.product_unit_type !== 'piece') {
+      // Calculate price in new unit based on base price per base unit
+      newPrice = calculatePriceForUnit(
+        item.base_price_per_base_unit, // Base unit price
+        newUnit, // New sale unit
+        item.product_unit_type
+      );
+    }
+
+    // Update item
+    const updatedItems = [...selectedItems];
+    updatedItems[itemIndex] = {
+      ...item,
+      unit: newUnit,
+      unit_quantity: newQuantity,
+      quantity: newQuantity,
+      unit_price: newPrice, // Auto-calculated price
+      sell_price: newPrice,
+      total_price: newQuantity * newPrice,
+    };
+
+    setSelectedItems(updatedItems);
+    setSelectedUnits(prev => ({ ...prev, [itemKey]: newUnit }));
+    setUnitQuantities(prev => ({ ...prev, [itemKey]: newQuantity }));
+  };
 
   const removeItem = (index) => {
     const updated = [...selectedItems];
+    const itemKey = updated[index].uniqueKey;
+    
+    // Clean up unit states
+    const newSelectedUnits = { ...selectedUnits };
+    const newUnitQuantities = { ...unitQuantities };
+    const newAvailableUnits = { ...availableUnits };
+    const newStockDetails = { ...stockDetails };
+    const newBasePrices = { ...basePrices };
+    
+    delete newSelectedUnits[itemKey];
+    delete newUnitQuantities[itemKey];
+    delete newAvailableUnits[itemKey];
+    delete newStockDetails[itemKey];
+    delete newBasePrices[itemKey];
+    
+    setSelectedUnits(newSelectedUnits);
+    setUnitQuantities(newUnitQuantities);
+    setAvailableUnits(newAvailableUnits);
+    setStockDetails(newStockDetails);
+    setBasePrices(newBasePrices);
+    
     updated.splice(index, 1);
     setSelectedItems(updated);
   };
 
+  // ✅ UPDATED: Make unit_price read-only, only quantity can be changed
   const updateItem = (index, field, value) => {
     const updated = [...selectedItems];
-    const numValue = field === "quantity" ? parseInt(value) || 0 : parseFloat(value) || 0;
-    updated[index][field] = numValue;
-
-    if (field === "quantity" || field === "unit_price") {
-      const quantity = field === "quantity" ? numValue : updated[index].quantity;
-      const unitPrice = field === "unit_price" ? numValue : updated[index].unit_price;
-      updated[index].total_price = quantity * unitPrice;
+    const item = updated[index];
+    const itemKey = item.uniqueKey;
+    
+    if (field === "unit_quantity" || field === "quantity") {
+      const numValue = parseFloat(value) || 0;
+      
+      // Validate if fractions are allowed
+      if (!item.is_fraction_allowed && numValue % 1 !== 0) {
+        alert("Fractions are not allowed for this product");
+        return;
+      }
+      
+      // Validate against available stock
+      if (item.product_unit_type && item.product_unit_type !== 'piece') {
+        const requestedBaseQty = convertToBase(numValue, item.unit || "piece", item.product_unit_type);
+        const availableBaseQty = item.stockDetails?.base_quantity || item.stockBaseQuantity;
+        
+        if (requestedBaseQty > availableBaseQty) {
+          const availableInUnit = convertFromBase(availableBaseQty, item.unit, item.product_unit_type);
+          alert(`Exceeds available stock! Available: ${availableInUnit.toFixed(3)} ${item.unit.toUpperCase()}`);
+          return;
+        }
+      } else if (numValue > item.stockQuantity) {
+        alert(`Exceeds available stock! Available: ${item.stockQuantity}`);
+        return;
+      }
+      
+      updated[index][field] = numValue;
+      updated[index].quantity = numValue;
+      setUnitQuantities(prev => ({ ...prev, [itemKey]: numValue }));
+      
+      // Recalculate total price with auto-calculated unit price
+      updated[index].total_price = numValue * updated[index].unit_price;
+    } else if (field === "unit_price" || field === "sell_price") {
+      // Read-only fields - don't allow manual changes
+      // Price is auto-calculated based on unit
+      alert("Unit price is auto-calculated based on unit selection. Change the unit to change the price.");
+      return;
     }
-
+    
     setSelectedItems(updated);
   };
 
-  // Pickup sale functions
+  // ========== PICKUP SALE FUNCTIONS ==========
   const addPickupItem = () => {
     if (!pickupProductName || pickupQuantity <= 0 || pickupUnitPrice <= 0 || pickupSalePrice <= 0) {
       alert("Please fill all required fields for pickup item");
@@ -628,6 +786,8 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       brand: pickupBrand,
       variant: pickupVariant,
       quantity: Number(pickupQuantity),
+      unit: "piece",
+      unit_quantity: Number(pickupQuantity),
       unit_price: Number(pickupUnitPrice),
       sale_price: Number(pickupSalePrice),
       total_price: Number(pickupQuantity) * Number(pickupSalePrice),
@@ -701,7 +861,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     }
   };
 
-  // ✅ Sync form data
+  // ========== FORM SYNC ==========
   useEffect(() => {
     const realSubTotal = calculateRealSubTotal();
     const pickupSubTotal = calculatePickupSubTotal();
@@ -722,7 +882,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       stock_id: item.stockId,
       batch_no: item.batch_no,
       quantity: item.quantity,
-      unit_price: item.unit_price,
+      unit_quantity: item.unit_quantity || item.quantity,
+      unit: item.unit || "piece",
+      unit_price: item.unit_price, // Auto-calculated price
       total_price: item.total_price,
       shadow_sell_price: item.shadow_sell_price,
     }));
@@ -732,12 +894,11 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       brand: item.brand,
       variant: item.variant,
       quantity: item.quantity,
+      unit_quantity: item.unit_quantity || item.quantity,
+      unit: item.unit || "piece",
       unit_price: item.unit_price,
       sale_price: item.sale_price,
       total_price: item.total_price,
-      supplier_id: item.supplier_id,
-      supplier_name: item.supplier_name,
-      supplier_company: item.supplier_company,
     }));
 
     form.setData({
@@ -746,8 +907,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       pickup_items: formattedPickupItems,
       vat_rate: Number(vatRate) || 0,
       discount_rate: Number(discountRate) || 0,
-      flat_discount: Number(flatDiscount) || 0,
-      discount_type: discountType,
       paid_amount: Number(paidAmount) || 0,
       shadow_paid_amount: Number(shadowPaidAmount) || 0,
       grand_amount: grandTotal,
@@ -762,15 +921,12 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       account_id: selectedAccount,
       customer_name: customerNameInput,
       phone: customerPhoneInput,
-      customer_due_amount: Number(customerDueAmountInput) || 0,
     });
   }, [
     selectedItems,
     pickupItems,
     vatRate,
     discountRate,
-    flatDiscount,
-    discountType,
     paidAmount,
     shadowPaidAmount,
     usePartialPayment,
@@ -781,7 +937,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     paymentStatus,
     customerNameInput,
     customerPhoneInput,
-    customerDueAmountInput,
     calculateRealSubTotal,
     calculatePickupSubTotal,
     calculateTotalSubTotal,
@@ -789,7 +944,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
     calculateDueAmount,
   ]);
 
-  // ---------------- Submit ----------------
+  // ========== SUBMIT ==========
   const submit = (e) => {
     e.preventDefault();
 
@@ -798,34 +953,52 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
       return;
     }
 
-    const invalidItems = selectedItems.filter((item) => !item.quantity || item.quantity <= 0 || !item.unit_price || item.unit_price <= 0);
+    const invalidItems = selectedItems.filter(
+      (item) =>
+        !item.unit_quantity ||
+        item.unit_quantity <= 0 ||
+        !item.unit_price ||
+        item.unit_price <= 0
+    );
     if (invalidItems.length > 0) {
       alert("Please ensure all items have valid quantity and unit price");
       return;
     }
 
-    const outOfStockItems = selectedItems.filter((item) => item.quantity > item.stockQuantity);
+    // Validate stock in base units
+    const outOfStockItems = selectedItems.filter((item) => {
+      if (item.product_unit_type && item.product_unit_type !== 'piece') {
+        const requestedBaseQty = convertToBase(item.unit_quantity || 1, item.unit || "piece", item.product_unit_type);
+        const availableBaseQty = item.stockDetails?.base_quantity || item.stockBaseQuantity;
+        return requestedBaseQty > availableBaseQty;
+      } else {
+        return item.unit_quantity > item.stockQuantity;
+      }
+    });
+    
     if (outOfStockItems.length > 0) {
-      alert("Some items exceed available stock. Please adjust quantities.");
+      const itemNames = outOfStockItems.map(item => 
+        `${item.product_name} (Requested: ${item.unit_quantity} ${item.unit.toUpperCase()})`
+      ).join(', ');
+      alert(`Some items exceed available stock: ${itemNames}`);
       return;
     }
 
-    // ✅ Inventory: must provide name + phone when customer fields are shown
-    if (showCustomerFields && (!form.data.customer_name || !form.data.phone)) {
+    // ✅ Inventory: must provide name + phone
+    if (!form.data.customer_name || !form.data.phone) {
       alert("Please provide customer name and phone number");
       return;
     }
 
-    // Require account selection when paid amount > 0
-    if (paidAmount > 0 && !selectedAccount) {
+    if (!selectedAccount) {
       alert("Please select a payment account");
       return;
     }
 
-    // if (pickupItems.length > 0 && !selectedSupplier) {
-    //   alert("Please select a supplier for pickup items");
-    //   return;
-    // }
+    if (pickupItems.length > 0 && !selectedSupplier) {
+      alert("Please select a supplier for pickup items");
+      return;
+    }
 
     form.post(route("sales.store"), {
       onSuccess: () => router.visit(route("sales.index")),
@@ -844,14 +1017,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
   const vatAmount = calculateVatAmount();
   const discountAmount = calculateDiscountAmount();
 
-  // ✅ Selected account object (for design box)
   const selectedAccountObj = selectedAccount
     ? accounts?.find((acc) => String(acc.id) === String(selectedAccount))
     : null;
 
   return (
     <div className="bg-white rounded-box p-5">
-      <PageHeader title="Create New (Sale/Order)" subtitle="Add products to sale (Inventory System)">
+      <PageHeader title="Create New Sale" subtitle="Add products to sale (Inventory System)">
         <button onClick={() => router.visit(route("sales.index"))} className="btn btn-sm btn-ghost">
           <ArrowLeft size={15} /> Back to List
         </button>
@@ -859,9 +1031,9 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
 
       <form onSubmit={submit}>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* LEFT */}
+          {/* LEFT COLUMN */}
           <div className="lg:col-span-1 space-y-4">
-            {/* ✅ CUSTOMER SELECT */}
+            {/* CUSTOMER SELECT */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text">Select Customer *</span>
@@ -895,11 +1067,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                   <div className="flex items-center gap-2 text-sm">
                     <Phone size={12} className="text-gray-500" />
                     <span>{selectedCustomer.phone}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign size={12} className="text-gray-500" />
-                    <span>Due Amount: ৳{formatCurrency(selectedCustomer.due_amount || 0)}</span>
                   </div>
 
                   {availableAdvance > 0 && (
@@ -940,126 +1107,101 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
               </div>
             )}
 
-            {/* NEW CUSTOMER BUTTON - Show only when payment is partial or paid */}
-            {/* {(paymentStatus === "partial" || paymentStatus === "paid") && !showCustomerFields && !selectedCustomer && (
-              <div className="border border-dashed border-gray-300 rounded-box p-4 text-center">
-                <p className="text-sm text-gray-600 mb-3">Customer information required for paid/partial payments</p>
-                <button
-                  type="button"
-                  onClick={handleNewCustomerClick}
-                  className="btn btn-sm btn-outline btn-primary"
-                >
-                  <Plus size={14} className="mr-1" />
-                  New Customer
-                </button>
-              </div>
-            )} */}
+            {/* Name */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Customer Name *</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered"
+                value={customerNameInput}
+                onChange={(e) => handleCustomerNameChange(e.target.value)}
+              />
+            </div>
 
-            {/* Customer Name Field - Conditionally shown */}
-            {(showCustomerFields || selectedCustomer || customerSelectValue === "new") && (
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Customer Name *</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={customerNameInput}
-                  onChange={(e) => handleCustomerNameChange(e.target.value)}
-                  required={showCustomerFields || customerSelectValue === "new"}
-                />
-              </div>
-            )}
+            {/* Phone */}
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Customer Phone *</span>
+              </label>
+              <input
+                type="text"
+                className="input input-bordered"
+                value={customerPhoneInput}
+                onChange={(e) => handleCustomerPhoneChange(e.target.value)}
+              />
+            </div>
 
-            {/* Customer Phone Field - Conditionally shown */}
-            {(showCustomerFields || selectedCustomer || customerSelectValue === "new") && (
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Customer Phone *</span>
-                </label>
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  value={customerPhoneInput}
-                  onChange={(e) => handleCustomerPhoneChange(e.target.value)}
-                  required={showCustomerFields || customerSelectValue === "new"}
-                />
-              </div>
-            )}
+            {/* PAYMENT CARD */}
+            <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl shadow-lg">
+              <div className="card-body">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="card-title text-sm font-black uppercase text-red-500 flex items-center gap-2">
+                    <CreditCard size={16} /> Payment
+                  </h3>
 
-            {/* Customer Due Amount Field - Conditionally shown for new customers */}
-            {(showCustomerFields || customerSelectValue === "new") && (
-              <div className="form-control">
-                <label className="label">
-                  <span className="label-text">Customer Due Amount</span>
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  className="input input-bordered"
-                  value={customerDueAmountInput}
-                  onChange={(e) => handleCustomerDueAmountChange(e.target.value)}
-                  placeholder="Enter due amount if any"
-                />
-              </div>
-            )}
-
-            {/*  PAYMENT CARD — SAME DESIGN AS PURCHASE (DESIGN ONLY) */}
-            <div className="bg-[#F8FAF5] rounded-xl border border-gray-200">
-              <div className="p-3 space-y-3">
-
-                {/* Header */}
-                <div className="flex items-center gap-2 text-[#235E33] font-semibold text-sm">
-                  <CreditCard size={14} />
-                  Payment
+                  <button
+                    type="button"
+                    onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
+                    className="btn btn-xs bg-red-600 hover:bg-red-700 border-none text-white font-black text-[10px] uppercase"
+                  >
+                    {manualPaymentOverride ? <X size={10} /> : <Edit size={10} />}
+                    {manualPaymentOverride ? "Cancel" : "Manual"}
+                  </button>
                 </div>
 
-                {/* Account */}
-                <div className="space-y-1">
-                  <label className="text-[11px] text-gray-600">
-                    Payment Account {paidAmount > 0 && "*"}
+                {/* Account Selection */}
+                <div className="form-control mb-3">
+                  <label className="label py-0">
+                    <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
+                      Payment Account {paidAmount > 0 && "*"}
+                    </span>
                   </label>
 
                   <select
-                    className="select select-sm w-full bg-white border-gray-300 text-gray-800"
+                    className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
                     value={selectedAccount}
                     onChange={(e) => handleAccountSelect(e.target.value)}
-                    disabled={paymentStatus === "unpaid"}
                     required={paidAmount > 0}
+                    disabled={paidAmount <= 0}
                   >
-                    <option value="">Select account</option>
-                    {accounts?.map((a) => (
-                      <option key={a.id} value={a.id}>
-                        {a.name} — ৳{formatCurrency(a.current_balance)}
+                    <option value="">Select Account</option>
+                    {accounts?.map((account) => (
+                      <option key={account.id} value={account.id}>
+                        {account.name} — ৳{formatCurrency(account.current_balance)}
                       </option>
                     ))}
                   </select>
 
                   {paidAmount > 0 && !selectedAccount && (
-                    <p className="text-[11px] text-red-500">Account required</p>
+                    <div className="text-red-400 text-xs mt-1">Please select a payment account</div>
+                  )}
+
+                  {/* Selected Account Info */}
+                  {selectedAccountObj && (
+                    <div className="mt-2 p-2 bg-gray-800 rounded-lg border border-gray-700">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {getAccountIcon(selectedAccountObj.type)}
+                          <span className="text-xs font-bold">{selectedAccountObj.name}</span>
+                          <span className="text-xs text-gray-400 capitalize">({selectedAccountObj.type})</span>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[10px] text-gray-400">Balance</div>
+                          <div className="text-xs font-mono font-bold">
+                            ৳{formatCurrency(selectedAccountObj.current_balance)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
 
-                {/* Selected account info */}
-                {selectedAccountObj && (
-                  <div className="flex justify-between text-xs bg-white p-2 rounded-md border">
-                    <span className="font-medium">
-                      {selectedAccountObj.name}
-                      <span className="text-gray-400 ml-1">
-                        ({selectedAccountObj.type})
-                      </span>
-                    </span>
-                    <span className="font-mono">
-                      ৳{formatCurrency(selectedAccountObj.current_balance)}
-                    </span>
-                  </div>
-                )}
-
-                {/* Status + amount */}
-                <div className="grid grid-cols-2 gap-2">
+                {/* Payment status */}
+                <div className="form-control mb-3">
                   <select
-                    className="select select-sm bg-white border-gray-300"
+                    className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
                     value={paymentStatus}
                     onChange={(e) => handlePaymentStatusChange(e.target.value)}
                   >
@@ -1067,36 +1209,42 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     <option value="partial">Partial</option>
                     <option value="paid">Paid</option>
                   </select>
+                </div>
 
+                {/* Paid amount */}
+                <div className="form-control mb-3">
+                  <label className="label py-1">
+                    <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
+                      Paid Amount
+                    </span>
+                  </label>
                   <input
                     type="number"
-                    className="input input-sm bg-white border-gray-300 font-mono"
+                    step="0.01"
+                    className="input input-bordered input-sm w-full bg-gray-800 border-gray-700 font-mono"
                     value={paidAmount}
                     onChange={handleManualPaymentInput}
                     disabled={!manualPaymentOverride && adjustFromAdvance}
-                    placeholder="Paid"
                   />
                 </div>
 
                 {/* Totals */}
-                <div className="pt-2 border-t text-xs space-y-1">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Gross</span>
+                <div className="space-y-1 text-xs pt-2 border-t border-gray-800 mt-2 font-bold uppercase tracking-tighter">
+                  <div className="flex justify-between">
+                    <span>Gross:</span>
                     <span>৳{formatCurrency(grandTotal)}</span>
                   </div>
-                  <div className="flex justify-between font-semibold text-[#235E33]">
-                    <span>Due</span>
+                  <div className="flex justify-between text-red-500 font-black">
+                    <span>Due:</span>
                     <span>৳{formatCurrency(dueAmount)}</span>
                   </div>
                 </div>
-
               </div>
             </div>
 
-
             {/* Supplier for pickup */}
-            {/* {pickupItems.length > 0 && (
-              <div className="form-control ">
+            {pickupItems.length > 0 && (
+              <div className="form-control">
                 <label className="label">
                   <span className="label-text font-bold">Supplier for Pickup Items *</span>
                 </label>
@@ -1117,13 +1265,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                       </option>
                     ))}
                   </select>
-
+{/* 
                   <button type="button" onClick={() => setShowSupplierModal(true)} className="btn btn-sm btn-outline">
                     <Plus size={14} />
-                  </button>
+                  </button> */}
                 </div>
               </div>
-            )} */}
+            )}
 
             {/* Sale date */}
             <div className="form-control">
@@ -1154,7 +1302,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
             </div>
           </div>
 
-          {/* RIGHT */}
+          {/* RIGHT COLUMN */}
           <div className="lg:col-span-2">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-gray-700">Add Products to Sale</h3>
@@ -1192,7 +1340,6 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                       setShowProductDropdown(true);
                     }}
                     onClick={() => setShowProductDropdown(true)}
-                    onBlur={() => setTimeout(() => setShowProductDropdown(false), 200)}
                     placeholder="Search products by name or SKU..."
                   />
                   <Search size={18} className="absolute right-3 top-3.5 text-gray-400" />
@@ -1229,7 +1376,12 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                           <div className="flex-1">
                             <div className="font-medium">{product.name}</div>
                             <div className="text-xs text-gray-500 mt-1">
-                              Code: {product.product_no || "N/A"} • Stock: {product.totalStock} • Variants: {product.variantsCount}
+                              Code: {product.product_no || "N/A"} • Stock: {product.totalStock} {product.default_unit?.toUpperCase() || 'PIECE'} • Variants: {product.variantsCount}
+                              {product.unit_type && product.unit_type !== 'piece' && (
+                                <span className="ml-2 text-blue-600">
+                                  • Purchase Unit: {product.default_unit?.toUpperCase() || 'PIECE'}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <ChevronRight size={16} className="text-gray-400" />
@@ -1293,10 +1445,13 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                     </div>
 
                     {availableVariants.map((variantWithStocks) => {
-                      const { variant, totalQuantity, sale_price, shadow_sale_price } = variantWithStocks;
+                      const { variant, totalQuantity, totalBaseQuantity, sale_price, shadow_sale_price, unit, product, stockId } = variantWithStocks;
                       const displayName = selectedBrand
                         ? variant.attribute_values?.[selectedBrand] || "Default"
                         : Object.values(variant.attribute_values || {})[0] || "Default";
+                      
+                      const productDetails = getProductDetails(product.id);
+                      const availableUnitsForStock = getAvailableUnitsForProduct(product, variantWithStocks.stocks[0]);
 
                       return (
                         <div
@@ -1309,9 +1464,19 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             <div className="flex-1">
                               <div className="font-medium">{displayName}</div>
                               <div className="text-xs text-gray-500 mt-1">
-                                Stock: {totalQuantity} • SKU: {variant.sku || "N/A"} • Price: {formatWithSymbol(Number(sale_price) || 0)}
-                                {Number(shadow_sale_price) > 0 ? ` • Shadow: ${formatWithSymbol(Number(shadow_sale_price))}` : ""}
+                                <div>Purchase Unit: {unit?.toUpperCase()}</div>
+                                <div>Available: {totalQuantity} {unit?.toUpperCase()} ({totalBaseQuantity.toFixed(3)} base units)</div>
+                                <div>Price: {formatWithSymbol(Number(sale_price) || 0)} per {unit?.toUpperCase()}</div>
+                                {Number(shadow_sale_price) > 0 && (
+                                  <div>Shadow Price: {formatWithSymbol(Number(shadow_sale_price))}</div>
+                                )}
                               </div>
+                              {availableUnitsForStock.length > 1 && (
+                                <div className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                  <Ruler size={10} />
+                                  Can sell in: {availableUnitsForStock.map(u => u.toUpperCase()).join(", ")}
+                                </div>
+                              )}
                             </div>
                             <Plus size={16} className="text-primary" />
                           </div>
@@ -1327,64 +1492,170 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                 <div className="space-y-3">
                   <h3 className="font-semibold">Stock Items ({selectedItems.length})</h3>
 
-                  {selectedItems.map((item, index) => (
-                    <div key={item.uniqueKey || index} className="border border-gray-300 rounded-box p-4">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className="flex-1">
-                          <h4 className="font-medium">
-                            {item.product_name} ({item.product_code})
-                          </h4>
-                          <p className="text-sm text-gray-600">
-                            <strong>Variant:</strong> Attribute: {item.variant_attribute} | Value: {item.variant_value}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            <strong>Batch No:</strong> {item?.batch_no} || <strong>Sku:</strong> {item?.sku}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            <strong>Available Stock:</strong> {item.stockQuantity} | <strong>Sale Price:</strong> ৳{formatCurrency(item.sell_price)}
-                          </p>
+                  {selectedItems.map((item, index) => {
+                    const itemKey = item.uniqueKey || index;
+                    const availableUnitsList = availableUnits[item.uniqueKey] || [item.unit || "piece"];
+                    const selectedUnit = selectedUnits[item.uniqueKey] || item.unit || "piece";
+                    const unitQuantity = unitQuantities[item.uniqueKey] || item.unit_quantity || 1;
+                    
+                    return (
+                      <div key={itemKey} className="border border-gray-300 rounded-box p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex-1">
+                            <h4 className="font-medium">
+                              {item.product_name} ({item.product_code})
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              <strong>Variant:</strong> {item.variant_attribute}: {item.variant_value}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              <strong>Batch No:</strong> {item?.batch_no} • <strong>SKU:</strong> {item?.sku}
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              <strong>Purchase Unit:</strong> {item.original_purchase_unit?.toUpperCase()} • 
+                              <strong> Available:</strong> {item.stockQuantity} {item.original_purchase_unit?.toUpperCase()}
+                              {item.product_unit_type && item.product_unit_type !== 'piece' && (
+                                <span> ({item.stockBaseQuantity.toFixed(3)} base units)</span>
+                              )}
+                            </p>
+                          </div>
+
+                          <button type="button" onClick={() => removeItem(index)} className="btn btn-xs btn-error">
+                            <Trash2 size={12} />
+                          </button>
                         </div>
 
-                        <button type="button" onClick={() => removeItem(index)} className="btn btn-xs btn-error">
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
+                        {/* ইউনিট সেটিংস সেকশন */}
+                        <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Ruler size={14} className="text-blue-600" />
+                            <span className="text-sm font-bold text-gray-700">Sale Unit Settings</span>
+                            <div className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                              <Calculator size={10} className="inline mr-1" />
+                              Auto Price Calculation
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            {/* ইউনিট সিলেক্ট */}
+                            <div className="form-control">
+                              <label className="label">
+                                <span className="label-text">Sale Unit *</span>
+                              </label>
+                              <select
+                                className="select select-bordered select-sm"
+                                value={selectedUnit}
+                                onChange={(e) => handleUnitChange(item.uniqueKey, e.target.value)}
+                              >
+                                {availableUnitsList.map(unit => (
+                                  <option key={unit} value={unit}>
+                                    {unit.toUpperCase()}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Purchase Unit: {item.original_purchase_unit?.toUpperCase()}
+                              </div>
+                            </div>
 
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="form-control">
-                          <label className="label">
-                            <span className="label-text">Quantity *</span>
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            max={item.stockQuantity}
-                            className="input input-bordered input-sm"
-                            value={item.quantity}
-                            onChange={(e) => updateItem(index, "quantity", e.target.value)}
-                            required
-                          />
-                          {item.quantity > item.stockQuantity && (
-                            <div className="text-error text-xs mt-1">Exceeds available stock!</div>
+                            {/* Quantity Input */}
+                            <div className="form-control">
+                              <label className="label">
+                                <span className="label-text">Quantity *</span>
+                              </label>
+                              <input
+                                type="number"
+                                step={item.is_fraction_allowed ? "0.001" : "1"}
+                                min="0.001"
+                                className="input input-bordered input-sm"
+                                value={unitQuantity}
+                                onChange={(e) => updateItem(index, "unit_quantity", e.target.value)}
+                                required
+                              />
+                              <div className="text-xs text-gray-500 mt-1">
+                                In {selectedUnit.toUpperCase()}
+                              </div>
+                            </div>
+
+                            {/* Unit Price - READ ONLY & AUTO-CALCULATED */}
+                            <div className="form-control">
+                              <label className="label">
+                                <span className="label-text">Unit Price (৳) *</span>
+                              </label>
+                              <div className="relative">
+                                <input 
+                                  type="number" 
+                                  step="0.01"
+                                  className="input input-bordered input-sm bg-gray-100 w-full pr-10" 
+                                  value={formatCurrency(item.unit_price)}
+                                  readOnly 
+                                />
+                                <div className="absolute right-3 top-2.5 text-gray-500">
+                                  <Calculator size={14} />
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-500 mt-1">
+                                Per {selectedUnit.toUpperCase()} (auto)
+                              </div>
+                              {item.product_unit_type && item.product_unit_type !== 'piece' && (
+                                <div className="text-xs text-blue-600 mt-1">
+                                  Base: ৳{formatCurrency(item.base_price_per_base_unit || item.unit_price)} per base unit
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Total Price */}
+                            <div className="form-control">
+                              <label className="label">
+                                <span className="label-text">Total Price (৳)</span>
+                              </label>
+                              <input 
+                                type="number" 
+                                className="input input-bordered input-sm bg-gray-100" 
+                                value={formatCurrency(item.total_price)} 
+                                readOnly 
+                              />
+                            </div>
+                          </div>
+                          
+                          {/* ইউনিট কনভার্সন ইনফো */}
+                          {item.product_unit_type && item.product_unit_type !== 'piece' && (
+                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                              <div className="text-xs text-blue-800">
+                                <div className="font-bold mb-1 flex items-center gap-1">
+                                  <Calculator size={10} />
+                                  Unit Conversion & Price Calculation:
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <span className="font-medium">Purchase Unit:</span> {item.original_purchase_unit?.toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Sale Unit:</span> {selectedUnit.toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Base Unit Price:</span> ৳{formatCurrency(item.base_price_per_base_unit || item.unit_price)}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Calculated Price:</span> ৳{formatCurrency(item.unit_price)}/{selectedUnit.toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">Quantity:</span> {unitQuantity} {selectedUnit.toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <span className="font-medium">In Base Units:</span> {convertToBase(unitQuantity, selectedUnit, item.product_unit_type).toFixed(3)}
+                                  </div>
+                                  <div className="col-span-2">
+                                    <span className="font-medium">Available Stock:</span> {convertFromBase(item.stockBaseQuantity, selectedUnit, item.product_unit_type).toFixed(3)} {selectedUnit.toUpperCase()}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
                           )}
                         </div>
-
-                        <div className="form-control">
-                          <label className="label">
-                            <span className="label-text">Unit Price (৳)</span>
-                          </label>
-                          <input type="number" className="input input-bordered input-sm bg-gray-100" value={item.sell_price} readOnly />
-                        </div>
-
-                        <div className="form-control">
-                          <label className="label">
-                            <span className="label-text">Total Price (৳)</span>
-                          </label>
-                          <input type="number" className="input input-bordered input-sm bg-gray-100" value={formatCurrency(item.total_price)} readOnly />
-                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-box">
@@ -1415,12 +1686,12 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                             <h4 className="font-bold text-gray-900">{item.product_name}</h4>
                             <div className="text-sm text-gray-600 mt-1">
                               <div className="text-xs">
-                                <strong>Brand:</strong> {item.brand || "N/A"} | Variant: {item.variant || "N/A"}
+                                <strong>Brand:</strong> {item.brand || "N/A"} • <strong>Variant:</strong> {item.variant || "N/A"}
                               </div>
                               <div className="grid grid-cols-4 gap-2 mt-2">
                                 <div>
                                   <span className="text-xs text-gray-500">Qty:</span>
-                                  <div className="font-bold">{item.quantity}</div>
+                                  <div className="font-bold">{item.quantity} {item.unit?.toUpperCase() || 'PIECE'}</div>
                                 </div>
                                 <div>
                                   <span className="text-xs text-gray-500">Cost:</span>
@@ -1490,44 +1761,16 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-2">
                     <span>Discount:</span>
-                    <div className="flex items-center gap-2">
-                      <select
-                        className="select select-bordered select-sm"
-                        value={discountType}
-                        onChange={(e) => setDiscountType(e.target.value)}
-                      >
-                        <option value="percentage">Percentage</option>
-                        <option value="flat">Flat</option>
-                      </select>
-
-                      {discountType === "percentage" ? (
-                        <div className="flex items-center gap-1">
-                          <input
-                            type="number"
-                            min="0"
-                            max="30"
-                            step="0.01"
-                            className="input input-bordered input-sm w-20"
-                            value={discountRate}
-                            onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
-                          />
-                          <span>%</span>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-1">
-                          <span>৳</span>
-                          <input
-                            type="number"
-                            min="0"
-                            max="100"
-                            step="0.01"
-                            className="input input-bordered input-sm w-20"
-                            value={flatDiscount}
-                            onChange={(e) => setFlatDiscount(parseFloat(e.target.value) || 0)}
-                          />
-                        </div>
-                      )}
-                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      className="input input-bordered input-sm w-20"
+                      value={discountRate}
+                      onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
+                    />
+                    <span>%</span>
                   </div>
                   <span>{formatWithSymbol(discountAmount)}</span>
                 </div>
@@ -1550,7 +1793,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
           <button
             type="submit"
             className="btn bg-[#1e4d2b] text-white"
-            disabled={form.processing || (selectedItems.length === 0 && pickupItems.length === 0) || (paidAmount > 0 && !selectedAccount)}
+            disabled={form.processing  }
           >
             {form.processing ? "Creating Sale..." : "Create Sale"}
           </button>
@@ -1670,6 +1913,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
         </div>
       )}
 
+      {/* Supplier Modal */}
       {showSupplierModal && (
         <div className="modal modal-open">
           <div className="modal-box max-w-lg">
@@ -1697,7 +1941,7 @@ export default function AddSale({ customers, productstocks, suppliers, accounts 
               <div className="form-control">
                 <label className="label">
                   <span className="label-text">Company</span>
-                </label>
+                  </label>
                 <input
                   type="text"
                   className="input input-bordered"

@@ -31,6 +31,9 @@ return new class extends Migration
             $table->unsignedBigInteger('outlet_id');
             $table->unsignedBigInteger('purchase_id')->nullable();
 
+            $table->decimal('base_quantity', 12, 4)->default(0); // Base unit এ মোট পরিমাণ
+            $table->decimal('available_base_quantity', 12, 4)->default(0); // Base unit এ অবশিষ্ট পরিমাণ
+
             $table->index(['warehouse_id', 'product_id', 'variant_id', 'batch_no']);
         });
     }

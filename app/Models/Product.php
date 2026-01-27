@@ -26,7 +26,11 @@ class Product extends Model
         'in_house_shadow_sale_price',
         'in_house_initial_stock',
         'outlet_id',
-        'photo'
+        'photo',
+        'unit_type',
+        'default_unit',
+        'is_fraction_allowed',
+        'min_sale_unit',
     ];
 
     protected $casts = [
@@ -125,5 +129,43 @@ class Product extends Model
             }
             return 0;
         });
+    }
+
+    public function availableUnits()
+    {
+        $unitType = $this->unit_type ?? 'piece';
+        $conversions = Unit::getConversions();
+
+        return array_keys($conversions[$unitType] ?? ['piece' => 1]);
+    }
+
+    public function getBaseUnit()
+    {
+        return $this->default_unit ?? 'piece';
+    }
+
+    public function convertToBase($quantity, $fromUnit)
+    {
+        $unitType = $this->unit_type ?? 'piece';
+        $conversions = Unit::getConversions();
+
+        if (!isset($conversions[$unitType][$fromUnit])) {
+            return $quantity;
+        }
+
+        return $quantity * $conversions[$unitType][$fromUnit];
+    }
+
+    public function convertFromBase($quantity, $toUnit)
+    {
+        $unitType = $this->unit_type ?? 'piece';
+        $conversions = Unit::getConversions();
+
+        if (!isset($conversions[$unitType][$toUnit])) {
+            return $quantity;
+        }
+
+        $conversion = $conversions[$unitType][$toUnit];
+        return $conversion != 0 ? $quantity / $conversion : $quantity;
     }
 }

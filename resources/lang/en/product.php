@@ -28,7 +28,9 @@ return [
     'total_stock' => 'Total Stock',
     'variants' => 'Variants',
     'actions' => 'Actions',
-    
+    'code_auto_info' => 'Code Auto Info',
+    'last_generated' => 'Last Generated',
+    'regenerate' => 'Re Generated',
     // Product details
     'default_variant' => 'Default Variant',
     'units' => 'units',
@@ -38,7 +40,14 @@ return [
     'price' => 'Price',
     'description' => 'Description',
     'not_available' => 'N/A',
-    
+    'from_brand' => 'Brand',
+    'generate' => 'Generate',
+    'code_tip' => 'Code Tip',
+    'no_photo_selected' => 'No photo selected',
+    'preview' => 'Preview',
+    'photo_tip' => 'Photo Tip',
+    'photo' => 'Photo',
+
     // Status messages
     'product_added' => 'Product added successfully!',
     'product_updated' => 'Product updated successfully!',
@@ -58,8 +67,7 @@ return [
     'enter_description' => 'Enter product description',
     
     // Brand field
-    'brand' => 'Attribute',
-    'pick_brand' => '--Pick a Attribute--',
+    'pick_brand' => '--Pick a Brand--',
     
     // Attributes section
     'product_attributes' => 'Product Attribute',
@@ -69,7 +77,6 @@ return [
     'selected_attributes' => 'Selected Attributes',
     'apply_attributes' => 'Apply Attributes',
     'selected_count' => 'Selected',
-    'attributes' => 'attribute',
     
     // Variants section
     'product_variants' => 'Product Variants',
@@ -95,6 +102,8 @@ return [
     'fix_validation_errors' => 'Please fix the validation errors',
     'something_went_wrong' => 'Something went wrong. Please try again!',
     'duplicate_variants' => 'Duplicate attribute combinations found',
+    'invalid_variant_attributes' => 'Please check variant attributes',
+    'at_least_one_variant' => 'Please add at least one variant',
     
     // Success messages
     'product_added_success' => 'Product added successfully!',
@@ -133,4 +142,34 @@ return [
     'select_attributes_for' => 'Select Attributes for',
     'clear_attributes' => 'Clear Attributes',
     'done' => 'Done',
+
+    // Unit Settings
+    'unit_settings' => 'Unit Settings',
+    'unit_type' => 'Unit Type',
+    'default_unit' => 'Default Purchase Unit',
+    'min_sale_unit' => 'Minimum Sale Unit',
+    'allow_fractions' => 'Allow Fractional Sales',
+    'select_min_sale_unit' => '-- Select --',
+    'default_unit_help' => 'Default unit for purchasing this product',
+    'min_sale_unit_help' => 'Smallest unit that can be sold. Cannot be larger than purchase unit',
+    'fractions_help' => 'Allow decimal quantities (e.g., 1.5 kg, 0.75 liter)',
+    'fractions_piece_help' => 'Not applicable for piece products',
+    'min_sale_unit_piece_help' => 'For piece products, minimum sale unit is always "piece"',
+    'unit_conversion_info' => 'Unit Conversion Information',
+    'sale_note' => 'You can purchase in',
+    'and_sell_in' => ' and sell in',
+    'or_smaller' => ' or smaller units',
+
+    // In-House Unit Settings
+    'in_house_unit_settings' => 'In-House Production Unit Settings',
+    'production_unit' => 'Production Unit',
+    'sale_unit' => 'Sale Unit',
+    'in_house_unit_help' => 'Production will be recorded in this unit',
+    'in_house_sale_unit_help' => 'Customers can purchase in this unit',
+
+    // Variant Unit Info
+    'variant_unit_note' => 'Note for Variants:',
+    'variant_unit_description' => 'All variants will use the same unit settings. Each variant\'s stock will be tracked in',
+    
+  
 ];

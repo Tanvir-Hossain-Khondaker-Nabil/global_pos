@@ -1,415 +1,504 @@
-import React from 'react';
-import { usePage } from '@inertiajs/react';
-import { Printer, Download, Mail, ArrowLeft } from 'lucide-react';
-import { Link } from '@inertiajs/react';
+import React, { useMemo, useState } from "react";
+import { usePage, Link } from "@inertiajs/react";
+import { Printer, Download, ArrowLeft } from "lucide-react";
 
 export default function Invoice({ sale }) {
-    const { auth } = usePage().props;
+  const { auth } = usePage().props;
+  const [isPrinting, setIsPrinting] = useState(false);
 
-    console.log(auth, sale);
+  // ======= Bangla Helpers =======
+  const toBanglaDigit = (value) => {
+    const map = { 0: "০", 1: "১", 2: "২", 3: "৩", 4: "৪", 5: "৫", 6: "৬", 7: "৭", 8: "৮", 9: "৯" };
+    return String(value ?? "").replace(/\d/g, (d) => map[d]);
+  };
 
-    // Format currency
-    const formatCurrency = (amount) => {
-        return new Intl.NumberFormat('en-BD', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        }).format(amount || 0);
-    };
+  const formatMoneyBn = (amount) => {
+    const num = new Intl.NumberFormat("en-BD", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(Number(amount || 0));
+    return toBanglaDigit(num);
+  };
 
-    // Format date for receipt
-    const formatReceiptDate = (date) => {
-        return new Date(date).toLocaleString('en-BD', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false
-        }).replace(',', '');
-    };
+  const formatDateBn = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yy = String(d.getFullYear());
+    return toBanglaDigit(`${dd}/${mm}/${yy}`);
+  };
 
-    // Calculate total items
-    const getTotalItems = () => {
-        return sale.items?.reduce((total, item) => total + (item.quantity || 0), 0) || 0;
-    };
+  const formatDateTimeBn = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yy = String(d.getFullYear());
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return toBanglaDigit(`${dd}/${mm}/${yy} ${hh}:${mi}`);
+  };
 
-    // Handle print
-    const handlePrint = () => {
+  const items = useMemo(() => sale?.items || [], [sale]);
+
+  const totalQty = useMemo(
+    () => items.reduce((sum, it) => sum + Number(it?.quantity || 0), 0),
+    [items]
+  );
+
+  // ===== আল-মদিনা স্টোর Theme =====
+  const MB_DARK = "rgb(15, 45, 26)";
+  const MB_LIGHT = "rgb(30, 77, 43)";
+  const MB_GRADIENT =
+    "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)";
+
+  // ======= Dynamic Header Data =======
+  const STORE_NAME = sale?.creator?.business?.name || "আল-মদিনা স্টোর";
+  const OWNER_NAME = "প্রোঃ মোঃ সবুজ হোসেন";
+  const STORE_NOTE =
+    "এখানে বেবী ফুডস, মুদি মালামাল, কসমেটিকস সামগ্রী সুলভ মূল্যে ক্রয়-বিক্রয় করা হয়। বিশেষ অর্ডারে সকল ধরনের কেক পাওয়া যায় এবং অর্ডার নেয়া হয়।";
+
+  const STORE_ADDRESS =
+    sale?.creator?.business?.address ||
+    "নেভী চেকপোস্ট, খালিশপুর, খুলনা";
+
+  const STORE_PHONE = sale?.creator?.business?.phone || "০১৬৭৪-০০৭৪৭২";
+
+  const customerName =
+    sale?.customer?.customer_name || sale?.customer?.name || "Walk-in Customer";
+
+  const customerAddress =
+    sale?.customer?.address || sale?.customer?.customer_address || "";
+
+  const memoNo = sale?.invoice_no || sale?.id || "";
+  const invoiceDate = formatDateBn(sale?.created_at);
+
+  // ======= Table Rows =======
+  const tableRows = items.map((item) => {
+    const desc =
+      item?.product?.name || item?.product_name || item?.description || "N/A";
+
+    const qty = Number(item?.quantity || 0);
+    const rate = Number(item?.unit_price || 0);
+    const amount = Number(item?.total_price || 0);
+
+    return { desc, qty, rate, amount };
+  });
+
+  // ======= Print (ONLY window.print) =======
+  const handlePrint = () => {
+    setIsPrinting(true);
+
+    requestAnimationFrame(() => {
+      setTimeout(() => {
         window.print();
-    };
+        setTimeout(() => setIsPrinting(false), 400);
+      }, 80);
+    });
+  };
 
-    // Handle PDF download
-    const handleDownloadPDF = async () => {
-        try {
-            const printWindow = window.open('', '_blank');
-            const receiptHTML = generateReceiptHTML();
+  const handleDownloadPDF = () => handlePrint();
 
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>Invoice ${sale.invoice_no}</title>
-                    <style>
-                        @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+128&display=swap');
-                        
-                        body { 
-                            font-family: 'Courier New', monospace; 
-                            font-size: 12px; 
-                            margin: 0; 
-                            padding: 8px; 
-                            max-width: 80mm;
-                            background: white;
-                        }
-                        .header { 
-                            text-align: center; 
-                            margin-bottom: 10px; 
-                            border-bottom: 2px solid #000;
-                            padding-bottom: 8px;
-                        }
-                        .company-name { 
-                            font-weight: bold; 
-                            font-size: 16px; 
-                            margin-bottom: 4px;
-                        }
-                        .receipt-info { 
-                            margin: 8px 0; 
-                            padding: 8px 0;
-                            border-bottom: 1px dashed #ccc;
-                        }
-                        .barcode { 
-                            text-align: center; 
-                            margin: 10px 0; 
-                            padding: 8px 0;
-                            border-bottom: 1px dashed #ccc;
-                        }
-                        .barcode-text {
-                            font-family: 'Libre Barcode 128', cursive;
-                            font-size: 32px;
-                            line-height: 1;
-                        }
-                        .items-table { 
-                            width: 100%; 
-                            border-collapse: collapse; 
-                            margin: 10px 0; 
-                        }
-                        .items-table td { 
-                            padding: 3px 0; 
-                            border-bottom: 1px dashed #ccc; 
-                            vertical-align: top;
-                        }
-                        .summary { 
-                            margin-top: 10px; 
-                            padding-top: 10px; 
-                            border-top: 2px solid #000; 
-                        }
-                        .footer { 
-                            text-align: center; 
-                            margin-top: 15px; 
-                            font-size: 10px; 
-                            border-top: 1px dashed #ccc;
-                            padding-top: 8px;
-                        }
-                        .text-right { text-align: right; }
-                        .text-center { text-align: center; }
-                        .text-bold { font-weight: bold; }
-                        .border-top { border-top: 1px dashed #000; }
-                        @media print { 
-                            body { margin: 0; padding: 5px; }
-                        }
-                    </style>
-                </head>
-                <body>
-                    ${receiptHTML}
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
+  const BorderColor = "border-[#0f2d1a]";
+  const TextColor = "text-[#1e4d2b]";
+  const DottedBorder = "border-dotted border-[#0f2d1a]";
 
-            // Wait for content to load then print
-            setTimeout(() => {
-                printWindow.print();
-                // Optional: close window after print
-                // setTimeout(() => printWindow.close(), 500);
-            }, 500);
+  return (
+    <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm">
+      {/* ✅ Print CSS: print ONLY #printPad */}
+      <style>{`
+        @media print {
+          @page { size: A4 portrait; margin: 10mm; }
+          html, body { height: auto !important; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
-        } catch (error) {
-            console.error('Error generating PDF:', error);
-            // Fallback to regular print
-            window.print();
+          body * { visibility: hidden !important; }
+          #printPad, #printPad * { visibility: visible !important; }
+
+          #printPad {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100% !important;
+            background: #fff !important;
+            padding: 0 !important;
+          }
+
+          #printPad .pad-border {
+            max-width: 190mm !important;
+            margin: 0 auto !important;
+            border: 2px solid ${MB_DARK} !important;
+            padding: 16px !important;
+            min-height: 277mm !important;
+            display: flex !important;
+            flex-direction: column !important;
+          }
+
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+
+          .no-print { display: none !important; }
+
+          #printPad .print-down{
+            margin-top: auto !important;
+          }
         }
-    };
+      `}</style>
 
-    // Generate barcode-like representation
-    const generateBarcode = (text) => {
-        return `*${text}*`;
-    };
+      {/* Header Actions */}
+      <div className="flex justify-between items-center p-6 border-b no-print">
+        <Link href={route("sales.index")} className="btn btn-ghost btn-sm">
+          <ArrowLeft size={16} />
+          Back to Sales
+        </Link>
 
-    // Generate compact receipt HTML for PDF
-    const generateReceiptHTML = () => {
-        return `
-            <div class="header">
-                <div class="company-name">${sale?.creator?.business?.name}</div>
-                <div>${sale?.creator?.business?.address}</div>
-                <div>Phone: ${sale?.creator?.business?.phone}</div>
-                <div>VAT: ${sale?.creator?.business?.email}</div>
+        <div className="flex gap-2">
+          <button
+            onClick={handlePrint}
+            className="btn text-white btn-sm"
+            style={{ background: MB_GRADIENT }}
+            disabled={isPrinting}
+          >
+            <Printer size={16} />
+            Print
+            {isPrinting && (
+              <span className="loading loading-spinner loading-xs ml-2"></span>
+            )}
+          </button>
+
+          <button
+            onClick={handleDownloadPDF}
+            className="btn btn-outline btn-sm"
+            disabled={isPrinting}
+          >
+            <Download size={16} />
+            PDF
+            {isPrinting && (
+              <span className="loading loading-spinner loading-xs ml-2"></span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Screen Preview */}
+      <div className="p-6 bg-gray-50 no-print">
+        <div className="mx-auto max-w-[860px] bg-white">
+          <div className={`border-2 ${BorderColor} p-4`}>
+            {/* Title with gradient text */}
+            <div
+              className="text-center text-[34px] sm:text-[38px] font-extrabold leading-tight"
+              style={{
+                background: MB_GRADIENT,
+                WebkitBackgroundClip: "text",
+                color: "transparent",
+              }}
+            >
+              {STORE_NAME}
             </div>
-            
-            <div class="receipt-info">
-                <div><strong>INVOICE: ${sale.invoice_no}</strong></div>
-                <div>Date: ${formatReceiptDate(sale.created_at)}</div>
-                <div>Customer: ${sale.customer?.customer_name || "Walk-in Customer"}</div>
-                ${sale.customer?.phone ? `<div>Phone: ${sale.customer.phone}</div>` : ''}
+
+            <div className="text-center mt-2">
+              <span
+                className="inline-block text-white px-4 py-1 rounded-full text-sm font-bold"
+                style={{ background: MB_GRADIENT }}
+              >
+                {OWNER_NAME}
+              </span>
             </div>
 
-            <div class="barcode">
-                <div class="barcode-text">${generateBarcode(sale.invoice_no)}</div>
-                <div style="font-size: 10px; margin-top: -5px;">${sale.invoice_no}</div>
+            <div className="text-center text-xs sm:text-sm leading-relaxed mt-2 px-1">
+              {STORE_NOTE}
             </div>
 
-            <table class="items-table">
+            <div className="text-center text-xs sm:text-sm font-bold mt-2">
+              {STORE_ADDRESS}
+            </div>
+            <div className="text-center text-xs sm:text-sm font-semibold mt-1">
+              মোবাঃ {STORE_PHONE}
+            </div>
+
+            {/* dotted fields */}
+            <div className="mt-3 space-y-2 text-sm font-bold">
+              <div className="grid grid-cols-[42px_1fr_38px_1fr] gap-2 items-end">
+                <div>নং-</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-xs font-semibold">
+                    {toBanglaDigit(memoNo)}
+                  </span>
+                  <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+                </div>
+                <div>তারিখ</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-xs font-semibold">{invoiceDate}</span>
+                  <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
+                <div>নাম</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-xs font-semibold">{customerName}</span>
+                  <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
+                <div>ঠিকানা</div>
+                <div className="flex items-end gap-2">
+                  <span className="text-xs font-semibold">
+                    {customerAddress}
+                  </span>
+                  <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Table */}
+            <div className="mt-4">
+              <table className="w-full table-fixed border-collapse">
+                <thead>
+                  <tr>
+                    <th
+                      className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[55%]`}
+                      style={{ color: MB_LIGHT }}
+                    >
+                      বিবরণ
+                    </th>
+                    <th
+                      className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[15%]`}
+                      style={{ color: MB_LIGHT }}
+                    >
+                      পরিমাণ
+                    </th>
+                    <th
+                      className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[15%]`}
+                      style={{ color: MB_LIGHT }}
+                    >
+                      দর
+                    </th>
+                    <th
+                      className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[15%]`}
+                      style={{ color: MB_LIGHT }}
+                    >
+                      টাকা
+                    </th>
+                  </tr>
+                </thead>
                 <tbody>
-                    ${sale.items?.map(item => `
-                        <tr>
-                            <td>${item.product?.name || item?.product_name} (${item.product?.product_no || item?.brand || 'N/A'})</td>
-                            <td class="text-center">${item.quantity} x ${formatCurrency(item.unit_price)}</td>
-                            <td class="text-right">${formatCurrency(item.total_price)}</td>
-                        </tr>
-                        ${item.variant?.sku ? `<tr><td colspan="3" style="font-size: 10px; padding-left: 10px;">↳ ${item.variant.sku}</td></tr>` : ''}
-                    `).join('')}
+                  {tableRows.length ? (
+                    tableRows.map((r, idx) => (
+                      <tr key={idx}>
+                        <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm`}>
+                          {r.desc}
+                        </td>
+                        <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm text-center`}>
+                          {toBanglaDigit(r.qty)}
+                        </td>
+                        <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm text-center`}>
+                          {formatMoneyBn(r.rate)}
+                        </td>
+                        <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm text-center`}>
+                          {formatMoneyBn(r.amount)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        className={`border-l-2 border-r-2 border-b-2 ${BorderColor} px-3 py-8 text-center text-gray-500`}
+                      >
+                        কোনো আইটেম পাওয়া যায়নি
+                      </td>
+                    </tr>
+                  )}
+
+                  <tr>
+                    <td colSpan={4} className={`border-b-2 ${BorderColor}`} style={{ height: 1 }} />
+                  </tr>
                 </tbody>
+              </table>
+
+              {/* totals */}
+              <div className="mt-3 flex flex-wrap justify-end gap-4 text-xs font-extrabold">
+                <span>
+                  মোট পরিমাণ:{" "}
+                  <b className={TextColor}>{toBanglaDigit(totalQty)}</b>
+                </span>
+                <span>
+                  মোট টাকা:{" "}
+                  <b className={TextColor}>{formatMoneyBn(sale?.grand_total)}</b>
+                </span>
+                <span>
+                  পরিশোধ:{" "}
+                  <b className={TextColor}>{formatMoneyBn(sale?.paid_amount)}</b>
+                </span>
+                <span>
+                  বকেয়া:{" "}
+                  <b className={TextColor}>{formatMoneyBn(sale?.due_amount)}</b>
+                </span>
+              </div>
+
+              <div className="mt-2 text-[11px] text-gray-700">
+                সময়: {formatDateTimeBn(sale?.created_at)}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PRINT ONLY */}
+      <div id="printPad" className="hidden print:block">
+        <div className="pad-border border-2 border-[#0f2d1a] p-4">
+          <div
+            className="text-center text-[34px] font-extrabold leading-tight"
+            style={{
+              background: MB_GRADIENT,
+              WebkitBackgroundClip: "text",
+              color: "transparent",
+            }}
+          >
+            {STORE_NAME}
+          </div>
+
+          <div className="text-center mt-2">
+            <span
+              className="inline-block text-white px-4 py-1 rounded-full text-sm font-bold"
+              style={{ background: MB_GRADIENT }}
+            >
+              {OWNER_NAME}
+            </span>
+          </div>
+
+          <div className="text-center text-xs leading-relaxed mt-2 px-1">
+            {STORE_NOTE}
+          </div>
+
+          <div className="text-center text-xs font-bold mt-2">
+            {STORE_ADDRESS}
+          </div>
+          <div className="text-center text-xs font-semibold mt-1">
+            মোবাঃ {STORE_PHONE}
+          </div>
+
+          <div className="mt-3 space-y-2 text-sm font-bold">
+            <div className="grid grid-cols-[42px_1fr_38px_1fr] gap-2 items-end">
+              <div>নং-</div>
+              <div className="flex items-end gap-2">
+                <span className="text-xs font-semibold">
+                  {toBanglaDigit(memoNo)}
+                </span>
+                <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+              </div>
+              <div>তারিখ</div>
+              <div className="flex items-end gap-2">
+                <span className="text-xs font-semibold">{invoiceDate}</span>
+                <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
+              <div>নাম</div>
+              <div className="flex items-end gap-2">
+                <span className="text-xs font-semibold">{customerName}</span>
+                <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
+              <div>ঠিকানা</div>
+              <div className="flex items-end gap-2">
+                <span className="text-xs font-semibold">{customerAddress}</span>
+                <span className={`flex-1 border-b-2 ${DottedBorder} h-4`} />
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            <table className="w-full table-fixed border-collapse">
+              <thead>
+                <tr>
+                  <th
+                    className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[55%]`}
+                    style={{ color: MB_LIGHT }}
+                  >
+                    বিবরণ
+                  </th>
+                  <th
+                    className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[15%]`}
+                    style={{ color: MB_LIGHT }}
+                  >
+                    পরিমাণ
+                  </th>
+                  <th
+                    className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[15%]`}
+                    style={{ color: MB_LIGHT }}
+                  >
+                    দর
+                  </th>
+                  <th
+                    className={`border-2 ${BorderColor} font-extrabold text-sm py-2 w-[15%]`}
+                    style={{ color: MB_LIGHT }}
+                  >
+                    টাকা
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableRows.length ? (
+                  tableRows.map((r, idx) => (
+                    <tr key={idx}>
+                      <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm`}>
+                        {r.desc}
+                      </td>
+                      <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm text-center`}>
+                        {toBanglaDigit(r.qty)}
+                      </td>
+                      <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm text-center`}>
+                        {formatMoneyBn(r.rate)}
+                      </td>
+                      <td className={`border-l-2 border-r-2 ${BorderColor} px-2 py-2 text-sm text-center`}>
+                        {formatMoneyBn(r.amount)}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className={`border-l-2 border-r-2 border-b-2 ${BorderColor} px-3 py-8 text-center text-gray-500`}
+                    >
+                      কোনো আইটেম পাওয়া যায়নি
+                    </td>
+                  </tr>
+                )}
+
+                <tr>
+                  <td colSpan={4} className={`border-b-2 ${BorderColor}`} style={{ height: 1 }} />
+                </tr>
+              </tbody>
             </table>
 
-            <div class="summary">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Sub Total:</span>
-                    <span>${formatCurrency(sale.sub_total)} Tk</span>
-                </div>
-                ${sale.discount > 0 ? `
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Discount:</span>
-                    <span>-${formatCurrency(sale.discount)}   ${sale.discount_type == 'flat' ? ' Tk' : ' %'} </span>
-                </div>
-                ` : ''}
-                ${sale.tax > 0 ? `
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Tax:</span>
-                    <span>${formatCurrency(sale.tax)} Tk</span>
-                </div>
-                ` : ''}
-                <div style="display: flex; justify-content: space-between; font-weight: bold; border-top: 1px dashed #000; padding-top: 5px; margin-top: 5px;">
-                    <span>TOTAL:</span>
-                    <span>${formatCurrency(sale.grand_total)} Tk</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Paid:</span>
-                    <span>${formatCurrency(sale.paid_amount)} Tk</span>
-                </div>
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Due:</span>
-                    <span>${formatCurrency(sale.due_amount)} Tk</span>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 5px; border-top: 1px dashed #000; padding-top: 5px;">
-                    <span>Payment:</span>
-                    <span class="text-bold">${sale.payment_type || 'Cash'}</span>
-                </div>
-                ${sale.payment_reference ? `
-                <div style="display: flex; justify-content: space-between;">
-                    <span>Reference:</span>
-                    <span>${sale.payment_reference}</span>
-                </div>
-                ` : ''}
+            <div className="mt-3 flex flex-wrap justify-end gap-4 text-xs font-extrabold">
+              <span>
+                মোট পরিমাণ: <b className={TextColor}>{toBanglaDigit(totalQty)}</b>
+              </span>
+              <span>
+                মোট টাকা: <b className={TextColor}>{formatMoneyBn(sale?.grand_total)}</b>
+              </span>
+              <span>
+                পরিশোধ: <b className={TextColor}>{formatMoneyBn(sale?.paid_amount)}</b>
+              </span>
+              <span>
+                বকেয়া: <b className={TextColor}>{formatMoneyBn(sale?.due_amount)}</b>
+              </span>
             </div>
 
-            <div class="footer">
-                <div>*** ${getTotalItems()} Items ***</div>
-                <div style="margin-top: 8px;">Thank you for your purchase!</div>
-                <div style="margin-top: 5px;">
-                    <div>This is computer generated receipt</div>
-                    <div>No signature required</div>
-                </div>
+            <div className="mt-2 text-[11px] text-gray-700">
+              সময়: {formatDateTimeBn(sale?.created_at)}
             </div>
-        `;
-    };
-
-    return (
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-sm print-preview">
-            {/* Header Actions */}
-            <div className="flex justify-between items-center p-6 border-b print-hidden">
-                <Link
-                    href={route('sales.index')}
-                    className="btn btn-ghost btn-sm"
-                >
-                    <ArrowLeft size={16} />
-                    Back to Sales
-                </Link>
-                <div className="flex gap-2">
-                    <button
-                        onClick={handlePrint}
-                        className="btn bg-[#1e4d2b] text-white btn-sm"
-                    >
-                        <Printer size={16} />
-                        Print Invoice
-                    </button>
-                    <button
-                        onClick={handleDownloadPDF}
-                        className="btn btn-outline btn-sm"
-                    >
-                        <Download size={16} />
-                        Download PDF
-                    </button>
-                </div>
-            </div>
-
-            {/* Compact Invoice Content */}
-            <div className="p-6 print-p-2 print-max-w-80mm print-mx-auto thermal-receipt">
-                {/* Company Header - Compact */}
-                <div className="text-center print-mb-2 border-b-2 border-black print-border-b-2 print-border-black pb-4 print-pb-2">
-                    <h1 className="text-xl font-bold print-text-lg">{sale?.creator?.business?.name || 'Business Name'}</h1>
-                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.address || 'Business Address'}</p>
-                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.phone || 'Business Phone'}</p>
-                    <p className="text-sm text-gray-600 print-text-xs">{sale?.creator?.business?.email || 'Business Email'}</p>
-                </div>
-
-                {/* Receipt Info */}
-                <div className="grid grid-cols-2 gap-4 print-grid-cols-1 print-gap-1 print-mb-2 print-space-y-1 my-4 print-my-2 border-b border-dashed border-gray-300 print-border-b print-border-dashed print-border-gray-300 pb-4 print-pb-2">
-                    <div className="col-span-2 print-col-span-1">
-                        <p className="font-semibold print-text-sm">INVOICE NO:</p>
-                        <p className="text-primary font-mono print-text-sm">{sale.invoice_no}</p>
-                    </div>
-                    <div className="col-span-2 print-col-span-1">
-                        <p className="font-semibold print-text-sm">DATE:</p>
-                        <p className="print-text-sm">{formatReceiptDate(sale.created_at)}</p>
-                    </div>
-                    <div className="col-span-2 print-col-span-1">
-                        <p className="font-semibold print-text-sm">CUSTOMER:</p>
-                        <p className="print-text-sm">{sale.customer?.customer_name || "Walk-in Customer"}</p>
-                        {sale.customer?.phone && (
-                            <p className="text-sm text-gray-600 print-text-xs">Phone: {sale.customer.phone}</p>
-                        )}
-                    </div>
-                </div>
-
-                {/* Barcode */}
-                <div className="text-center print-mb-2 border-b border-dashed border-gray-300 print-border-b print-border-dashed print-border-gray-300 pb-4 print-pb-2">
-                    <div className="font-barcode text-3xl print-text-xl" style={{ fontFamily: "'Libre Barcode 128', cursive" }}>
-                        {generateBarcode(sale.invoice_no)}
-                    </div>
-                    <p className="text-xs text-gray-600 print-text-xs mt-1 print-mt-1">{sale.invoice_no}</p>
-                </div>
-
-                {/* Items Table - Compact */}
-                <div className="print-mb-2 my-4 print-my-2">
-                    <table className="w-full text-sm print-text-xs receipt-table">
-                        <thead>
-                            <tr className="border-b-2 border-black">
-                                <th className="text-left pb-1 print-pb-1">ITEM</th>
-                                <th className="text-left pb-1 print-pb-1">Brand</th>
-                                <th className="text-center pb-1 print-pb-1">QTY</th>
-                                <th className="text-right pb-1 print-pb-1">PRICE</th>
-                                <th className="text-right pb-1 print-pb-1">TOTAL</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {sale.items?.map((item, index) => (
-                                <React.Fragment key={item.id}>
-                                    <tr className="border-bottom-dashed">
-                                        <td className="py-1 print-py-1">
-                                            <div>
-                                                <p className="font-medium">{item.product?.name || item?.product_name}
-                                                    {item.product && (
-                                                        <span> ( {item.product?.product_no || item?.product_name} )</span>
-                                                    )}
-                                                </p>
-                                       
-                                                {item.variant && (
-                                                    <div className="text-xs text-gray-500">
-                                                        {item.variant.attribute_values &&
-                                                            (typeof item.variant.attribute_values === 'object'
-                                                                ? Object.entries(item.variant.attribute_values)
-                                                                    .map(([k, v]) => `${k}{${v}}`)
-                                                                    .join(', ')
-                                                                : item.variant.attribute_values)
-                                                        }
-                                                        {item.variant.attribute_values && ' · '}
-                                                        SKU: {item.variant.sku || 'N/A'}
-                                                    </div>
-                                                )}
-
-
-                                            </div>
-                                        </td>
-                                        <td className="text-left py-1 print-py-1">
-                                            {item?.product?.brand && (
-                                                <p className="text-sm text-gray-500 print:text-xs">
-                                                    Brand: {item.product.brand?.name || 'N/A'}
-                                                </p>
-                                            )}
-                                            {item?.brand || 'N/A'}
-                                        </td>
-                                        <td className="text-center py-1 print-py-1">{item.quantity}</td>
-                                        <td className="text-right py-1 print-py-1">{formatCurrency(item.unit_price)}</td>
-                                        <td className="text-right py-1 print-py-1 font-semibold">{formatCurrency(item.total_price)}</td>
-                                    </tr>
-                                </React.Fragment>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-
-                {/* Payment Summary - Compact */}
-                <div className="border-t-2 border-black print-border-t-2 print-border-black pt-2 print-pt-2 print-space-y-1">
-                    <div className="space-y-1 print-space-y-1 text-sm print-text-xs">
-                        <div className="flex justify-between">
-                            <span>Sub Total:</span>
-                            <span>{formatCurrency(sale.sub_total)} Tk</span>
-                        </div>
-                        {sale.discount > 0 && (
-                            <div className="flex justify-between">
-                                <span>Discount:</span>
-                                <span>{formatCurrency(sale.discount)}
-                                     {sale.discount_type == 'flat' ? ' Tk' : ' %'}
-                                     </span>
-                            </div>
-                        )}
-                        {sale.tax > 0 && (
-                            <div className="flex justify-between">
-                                <span>Tax:</span>
-                                <span>+{formatCurrency(sale.tax)} Tk</span>
-                            </div>
-                        )}
-                        <div className="flex justify-between border-t border-dashed border-gray-300 print-border-t print-border-dashed print-border-gray-300 pt-1 print-pt-1 font-bold print-text-sm">
-                            <span>GRAND TOTAL:</span>
-                            <span className="text-primary">{formatCurrency(sale.grand_total)} Tk</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>Paid Amount:</span>
-                            <span>{formatCurrency(sale.paid_amount)} Tk</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span>Due Amount:</span>
-                            <span>{formatCurrency(sale.due_amount)} Tk</span>
-                        </div>
-                        <div className="flex justify-between border-t border-dashed border-gray-300 print-border-t print-border-dashed print-border-gray-300 pt-1 print-pt-1">
-                            <span>Payment Method:</span>
-                            <span className="font-semibold">{sale.payment_type || 'Cash'}</span>
-                        </div>
-                        {sale.payment_reference && (
-                            <div className="flex justify-between">
-                                <span>Reference:</span>
-                                <span className="font-mono text-xs print-text-xs">{sale.payment_reference}</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Footer - Compact */}
-                <div className="text-center print-mt-2 mt-4 text-xs print-text-xs text-gray-500 border-t border-dashed border-gray-300 print-border-t print-border-dashed print-border-gray-300 pt-4 print-pt-2">
-                    <p>*** {getTotalItems()} Items ***</p>
-                    <p className="mt-1 print-mt-1">Thank you for your business!</p>
-                    <p className="mt-2 print-mt-1">This is computer generated receipt</p>
-                    <p>No signature required</p>
-                </div>
-            </div>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 }

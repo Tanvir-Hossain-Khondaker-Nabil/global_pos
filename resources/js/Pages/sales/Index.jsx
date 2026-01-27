@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Wallet, AlertCircle, DollarSign, History, Landmark, Smartphone, CreditCard, Calendar, Filter } from "lucide-react";
+import { Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Wallet, AlertCircle, DollarSign, History, Landmark, Smartphone, CreditCard } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 
 export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
     const { auth } = usePage().props;
     const [paymentErrors, setPaymentErrors] = useState({});
-    const [selectedAccount, setSelectedAccount] = useState(null);
-    const [showFilters, setShowFilters] = useState(false);
+    const [selectedAccount, setSelectedAccount] = useState(null); // Added missing state
 
     // Handle search and filters
     const filterForm = useForm({
@@ -30,7 +29,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
     const [showPaymentModal, setShowPaymentModal] = useState(false);
     const [processingPayment, setProcessingPayment] = useState(false);
 
-    // Handle account selection when paymentData changes
+    // Fix: Added useEffect to handle account selection when paymentData changes
     useEffect(() => {
         if (paymentData.account_id && accounts && accounts.length > 0) {
             const account = accounts.find(acc => acc.id == paymentData.account_id);
@@ -77,8 +76,12 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
     };
 
     const openPaymentModal = (sale) => {
+        console.log('Selected Sale:', sale);
+        console.log('Sale Payments:', sale.payments);
+
         let defaultAccountId = '';
         if (accounts && accounts.length > 0) {
+            // Find default account
             const defaultAccount = accounts.find(acc => acc.is_default);
             if (defaultAccount) {
                 defaultAccountId = defaultAccount.id;
@@ -114,6 +117,8 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
         if (!selectedSale) return;
 
         setProcessingPayment(true);
+
+        // Clear previous errors
         setPaymentErrors({});
 
         // Validate before submitting
@@ -186,6 +191,17 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
         }).format(numAmount);
     };
 
+    // Format date
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('en-GB', {
+            timeZone: "Asia/Dhaka",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        });
+    };
+
     // Get account icon
     const getAccountIcon = (type) => {
         switch (type) {
@@ -220,8 +236,11 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
         };
     };
 
+    // Get payments for selected sale - with multiple fallback options
     const getPayments = (sale) => {
         if (!sale) return [];
+        
+        // Try different possible property names
         return sale.payments || sale.payment_history || sale.payment_records || [];
     };
 
@@ -233,383 +252,135 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
     };
 
     return (
-        <div className="bg-white rounded-box p-3 md:p-4">
+        <div className="bg-white rounded-box p-5">
             <PageHeader
                 title="Sales History (Inventory)"
                 subtitle={isShadowUser ? "View sales data" : "Manage your product sales"}
             >
-                {/* Responsive Filter Section */}
-                <div className="mb-4">
-                    {/* Desktop/Tablet View (md and up) */}
-                    <div className="hidden md:flex flex-col lg:flex-row items-start lg:items-center gap-3">
-                        {/* Main filter row */}
-                        <div className="flex-1 flex flex-wrap lg:flex-nowrap items-center gap-2">
-                            {/* Search Input */}
-                            <div className="flex-1 min-w-[200px] max-w-[300px]">
-                                <div className="join w-full">
-                                    <input
-                                        type="search"
-                                        value={filterForm.data.search}
-                                        onChange={(e) => filterForm.setData("search", e.target.value)}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder="Search invoice or customer..."
-                                        className="input input-sm input-bordered join-item w-full"
-                                    />
-                                    <button
-                                        onClick={handleFilter}
-                                        className="btn btn-sm bg-[#1e4d2b] text-white join-item"
-                                        title="Search"
-                                    >
-                                        <Search size={14} />
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Status Filter */}
-                            <div className="w-32">
-                                <select
-                                    value={filterForm.data.status}
-                                    onChange={(e) => filterForm.setData("status", e.target.value)}
-                                    className="select select-sm select-bordered w-full"
-                                >
-                                    <option value="">All Status</option>
-                                    <option value="pending">Pending</option>
-                                    <option value="partial">Partial</option>
-                                    <option value="paid">Paid</option>
-                                    <option value="partially_returned">Partial Return</option>
-                                </select>
-                            </div>
-
-                            {/* Date Range - For tablet and desktop */}
-                            <div className="flex items-center gap-1">
-                                <div className="relative">
-                                    <Calendar size={12} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="date"
-                                        value={filterForm.data.date_from}
-                                        onChange={(e) => filterForm.setData("date_from", e.target.value)}
-                                        className="input input-sm input-bordered pl-8 w-32"
-                                        title="From Date"
-                                    />
-                                </div>
-                                <span className="text-gray-400">-</span>
-                                <div className="relative">
-                                    <Calendar size={12} className="absolute left-2 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                                    <input
-                                        type="date"
-                                        value={filterForm.data.date_to}
-                                        onChange={(e) => filterForm.setData("date_to", e.target.value)}
-                                        className="input input-sm input-bordered pl-8 w-32"
-                                        title="To Date"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-1">
-                                {hasActiveFilters && (
-                                    <button
-                                        onClick={clearFilters}
-                                        className="btn btn-sm btn-ghost text-xs"
-                                        title="Clear Filters"
-                                    >
-                                        Clear
-                                    </button>
-                                )}
-                                
-                                <button
-                                    onClick={handleFilter}
-                                    className="btn btn-sm btn-primary"
-                                    title="Apply Filters"
-                                >
-                                    <Filter size={14} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* New Sale Button - Right side on desktop */}
-                        <div className="lg:ml-auto">
-                            <Link
-                                className="btn bg-[#1e4d2b] hover:bg-[#1a4326] text-white btn-sm flex items-center gap-2"
-                                href={route("sales.create")}
-                            >
-                                <Plus size={16} />
-                                <span>New Sale</span>
-                            </Link>
-                        </div>
+                <div className="flex items-center gap-3 flex-wrap">
+                    <div className="join">
+                        <input
+                            type="search"
+                            value={filterForm.data.search}
+                            onChange={(e) => filterForm.setData("search", e.target.value)}
+                            onKeyPress={handleKeyPress}
+                            placeholder="Search invoice or customer..."
+                            className="input input-sm input-bordered join-item"
+                        />
                     </div>
+                    
+                    <select
+                        value={filterForm.data.status}
+                        onChange={(e) => filterForm.setData("status", e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        className="select select-sm select-bordered"
+                    >
+                        <option value="">All Status</option>
+                        <option value="pending">Pending</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    
+                    <input
+                        type="date"
+                        value={filterForm.data.date_from}
+                        onChange={(e) => filterForm.setData("date_from", e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        className="input input-sm input-bordered"
+                    />
+                    
+                    <input
+                        type="date"
+                        value={filterForm.data.date_to}
+                        onChange={(e) => filterForm.setData("date_to", e.target.value)}
+                        onKeyPress={handleKeyPress}
+                        className="input input-sm input-bordered"
+                    />
+                    
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearFilters}
+                            className="btn btn-sm btn-ghost"
+                        >
+                            Clear Filters
+                        </button>
+                    )}
 
-                    {/* Mobile View (below md) */}
-                    <div className="md:hidden space-y-2">
-                        {/* Top Row: Search and New Sale */}
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                                <div className="join w-full">
-                                    <input
-                                        type="search"
-                                        value={filterForm.data.search}
-                                        onChange={(e) => filterForm.setData("search", e.target.value)}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder="Search..."
-                                        className="input input-sm input-bordered join-item w-full"
-                                    />
-                                    <button
-                                        onClick={handleFilter}
-                                        className="btn btn-sm bg-[#1e4d2b] text-white join-item"
-                                    >
-                                        <Search size={14} />
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="btn btn-sm btn-ghost"
-                                title="Toggle Filters"
-                            >
-                                <Filter size={16} />
-                            </button>
-                            
-                            <Link
-                                className="btn bg-[#1e4d2b] text-white btn-sm p-2"
-                                href={route("sales.create")}
-                                title="New Sale"
-                            >
-                                <Plus size={16} />
-                            </Link>
-                        </div>
-
-                        {/* Collapsible Mobile Filters */}
-                        {showFilters && (
-                            <div className="bg-gray-50 p-3 rounded-box space-y-3">
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <label className="text-xs font-medium mb-1 block">Status</label>
-                                        <select
-                                            value={filterForm.data.status}
-                                            onChange={(e) => filterForm.setData("status", e.target.value)}
-                                            className="select select-sm select-bordered w-full"
-                                        >
-                                            <option value="">All Status</option>
-                                            <option value="pending">Pending</option>
-                                            <option value="partial">Partial</option>
-                                            <option value="paid">Paid</option>
-                                            <option value="partially_returned">Partial Return</option>
-
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="text-xs font-medium mb-1 block">From Date</label>
-                                        <input
-                                            type="date"
-                                            value={filterForm.data.date_from}
-                                            onChange={(e) => filterForm.setData("date_from", e.target.value)}
-                                            className="input input-sm input-bordered w-full"
-                                        />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <label className="text-xs font-medium mb-1 block">To Date</label>
-                                        <input
-                                            type="date"
-                                            value={filterForm.data.date_to}
-                                            onChange={(e) => filterForm.setData("date_to", e.target.value)}
-                                            className="input input-sm input-bordered w-full"
-                                        />
-                                    </div>
-                                </div>
-                                
-                                <div className="flex gap-2 pt-2">
-                                    <button
-                                        onClick={handleFilter}
-                                        className="btn btn-sm bg-[#1e4d2b] text-white flex-1"
-                                    >
-                                        Apply Filters
-                                    </button>
-                                    {hasActiveFilters && (
-                                        <button
-                                            onClick={clearFilters}
-                                            className="btn btn-sm btn-ghost"
-                                        >
-                                            Clear All
-                                        </button>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                    <button
+                        onClick={handleFilter}
+                        className="btn btn-sm bg-[#1e4d2b] text-white join-item"
+                    >
+                        <Search size={16} />
+                        Search
+                    </button>
+                    
+                    <Link
+                        className="btn bg-[#1e4d2b] text-white btn-sm"
+                        href={route("sales.create")}
+                    >
+                        <Plus size={16} />
+                        New Sale
+                    </Link>
                 </div>
             </PageHeader>
 
             <div className="print:hidden">
-                {/* Responsive Table Container */}
-                <div className="overflow-x-auto -mx-2">
+                <div className="overflow-x-auto">
                     {sales?.data?.length > 0 ? (
-                        <>
-                            {/* Desktop/Tablet Table */}
-                            <div className="hidden md:block">
-                                <table className="table table-auto w-full text-sm">
-                                    <thead className={`${isShadowUser ? 'bg-warning' : 'bg-[#1e4d2b]'} text-white`}>
-                                        <tr>
-                                            <th className="py-2 px-3">Invoice</th>
-                                            <th className="py-2 px-3">Customer</th>
-                                            <th className="py-2 px-3 text-center">Items</th>
-                                            <th className="py-2 px-3 text-right">Total</th>
-                                            <th className="py-2 px-3 text-right">Paid</th>
-                                            <th className="py-2 px-3 text-right">Due</th>
-                                            <th className="py-2 px-3">Status</th>
-                                            <th className="py-2 px-3">Date</th>
-                                            <th className="py-2 px-3">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {sales.data.map((sale) => (
-                                            <tr key={sale.id} className="hover:bg-gray-50 border-b">
-                                                <td className="py-2 px-3">
-                                                    <span className="font-mono font-semibold text-xs">
-                                                        {sale.invoice_no}
-                                                    </span>
-                                                </td>
-                                                <td className="py-2 px-3">
-                                                    <div className="max-w-[120px]">
-                                                        <p className="font-medium truncate text-xs">
-                                                            {sale.customer?.customer_name || "Walk-in Customer"}
-                                                        </p>
-                                                        {sale.customer?.phone && (
-                                                            <p className="text-xs text-gray-500 truncate">
-                                                                {sale.customer.phone}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="py-2 px-3 text-center">
-                                                    <span className="badge badge-outline badge-xs">
-                                                        {getTotalItems(sale)}
-                                                    </span>
-                                                </td>
-                                                <td className="py-2 px-3 text-right">
-                                                    <span className="font-semibold text-primary text-xs">
-                                                        {formatCurrency(sale.grand_total)}
-                                                    </span>
-                                                </td>
-                                                <td className="py-2 px-3 text-right">
-                                                    <span className="text-success font-semibold text-xs">
-                                                        {formatCurrency(sale.paid_amount)}
-                                                    </span>
-                                                </td>
-                                                <td className={`py-2 px-3 text-right font-semibold text-xs ${
-                                                    (sale.due_amount > 0 || sale.shadow_due_amount > 0) ? "text-error" : "text-success"
-                                                }`}>
-                                                    {formatCurrency(sale.due_amount)}
-                                                </td>
-                                                <td className="py-2 px-3">
-                                                    <span className={`badge badge-xs capitalize ${
-                                                        sale.status === 'paid' 
-                                                            ? 'badge-success' 
-                                                            : sale.status === 'cancelled'
-                                                            ? 'badge-error'
-                                                            : 'badge-warning'
-                                                    }`}>
-                                                        {sale.status}
-                                                    </span>
-                                                </td>
-                                                <td className="py-2 px-3">
-                                                    <span className="text-xs whitespace-nowrap">
-                                                        {new Date(sale.created_at).toLocaleDateString("en-GB", {
-                                                            timeZone: "Asia/Dhaka",
-                                                            day: "2-digit",
-                                                            month: "2-digit",
-                                                            year: "numeric",
-                                                        })}
-                                                    </span>
-                                                </td>
-                                                <td className="py-2 px-3">
-                                                    <div className="flex items-center gap-1 flex-wrap">
-                                                        <Link
-                                                            href={route("sales.show", { sale: sale.id })}
-                                                            className="btn btn-xs btn-info p-1"
-                                                            title="View"
-                                                        >
-                                                            <Eye size={10} />
-                                                        </Link>
-
-                                                        <button
-                                                            onClick={() => openPaymentModal(sale)}
-                                                            className="btn btn-xs btn-warning btn-outline p-1"
-                                                            disabled={isPaymentDisabled(sale)}
-                                                            title="Payment"
-                                                        >
-                                                            <Edit size={10} />
-                                                        </button>
-                                                    
-                                                        {sale.shadow_type == 'shadow' && !isShadowUser && (
-                                                            <>
-                                                                <Link
-                                                                    href={route("sales.edit", { sale: sale.id })}
-                                                                    className="btn btn-xs btn-success p-1"
-                                                                    title="Accept"
-                                                                >
-                                                                    <Check size={10} />
-                                                                </Link>
-
-                                                                <button
-                                                                    onClick={(e) => {
-                                                                        if (confirm("Are you sure you want to reject this order?")) {
-                                                                            router.delete(route("sales.rejected", { sale: sale.id }), {
-                                                                                preserveScroll: true,
-                                                                                preserveState: true,
-                                                                                onSuccess: () => router.reload({ only: ['sales'] })
-                                                                            });
-                                                                        }
-                                                                    }}
-                                                                    className="btn btn-xs btn-error p-1"
-                                                                    title="Reject"
-                                                                >
-                                                                    <X size={10} />
-                                                                </button>
-                                                            </>
-                                                        )}
-
-                                                        {sale.shadow_type == 'general' && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    if (confirm("Are you sure you want to delete this sale?")) {
-                                                                        router.delete(route("sales.destroy", { sale: sale.id }), {
-                                                                            preserveScroll: true,
-                                                                            preserveState: true,
-                                                                            onSuccess: () => router.reload({ only: ['sales'] })
-                                                                        });
-                                                                    }
-                                                                }}
-                                                                className="btn btn-xs btn-error p-1"
-                                                                title="Delete"
-                                                            >
-                                                                <Trash2 size={10} />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Mobile Card View */}
-                            <div className="md:hidden space-y-3">
-                                {sales.data.map((sale) => (
-                                    <div key={sale.id} className="bg-white border rounded-lg p-3 shadow-sm">
-                                        {/* Card Header */}
-                                        <div className="flex justify-between items-start mb-2">
+                        <table className="table table-auto w-full">
+                            <thead className={`${isShadowUser ? 'bg-warning' : 'bg-[#1e4d2b]'} text-white`}>
+                                <tr>
+                                    <th>Invoice No</th>
+                                    <th>Customer</th>
+                                    <th>Items</th>
+                                    <th>Sub Total</th>
+                                    <th>Grand Total</th>
+                                    <th>Paid</th>
+                                    <th>Due</th>
+                                    <th>Status</th>
+                                    <th>Date</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {sales.data.map((sale, index) => (
+                                    <tr key={sale.id} className="hover:bg-gray-50">
+                                        <td className="font-mono font-semibold">
+                                            {sale.invoice_no}
+                                        </td>
+                                        <td>
                                             <div>
-                                                <h3 className="font-bold text-sm">{sale.invoice_no}</h3>
-                                                <p className="text-xs text-gray-600">
+                                                <p className="font-medium">
                                                     {sale.customer?.customer_name || "Walk-in Customer"}
                                                 </p>
                                                 {sale.customer?.phone && (
-                                                    <p className="text-xs text-gray-500">{sale.customer.phone}</p>
+                                                    <p className="text-sm text-gray-500">
+                                                        {sale.customer.phone}
+                                                    </p>
                                                 )}
                                             </div>
-                                            <span className={`badge badge-xs capitalize ${
+                                        </td>
+                                        <td>
+                                            <span className="badge badge-outline">
+                                                {getTotalItems(sale)}
+                                            </span>
+                                        </td>
+                                        <td className="font-semibold">
+                                            {formatCurrency(sale.sub_total)} Tk
+                                        </td>
+                                        <td className="font-semibold text-primary">
+                                            {formatCurrency(sale.grand_total)} Tk
+                                        </td>
+                                        <td className="text-success font-semibold">
+                                            {formatCurrency(sale.paid_amount)} Tk
+                                        </td>
+                                        <td className={`font-semibold ${
+                                            (sale.due_amount > 0 || sale.shadow_due_amount > 0) ? "text-error" : "text-success"
+                                        }`}>
+                                            {formatCurrency(sale.due_amount)} Tk
+                                        </td>
+                                        <td>
+                                            <span className={`badge capitalize ${
                                                 sale.status === 'paid' 
                                                     ? 'badge-success' 
                                                     : sale.status === 'cancelled'
@@ -618,73 +389,42 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                             }`}>
                                                 {sale.status}
                                             </span>
-                                        </div>
-
-                                        {/* Card Body */}
-                                        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
-                                            <div>
-                                                <span className="text-gray-500">Items:</span>
-                                                <p className="font-medium">{getTotalItems(sale)}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-gray-500">Total:</span>
-                                                <p className="font-bold text-primary">{formatCurrency(sale.grand_total)}</p>
-                                            </div>
-                                            <div>
-                                                <span className="text-gray-500">Paid:</span>
-                                                <p className="font-medium text-success">{formatCurrency(sale.paid_amount)}</p>
-                                            </div>
-                                            <div className="text-right">
-                                                <span className="text-gray-500">Due:</span>
-                                                <p className={`font-bold ${
-                                                    sale.due_amount > 0 ? 'text-error' : 'text-success'
-                                                }`}>
-                                                    {formatCurrency(sale.due_amount)}
-                                                </p>
-                                            </div>
-                                            <div className="col-span-2">
-                                                <span className="text-gray-500">Date:</span>
-                                                <p className="font-medium">
-                                                    {new Date(sale.created_at).toLocaleDateString("en-GB", {
-                                                        timeZone: "Asia/Dhaka",
-                                                        day: "2-digit",
-                                                        month: "2-digit",
-                                                        year: "numeric",
-                                                    })}
-                                                </p>
-                                            </div>
-                                        </div>
-
-                                        {/* Card Footer - Actions */}
-                                        <div className="flex justify-between items-center pt-2 border-t">
-                                            <div className="flex items-center gap-1">
+                                        </td>
+                                        <td>
+                                            {new Date(sale.created_at).toLocaleString("en-GB", {
+                                                timeZone: "Asia/Dhaka",
+                                                day: "2-digit",
+                                                month: "2-digit",
+                                                year: "numeric",
+                                                hour: "2-digit",
+                                                minute: "2-digit",
+                                            })}
+                                        </td>
+                                        <td>
+                                            <div className="flex items-center gap-1 flex-wrap">
                                                 <Link
                                                     href={route("sales.show", { sale: sale.id })}
-                                                    className="btn btn-xs btn-info p-1"
-                                                    title="View"
+                                                    className="btn btn-xs btn-info"
                                                 >
-                                                    <Eye size={12} />
+                                                    <Eye size={13} />
+                                                    View
                                                 </Link>
 
                                                 <button
                                                     onClick={() => openPaymentModal(sale)}
-                                                    className="btn btn-xs btn-warning btn-outline p-1"
+                                                    className="btn btn-xs btn-warning btn-outline"
                                                     disabled={isPaymentDisabled(sale)}
-                                                    title="Payment"
                                                 >
-                                                    <Edit size={12} />
+                                                    <Edit size={12} /> Payment
                                                 </button>
-                                            </div>
-                                            
-                                            <div className="flex items-center gap-1">
+                                             
                                                 {sale.shadow_type == 'shadow' && !isShadowUser && (
                                                     <>
                                                         <Link
                                                             href={route("sales.edit", { sale: sale.id })}
-                                                            className="btn btn-xs btn-success p-1"
-                                                            title="Accept"
+                                                            className="btn btn-xs btn-success flex items-center gap-1"
                                                         >
-                                                            <Check size={12} />
+                                                            <Check size={13} /> Accepted
                                                         </Link>
 
                                                         <button
@@ -697,10 +437,10 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                                     });
                                                                 }
                                                             }}
-                                                            className="btn btn-xs btn-error p-1"
-                                                            title="Reject"
+                                                            className="btn btn-xs btn-error"
                                                         >
-                                                            <X size={12} />
+                                                            <X size={13} />
+                                                            Rejected
                                                         </button>
                                                     </>
                                                 )}
@@ -716,22 +456,22 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                                 });
                                                             }
                                                         }}
-                                                        className="btn btn-xs btn-error p-1"
-                                                        title="Delete"
+                                                        className="btn btn-xs btn-error"
                                                     >
-                                                        <Trash2 size={12} />
+                                                        <Trash2 size={13} />
+                                                        Delete
                                                     </button>
                                                 )}
                                             </div>
-                                        </div>
-                                    </div>
+                                        </td>
+                                    </tr>
                                 ))}
-                            </div>
-                        </>
+                            </tbody>
+                        </table>
                     ) : (
-                        <div className="border border-gray-200 rounded-box px-4 py-12 flex flex-col justify-center items-center gap-3">
-                            <Frown size={28} className="text-gray-400" />
-                            <h1 className="text-gray-500 text-base font-medium text-center">
+                        <div className="border border-gray-200 rounded-box px-5 py-16 flex flex-col justify-center items-center gap-3">
+                            <Frown size={32} className="text-gray-400" />
+                            <h1 className="text-gray-500 text-lg font-medium">
                                 No sales found!
                             </h1>
                             <p className="text-gray-400 text-sm text-center max-w-md">
@@ -745,7 +485,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                     className="btn bg-[#1e4d2b] text-white btn-sm mt-2"
                                     href={route("sales.create")}
                                 >
-                                    <Plus size={14} />
+                                    <Plus size={16} />
                                     Create First Sale
                                 </Link>
                             )}
@@ -753,37 +493,37 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                     )}
                 </div>
 
-                {/* Compact Summary Stats - Responsive */}
+                {/* Summary Stats */}
                 {sales?.data?.length > 0 && (
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mt-4 p-3 bg-gray-50 rounded-box">
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6 p-4 bg-gray-50 rounded-box">
                         <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Total Sales</p>
-                            <p className="text-base md:text-lg font-bold text-primary">
+                            <p className="text-sm text-gray-600">Total Sales</p>
+                            <p className="text-xl font-bold text-primary">
                                 {totals.totalSales}
                             </p>
                         </div>
                         <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Total Revenue</p>
-                            <p className="text-base md:text-lg font-bold text-success">
-                                {formatCurrency(totals.totalRevenue)}
+                            <p className="text-sm text-gray-600">Total Revenue</p>
+                            <p className="text-xl font-bold text-success">
+                                {formatCurrency(totals.totalRevenue)} Tk
                             </p>
                         </div>
                         <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Total Paid</p>
-                            <p className="text-base md:text-lg font-bold text-info">
-                                {formatCurrency(totals.totalPaid)}
+                            <p className="text-sm text-gray-600">Total Paid</p>
+                            <p className="text-xl font-bold text-info">
+                                {formatCurrency(totals.totalPaid)} Tk
                             </p>
                         </div>
                         <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Total Due</p>
-                            <p className="text-base md:text-lg font-bold text-error">
-                                {formatCurrency(totals.totalDue)}
+                            <p className="text-sm text-gray-600">Total Due</p>
+                            <p className="text-xl font-bold text-error">
+                                {formatCurrency(totals.totalDue)} Tk
                             </p>
                         </div>
                     </div>
                 )}
 
-                {sales?.data?.length > 0 && <Pagination data={sales} className="mt-4" />}
+                {sales?.data?.length > 0 && <Pagination data={sales} />}
             </div>
 
             {/* Payment Modal */}

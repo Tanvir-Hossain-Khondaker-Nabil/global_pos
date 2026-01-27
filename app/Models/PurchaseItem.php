@@ -28,18 +28,21 @@ class PurchaseItem extends Model
         'created_by',
 
         //add new feild
-        'item_type' ,
-        'product_name' ,
-        'brand' ,
+        'item_type',
+        'product_name',
+        'brand',
         'variant_name',
-        'outlet_id'
+        'outlet_id',
+        'unit', // Purchase unit (ton, kg, gram)
+        'unit_quantity', // Original quantity in purchased unit
+        'base_quantity',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
-        'shadow_unit_price' => 'decimal:2', 
+        'shadow_unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
-        'shadow_total_price' => 'decimal:2' 
+        'shadow_total_price' => 'decimal:2'
     ];
 
     protected static function booted()
@@ -77,12 +80,12 @@ class PurchaseItem extends Model
     //supplier relactionship
     public function supplier()
     {
-        return $this->belongsTo(Supplier::class,'supplier_id');
+        return $this->belongsTo(Supplier::class, 'supplier_id');
     }
 
     public function purchase()
     {
-        return $this->belongsTo(Purchase::class)->with(['warehouse','creator','supplier','stock']);
+        return $this->belongsTo(Purchase::class)->with(['warehouse', 'creator', 'supplier', 'stock']);
     }
 
     public function product()
@@ -97,6 +100,37 @@ class PurchaseItem extends Model
 
     public function warehouse()
     {
-        return $this->belongsTo(Warehouse::class,'warehouse_id');
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+    public function getAvailableUnitsForSale()
+    {
+        if (!$this->product) {
+            return ['piece'];
+        }
+
+        $purchasedUnit = $this->unit ?? 'piece';
+        $unitType = $this->product->unit_type ?? 'piece';
+        $conversions = Unit::getConversions();
+
+        $availableUnits = [];
+
+        if (isset($conversions[$unitType])) {
+            foreach ($conversions[$unitType] as $unit => $factor) {
+                // Only allow units equal or smaller than purchased unit
+                if ($factor <= ($conversions[$unitType][$purchasedUnit] ?? 1)) {
+                    $availableUnits[] = $unit;
+                }
+            }
+        }
+
+        return $availableUnits;
+    }
+
+    public function getRemainingBaseQuantity()
+    {
+        $soldBaseQuantity = SaleItem::where('purchase_item_id', $this->id)
+            ->sum('base_quantity');
+
+        return max(0, $this->base_quantity - $soldBaseQuantity);
     }
 }

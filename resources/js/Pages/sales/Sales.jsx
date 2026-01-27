@@ -312,7 +312,7 @@ export default function Sales({
             <PageHeader title="Add sales" />
 
             {/* Scanner Alert */}
-            <div className="bg-[#1e4d2b] text-white/10 text-primary p-4 rounded-box flex items-center space-x-2 mb-2">
+            <div className="bg-[#1e4d2b] text-white text-primary p-4 rounded-box flex items-center space-x-2 mb-2">
                 <Check size={14} />
                 <p className="font-medium text-sm">
                     Barcode scanner detected ✅ Connect and start adding
