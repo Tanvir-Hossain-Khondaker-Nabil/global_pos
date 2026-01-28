@@ -45,6 +45,10 @@ class Purchase extends Model
     //     'shadow_due_amount' => 'decimal:2',
     // ];
 
+
+    const TYPE_LOCAL = 'local';
+    const TYPE_IMPORT = 'import';
+
     protected static function booted()
     {
         static::addGlobalScope(new UserScope);

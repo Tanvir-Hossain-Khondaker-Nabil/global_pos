@@ -551,7 +551,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                           </span>
                         </div>
 
-                        {hasDueAmount && purchase.status === 'completed' && (
+                        {hasDueAmount  && (
                           <div className="mt-2">
                             <button
                               onClick={() => openPaymentModal(purchase)}
