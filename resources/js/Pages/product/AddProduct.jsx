@@ -25,6 +25,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
 
     const productForm = useForm({
         id: update?.id || "",
+        type: update?.type || "global",
         product_name: update?.name || "",
         brand_id: update?.brand_id || "",
         category_id: update?.category_id || "",
@@ -149,6 +150,23 @@ export default function AddProduct({ category, update, brand, attributes, errors
 
                 {/* LEFT COLUMN: Basic & Supply */}
                 <div className="col-span-12 lg:col-span-4 space-y-6">
+
+                    {/* Supply Type Card */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                        <span className="text-[10px] font-black uppercase text-slate-400 block mb-3">{t("Supply Strategy")}</span>
+                        <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
+                            {["regular", "in_house"].map(type => (
+                                <button key={type} type="button" onClick={() => { setProductType(type); productForm.setData("product_type", type); }}
+                                    className={`flex-1 py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${productType === type ? 'bg-white shadow-sm text-primary border border-slate-200' : 'text-slate-400 opacity-60'}`}>
+                                    {type === 'regular' ? <Package size={16} /> : <Factory size={16} />}
+                                    <span className="text-[10px] font-bold uppercase">{type.replace('_', ' ')}</span>
+                                </button>
+                            ))}
+                        </div>
+                        {formErrors.product_type && <span className="text-error text-xs mt-2 block">{formErrors.product_type}</span>}
+                    </div>
+
+
                     {/* General Info Card */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                         <div className="bg-slate-50 px-5 py-3 border-b flex items-center gap-2">
@@ -164,6 +182,48 @@ export default function AddProduct({ category, update, brand, attributes, errors
                                 }} />
                                 {formErrors.product_name && <span className="text-error text-xs mt-1">{formErrors.product_name}</span>}
                             </div>
+
+                            {/* here add checkbox of  type */}
+                            <div className="form-control">
+                                <label className="label py-1">
+                                    <span className="label-text text-xs font-bold">
+                                        {t("Select your Product Type")} *
+                                    </span>
+                                </label>
+
+                                <div className="flex gap-4">
+                                    {["local", "global"].map((type) => (
+                                        <label
+                                            key={type}
+                                            className={`flex items-center gap-2 cursor-pointer px-3 py-1 rounded-md border
+                                                ${productForm.data.type === type
+                                                    ? "border-primary text-primary bg-primary/5"
+                                                    : "border-gray-300 text-slate-600"
+                                                }`}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="type"
+                                                value={type}
+                                                checked={productForm.data.type === type}
+                                                onChange={() => productForm.setData("type", type)}
+                                                className="radio radio-xs hidden"
+                                            />
+                                            <span className="text-sm font-medium">
+                                                {type}
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                {formErrors.product_type && (
+                                    <span className="text-error text-xs mt-1 block">
+                                        {formErrors.product_type}
+                                    </span>
+                                )}
+                            </div>
+
+
                             <div className="form-control">
                                 <label className="label py-1"><span className="label-text text-xs font-bold">{t("Product Code")}*</span></label>
                                 <div className="join w-full">
@@ -195,7 +255,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                                 </div>
                             </div>
                             {/* Description field - add this */}
-                            <div className="form-control">
+                            {/* <div className="form-control">
                                 <label className="label py-1"><span className="label-text text-xs font-bold">{t("Description")}</span></label>
                                 <textarea
                                     className="textarea textarea-bordered textarea-sm w-full"
@@ -204,24 +264,11 @@ export default function AddProduct({ category, update, brand, attributes, errors
                                     placeholder={t("Enter product description...")}
                                 />
                                 {formErrors.description && <span className="text-error text-xs mt-1">{formErrors.description}</span>}
-                            </div>
+                            </div> */}
                         </div>
                     </div>
 
-                    {/* Supply Type Card */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-                        <span className="text-[10px] font-black uppercase text-slate-400 block mb-3">{t("Supply Strategy")}</span>
-                        <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
-                            {["regular", "in_house"].map(type => (
-                                <button key={type} type="button" onClick={() => { setProductType(type); productForm.setData("product_type", type); }}
-                                    className={`flex-1 py-2 rounded-lg flex flex-col items-center gap-1 transition-all ${productType === type ? 'bg-white shadow-sm text-primary border border-slate-200' : 'text-slate-400 opacity-60'}`}>
-                                    {type === 'regular' ? <Package size={16} /> : <Factory size={16} />}
-                                    <span className="text-[10px] font-bold uppercase">{type.replace('_', ' ')}</span>
-                                </button>
-                            ))}
-                        </div>
-                        {formErrors.product_type && <span className="text-error text-xs mt-2 block">{formErrors.product_type}</span>}
-                    </div>
+
                 </div>
 
                 {/* MIDDLE COLUMN: Measurement & Financial */}

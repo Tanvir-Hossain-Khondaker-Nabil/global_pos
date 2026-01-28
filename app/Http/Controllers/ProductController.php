@@ -214,11 +214,11 @@ class ProductController extends Controller
             'variants' => 'nullable|array',
             'variants.*.attribute_values' => 'nullable',
             'brand_id' => 'nullable|exists:brands,id',
-
             'unit_type' => 'required|in:piece,weight,volume,length',
             'default_unit' => 'required|string|max:20',
             'min_sale_unit' => 'nullable|string|max:20',
-            'photo' => 'nullable'
+            'photo' => 'nullable',
+            'type' => 'nullable|string|max:20',
         ];
 
         if ($request->product_type === 'in_house') {
@@ -255,6 +255,7 @@ class ProductController extends Controller
                 ->with('error', 'Please fix the validation errors');
         }
 
+
         DB::beginTransaction();
         try {
             $product = $isUpdate ? Product::find($request->id) : new Product();
@@ -264,6 +265,7 @@ class ProductController extends Controller
             }
 
             $product->name = $request->product_name;
+            $product->type = $request->type;
             $product->brand_id = $request->brand_id ?: null;
             $product->product_no = $request->product_no;
             $product->category_id = $request->category_id;
@@ -278,8 +280,8 @@ class ProductController extends Controller
             $product->min_sale_unit = $request->min_sale_unit;
 
             // ✅ outlet_id (keep your logic if you use OutletScope or auth outlet)
-            if (!$product->outlet_id && auth()->user() && isset(auth()->user()->outlet_id)) {
-                $product->outlet_id = auth()->user()->outlet_id;
+            if (!$product->outlet_id && Auth::user() && isset(Auth::user()->outlet_id)) {
+                $product->outlet_id = Auth::user()->outlet_id;
             }
 
             // ✅ Photo upload
@@ -408,7 +410,7 @@ class ProductController extends Controller
                 'code' => 'IN-HOUSE',
                 'address' => 'Internal Production Department',
                 'is_active' => true,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
         }
 
@@ -439,7 +441,7 @@ class ProductController extends Controller
                 'warehouse_id' => $inHouseWarehouse->id,
                 'product_id' => $product->id,
                 'variant_id' => $variant->id,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]));
         }
     }
@@ -678,7 +680,7 @@ class ProductController extends Controller
                     'quantity' => $request->quantity,
                     'unit' => $request->unit,
                     'base_quantity' => $baseQuantity,
-                    'updated_by' => auth()->id(),
+                    'updated_by' => Auth::id(),
                 ]);
             } else {
                 Stock::create([
@@ -688,7 +690,7 @@ class ProductController extends Controller
                     'quantity' => $request->quantity,
                     'unit' => $request->unit,
                     'base_quantity' => $baseQuantity,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                 ]);
             }
 
@@ -701,9 +703,9 @@ class ProductController extends Controller
                 'qty' => $baseQuantity,
                 'unit' => 'base',
                 'reference_type' => 'manual',
-                'reference_id' => auth()->id(),
+                'reference_id' => Auth::id(),
                 'notes' => $request->notes ?? 'Manual stock adjustment',
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
             ]);
 
             DB::commit();

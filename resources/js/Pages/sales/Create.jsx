@@ -32,6 +32,7 @@ export default function AddSale({
     customers,
     productstocks,
     suppliers,
+    products,
     accounts,
     unitConversions = {
         weight: { ton: 1000, kg: 1, gram: 0.001, pound: 0.453592 },
@@ -61,11 +62,11 @@ export default function AddSale({
     const [showPickupModal, setShowPickupModal] = useState(false);
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [pickupProductName, setPickupProductName] = useState("");
+    const [pickupProductNo, setPickupProductNo] = useState("");
+
     const [pickupBrand, setPickupBrand] = useState("");
     const [pickupVariant, setPickupVariant] = useState("");
-    const [pickupQuantity, setPickupQuantity] = useState(1);
-    const [pickupUnitPrice, setPickupUnitPrice] = useState(0);
-    const [pickupSalePrice, setPickupSalePrice] = useState(0);
+
     const [selectedSupplier, setSelectedSupplier] = useState(null);
     const [newSupplierName, setNewSupplierName] = useState("");
     const [newSupplierCompany, setNewSupplierCompany] = useState("");
@@ -83,6 +84,17 @@ export default function AddSale({
     const [productDetails, setProductDetails] = useState({});
     const [stockDetails, setStockDetails] = useState({});
     const [basePrices, setBasePrices] = useState({});
+
+
+    // picup state
+    const [pickupProductId, setPickupProductId] = useState("");
+    const [pickupVariantId, setPickupVariantId] = useState("");
+    const [pickupSupplierId, setPickupSupplierId] = useState("");
+    const [pickupVariants, setPickupVariants] = useState([]);
+    const [pickupQuantity, setPickupQuantity] = useState(1);
+    const [pickupUnitPrice, setPickupUnitPrice] = useState(0);
+    const [pickupSalePrice, setPickupSalePrice] = useState(0);
+
 
     // Batch selection modal state
     const [showBatchModal, setShowBatchModal] = useState(false);
@@ -466,6 +478,21 @@ export default function AddSale({
         form.setData("account_id", id);
     };
 
+    const handlePickupProductChange = (productId) => {
+        setPickupProductId(productId);
+
+        const p = products?.find((x) => String(x.id) === String(productId));
+        setPickupProductName(p?.name || "");
+        setPickupProductNo(p?.product_no || "");
+
+        // variants load
+        const vars = p?.variants || [];
+        setPickupVariants(vars);
+
+        // reset selected variant
+        setPickupVariantId("");
+    };
+
     // ========== PRODUCT SELECTION FLOW ==========
     useEffect(() => {
         if (!productSearch.trim()) {
@@ -774,6 +801,7 @@ export default function AddSale({
                 variant_id: variant.id,
                 batch_no: selectedStock.batch_no,
                 product_name: product.name,
+                product_no : product.product_no,
                 variant_attribute:
                     selectedBrand ||
                     Object.keys(variant.attribute_values || {})[0] ||
@@ -1048,11 +1076,11 @@ export default function AddSale({
     useEffect(() => {
         const handleKeydown = (e) => {
             // Check if user is typing in an input field
-            const isInputElement = 
-                e.target.tagName === 'INPUT' || 
-                e.target.tagName === 'TEXTAREA' || 
+            const isInputElement =
+                e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA' ||
                 e.target.tagName === 'SELECT';
-            
+
             // If user is typing in an input field, don't interfere
             if (isInputElement) {
                 return;
@@ -1097,24 +1125,37 @@ export default function AddSale({
 
     // ========== PICKUP SALE FUNCTIONS ==========
     const addPickupItem = () => {
-        if (
-            !pickupProductName ||
-            pickupQuantity <= 0 ||
-            pickupUnitPrice <= 0 ||
-            pickupSalePrice <= 0
-        ) {
+        if (!pickupProductId || !pickupSupplierId) {
+            alert("Please select product and supplier");
+            return;
+        }
+
+        if (!pickupVariantId) {
+            alert("Please select variant");
+            return;
+        }
+
+        if (pickupQuantity <= 0 || pickupUnitPrice <= 0 || pickupSalePrice <= 0) {
             alert("Please fill all required fields for pickup item");
             return;
         }
 
+        const variantObj = pickupVariants?.find(v => String(v.id) === String(pickupVariantId));
+
         const newItem = {
             id: Date.now(),
             product_name: pickupProductName,
+            product_no: pickupProductNo,
+            pickup_product_id: pickupProductId,
+            pickup_supplier_id: pickupSupplierId,
+
+            // ✅ These are the important fields
+            variant_id: pickupVariantId,
+            variant_name: variantObj?.sku || `Variant#${pickupVariantId}`,
+
             brand: pickupBrand,
             variant: pickupVariant,
             quantity: Number(pickupQuantity),
-            unit: "piece",
-            unit_quantity: Number(pickupQuantity),
             unit_price: Number(pickupUnitPrice),
             sale_price: Number(pickupSalePrice),
             total_price: Number(pickupQuantity) * Number(pickupSalePrice),
@@ -1122,13 +1163,17 @@ export default function AddSale({
 
         setPickupItems([...pickupItems, newItem]);
 
-        setPickupProductName("");
+        // Reset form
+        setPickupSupplierId("");
+        setPickupProductId("");
+        setPickupVariants([]);
+        setPickupVariantId("");
+
         setPickupBrand("");
         setPickupVariant("");
         setPickupQuantity(1);
         setPickupUnitPrice(0);
         setPickupSalePrice(0);
-        setSelectedSupplier(null);
         setShowPickupModal(false);
     };
 
@@ -1221,12 +1266,10 @@ export default function AddSale({
         }));
 
         const formattedPickupItems = pickupItems.map((item) => ({
-            product_name: item.product_name,
-            brand: item.brand,
-            variant: item.variant,
+            pickup_product_id: item.pickup_product_id,
+            pickup_supplier_id: item.pickup_supplier_id,
+            variant_id: item.variant_id, 
             quantity: item.quantity,
-            unit_quantity: item.unit_quantity || item.quantity,
-            unit: item.unit || "piece",
             unit_price: item.unit_price,
             sale_price: item.sale_price,
             total_price: item.total_price,
@@ -1328,10 +1371,7 @@ export default function AddSale({
             return;
         }
 
-        if (pickupItems.length > 0 && !selectedSupplier) {
-            alert("Please select a supplier for pickup items");
-            return;
-        }
+      
 
         form.post(route("sales.store"), {
             onSuccess: () => router.visit(route("sales.index")),
@@ -1478,33 +1518,36 @@ export default function AddSale({
                         )}
 
                         {/* PAYMENT CARD */}
-                        <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl shadow-lg">
-                            <div className="card-body">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h3 className="card-title text-sm font-black uppercase text-red-500 flex items-center gap-2">
-                                        <CreditCard size={16} /> Payment
+                        <div className="card card-compact bg-[#F8FAF5] text-[#333] border border-gray-200 rounded-xl shadow-sm">
+                            <div className="card-body p-4">
+
+                                {/* Header */}
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-xs font-black uppercase text-red-600 flex items-center gap-2">
+                                        <CreditCard size={14} /> Payment
                                     </h3>
 
                                     <button
                                         type="button"
                                         onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
-                                        className="btn btn-xs bg-red-600 hover:bg-red-700 border-none text-white font-black text-[10px] uppercase"
+                                        className="btn btn-xs px-2 bg-red-600 hover:bg-red-700 border-none text-white font-bold text-[10px] uppercase"
                                     >
                                         {manualPaymentOverride ? <X size={10} /> : <Edit size={10} />}
                                         {manualPaymentOverride ? "Cancel" : "Manual"}
                                     </button>
                                 </div>
 
+
                                 {/* Account Selection */}
                                 <div className="form-control mb-3">
                                     <label className="label py-0">
-                                        <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
+                                        <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
                                             Payment Account {paidAmount > 0 && "*"}
                                         </span>
                                     </label>
 
                                     <select
-                                        className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
+                                        className="select select-bordered select-sm w-full bg-white border-gray-300 text-gray-800"
                                         value={selectedAccount}
                                         onChange={(e) => handleAccountSelect(e.target.value)}
                                         required={paidAmount > 0}
@@ -1519,17 +1562,23 @@ export default function AddSale({
                                     </select>
 
                                     {paidAmount > 0 && !selectedAccount && (
-                                        <div className="text-red-400 text-xs mt-1">Please select a payment account</div>
+                                        <div className="text-red-500 text-xs mt-1">
+                                            Please select a payment account
+                                        </div>
                                     )}
 
                                     {/* Selected Account Info */}
                                     {selectedAccountObj && (
-                                        <div className="mt-2 p-2 bg-gray-800 rounded-lg border border-gray-700">
+                                        <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     {getAccountIcon(selectedAccountObj.type)}
-                                                    <span className="text-xs font-bold">{selectedAccountObj.name}</span>
-                                                    <span className="text-xs text-gray-400 capitalize">({selectedAccountObj.type})</span>
+                                                    <span className="text-xs font-bold">
+                                                        {selectedAccountObj.name}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 capitalize">
+                                                        ({selectedAccountObj.type})
+                                                    </span>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-[10px] text-gray-400">Balance</div>
@@ -1542,77 +1591,67 @@ export default function AddSale({
                                     )}
                                 </div>
 
-                                {/* Payment status */}
-                                <div className="form-control mb-3">
-                                    <select
-                                        className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
-                                        value={paymentStatus}
-                                        onChange={(e) => handlePaymentStatusChange(e.target.value)}
-                                    >
-                                        <option value="unpaid">Unpaid</option>
-                                        <option value="partial">Partial</option>
-                                        <option value="paid">Paid</option>
-                                    </select>
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
 
-                                {/* Paid amount */}
-                                <div className="form-control mb-3">
-                                    <label className="label py-1">
-                                        <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
-                                            Paid Amount
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="input input-bordered input-sm w-full bg-gray-800 border-gray-700 font-mono"
-                                        value={paidAmount}
-                                        onChange={handleManualPaymentInput}
-                                        disabled={!manualPaymentOverride && adjustFromAdvance}
-                                        onFocus={(e) => e.target.select()}
-                                    />
+                                    {/* Payment Status */}
+                                    <div className="md:col-span-1">
+                                        <div className="form-control">
+                                            <label className="label py-0">
+                                                <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                    Status
+                                                </span>
+                                            </label>
+
+                                            <select
+                                                className="select select-bordered select-sm w-full bg-white border-gray-300 text-gray-800"
+                                                value={paymentStatus}
+                                                onChange={(e) => handlePaymentStatusChange(e.target.value)}
+                                            >
+                                                <option value="unpaid">Unpaid</option>
+                                                <option value="partial">Partial</option>
+                                                <option value="paid">Paid</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Paid Amount */}
+                                    <div className="md:col-span-1">
+                                        <div className="form-control">
+                                            <label className="label py-0">
+                                                <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                    Paid Amount
+                                                </span>
+                                            </label>
+
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                value={paidAmount}
+                                                onChange={handleManualPaymentInput}
+                                                disabled={!manualPaymentOverride && adjustFromAdvance}
+                                                onFocus={(e) => e.target.select()}
+                                            />
+                                        </div>
+                                    </div>
+
                                 </div>
 
                                 {/* Totals */}
-                                <div className="space-y-1 text-xs pt-2 border-t border-gray-800 mt-2 font-bold uppercase tracking-tighter">
+                                <div className="space-y-1 text-xs pt-2 border-t border-gray-200 font-bold uppercase">
                                     <div className="flex justify-between">
-                                        <span>Gross:</span>
+                                        <span>Gross</span>
                                         <span>৳{formatCurrency(grandTotal)}</span>
                                     </div>
-                                    <div className="flex justify-between text-red-500 font-black">
-                                        <span>Due:</span>
+                                    <div className="flex justify-between text-red-600 font-black">
+                                        <span>Due</span>
                                         <span>৳{formatCurrency(dueAmount)}</span>
                                     </div>
                                 </div>
+
                             </div>
                         </div>
 
-                        {/* Supplier for pickup */}
-                        {pickupItems.length > 0 && (
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text font-bold">Supplier for Pickup Items *</span>
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <select
-                                        className="select select-bordered w-full"
-                                        value={selectedSupplier?.id || ""}
-                                        onChange={(e) => {
-                                            const supplier = suppliers.find((s) => s.id == e.target.value);
-                                            if (supplier) handleSupplierSelect(supplier);
-                                        }}
-                                        required
-                                    >
-                                        <option value="">Select Supplier</option>
-                                        {suppliers?.map((s) => (
-                                            <option key={s.id} value={s.id}>
-                                                {s.name} {s.company ? `(${s.company})` : ""}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-                        )}
 
                         {/* Sale date */}
                         <div className="form-control">
@@ -2209,98 +2248,47 @@ export default function AddSale({
                                 <h4 className="font-bold text-gray-700 flex items-center gap-2">
                                     <ShoppingBag size={16} /> Pickup Products
                                 </h4>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPickupModal(true)}
-                                    className="btn btn-sm btn-outline"
-                                >
-                                    <Plus size={14} className="mr-1" /> Add
-                                    Pickup Item
+                                <button type="button" onClick={() => setShowPickupModal(true)} className="btn btn-sm btn-outline">
+                                    <Plus size={14} className="mr-1" /> Add Pickup Item
                                 </button>
                             </div>
 
                             {pickupItems.length > 0 ? (
                                 <div className="space-y-3">
                                     {pickupItems.map((item, index) => (
-                                        <div
-                                            key={item.id}
-                                            className="card bg-gray-50 border border-gray-200 rounded-lg"
-                                        >
+                                        <div key={item.id} className="card bg-gray-50 border border-gray-200 rounded-lg">
                                             <div className="card-body p-3">
                                                 <div className="flex justify-between items-start">
                                                     <div className="flex-1">
-                                                        <h4 className="font-bold text-gray-900">
-                                                            {item.product_name}
-                                                        </h4>
+                                                        <h4 className="font-bold text-gray-900">{item.product_name} ({item.product_no})</h4>
                                                         <div className="text-sm text-gray-600 mt-1">
-                                                            <div className="text-xs">
-                                                                <strong>
-                                                                    Brand:
-                                                                </strong>{" "}
-                                                                {item.brand ||
-                                                                    "N/A"}{" "}
-                                                                •{" "}
-                                                                <strong>
-                                                                    Variant:
-                                                                </strong>{" "}
-                                                                {item.variant ||
-                                                                    "N/A"}
+                                                            <div className="text-xs mb-2">
+                                                                <strong>Variant:</strong> {item.variant_name}
+                                                                {item.variant_attributes && Object.keys(item.variant_attributes).length > 0 && (
+                                                                    <span> ({Object.values(item.variant_attributes).join(", ")})</span>
+                                                                )}
                                                             </div>
                                                             <div className="grid grid-cols-4 gap-2 mt-2">
                                                                 <div>
-                                                                    <span className="text-xs text-gray-500">
-                                                                        Qty:
-                                                                    </span>
-                                                                    <div className="font-bold">
-                                                                        {
-                                                                            item.quantity
-                                                                        }{" "}
-                                                                        {item.unit?.toUpperCase() ||
-                                                                            "PIECE"}
-                                                                    </div>
+                                                                    <span className="text-xs text-gray-500">Qty:</span>
+                                                                    <div className="font-bold">{item.quantity}</div>
                                                                 </div>
                                                                 <div>
-                                                                    <span className="text-xs text-gray-500">
-                                                                        Cost:
-                                                                    </span>
-                                                                    <div className="font-bold">
-                                                                        {formatWithSymbol(
-                                                                            item.unit_price
-                                                                        )}
-                                                                    </div>
+                                                                    <span className="text-xs text-gray-500">Cost:</span>
+                                                                    <div className="font-bold">{formatWithSymbol(item.unit_price)}</div>
                                                                 </div>
                                                                 <div>
-                                                                    <span className="text-xs text-gray-500">
-                                                                        Sale:
-                                                                    </span>
-                                                                    <div className="font-bold">
-                                                                        {formatWithSymbol(
-                                                                            item.sale_price
-                                                                        )}
-                                                                    </div>
+                                                                    <span className="text-xs text-gray-500">Sale:</span>
+                                                                    <div className="font-bold">{formatWithSymbol(item.sale_price)}</div>
                                                                 </div>
                                                                 <div>
-                                                                    <span className="text-xs text-gray-500">
-                                                                        Total:
-                                                                    </span>
-                                                                    <div className="font-bold text-red-600">
-                                                                        {formatWithSymbol(
-                                                                            item.total_price
-                                                                        )}
-                                                                    </div>
+                                                                    <span className="text-xs text-gray-500">Total:</span>
+                                                                    <div className="font-bold text-red-600">{formatWithSymbol(item.total_price)}</div>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            removePickupItem(
-                                                                index
-                                                            )
-                                                        }
-                                                        className="btn btn-xs btn-ghost text-red-600"
-                                                    >
+                                                    <button type="button" onClick={() => removePickupItem(index)} className="btn btn-xs btn-ghost text-red-600">
                                                         <Trash2 size={14} />
                                                     </button>
                                                 </div>
@@ -2310,17 +2298,9 @@ export default function AddSale({
                                 </div>
                             ) : (
                                 <div className="border border-dashed border-gray-200 rounded-box py-8 text-center">
-                                    <ShoppingBag
-                                        size={32}
-                                        className="mx-auto text-gray-300 mb-2"
-                                    />
-                                    <p className="text-gray-500">
-                                        No pickup items added
-                                    </p>
-                                    <p className="text-sm text-gray-400 mt-1">
-                                        Click "Add Pickup Item" to add products
-                                        not in stock
-                                    </p>
+                                    <ShoppingBag size={32} className="mx-auto text-gray-300 mb-2" />
+                                    <p className="text-gray-500">No pickup items added</p>
+                                    <p className="text-sm text-gray-400 mt-1">Click "Add Pickup Item" to add products not in stock</p>
                                 </div>
                             )}
                         </div>
@@ -2444,144 +2424,143 @@ export default function AddSale({
                 <div className="modal modal-open">
                     <div className="modal-box max-w-2xl">
                         <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold">
-                                Add Pickup Item
-                            </h3>
-                            <button
-                                onClick={() => setShowPickupModal(false)}
-                                className="btn btn-sm btn-circle btn-ghost"
-                            >
+                            <h3 className="text-lg font-bold">Add Pickup Item</h3>
+                            <button onClick={() => setShowPickupModal(false)} className="btn btn-sm btn-circle btn-ghost">
                                 ✕
                             </button>
                         </div>
 
                         <div className="space-y-4">
+
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">
-                                        Product Name *
-                                    </span>
+                                    <span className="label-text">Pickup Product *</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered"
-                                    value={pickupProductName}
-                                    onChange={(e) =>
-                                        setPickupProductName(e.target.value)
-                                    }
-                                    placeholder="Enter product name"
-                                    onFocus={(e) => e.target.select()}
-                                />
+
+                                <select
+                                    value={pickupProductId}
+                                    onChange={(e) => handlePickupProductChange(e.target.value)}
+                                    className="select select-bordered"
+                                    required
+                                >
+                                    <option value="">Select Product</option>
+                                    {products.map((product) => (
+                                        <option key={product.id} value={product.id}>
+                                            {product.name} ({product?.product_no}) [ {product?.unit_type} unit ]
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">
-                                            Brand
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="input input-bordered"
-                                        value={pickupBrand}
-                                        onChange={(e) =>
-                                            setPickupBrand(e.target.value)
-                                        }
-                                        placeholder="Enter brand"
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                </div>
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Pickup Variant *</span>
+                                </label>
 
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">
-                                            Variant
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="input input-bordered"
-                                        value={pickupVariant}
-                                        onChange={(e) =>
-                                            setPickupVariant(e.target.value)
-                                        }
-                                        placeholder="Enter variant"
-                                        onFocus={(e) => e.target.select()}
-                                    />
-                                </div>
+                                <select
+                                    value={pickupVariantId}
+                                    onChange={(e) => setPickupVariantId(e.target.value)}
+                                    className="select select-bordered"
+                                    required
+                                    disabled={!pickupProductId || pickupVariants.length === 0}
+                                >
+                                    <option value="">
+                                        {pickupProductId ? "Select Variant" : "Select Product First"}
+                                    </option>
+
+                                    {pickupVariants?.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.sku || `Variant#${v.id}`}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                {pickupProductId && pickupVariants.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                        This product has no variants. Please create at least one variant.
+                                    </p>
+                                )}
                             </div>
+
+
+
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Pickup Supplier *</span>
+                                </label>
+
+                                <select
+                                    value={pickupSupplierId}
+                                    onChange={(e) => setPickupSupplierId(e.target.value)}
+                                    className="select select-bordered"
+                                    required
+                                >
+                                    <option value="" >
+                                        Select Supplier
+                                    </option>
+
+                                    {suppliers.map((supplier) => (
+                                        <option key={supplier.id} value={supplier.id}>
+                                            {supplier.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+
 
                             <div className="grid grid-cols-3 gap-4">
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">
-                                            Quantity *
-                                        </span>
+                                        <span className="label-text">Quantity *</span>
                                     </label>
                                     <input
                                         type="number"
                                         className="input input-bordered"
                                         value={pickupQuantity}
-                                        onChange={(e) =>
-                                            setPickupQuantity(e.target.value)
-                                        }
+                                        onChange={(e) => setPickupQuantity(e.target.value)}
                                         min="1"
-                                        onFocus={(e) => e.target.select()}
+                                        required
                                     />
                                 </div>
 
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">
-                                            Cost Price *
-                                        </span>
+                                        <span className="label-text">Cost Price *</span>
                                     </label>
                                     <input
                                         type="number"
                                         className="input input-bordered"
                                         value={pickupUnitPrice}
-                                        onChange={(e) =>
-                                            setPickupUnitPrice(e.target.value)
-                                        }
+                                        onChange={(e) => setPickupUnitPrice(e.target.value)}
                                         min="0"
                                         step="0.01"
-                                        onFocus={(e) => e.target.select()}
+                                        required
                                     />
                                 </div>
 
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">
-                                            Sale Price *
-                                        </span>
+                                        <span className="label-text">Sale Price *</span>
                                     </label>
                                     <input
                                         type="number"
                                         className="input input-bordered"
                                         value={pickupSalePrice}
-                                        onChange={(e) =>
-                                            setPickupSalePrice(e.target.value)
-                                        }
+                                        onChange={(e) => setPickupSalePrice(e.target.value)}
                                         min="0"
                                         step="0.01"
-                                        onFocus={(e) => e.target.select()}
+                                        required
                                     />
                                 </div>
                             </div>
                         </div>
 
                         <div className="modal-action">
-                            <button
-                                onClick={() => setShowPickupModal(false)}
-                                className="btn btn-ghost"
-                            >
+                            <button onClick={() => setShowPickupModal(false)} className="btn btn-ghost">
                                 Cancel
                             </button>
-                            <button
-                                onClick={addPickupItem}
-                                className="btn bg-[#1e4d2b] text-white"
-                            >
+                            <button onClick={addPickupItem} className="btn bg-[#1e4d2b] text-white">
                                 Add Item
                             </button>
                         </div>
