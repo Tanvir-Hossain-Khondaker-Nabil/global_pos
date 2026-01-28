@@ -270,7 +270,12 @@ class SalesController extends Controller
 
     public function store(Request $request)
     {
+
         $type = $request->input('type', 'pos');
+
+         if ($request->filled('discount_type')) {
+            $rules['discount_type'] = 'nullable|string|max:255';
+        }
 
         $rules = [
             'customer_id' => 'nullable|exists:customers,id',
@@ -284,6 +289,15 @@ class SalesController extends Controller
         if (empty($request->items) && empty($request->pickup_items)) {
             return back()->withErrors(['items' => 'At least one item (stock or pickup) is required.']);
         }
+
+        $discountType = $request->input('discount_type');
+
+        if ($discountType == 'percentage') {
+            $discount = $request->discount_rate;
+        } elseif ($discountType == 'flat') {
+            $discount = $request->flat_discount;
+        }
+
 
         if ($request->items && count($request->items) > 0) {
             $rules['items.*.product_id'] = 'required|exists:products,id';

@@ -738,6 +738,7 @@ export default function AddSale({
         items: [],
         vat_rate: 0,
         discount_rate: 0,
+        flat_discount: 0,
         paid_amount: 0,
         grand_amount: 0,
         due_amount: 0,
@@ -795,6 +796,7 @@ export default function AddSale({
 
             vat_rate: n(taxRate),
             discount_rate: 0,
+            flat_discount: n(discountValue),
             paid_amount: n(paidAmount),
             grand_amount: n(grandTotal),
             due_amount: n(dueAmount),
