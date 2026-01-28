@@ -36,6 +36,7 @@ export default function AddSale({
     productstocks = [],
     suppliers = [],
     accounts = [],
+    products = [],
     unitConversions = {
         weight: { ton: 1000, kg: 1, gram: 0.001, pound: 0.453592 },
         volume: { liter: 1, ml: 0.001 },
@@ -82,11 +83,11 @@ export default function AddSale({
     const [pickupItems, setPickupItems] = useState([]);
     const [showPickupModal, setShowPickupModal] = useState(false);
     const [selectedSupplier, setSelectedSupplier] = useState(null);
+    const [pickupVariantId, setPickupVariantId] = useState("");
+    const [pickupVariants, setPickupVariants] = useState([]);
 
     // Pickup form
     const [pickupProductName, setPickupProductName] = useState("");
-    const [pickupBrand, setPickupBrand] = useState("");
-    const [pickupVariant, setPickupVariant] = useState("");
     const [pickupQuantity, setPickupQuantity] = useState(1);
     const [pickupUnitPrice, setPickupUnitPrice] = useState(0);
     const [pickupSalePrice, setPickupSalePrice] = useState(0);
@@ -102,6 +103,8 @@ export default function AddSale({
     const [availableUnits, setAvailableUnits] = useState({});
     const [unitPrices, setUnitPrices] = useState({});
     const [basePrices, setBasePrices] = useState({});
+    const [pickupProductId, setPickupProductId] = useState("");
+    const [pickupSupplierId, setPickupSupplierId] = useState("");
 
     const dropdownRefs = useRef({});
 
@@ -344,7 +347,7 @@ export default function AddSale({
             // ✅ FIXED: Always calculate base price per base unit
             const unitType = product.unit_type || "piece";
             let basePricePerBaseUnit = variant.sale_price;
-            
+
             // ✅ Calculate base price correctly
             if (unitType !== "piece") {
                 basePricePerBaseUnit = calculateBasePricePerBaseUnit(
@@ -505,9 +508,9 @@ export default function AddSale({
         }
 
         // ✅ ALWAYS recalc price based on stored base price
-        const basePricePerBaseUnit = 
-            basePrices[key] || 
-            item.base_price_per_base_unit || 
+        const basePricePerBaseUnit =
+            basePrices[key] ||
+            item.base_price_per_base_unit ||
             calculateBasePricePerBaseUnit(item.original_sale_price, item.original_purchase_unit, unitType);
 
         // ✅ Calculate new price for the selected unit
@@ -517,11 +520,11 @@ export default function AddSale({
         setCart((prev) =>
             prev.map((x) => {
                 if (x.key !== key) return x;
-                return { 
-                    ...x, 
-                    unit: newUnit, 
-                    qty: newQty, 
-                    unit_price: newPrice, 
+                return {
+                    ...x,
+                    unit: newUnit,
+                    qty: newQty,
+                    unit_price: newPrice,
                     total_price: newQty * n(newPrice),
                     base_price_per_base_unit: basePricePerBaseUnit
                 };
@@ -619,11 +622,11 @@ export default function AddSale({
 
     useEffect(() => {
         const handleKeydown = (e) => {
-            const isInputElement = 
-                e.target.tagName === 'INPUT' || 
-                e.target.tagName === 'TEXTAREA' || 
+            const isInputElement =
+                e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA' ||
                 e.target.tagName === 'SELECT';
-            
+
             if (isInputElement) {
                 return;
             }
@@ -711,6 +714,20 @@ export default function AddSale({
 
     const dueAmount = useMemo(() => Math.max(0, grandTotal - n(paidAmount)), [grandTotal, paidAmount]);
 
+    const handlePickupProductChange = (productId) => {
+        setPickupProductId(productId);
+
+        const p = products?.find((x) => String(x.id) === String(productId));
+
+        setPickupProductName(p?.name || "");
+
+        const vars = p?.variants || [];
+        setPickupVariants(vars);
+
+        // reset variant selection
+        setPickupVariantId("");
+    };
+
     // ---------------- Form ----------------
     const form = useForm({
         customer_id: null,
@@ -721,6 +738,7 @@ export default function AddSale({
         items: [],
         vat_rate: 0,
         discount_rate: 0,
+        flat_discount: 0,
         paid_amount: 0,
         grand_amount: 0,
         due_amount: 0,
@@ -748,19 +766,15 @@ export default function AddSale({
             shadow_sell_price: n(i.shadow_unit_price),
         }));
 
-        const formattedPickupItems = pickupItems.map((i) => ({
-            product_name: i.product_name,
-            brand: i.brand,
-            variant: i.variant,
-            quantity: n(i.quantity),
-            unit_quantity: n(i.quantity),
-            unit: i.unit || "piece",
-            unit_price: n(i.unit_price),
-            sale_price: n(i.sale_price),
-            total_price: n(i.total_price),
-            supplier_id: selectedSupplier?.id || null,
+        const formattedPickupItems = pickupItems.map((item) => ({
+            pickup_product_id: item.pickup_product_id,
+            pickup_supplier_id: item.pickup_supplier_id,
+            variant_id: item.variant_id,
+            quantity: item.quantity,
+            unit_price: item.unit_price,
+            sale_price: item.sale_price,
+            total_price: item.total_price,
         }));
-
         const walkIn = !customerId && !customerName.trim() && !customerPhone.trim();
 
         form.setData({
@@ -782,6 +796,7 @@ export default function AddSale({
 
             vat_rate: n(taxRate),
             discount_rate: 0,
+            flat_discount: n(discountValue),
             paid_amount: n(paidAmount),
             grand_amount: n(grandTotal),
             due_amount: n(dueAmount),
@@ -795,7 +810,6 @@ export default function AddSale({
             notes: notes,
             type: "pos",
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [
         cart,
         pickupItems,
@@ -816,32 +830,56 @@ export default function AddSale({
 
     // ---------------- Pickup Functions ----------------
     const addPickupItem = () => {
-        if (!pickupProductName || n(pickupQuantity) <= 0 || n(pickupSalePrice) <= 0) {
-            alert("Please fill all required fields for pickup item");
+        if (!pickupProductId || !pickupSupplierId) {
+            alert("Please select product and supplier");
             return;
         }
+
+        if (!pickupVariantId) {
+            alert("Please select variant");
+            return;
+        }
+
+        // if (pickupQuantity <= 0 || pickupUnitPrice <= 0 || pickupSalePrice <= 0) {
+        //     alert("Please fill all required fields for pickup item");
+        //     return;
+        // }
+
+        const variantObj = pickupVariants?.find(
+            (v) => String(v.id) === String(pickupVariantId)
+        );
 
         const newItem = {
             id: Date.now(),
             product_name: pickupProductName,
-            brand: pickupBrand,
-            variant: pickupVariant,
-            quantity: n(pickupQuantity),
-            unit: "piece",
-            unit_price: n(pickupUnitPrice),
-            sale_price: n(pickupSalePrice),
-            total_price: n(pickupQuantity) * n(pickupSalePrice),
+            pickup_product_id: pickupProductId,
+            pickup_supplier_id: pickupSupplierId,
+
+            // ✅ IMPORTANT
+            variant_id: pickupVariantId,
+            variant_label: variantObj?.sku || `Variant#${pickupVariantId}`,
+
+            quantity: Number(pickupQuantity),
+            unit_price: Number(pickupUnitPrice),
+            sale_price: Number(pickupSalePrice),
+            total_price: Number(pickupQuantity) * Number(pickupSalePrice),
         };
 
-        setPickupItems((prev) => [...prev, newItem]);
+        setPickupItems([...pickupItems, newItem]);
 
+        // Reset
+        setPickupSupplierId("");
+        setPickupProductId("");
         setPickupProductName("");
-        setPickupBrand("");
-        setPickupVariant("");
+        setPickupVariants([]);
+        setPickupVariantId("");
+
         setPickupQuantity(1);
         setPickupUnitPrice(0);
         setPickupSalePrice(0);
         setShowPickupModal(false);
+
+        // focusScanner();
     };
 
     const removePickupItem = (index) => {
@@ -1193,147 +1231,13 @@ export default function AddSale({
                     {/* RIGHT COLUMN - Checkout */}
                     <div className="lg:col-span-4">
                         <div className="space-y-6">
-                            {/* Order Info */}
-                            <div className="card border border-gray-200 rounded-2xl shadow-sm">
-                                <div className="card-body p-4">
-                                    <h2 className="text-lg font-bold flex items-center gap-2 mb-4 text-gray-800">
-                                        <FileText size={20} /> Order Information
-                                    </h2>
 
-                                    <div className="space-y-4">
-                                        {/* Sale Date */}
-                                        <div className="form-control">
-                                            <label className="label py-1">
-                                                <span className="label-text flex items-center gap-2">
-                                                    <Calendar size={14} /> Sale Date
-                                                </span>
-                                            </label>
-                                            <input
-                                                type="date"
-                                                className="input input-bordered"
-                                                value={saleDate}
-                                                onChange={(e) => setSaleDate(e.target.value)}
-                                            />
-                                        </div>
-
-                                        {/* Customer */}
-                                        <div className="form-control">
-                                            <label className="label py-1">
-                                                <span className="label-text flex items-center gap-2">
-                                                    <User size={14} /> Customer
-                                                </span>
-                                            </label>
-                                            <select
-                                                className="select select-bordered"
-                                                value={customerId}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setCustomerId(val);
-                                                    setShowManualCustomerFields(val === "01");
-                                                }}
-                                            >
-                                                <option value="">Walk In Customer</option>
-                                                <option value="01">+ Add New Customer</option>
-                                                {customers.map((c) => (
-                                                    <option key={c.id} value={c.id}>
-                                                        {c.customer_name} ({c.phone})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-
-                                        {/* Manual customer */}
-                                        {showManualCustomerFields && (
-                                            <div className="space-y-3 bg-gray-50 p-3 rounded-lg border">
-                                                <div className="form-control">
-                                                    <label className="label py-1">
-                                                        <span className="label-text">Customer Name *</span>
-                                                    </label>
-                                                    <input
-                                                        className="input input-bordered"
-                                                        placeholder="Enter customer name"
-                                                        value={customerName}
-                                                        onChange={(e) => setCustomerName(e.target.value)}
-                                                        required
-                                                    />
-                                                </div>
-
-                                                <div className="form-control">
-                                                    <label className="label py-1">
-                                                        <span className="label-text">Phone Number *</span>
-                                                    </label>
-                                                    <input
-                                                        className="input input-bordered"
-                                                        placeholder="Enter phone number"
-                                                        value={customerPhone}
-                                                        onChange={(e) => setCustomerPhone(e.target.value)}
-                                                        required
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Selected Customer info */}
-                                        {selectedCustomer && (
-                                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <div className="font-medium text-blue-800">
-                                                            {selectedCustomer.customer_name}
-                                                        </div>
-                                                        <div className="text-sm text-blue-600">{selectedCustomer.phone}</div>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            setCustomerId("");
-                                                            setSelectedCustomer(null);
-                                                            setCustomerName("");
-                                                            setCustomerPhone("");
-                                                        }}
-                                                        className="btn btn-xs btn-ghost text-blue-600"
-                                                    >
-                                                        <X size={14} />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {/* Notes */}
-                                        <div className="form-control">
-                                            <label className="label py-1">
-                                                <span className="label-text flex items-center gap-2">
-                                                    <MessageSquare size={14} /> Notes
-                                                </span>
-                                            </label>
-                                            <textarea
-                                                className="textarea textarea-bordered"
-                                                rows="2"
-                                                value={notes}
-                                                onChange={(e) => setNotes(e.target.value)}
-                                                placeholder="Additional notes..."
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             {/* Checkout Summary */}
                             <div className="card border border-gray-200 rounded-2xl shadow-sm">
                                 <div className="card-body p-0">
-                                    <div className="px-4 py-3 border-b bg-gray-50 rounded-t-2xl">
-                                        <div className="flex items-center justify-between">
-                                            <h2 className="text-lg font-bold text-gray-800">Checkout Summary</h2>
-                                            <div className="flex items-center gap-2">
-                                                <span className="badge badge-primary">{cartCount + pickupItems.length} items</span>
-                                                {pickupItems.length > 0 && (
-                                                    <span className="badge badge-warning">{pickupItems.length} pickup</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div className="p-4">
+                                    <div className="p-2">
                                         {!cart.length && !pickupItems.length ? (
                                             <div className="py-12 text-center bg-white">
                                                 <Package size={48} className="mx-auto text-gray-300 mb-3" />
@@ -1502,22 +1406,20 @@ export default function AddSale({
                                         )}
 
                                         {/* Add pickup */}
-                                        {cart.length > 0 && (
-                                            <div className="mt-4 px-4 pb-4">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setShowPickupModal(true)}
-                                                    className="btn btn-outline w-full btn-sm"
-                                                >
-                                                    <Plus size={14} className="mr-2" />
-                                                    Add Pickup Item
-                                                </button>
-                                            </div>
-                                        )}
+                                        <div className="mt-4 px-4 pb-4">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPickupModal(true)}
+                                                className="btn btn-outline w-full btn-sm"
+                                            >
+                                                <Plus size={14} className="mr-2" />
+                                                Add Pickup Item
+                                            </button>
+                                        </div>
                                     </div>
 
                                     {/* Totals */}
-                                    <div className="px-4 py-3 border-t bg-gray-50">
+                                    <div className="px-2 py-3 border-t bg-gray-50">
                                         <div className="space-y-2 mb-3">
                                             <div className="flex justify-between items-center">
                                                 <span className="text-gray-600">Stock Items:</span>
@@ -1602,46 +1504,162 @@ export default function AddSale({
                                 </div>
                             </div>
 
-                            {/* Payment */}
-                            <div className="card border border-gray-800 bg-[#1e4d2b] text-white rounded-2xl shadow-lg">
+                            {/* Order Info */}
+                            <div className="card border border-gray-200 rounded-2xl shadow-sm">
                                 <div className="card-body p-4">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-lg font-bold flex items-center gap-2">
-                                            <CreditCard size={20} /> Payment Details
+                                    <h2 className="text-lg font-bold flex items-center gap-2 mb-4 text-gray-800">
+                                        <FileText size={20} /> Order Information
+                                    </h2>
+
+                                    <div className="space-y-4">
+                                        {/* Sale Date */}
+                                        <div className="form-control">
+                                            <label className="label py-1">
+                                                <span className="label-text flex items-center gap-2">
+                                                    <Calendar size={14} /> Sale Date
+                                                </span>
+                                            </label>
+                                            <input
+                                                type="date"
+                                                className="input input-bordered"
+                                                value={saleDate}
+                                                onChange={(e) => setSaleDate(e.target.value)}
+                                            />
+                                        </div>
+
+                                        {/* Customer */}
+                                        <div className="form-control">
+                                            <label className="label py-1">
+                                                <span className="label-text flex items-center gap-2">
+                                                    <User size={14} /> Customer
+                                                </span>
+                                            </label>
+                                            <select
+                                                className="select select-bordered"
+                                                value={customerId}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setCustomerId(val);
+                                                    setShowManualCustomerFields(val === "01");
+                                                }}
+                                            >
+                                                <option value="">Walk In Customer</option>
+                                                <option value="01">+ Add New Customer</option>
+                                                {customers.map((c) => (
+                                                    <option key={c.id} value={c.id}>
+                                                        {c.customer_name} ({c.phone})
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+
+                                        {/* Manual customer */}
+                                        {showManualCustomerFields && (
+                                            <div className="space-y-3 bg-gray-50 p-3 rounded-lg border">
+                                                <div className="form-control">
+                                                    <label className="label py-1">
+                                                        <span className="label-text">Customer Name *</span>
+                                                    </label>
+                                                    <input
+                                                        className="input input-bordered"
+                                                        placeholder="Enter customer name"
+                                                        value={customerName}
+                                                        onChange={(e) => setCustomerName(e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+
+                                                <div className="form-control">
+                                                    <label className="label py-1">
+                                                        <span className="label-text">Phone Number *</span>
+                                                    </label>
+                                                    <input
+                                                        className="input input-bordered"
+                                                        placeholder="Enter phone number"
+                                                        value={customerPhone}
+                                                        onChange={(e) => setCustomerPhone(e.target.value)}
+                                                        required
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Selected Customer info */}
+                                        {selectedCustomer && (
+                                            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="font-medium text-blue-800">
+                                                            {selectedCustomer.customer_name}
+                                                        </div>
+                                                        <div className="text-sm text-blue-600">{selectedCustomer.phone}</div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setCustomerId("");
+                                                            setSelectedCustomer(null);
+                                                            setCustomerName("");
+                                                            setCustomerPhone("");
+                                                        }}
+                                                        className="btn btn-xs btn-ghost text-blue-600"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Notes */}
+                                        {/* <div className="form-control">
+                                            <label className="label py-1">
+                                                <span className="label-text flex items-center gap-2">
+                                                    <MessageSquare size={14} /> Notes
+                                                </span>
+                                            </label>
+                                            <textarea
+                                                className="textarea textarea-bordered"
+                                                rows="2"
+                                                value={notes}
+                                                onChange={(e) => setNotes(e.target.value)}
+                                                placeholder="Additional notes..."
+                                            />
+                                        </div> */}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Payment */}
+                            <div className="card bg-white border border-gray-200 rounded-xl shadow-sm">
+                                <div className="card-body p-3">
+                                    {/* Header */}
+                                    <div className="flex justify-between items-center mb-3">
+                                        <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
+                                            <CreditCard size={16} className="text-green-600" />
+                                            Payment
                                         </h3>
 
                                         <button
                                             type="button"
                                             onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
-                                            className="btn btn-xs bg-red-600 hover:bg-red-700 border-none text-white font-bold"
+                                            className="btn btn-xs bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-300"
                                         >
                                             {manualPaymentOverride ? <X size={12} /> : <Edit size={12} />}
                                             {manualPaymentOverride ? "Cancel" : "Manual"}
                                         </button>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        <div className="form-control">
-                                            <label className="label py-1">
-                                                <span className="label-text text-sm text-gray-300">Payment Status *</span>
-                                            </label>
-                                            <select
-                                                className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
-                                                value={paymentStatus}
-                                                onChange={(e) => handlePaymentStatusChange(e.target.value)}
-                                            >
-                                                <option value="unpaid">Unpaid</option>
-                                                <option value="partial">Partial</option>
-                                                <option value="paid">Paid</option>
-                                            </select>
-                                        </div>
+                                    <div className="space-y-3">
 
+                                        {/* Account */}
                                         <div className="form-control">
-                                            <label className="label py-1">
-                                                <span className="label-text text-sm text-gray-300">Payment Account *</span>
+                                            <label className="label py-0">
+                                                <span className="label-text text-xs text-gray-600 font-semibold">
+                                                    Payment Account *
+                                                </span>
                                             </label>
                                             <select
-                                                className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
+                                                className="select select-bordered select-sm w-full bg-white border-gray-300 text-gray-800"
                                                 value={selectedAccount}
                                                 onChange={(e) => setSelectedAccount(e.target.value)}
                                                 required={paymentStatus !== "unpaid"}
@@ -1656,55 +1674,85 @@ export default function AddSale({
                                             </select>
 
                                             {isAccountDisabled && (
-                                                <div className="text-xs text-gray-300 mt-1">
-                                                    Account selection is disabled for unpaid status
-                                                </div>
+                                                <p className="text-[11px] text-gray-500 mt-1">
+                                                    Account disabled for unpaid status
+                                                </p>
                                             )}
                                         </div>
 
+                                        {/* Account Preview */}
                                         {selectedAccountObj && !isAccountDisabled && (
-                                            <div className="p-3 bg-gray-800 rounded-lg border border-gray-700">
-                                                <div className="flex items-center justify-between">
-                                                    <div className="flex items-center gap-2">
+                                            <div className="p-2 rounded-lg bg-gray-50 border border-gray-200">
+                                                <div className="flex justify-between items-center text-xs">
+                                                    <div className="flex items-center gap-2 text-gray-700">
                                                         {getAccountIcon(selectedAccountObj.type)}
                                                         <span className="font-medium">{selectedAccountObj.name}</span>
                                                     </div>
-                                                    <div className="text-right">
-                                                        <div className="text-xs text-gray-400">Balance</div>
-                                                        <div className="text-sm font-bold">৳ {formatCurrency(selectedAccountObj.current_balance)}</div>
-                                                    </div>
+                                                    <span className="font-semibold">
+                                                        ৳ {formatCurrency(selectedAccountObj.current_balance)}
+                                                    </span>
                                                 </div>
                                             </div>
                                         )}
 
-                                        <div className="form-control">
-                                            <label className="label py-1">
-                                                <span className="label-text text-sm text-gray-300">Paid Amount</span>
-                                            </label>
-                                            <input
-                                                type="number"
-                                                step="0.01"
-                                                className="input input-bordered input-sm w-full bg-gray-800 border-gray-700 text-white"
-                                                value={paidAmount}
-                                                onChange={(e) => handlePaidAmountChange(e.target.value)}
-                                                disabled={!manualPaymentOverride && paymentStatus === "unpaid"}
-                                                min={0}
-                                                max={grandTotal}
-                                            />
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {/* Payment Status */}
+                                            <div className="form-control">
+                                                <label className="label py-0">
+                                                    <span className="label-text text-xs text-gray-600 font-semibold">
+                                                        Payment Status *
+                                                    </span>
+                                                </label>
+                                                <select
+                                                    className="select select-bordered select-sm w-full bg-white border-gray-300 text-gray-800"
+                                                    value={paymentStatus}
+                                                    onChange={(e) => handlePaymentStatusChange(e.target.value)}
+                                                >
+                                                    <option value="unpaid">Unpaid</option>
+                                                    <option value="partial">Partial</option>
+                                                    <option value="paid">Paid</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Paid Amount */}
+                                            <div className="form-control">
+                                                <label className="label py-0">
+                                                    <span className="label-text text-xs text-gray-600 font-semibold">
+                                                        Paid Amount
+                                                    </span>
+                                                </label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    className="input input-bordered input-sm w-full bg-white border-gray-300 text-gray-800"
+                                                    value={paidAmount}
+                                                    onChange={(e) => handlePaidAmountChange(e.target.value)}
+                                                    disabled={!manualPaymentOverride && paymentStatus === "unpaid"}
+                                                    min={0}
+                                                    max={grandTotal}
+                                                />
+                                            </div>
                                         </div>
 
-                                        <div className="space-y-2 pt-3 border-t border-gray-700">
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-300">Grand Total:</span>
-                                                <span className="font-bold">{money(grandTotal)}</span>
+
+                                        {/* Summary */}
+                                        <div className="pt-2 border-t border-gray-200 space-y-1 text-xs">
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Total</span>
+                                                <span className="font-semibold">{money(grandTotal)}</span>
                                             </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-300">Paid Amount:</span>
-                                                <span className="font-bold text-green-300">{money(paidAmount)}</span>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Paid</span>
+                                                <span className="font-semibold text-green-600">
+                                                    {money(paidAmount)}
+                                                </span>
                                             </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-gray-300">Due Amount:</span>
-                                                <span className={`font-bold ${dueAmount > 0 ? "text-red-300" : "text-green-300"}`}>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-500">Due</span>
+                                                <span
+                                                    className={`font-semibold ${dueAmount > 0 ? "text-red-600" : "text-green-600"
+                                                        }`}
+                                                >
                                                     {money(dueAmount)}
                                                 </span>
                                             </div>
@@ -1772,49 +1820,82 @@ export default function AddSale({
                         </div>
 
                         <div className="space-y-4">
+
                             <div className="form-control">
                                 <label className="label">
-                                    <span className="label-text">Product Name *</span>
+                                    <span className="label-text">Pickup Product *</span>
                                 </label>
-                                <input
-                                    type="text"
-                                    className="input input-bordered"
-                                    value={pickupProductName}
-                                    onChange={(e) => setPickupProductName(e.target.value)}
-                                    placeholder="Enter product name"
+
+                                <select
+                                    value={pickupProductId}
+                                    onChange={(e) => handlePickupProductChange(e.target.value)}
+                                    className="select select-bordered"
                                     required
-                                />
+                                >
+                                    <option value="">Select Product</option>
+                                    {products.map((product) => (
+                                        <option key={product.id} value={product.id}>
+                                            {product.name}({product.product_no}) [{product.unit_type} unit]
+                                        </option>
+                                    ))}
+                                </select>
+
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">Brand</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="input input-bordered"
-                                        value={pickupBrand}
-                                        onChange={(e) => setPickupBrand(e.target.value)}
-                                        placeholder="Enter brand"
-                                    />
-                                </div>
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Pickup Variant *</span>
+                                </label>
 
-                                <div className="form-control">
-                                    <label className="label">
-                                        <span className="label-text">Variant</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        className="input input-bordered"
-                                        value={pickupVariant}
-                                        onChange={(e) => setPickupVariant(e.target.value)}
-                                        placeholder="Enter variant"
-                                    />
-                                </div>
+                                <select
+                                    value={pickupVariantId}
+                                    onChange={(e) => setPickupVariantId(e.target.value)}
+                                    className="select select-bordered"
+                                    required
+                                    disabled={!pickupProductId || pickupVariants.length === 0}
+                                >
+                                    <option value="">
+                                        {pickupProductId ? "Select Variant" : "Select Product First"}
+                                    </option>
+
+                                    {pickupVariants?.map((v) => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.sku || `Variant#${v.id}`}
+                                        </option>
+                                    ))}
+                                </select>
+
+                                {pickupProductId && pickupVariants.length === 0 && (
+                                    <p className="text-xs text-red-500 mt-1">
+                                        This product has no variants. Please create at least one variant.
+                                    </p>
+                                )}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="form-control">
+                                <label className="label">
+                                    <span className="label-text">Pickup Supplier *</span>
+                                </label>
+
+                                <select
+                                    value={pickupSupplierId}
+                                    onChange={(e) => setPickupSupplierId(e.target.value)}
+                                    className="select select-bordered"
+                                    required
+                                >
+                                    <option value="" >
+                                        Select Supplier
+                                    </option>
+
+                                    {suppliers.map((supplier) => (
+                                        <option key={supplier.id} value={supplier.id}>
+                                            {supplier.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
                                 <div className="form-control">
                                     <label className="label">
                                         <span className="label-text">Quantity *</span>
@@ -1831,6 +1912,26 @@ export default function AddSale({
 
                                 <div className="form-control">
                                     <label className="label">
+                                        <span className="label-text">Cost Price *</span>
+                                    </label>
+                                    <input
+                                        type="number"
+                                        className="input input-bordered"
+                                        value={pickupUnitPrice}
+                                        onChange={(e) => setPickupUnitPrice(e.target.value)}
+                                        min="0"
+                                        step="0.01"
+                                        required
+                                    />
+                                </div>
+
+
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2">
+
+                                <div className="form-control">
+                                    <label className="label">
                                         <span className="label-text">Sale Price (৳) *</span>
                                     </label>
                                     <input
@@ -1844,16 +1945,17 @@ export default function AddSale({
                                         required
                                     />
                                 </div>
-                            </div>
 
-                            <div className="form-control">
-                                <label className="label">
-                                    <span className="label-text">Total Amount</span>
-                                </label>
-                                <div className="input input-bordered bg-gray-100 font-bold text-center">
-                                    ৳ {formatCurrency(n(pickupQuantity) * n(pickupSalePrice))}
+                                <div className="form-control">
+                                    <label className="label">
+                                        <span className="label-text">Total Amount</span>
+                                    </label>
+                                    <div className="input input-bordered bg-gray-100 font-bold text-center">
+                                        ৳ {formatCurrency(n(pickupQuantity) * n(pickupSalePrice))}
+                                    </div>
                                 </div>
                             </div>
+
                         </div>
 
                         <div className="modal-action">
