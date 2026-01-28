@@ -7,6 +7,7 @@ use App\Scopes\OutletScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,7 +26,8 @@ class SmsTemplate extends Model
         'balance',
         'notes',
         'created_by',
-        'outlet_id'
+        'outlet_id',
+        'owner_id'
     ];
 
     protected $casts = [
@@ -38,32 +40,7 @@ class SmsTemplate extends Model
         return $query->where('is_active', true);
     }
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new UserScope);
-        static::addGlobalScope(new OutletScope);
-        
-        // Automatically set outlet_id and created_by when creating
-        static::creating(function ($attribute) {
-            if (Auth::check()) {
-                $user = Auth::user();
-                $attribute->created_by = $user->id;
-                
-                // Get current outlet ID from user
-                if ($user->current_outlet_id) {
-                    $attribute->outlet_id = $user->current_outlet_id;
-                }
-            }
-        });
-        
-        // Prevent updating outlet_id once set
-        static::updating(function ($attribute) {
-            $originalOutletId = $attribute->getOriginal('outlet_id');
-            if ($originalOutletId !== null && $attribute->outlet_id !== $originalOutletId) {
-                $attribute->outlet_id = $originalOutletId;
-            }
-        });
-    }
+    use BelongsToTenant;
 
     protected static function boot()
     {

@@ -33,11 +33,11 @@ class AuthController extends Controller
                 return back()->with('error', 'The provided credentials do not match our records.');
             }
 
-            if (!$user->isSuperAdmin()) {
-                if (!$user->hasValidSubscription()) {
-                    return back()->with('error', 'Your subscription is not active or has expired. Please renew to login.');
-                }
-            }
+            // if (!$user->isSuperAdmin()) {
+            //     if (!$user->hasValidSubscription()) {
+            //         return back()->with('error', 'Your subscription is not active or has expired. Please renew to login.');
+            //     }
+            // }
 
             $credentials = $request->only('email', 'password');
 

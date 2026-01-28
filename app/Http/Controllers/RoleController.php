@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use Inertia\Inertia;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\Models\Permission;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
-use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Permission;
 
 class RoleController extends Controller
 {
@@ -16,45 +17,45 @@ class RoleController extends Controller
      * Display a listing of the resource.
      */
     public function index(Request $request)
-{
-    $query = Role::with(['permissions', 'users'])
-        ->where('name', '!=', 'Super Admin');
+    {
+        $query = Role::with(['permissions', 'users'])
+            ->where('name', '!=', 'Super Admin')->where('created_by', Auth::id());
 
-    // Search filter
-    if ($request->has('search') && $request->search) {
-        $query->where('name', 'like', '%' . $request->search . '%');
+        // Search filter
+        if ($request->has('search') && $request->search) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'created_at');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        // Pagination
+        $roles = $query->paginate(10)->withQueryString()
+            ->through(function ($role) {
+                return [
+                    'id' => $role->id,
+                    'name' => $role->name,
+                    'permissions' => $role->permissions->pluck('name'),
+                    'created_at' => $role->created_at->format('d M Y'),
+                    'users_count' => $role->users->count(),
+                    'permissions_count' => $role->permissions->count()
+                ];
+            });
+
+        return Inertia::render('Roles/Index', [
+            'roles' => $roles,
+            'permissions' => $this->getPermissionsGrouped(),
+            'filters' => $request->only(['search', 'sort_by', 'sort_order']),
+            'pagination' => [
+                'current_page' => $roles->currentPage(),
+                'last_page' => $roles->lastPage(),
+                'per_page' => $roles->perPage(),
+                'total' => $roles->total(),
+            ]
+        ]);
     }
-
-    // Sorting
-    $sortBy = $request->get('sort_by', 'created_at');
-    $sortOrder = $request->get('sort_order', 'desc');
-    $query->orderBy($sortBy, $sortOrder);
-
-    // Pagination
-    $roles = $query->paginate(10)->withQueryString()
-        ->through(function ($role) {
-            return [
-                'id' => $role->id,
-                'name' => $role->name,
-                'permissions' => $role->permissions->pluck('name'),
-                'created_at' => $role->created_at->format('d M Y'),
-                'users_count' => $role->users->count(),
-                'permissions_count' => $role->permissions->count()
-            ];
-        });
-
-    return Inertia::render('Roles/Index', [
-        'roles' => $roles,
-        'permissions' => $this->getPermissionsGrouped(),
-        'filters' => $request->only(['search', 'sort_by', 'sort_order']),
-        'pagination' => [
-            'current_page' => $roles->currentPage(),
-            'last_page' => $roles->lastPage(),
-            'per_page' => $roles->perPage(),
-            'total' => $roles->total(),
-        ]
-    ]);
-}
 
     /**
      * Show the form for creating a new resource.
@@ -74,8 +75,8 @@ class RoleController extends Controller
         try {
             DB::beginTransaction();
 
-            $role = Role::create(['name' => $request->name]);
-            
+            $role = Role::create(['name' => $request->name, 'created_by' => Auth::id()]);
+
             if ($request->has('permissions')) {
                 $role->syncPermissions($request->permissions);
             }
@@ -230,7 +231,7 @@ class RoleController extends Controller
 
         $actionLabels = [
             'view' => 'View',
-            'create' => 'Create', 
+            'create' => 'Create',
             'edit' => 'Edit',
             'delete' => 'Delete',
             'update' => 'Update'

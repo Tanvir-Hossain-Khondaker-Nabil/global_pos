@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 
 class UserDeposit extends Model
 {
@@ -14,6 +15,7 @@ class UserDeposit extends Model
         'note',
         'created_by',
         'outlet_id',
+        'owner_id'
     ];
 
     protected $casts = [
@@ -23,6 +25,8 @@ class UserDeposit extends Model
     const STATUS_PENDING = 'pending';
     const STATUS_APPROVED = 'approved';
     const STATUS_FAILED = 'failed';
+
+    use BelongsToTenant;
 
     // relationships
     public function user()

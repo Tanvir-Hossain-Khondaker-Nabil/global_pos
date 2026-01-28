@@ -27,6 +27,7 @@ return new class extends Migration {
             $table->timestamp('outlet_logged_in_at')->nullable();
             $table->integer('total_deposit')->default(0);
             $table->enum('role', ['superadmin', 'admin', 'user', 'saller'])->default('user');
+            $table->unsignedBigInteger('created_by')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

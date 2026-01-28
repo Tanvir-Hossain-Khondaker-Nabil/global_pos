@@ -33,6 +33,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unsignedBigInteger('outlet_id');
+             $table->unsignedBigInteger('owner_id')->nullable();
             
             $table->foreign('supplier_id')->references('id')->on('suppliers')->onDelete('cascade');
             $table->foreign('warehouse_id')->references('id')->on('warehouses')->onDelete('cascade');

@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
 
-class OutletScope implements Scope
+class OwnerScope implements Scope
 {
     public function apply(Builder $builder, Model $model)
     {
@@ -15,14 +15,10 @@ class OutletScope implements Scope
 
         $user = Auth::user();
 
-        // Super Admin হলে skip
+        // Super Admin হলে tenant scope skip
         if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) return;
 
-        $outletId = $user->current_outlet_id;
-
-        // outlet select না থাকলে scope apply করবেন না
-        if (!$outletId) return;
-
-        $builder->where($model->qualifyColumn('outlet_id'), $outletId);
+        // owner_id কলাম থাকলেই apply
+        $builder->where($model->qualifyColumn('owner_id'), $user->ownerId());
     }
 }

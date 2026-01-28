@@ -6,6 +6,7 @@ use App\Scopes\UserScope;
 use App\Scopes\OutletScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Account extends Model
@@ -25,50 +26,11 @@ class Account extends Model
         'is_active',
         'user_id',
         'created_by',
-        'outlet_id'
+        'outlet_id',
+        'owner_id'
     ];
 
-    protected static function booted()
-    {
-        // প্রথমে গ্লোবাল স্কোপ যোগ করুন
-        static::addGlobalScope(new UserScope);
-        static::addGlobalScope(new OutletScope);
-
-        // একটি মাত্র creating ইভেন্ট হ্যান্ডলার ব্যবহার করুন
-        static::creating(function ($account) {
-            if (Auth::check()) {
-                $user = Auth::user();
-
-                // user_id সেট করুন
-                $account->user_id = $user->id;
-
-                // created_by সেট করুন
-                $account->created_by = $user->id;
-
-                // outlet_id সেট করুন
-                if ($user->current_outlet_id) {
-                    $account->outlet_id = $user->current_outlet_id;
-                }
-            }
-        });
-
-        // ডিফল্ট অ্যাকাউন্ট সেট করার লজিক
-        static::saving(function ($account) {
-            if ($account->is_default) {
-                Account::where('user_id', $account->user_id)
-                    ->where('id', '!=', $account->id)
-                    ->update(['is_default' => false]);
-            }
-        });
-
-        // outlet_id আপডেট প্রতিরোধ
-        static::updating(function ($account) {
-            $originalOutletId = $account->getOriginal('outlet_id');
-            if ($originalOutletId !== null && $account->outlet_id !== $originalOutletId) {
-                $account->outlet_id = $originalOutletId;
-            }
-        });
-    }
+    use BelongsToTenant;
 
     public function user()
     {

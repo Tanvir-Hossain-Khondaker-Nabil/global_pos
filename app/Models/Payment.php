@@ -7,6 +7,7 @@ use App\Scopes\OutletScope;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 
 class Payment extends Model
 {
@@ -26,58 +27,11 @@ class Payment extends Model
         'shadow_amount',
         'status',
         'created_by',
-        'outlet_id'
+        'outlet_id',
+        'owner_id'
     ];
 
-    protected static function booted()
-    {
-        // Add global scopes
-        static::addGlobalScope(new UserScope);
-        static::addGlobalScope(new OutletScope);
-
-        // Automatically set outlet_id and created_by when creating
-        static::creating(function ($model) {
-            if (Auth::check()) {
-                $user = Auth::user();
-                $model->created_by = $user->id;
-
-                // Get current outlet ID from user
-                if ($user->current_outlet_id) {
-                    $model->outlet_id = $user->current_outlet_id;
-                }
-            }
-        });
-
-        // Prevent updating outlet_id once set
-        static::updating(function ($model) {
-            $originalOutletId = $model->getOriginal('outlet_id');
-            if ($originalOutletId !== null && $model->outlet_id !== $originalOutletId) {
-                $model->outlet_id = $originalOutletId;
-            }
-        });
-
-        // Payment-specific event handlers
-        static::created(function ($model) {
-            // Update account balance when payment is created
-            if ($model->account && $model->status == 'completed') {
-                $model->updateAccountBalance();
-            }
-        });
-
-        static::updated(function ($model) {
-            // Handle balance updates if payment status or amount changes
-            if ($model->account && $model->isDirty(['amount', 'status'])) {
-                $model->updateAccountBalance();
-            }
-        });
-
-        static::deleting(function ($model) {
-            // Reverse account balance when payment is deleted
-            if ($model->account && $model->status == 'completed') {
-                $model->reverseAccountBalance();
-            }
-        });
-    }
+    use BelongsToTenant;
 
     public function account()
     {

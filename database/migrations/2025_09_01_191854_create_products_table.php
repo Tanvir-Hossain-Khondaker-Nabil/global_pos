@@ -27,6 +27,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('outlet_id');
+             $table->unsignedBigInteger('owner_id')->nullable();
             $table->enum('type', ['global', 'local'])->default('global');
 
             $table->unsignedBigInteger('unit_id')->nullable();

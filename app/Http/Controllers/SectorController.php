@@ -50,7 +50,6 @@ class SectorController extends Controller
         try {
             $q = $request->id ? Category::find($request->id) : new Category();
             $q->name = $request->name;
-            $q->created_by = Auth::id();
             $q->save();
 
             return redirect()->back()->with('success', $request->id ? 'Category updated success' : 'New category added success');

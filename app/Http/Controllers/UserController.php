@@ -14,38 +14,84 @@ use Spatie\Permission\Models\Role;
 class UserController extends Controller
 {
     /**
+     * Resolve "owner" user for subscription checking.
+     * If staff logged in (parent_id exists), owner = parent. else owner = self.
+     */
+    private function ownerUser(): ?User
+    {
+        $auth = Auth::user();
+        if (!$auth) return null;
+
+        return $auth->parent_id ? User::find($auth->parent_id) : $auth;
+    }
+
+    /**
+     * Does current owner's subscription valid?
+     */
+    private function hasOwnerSubscription(): bool
+    {
+        $owner = $this->ownerUser();
+        return $owner?->hasValidSubscription() ?? false;
+    }
+
+    /**
      * Display a listing of the resource.
+     * - If no subscription: show only users created by current user (created_by = auth id)
+     * - If subscription: show all users except Super Admin and current user
      */
     public function index(Request $request)
     {
+        $auth = Auth::user();
+        $hasSubscription = $this->hasOwnerSubscription();
+
         $query = User::query()
             ->with(['roles', 'business'])
-            ->where('id', '!=', Auth::id()) // Exclude current user
+            ->where('id', '!=', $auth->id)
             ->latest();
 
+        // Always exclude Super Admin from list (safe)
+        $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'));
+
+        // Condition: subscription
+        if (!$hasSubscription) {
+            $query->where('created_by', $auth->id);
+        }
+
         // Search filter
-        if ($request->has('search') && $request->search) {
-            $query->where(function ($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('email', 'like', '%' . $request->search . '%')
-                  ->orWhere('phone', 'like', '%' . $request->search . '%');
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
         // Role filter
-        if ($request->has('role') && $request->role) {
-            $query->whereHas('roles', function ($q) use ($request) {
-                $q->where('name', $request->role);
-            });
+        if ($request->filled('role')) {
+            $role = $request->role;
+            $query->whereHas('roles', fn ($q) => $q->where('name', $role));
         }
 
-        // Get all roles for filter dropdown
-        $allRoles = Role::where('name', '!=', 'Super Admin')->get()->pluck('name');
+        // Roles for dropdown
+        $allRoles = Role::where('name', '!=', 'Super Admin')->pluck('name');
+
+        // Statistics (same condition applied)
+        $statsQuery = User::query()->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'));
+        if (!$hasSubscription) {
+            $statsQuery->where('created_by', $auth->id);
+        }
+
+        $totalUsers = (clone $statsQuery)->count();
+        $adminsCount = (clone $statsQuery)->whereHas('roles', fn ($q) => $q->where('name', 'admin'))->count();
+        $sellersCount = Role::where('name', 'seller')->exists()
+            ? (clone $statsQuery)->whereHas('roles', fn ($q) => $q->where('name', 'seller'))->count()
+            : 0;
 
         return Inertia::render('Users/Index', [
             'filters' => $request->only(['search', 'role']),
             'users' => $query->paginate(10)->withQueryString()
-                ->through(fn($user) => [
+                ->through(fn ($user) => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
@@ -59,14 +105,31 @@ class UserController extends Controller
                 ]),
             'roles' => $allRoles,
             'statistics' => [
-                'total_users' => User::count(),
-                'admins_count' => User::role('admin')->count(),
-            ]
+                'total_users' => $totalUsers,
+                'admins_count' => $adminsCount,
+                'sellers_count' => $sellersCount,
+                'active_users' => $totalUsers,
+            ],
+            'hasSubscription' => $hasSubscription,
+        ]);
+    }
+
+    /**
+     * Show create form
+     */
+    public function create()
+    {
+        return Inertia::render('Users/Create', [
+            'user' => null,
+            'roles' => Role::where('name', '!=', 'Super Admin')->pluck('name'),
+            'isEdit' => false,
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
+     * - If subscription: create staff bound to owner + current outlet + type general
+     * - If no subscription: create simple user with created_by = auth id
      */
     public function store(Request $request)
     {
@@ -80,32 +143,53 @@ class UserController extends Controller
             'roles.*' => 'exists:roles,name',
         ]);
 
+        $auth = Auth::user();
+        $hasSubscription = $this->hasOwnerSubscription();
+
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
+            if ($hasSubscription) {
+                // ownerId() method থাকলে সেটা, না থাকলে fallback
+                $ownerId = method_exists($auth, 'ownerId')
+                    ? $auth->ownerId()
+                    : ($auth->parent_id ?? $auth->id);
 
-            // Create user
-            $user = User::create([
-                'name' => $request->name,
-                'email' => $request->email,
-                'phone' => $request->phone,
-                'address' => $request->address,
-                'password' => Hash::make($request->password),
-            ]);
+                if (!$auth->current_outlet_id) {
+                    DB::rollBack();
+                    return back()->with('error', 'Please login to an outlet first.')->withInput();
+                }
 
-            // Assign roles
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'phone' => $request->phone,
+                    'address' => $request->address,
+                    'password' => Hash::make($request->password),
+                    'created_by' => $auth->id,
+
+                    // ✅ staff binds to owner + outlet
+                    'parent_id' => $ownerId,
+                    'current_outlet_id' => $auth->current_outlet_id,
+                    'type' => 'general',
+                ]);
+            } else {
+                $user = User::create([
+                    'name' => $request->name,
+                    'email' => $request->email,
+                    'phone' => $request->phone,
+                    'address' => $request->address,
+                    'created_by' => $auth->id,
+                    'password' => Hash::make($request->password),
+                ]);
+            }
+
             $user->syncRoles($request->roles);
 
             DB::commit();
-
-            return redirect()->route('userlist.view')
-                ->with('success', 'User created successfully.');
-
+            return redirect()->route('userlist.view')->with('success', 'User created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            return redirect()->back()
-                ->with('error', 'Failed to create user: ' . $e->getMessage())
-                ->withInput();
+            return back()->with('error', 'Failed to create user: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -123,7 +207,7 @@ class UserController extends Controller
                     ->with('error', 'Cannot edit Super Admin user.');
             }
 
-            return Inertia::render('Users/Edit', [
+            return Inertia::render('Users/Create', [
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -132,9 +216,9 @@ class UserController extends Controller
                     'address' => $user->address,
                     'roles' => $user->roles->pluck('name'),
                 ],
-                'roles' => Role::where('name', '!=', 'Super Admin')->get()->pluck('name'),
+                'roles' => Role::where('name', '!=', 'Super Admin')->pluck('name'),
+                'isEdit' => true,
             ]);
-
         } catch (\Exception $e) {
             return redirect()->route('userlist.view')
                 ->with('error', 'User not found.');
@@ -164,38 +248,27 @@ class UserController extends Controller
             'roles.*' => 'exists:roles,name',
         ]);
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
-            // Update user
-            $user->update([
+            $updateData = [
                 'name' => $request->name,
                 'email' => $request->email,
                 'phone' => $request->phone,
                 'address' => $request->address,
-            ]);
+            ];
 
-            // Update password if provided
             if ($request->filled('password')) {
-                $user->update([
-                    'password' => Hash::make($request->password),
-                ]);
+                $updateData['password'] = Hash::make($request->password);
             }
 
-            // Sync roles
+            $user->update($updateData);
             $user->syncRoles($request->roles);
 
             DB::commit();
-
-            return redirect()->route('userlist.view')
-                ->with('success', 'User updated successfully.');
-
+            return redirect()->route('userlist.view')->with('success', 'User updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
-            
-            return redirect()->back()
-                ->with('error', 'Failed to update user: ' . $e->getMessage())
-                ->withInput();
+            return back()->with('error', 'Failed to update user: ' . $e->getMessage())->withInput();
         }
     }
 
@@ -220,10 +293,9 @@ class UserController extends Controller
             }
 
             $user->delete();
-            
+
             return redirect()->route('userlist.view')
                 ->with('success', 'User deleted successfully.');
-
         } catch (\Exception $e) {
             return redirect()->route('userlist.view')
                 ->with('error', 'Failed to delete user: ' . $e->getMessage());
@@ -231,7 +303,7 @@ class UserController extends Controller
     }
 
     /**
-     * Toggle user active status
+     * Toggle user active status (placeholder - implement your own column/logic).
      */
     public function toggleStatus($id)
     {
@@ -246,12 +318,13 @@ class UserController extends Controller
                 ], 403);
             }
 
+            // যদি আপনার users টেবিলে status/is_active ফিল্ড থাকে,
+            // তাহলে এখানে toggle করে save করবেন।
 
             return response()->json([
                 'success' => true,
                 'message' => 'User status updated successfully.',
             ]);
-
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -271,18 +344,15 @@ class UserController extends Controller
             return redirect()->back()->with('error', 'User not authenticated');
         }
 
-        // Toggle between shadow and general
         $newType = $user->type === 'shadow' ? 'general' : 'shadow';
-        
+
         try {
             $user->type = $newType;
             $user->save();
-            
-            // Refresh the user in the session
+
             Auth::setUser($user->fresh());
 
             return redirect()->back()->with('success', "Switched to {$newType} mode");
-
         } catch (\Exception $e) {
             Log::error("Error updating user type: " . $e->getMessage(), [
                 'user_id' => $user->id,
@@ -291,15 +361,5 @@ class UserController extends Controller
 
             return redirect()->back()->with('error', 'Failed to switch mode: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Show create form
-     */
-    public function create()
-    {
-        return Inertia::render('Users/Create', [
-            'roles' => Role::where('name', '!=', 'Super Admin')->get()->pluck('name'),
-        ]);
     }
 }

@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('outlet_id');
+            $table->unsignedBigInteger('owner_id')->nullable();
             $table->timestamps();
         });
     }

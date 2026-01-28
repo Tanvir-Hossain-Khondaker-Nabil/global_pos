@@ -49,61 +49,84 @@ import {
 import { useTranslation } from "../hooks/useTranslation";
 
 /** ---------------------------
- * Base Menu
+ * ✅ MENU (permission based)
+ * permission = Spatie permission name (middleware permission:)
  * --------------------------- */
 const baseMenu = [
-  { title: "Dashboard", icon: "home", route: "home", routeParams: null, active: "home", role: "all", category: "Main" },
+  // Dashboard
+  { title: "Dashboard", icon: "home", route: "home", active: "home", category: "Main", permission: "dashboard.view" },
 
-  { title: "Add Sale (Inventory)", icon: "baggage-claim", route: "sales.create", routeParams: null, active: "sales.create", role: "all", category: "Sales" },
-  { title: "Add Sale (POS)", icon: "baggage-claim", route: "sales.add", routeParams: null, active: "sales.add", role: "all", category: "Sales" },
-  { title: "All Orders (Inventory)", icon: "badge-cent", route: "sales.index", routeParams: null, active: "sales.index", role: "all", category: "Sales" },
-  { title: "All Orders (POS)", icon: "badge-cent", route: "salesPos.index", routeParams: { pos: "pos" }, active: "salesPos.index", role: "all", category: "Sales" },
-  { title: "All Sales Items", icon: "badge-cent", route: "salesItems.list", routeParams: null, active: "salesItems.list", role: "all", category: "Sales" },
-  { title: "All Sales Return", icon: "badge-cent", route: "salesReturn.list", routeParams: null, active: "salesReturn.list", role: "all", category: "Sales" },
+  // Sales
+  { title: "Add Sale (Inventory)", icon: "baggage-claim", route: "sales.create", active: "sales.create", category: "Sales", permission: "sales.create" },
+  { title: "Add Sale (POS)", icon: "baggage-claim", route: "sales.add", active: "sales.add", category: "Sales", permission: "sales.create" },
+  { title: "All Orders (Inventory)", icon: "badge-cent", route: "sales.index", active: "sales.index", category: "Sales", permission: "sales.view" },
+  { title: "All Orders (POS)", icon: "badge-cent", route: "salesPos.index", routeParams: { pos: "pos" }, active: "salesPos.index", category: "Sales", permission: "sales.view" },
+  { title: "All Sales Items", icon: "badge-cent", route: "salesItems.list", active: "salesItems.list", category: "Sales", permission: "sales.view" },
+  { title: "All Sales Return", icon: "badge-cent", route: "salesReturn.list", active: "salesReturn.list", category: "Sales", permission: "sales.return" },
 
-  { title: "Purchase", icon: "receipt", route: "purchase.list", routeParams: null, active: "purchase.list", role: "all", category: "Purchase" },
-  { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", routeParams: null, active: "purchase.create", role: "all", category: "Purchase" },
-  { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", routeParams: null, active: "purchase.items", role: "all", category: "Purchase" },
+  // Purchase
+  { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
+  { 
+  title: "Local Purchase",
+  icon: "receipt",
+  route: "purchase.list_index",
+  routeParams: null,
+  active: "purchase.list_index",
+  category: "Purchase",
+  permission: "purchase.view",
+},
 
-  { title: "Purchase Return", icon: "receipt", route: "purchase-return.list", routeParams: null, active: "purchase-return.list", role: "all", category: "Purchase" },
-  { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", routeParams: null, active: "purchase-return.create", role: "all", category: "Purchase" },
+  { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
+  { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.view" },
 
-  { title: "Warehouse", icon: "warehouse", route: "warehouse.list", routeParams: null, active: "warehouse.list", role: "all", category: "Inventory" },
-  { title: "Supplier", icon: "shopping-basket", route: "supplier.view", routeParams: null, active: "supplier.view", role: "all", category: "Inventory" },
-  { title: "Attribute", icon: "shopping-basket", route: "attributes.index", routeParams: null, active: "attributes.index", role: "all", category: "Inventory" },
-  { title: "Products", icon: "shopping-basket", route: "product.list", routeParams: null, active: "product.list", role: "all", category: "Inventory" },
-  { title: "Add Products", icon: "shopping-bag", route: "product.add", routeParams: null, active: "product.add", role: "all", category: "Inventory" },
-  { title: "Categories", icon: "box", route: "category.view", routeParams: null, active: "category.view", role: "all", category: "Inventory" },
-  { title: "Brands", icon: "box", route: "brands.index", routeParams: null, active: "brands.index", role: "all", category: "Inventory" },
+  // Purchase Return
+  { title: "Purchase Return", icon: "receipt", route: "purchase-return.list", active: "purchase-return.list", category: "Purchase", permission: "purchase.return" },
+  { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", active: "purchase-return.create", category: "Purchase", permission: "purchase.return" },
 
-  { title: "Extra cash", icon: "banknote-arrow-up", route: "extra.cash.all", routeParams: null, active: "extra.cash.all", role: "all", category: "Finance" },
-  { title: "Expense", icon: "wallet-minimal", route: "expenses.list", routeParams: null, active: "expenses.list", role: "all", category: "Finance" },
-  { title: "Transactions", icon: "dollar-sign", route: "payments.index", routeParams: null, active: "payments.index", role: "all", category: "Finance" },
-  { title: "Accounts", icon: "dollar-sign", route: "accounts.index", routeParams: null, active: "accounts.index", role: "all", category: "Finance" },
-  { title: "Ledgers", icon: "box", route: "ledgers.index", routeParams: null, active: "ledgers.index", role: "all", category: "Finance" },
+  // Inventory
+  { title: "Warehouse", icon: "warehouse", route: "warehouse.list", active: "warehouse.list", category: "Inventory", permission: "warehouse.view" },
+  { title: "Supplier", icon: "shopping-basket", route: "supplier.view", active: "supplier.view", category: "Inventory", permission: "supplier.view" },
+  { title: "Attribute", icon: "shopping-basket", route: "attributes.index", active: "attributes.index", category: "Inventory", permission: "attributes.view" },
+  { title: "Products", icon: "shopping-basket", route: "product.list", active: "product.list", category: "Inventory", permission: "product.view" },
+  { title: "Add Products", icon: "shopping-bag", route: "product.add", active: "product.add", category: "Inventory", permission: "product.create" },
+  { title: "Categories", icon: "box", route: "category.view", active: "category.view", category: "Inventory", permission: "category.view" },
+  { title: "Brands", icon: "box", route: "brands.index", active: "brands.index", category: "Inventory", permission: "brands.view" },
 
-  { title: "Plan", icon: "barcode", route: "plans.index", routeParams: null, active: "plans.index", role: "all", category: "Subscriptions" },
-  { title: "Plan Modules", icon: "barcode", route: "modules.index", routeParams: null, active: "modules.index", role: "all", category: "Subscriptions" },
-  { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", routeParams: null, active: "subscriptions.index", role: "all", category: "Subscriptions" },
-  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", routeParams: null, active: "subscriptions.payments", role: "all", category: "Subscriptions" },
+  // Finance
+  { title: "Extra cash", icon: "banknote-arrow-up", route: "extra.cash.all", active: "extra.cash.all", category: "Finance", permission: "extra_cash.view" },
+  { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expense.view" },
+  { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Finance", permission: "transactions.view" },
+  { title: "Accounts", icon: "dollar-sign", route: "accounts.index", active: "accounts.index", category: "Finance", permission: "accounts.view" },
+  { title: "Ledgers", icon: "box", route: "ledgers.index", active: "ledgers.index", category: "Finance", permission: "ledgers.view" },
 
-  { title: "Dealerships", icon: "box", route: "dealerships.index", routeParams: null, active: "dealerships.index", role: "all", category: "Partners" },
+  // Subscriptions
+  { title: "Plan", icon: "barcode", route: "plans.index", active: "plans.index", category: "Subscriptions", permission: "plan.view" },
+  { title: "Plan Modules", icon: "barcode", route: "modules.index", active: "modules.index", category: "Subscriptions", permission: "modules.view" },
+  { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", active: "subscriptions.index", category: "Subscriptions", permission: "subscriptions.view" },
+  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments" },
 
-  { title: "Customer", icon: "user-plus", route: "customer.index", routeParams: null, active: "customer.index", role: "all", category: "CRM" },
-  { title: "Companies", icon: "user-plus", route: "companies.index", routeParams: null, active: "companies.index", role: "all", category: "CRM" },
+  // Partners
+  { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
 
-  { title: "Users", icon: "user", route: "userlist.view", routeParams: null, active: "userlist.view", role: "all", category: "Admin" },
-  { title: "Roles", icon: "user", route: "roles.index", routeParams: null, active: "roles.index", role: "all", category: "Admin" },
+  // CRM
+  { title: "Customer", icon: "user-plus", route: "customer.index", active: "customer.index", category: "CRM", permission: "customer.view" },
+  { title: "Companies", icon: "user-plus", route: "companies.index", active: "companies.index", category: "CRM", permission: "companies.view" },
 
-  { title: "Employees", icon: "users", route: "employees.index", routeParams: null, active: "employees.index", role: "all", category: "HR" },
-  { title: "Attendance", icon: "calendar", route: "attendance.index", routeParams: null, active: "attendance.index", role: "all", category: "HR" },
-  { title: "Salary", icon: "credit-card", route: "salary.index", routeParams: null, active: "salary.index", role: "all", category: "HR" },
-  { title: "Allowances", icon: "trending-up", route: "allowances.index", routeParams: null, active: "allowances.index", role: "all", category: "HR" },
-  { title: "Ranks", icon: "star", route: "ranks.index", routeParams: null, active: "ranks.index", role: "all", category: "HR" },
-  { title: "Bonus", icon: "gift", route: "bonus.index", routeParams: null, active: "bonus.index", role: "all", category: "HR" },
-  { title: "SMS", icon: "gift", route: "sms-templates.index", routeParams: null, active: "sms-templates.index", role: "all", category: "HR" },
+  // Admin
+  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
 
-  { title: "Outlet", icon: "store", route: "outlets.index", routeParams: null, active: "outlets.index", role: "all", category: "Outlets" },
+  // HR
+  { title: "Employees", icon: "users", route: "employees.index", active: "employees.index", category: "HR", permission: "employees.view" },
+  { title: "Attendance", icon: "calendar", route: "attendance.index", active: "attendance.index", category: "HR", permission: "attendance.view" },
+  { title: "Salary", icon: "credit-card", route: "salary.index", active: "salary.index", category: "HR", permission: "salary.view" },
+  { title: "Allowances", icon: "trending-up", route: "allowances.index", active: "allowances.index", category: "HR", permission: "allowances.view" },
+  { title: "Ranks", icon: "star", route: "ranks.index", active: "ranks.index", category: "HR", permission: "ranks.view" },
+  { title: "Bonus", icon: "gift", route: "bonus.index", active: "bonus.index", category: "HR", permission: "bonus.view" },
+  { title: "SMS", icon: "gift", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms.view" },
+
+  // Outlets
+  { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
 ];
 
 const iconComponents = {
@@ -156,10 +179,11 @@ export default function Sidebar({ status, setStatus }) {
   const [openMenus, setOpenMenus] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ SUPER ADMIN DETECT (from inertia share)
+  // ✅ backend থেকে share করুন: auth.user.permissions = ['sales.view', ...]
+  const permissions = auth?.user?.permissions || [];
   const isSuperAdmin = !!auth?.user?.is_super_admin;
 
-  // ✅ Outlet gate: super admin হলে outlet লাগবে না
+  // ✅ Outlet gate
   const isLoggedIntoOutlet = isSuperAdmin ? true : !!auth?.user?.is_logged_into_outlet;
 
   const outletOnlyMenu = [
@@ -169,10 +193,16 @@ export default function Sidebar({ status, setStatus }) {
       route: "outlets.index",
       routeParams: null,
       active: "outlets.index",
-      role: "all",
       category: "Outlet Management",
+      permission: "outlets.view",
     },
   ];
+
+  const can = (perm) => {
+    if (!perm) return true;
+    if (isSuperAdmin) return true;
+    return permissions.includes(perm);
+  };
 
   const getIconComponent = (iconName) => {
     const IconComponent = iconComponents[iconName] || LayoutDashboard;
@@ -188,18 +218,15 @@ export default function Sidebar({ status, setStatus }) {
       Dashboard: t("auth.dashboard", "Dashboard"),
       Outlet: t("auth.outlet", "Outlet"),
       "Outlet Management": t("auth.outlet_management", "Outlet Management"),
-
       "Add Sale (Inventory)": t("auth.add_sale_inventory", "Add Sale (Inventory)"),
       "Add Sale (POS)": t("auth.add_sale_pos", "Add Sale (POS)"),
       "All Orders (Inventory)": t("auth.all_orders_inventory", "All Orders (Inventory)"),
       "All Orders (POS)": t("auth.all_orders_pos", "All Orders (POS)"),
       "All Sales Items": t("auth.all_sales_items", "All Sales Items"),
-
       Purchase: t("auth.purchase", "Purchase"),
       "Add Purchase": t("auth.add_purchase", "Add Purchase"),
       "Purchase Return": t("auth.purchase_return", "Purchase Return"),
       "Add Purchase Return": t("auth.add_purchase_return", "Add Purchase Return"),
-
       Warehouse: t("auth.warehouse", "Warehouse"),
       Supplier: t("auth.supplier", "Supplier"),
       Attribute: t("auth.attribute", "Attribute"),
@@ -207,18 +234,15 @@ export default function Sidebar({ status, setStatus }) {
       "Add Products": t("auth.add_products", "Add Products"),
       Categories: t("auth.categories", "Categories"),
       Brands: t("auth.brands", "Brands"),
-
       "Extra cash": t("auth.extra_cash", "Extra Cash"),
       Expense: t("auth.expense", "Expense"),
       Transactions: t("auth.transactions", "Transactions"),
       Accounts: t("auth.accounts", "Accounts"),
       Ledgers: t("auth.ledgers", "Ledgers"),
-
       Plan: t("auth.plan", "Plan"),
       "Plan Modules": t("auth.plan_modules", "Plan Modules"),
       Subscriptions: t("auth.subscriptions", "Subscriptions"),
       "Subscriptions Payments": t("auth.subscriptions_payments", "Subscriptions Payments"),
-
       Dealerships: t("auth.dealerships", "Dealerships"),
       Customer: t("auth.customer", "Customer"),
       Companies: t("auth.companies", "Companies"),
@@ -248,11 +272,11 @@ export default function Sidebar({ status, setStatus }) {
   const groupMenuByCategory = (menuItems) => {
     const categories = {};
     menuItems.forEach((item) => {
-      if (item.role === "all" || item.role === auth?.user?.role) {
-        const category = item.category || "General";
-        categories[category] ||= [];
-        categories[category].push(item);
-      }
+      if (!can(item.permission)) return;
+
+      const category = item.category || "General";
+      categories[category] ||= [];
+      categories[category].push(item);
     });
     return categories;
   };
@@ -283,21 +307,34 @@ export default function Sidebar({ status, setStatus }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [status, setStatus]);
 
-  // ✅ menu decision (super admin => full menu)
   const menuToShow = isLoggedIntoOutlet ? baseMenu : outletOnlyMenu;
 
-  const menuCategories = useMemo(() => groupMenuByCategory(menuToShow), [menuToShow]); // eslint-disable-line
+  const menuCategories = useMemo(() => {
+    const grouped = groupMenuByCategory(menuToShow);
+    // search filter apply per category
+    const out = {};
+    Object.entries(grouped).forEach(([cat, items]) => {
+      const filtered = filterMenuItems(items);
+      if (filtered.length) out[cat] = filtered;
+    });
+    return out;
+  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin]); // eslint-disable-line
 
   return (
     <>
       {status && (
-        <div className="fixed inset-0 bg-black/50 lg:hidden z-40 transition-opacity duration-300" onClick={() => setStatus(false)} />
+        <div
+          className="fixed inset-0 bg-black/50 lg:hidden z-40 transition-opacity duration-300"
+          onClick={() => setStatus(false)}
+        />
       )}
 
       <aside
         ref={sidebarRef}
         id="sidebar"
-        className={`w-72 fixed h-full z-50 transition-all duration-300 ${status ? "translate-x-0 shadow-2xl" : "-translate-x-full"} lg:translate-x-0 lg:shadow-xl`}
+        className={`w-72 fixed h-full z-50 transition-all duration-300 ${
+          status ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        } lg:translate-x-0 lg:shadow-xl`}
         style={{ background: "linear-gradient(180deg, #0f2d1a 0%, #1e4d2b 100%)" }}
       >
         <div className="p-6 h-full flex flex-col">
@@ -305,17 +342,22 @@ export default function Sidebar({ status, setStatus }) {
           <div className="flex items-center justify-center mb-8">
             <div className="flex items-center gap-3">
               <div className="bg-white p-1 rounded-xl shadow-lg">
-                {/* <LayoutDashboard className="w-6 h-6 text-[#1e4d2b]" /> */}
-                <img src="https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png" className="h-[80px]" alt="" />
+                <img
+                  src="https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png"
+                  className="h-[80px]"
+                  alt=""
+                />
               </div>
-              {/* <h1 className="font-bold text-lg uppercase tracking-tight text-white">Mobile Bazar</h1> */}
             </div>
-            <button onClick={() => setStatus(false)} className="lg:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors">
+            <button
+              onClick={() => setStatus(false)}
+              className="lg:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
+            >
               <X size={20} />
             </button>
           </div>
 
-          {/* ✅ Outlet warning only for non-super-admin */}
+          {/* Outlet warning (non-super-admin only) */}
           {!isSuperAdmin && !isLoggedIntoOutlet && (
             <div className="mb-6 bg-gradient-to-r from-amber-500/20 to-amber-600/10 backdrop-blur-sm border border-amber-500/20 rounded-xl p-4">
               <div className="flex items-center gap-3">
@@ -323,7 +365,9 @@ export default function Sidebar({ status, setStatus }) {
                   <Store size={20} className="text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-white font-bold text-sm">{locale === "bn" ? "আউটলেট নির্বাচন করুন" : "Select an Outlet"}</p>
+                  <p className="text-white font-bold text-sm">
+                    {locale === "bn" ? "আউটলেট নির্বাচন করুন" : "Select an Outlet"}
+                  </p>
                   <p className="text-white/70 text-xs">
                     {locale === "bn" ? "সব ফিচার এক্সেস করতে আউটলেটে লগইন করুন" : "Login to an outlet to access all features"}
                   </p>
@@ -341,7 +385,7 @@ export default function Sidebar({ status, setStatus }) {
             </div>
           )}
 
-          {/* Search Bar */}
+          {/* Search */}
           {isLoggedIntoOutlet && (
             <div className="mb-6 relative">
               <div className="relative">
@@ -354,7 +398,10 @@ export default function Sidebar({ status, setStatus }) {
                   className="w-full bg-white/10 border border-white/20 rounded-xl pl-10 pr-4 py-3 text-white placeholder-white/50 text-sm focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent transition-all"
                 />
                 {searchQuery && (
-                  <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white">
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white"
+                  >
                     <X size={16} />
                   </button>
                 )}
@@ -362,99 +409,53 @@ export default function Sidebar({ status, setStatus }) {
             </div>
           )}
 
-          {/* Navigation Menu */}
-          <nav className="no-scrollbar flex-1 overflow-y-auto no-scrollbar space-y-6 text-sm font-medium pr-2">
-            {Object.entries(menuCategories).map(([category, items]) => {
-              const filteredItems = filterMenuItems(items);
-              if (!filteredItems.length) return null;
+          {/* Navigation */}
+          <nav className="no-scrollbar flex-1 overflow-y-auto space-y-6 text-sm font-medium pr-2">
+            {Object.entries(menuCategories).map(([category, items]) => (
+              <div key={category} className="space-y-2">
+                <p className="text-[10px] uppercase text-white font-bold px-3 mb-1 tracking-widest">
+                  {getTranslatedTitle(category)}
+                </p>
 
-              return (
-                <div key={category} className="space-y-2">
-                  <p className="text-[10px] uppercase text-white font-bold px-3 mb-1 tracking-widest">
-                    {getTranslatedTitle(category)}
-                  </p>
+                <div className="space-y-1">
+                  {items.map((item, index) => {
+                    const isActive = currentRoute === item.active || (item.children ? item.children.some((c) => currentRoute === c.active) : false);
+                    const translatedTitle = getTranslatedTitle(item.title);
 
-                  <div className="space-y-1">
-                    {filteredItems.map((item, index) => {
-                      const isActive = currentRoute === item.active || hasActiveChild(item);
-                      const translatedTitle = getTranslatedTitle(item.title);
-                      const hasChildren = item.children && item.children.length > 0;
-                      const menuId = `${category}-${index}`;
-                      const isMenuOpen = openMenus[menuId];
-
-                      return (
-                        <div key={menuId} className="relative group">
-                          <div
-                            className={`relative rounded-xl transition-all duration-200 ${
-                              isActive ? "bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm border border-white/10" : "hover:bg-white/5"
-                            }`}
-                          >
-                            {hasChildren ? (
-                              <button onClick={() => toggleMenu(menuId)} className="flex items-center justify-between w-full px-4 py-3 group text-left">
-                                <div className="flex items-center gap-3">
-                                  <span className={`${isActive ? "text-white" : "text-white/70 group-hover:text-white"}`}>
-                                    {getIconComponent(item.icon || "dashboard")}
-                                  </span>
-                                  <span className={`font-medium ${locale === "bn" ? "text-sm leading-relaxed" : ""} ${isActive ? "text-white" : "text-white/90 group-hover:text-white"}`}>
-                                    {translatedTitle}
-                                  </span>
-                                </div>
-
-                                <ChevronRight size={16} className={`text-white transition-transform duration-200 ${isMenuOpen ? "rotate-90" : ""}`} />
-                              </button>
-                            ) : (
-                              <Link href={getRouteUrl(item)} className="flex items-center gap-3 px-4 py-3 group">
-                                <span className={`${isActive ? "text-white" : "text-white/70 group-hover:text-white"}`}>
-                                  {getIconComponent(item.icon || "dashboard")}
-                                </span>
-                                <span className={`font-medium ${locale === "bn" ? "text-sm leading-relaxed" : ""} ${isActive ? "text-white" : "text-white/90 group-hover:text-white"}`}>
-                                  {translatedTitle}
-                                </span>
-                              </Link>
-                            )}
-                          </div>
-
-                          {hasChildren && isMenuOpen && (
-                            <div className="ml-6 mt-1 space-y-1 animate-fadeIn">
-                              <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-[#35a952] to-transparent"></div>
-                              {item.children.map((child, childIndex) => {
-                                const isChildActive = currentRoute === child.active;
-                                const translatedChildTitle = getTranslatedTitle(child.title);
-
-                                return (
-                                  <Link
-                                    key={childIndex}
-                                    href={getRouteUrl(child)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm group relative ${
-                                      isChildActive ? "bg-gradient-to-r from-[#35a952]/20 to-[#35a952]/10 text-white" : "text-white/70 hover:text-white hover:bg-white/5"
-                                    }`}
-                                  >
-                                    <div className={`w-1.5 h-1.5 rounded-full transition-all ${isChildActive ? "bg-[#35a952] scale-125" : "bg-white/30 group-hover:bg-white/50"}`}></div>
-                                    <span className={`${locale === "bn" ? "text-xs leading-relaxed" : ""}`}>{translatedChildTitle}</span>
-                                    {isChildActive && (
-                                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-[#35a952] animate-pulse"></div>
-                                      </div>
-                                    )}
-                                  </Link>
-                                );
-                              })}
-                            </div>
-                          )}
+                    return (
+                      <div key={`${category}-${index}`} className="relative group">
+                        <div
+                          className={`relative rounded-xl transition-all duration-200 ${
+                            isActive
+                              ? "bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm border border-white/10"
+                              : "hover:bg-white/5"
+                          }`}
+                        >
+                          <Link href={getRouteUrl(item)} className="flex items-center gap-3 px-4 py-3 group">
+                            <span className={`${isActive ? "text-white" : "text-white/70 group-hover:text-white"}`}>
+                              {getIconComponent(item.icon || "dashboard")}
+                            </span>
+                            <span className={`font-medium ${locale === "bn" ? "text-sm leading-relaxed" : ""} ${isActive ? "text-white" : "text-white/90 group-hover:text-white"}`}>
+                              {translatedTitle}
+                            </span>
+                          </Link>
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+              </div>
+            ))}
 
-            {/* Info message when not logged into outlet (non-super-admin only) */}
             {!isSuperAdmin && !isLoggedIntoOutlet && (
               <div className="text-center py-8">
                 <Store className="w-12 h-12 text-white/20 mx-auto mb-3" />
-                <p className="text-white text-sm font-medium mb-2">{locale === "bn" ? "শুধুমাত্র আউটলেট মেনু" : "Outlet Menu Only"}</p>
-                <p className="text-white/60 text-xs">{locale === "bn" ? "সম্পূর্ণ মেনু দেখতে আউটলেটে লগইন করুন" : "Login to an outlet to see full menu"}</p>
+                <p className="text-white text-sm font-medium mb-2">
+                  {locale === "bn" ? "শুধুমাত্র আউটলেট মেনু" : "Outlet Menu Only"}
+                </p>
+                <p className="text-white/60 text-xs">
+                  {locale === "bn" ? "সম্পূর্ণ মেনু দেখতে আউটলেটে লগইন করুন" : "Login to an outlet to see full menu"}
+                </p>
               </div>
             )}
           </nav>
@@ -482,22 +483,6 @@ export default function Sidebar({ status, setStatus }) {
       >
         <Menu size={24} />
       </button>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
-        }
-      `}</style>
     </>
   );
 }

@@ -29,6 +29,7 @@ return new class extends Migration
             $table->timestamps();
             
             $table->unsignedBigInteger('outlet_id');
+             $table->unsignedBigInteger('owner_id')->nullable();
 
             $table->string('product_name')->nullable(); 
             $table->string('brand')->nullable(); 

@@ -6,6 +6,7 @@ use App\Scopes\UserScope;
 use App\Scopes\OutletScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Concerns\BelongsToTenant;
 
 class Unit extends Model
 {
@@ -17,23 +18,27 @@ class Unit extends Model
         'conversion_factor',
         'is_active',
         'created_by',
-        'outlet_id'
+        'outlet_id',
+        'owner_id',
+        
     ];
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new UserScope);
-        static::addGlobalScope(new OutletScope);
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new UserScope);
+    //     static::addGlobalScope(new OutletScope);
         
-        static::creating(function ($unit) {
-            if (Auth::check()) {
-                $unit->created_by = Auth::id();
-                if (Auth::user()->current_outlet_id) {
-                    $unit->outlet_id = Auth::user()->current_outlet_id;
-                }
-            }
-        });
-    }
+    //     static::creating(function ($unit) {
+    //         if (Auth::check()) {
+    //             $unit->created_by = Auth::id();
+    //             if (Auth::user()->current_outlet_id) {
+    //                 $unit->outlet_id = Auth::user()->current_outlet_id;
+    //             }
+    //         }
+    //     });
+    // }
+
+    use BelongsToTenant;
 
     public static function getBaseUnits()
     {

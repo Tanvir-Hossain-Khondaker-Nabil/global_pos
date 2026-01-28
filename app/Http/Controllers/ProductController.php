@@ -190,21 +190,57 @@ class ProductController extends Controller
     {
         $isUpdate = !empty($request->id);
 
-        // Check if variants is sent as JSON string and decode it
-        if ($request->has('variants') && is_string($request->variants)) {
-            try {
-                $variantsData = json_decode($request->variants, true);
-                if ($variantsData !== null && is_array($variantsData)) {
-                    $request->merge(['variants' => $variantsData]);
-                } else {
-                    $request->merge(['variants' => []]);
-                }
-            } catch (\Exception $e) {
-                $request->merge(['variants' => []]);
+        // -----------------------------
+        // 1) Active subscription + product_range limit
+        // -----------------------------
+        $user = Auth::user();
+
+        // যদি আপনার subscription validity/date আছে, active ধরার safe query:
+        $activeSubsQuery = $user->subscriptions()
+            ->where('status', 1)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now());
+
+        // ✅ Option A: শুধু latest active subscription ধরবেন
+        $activeSub = (clone $activeSubsQuery)->latest('end_date')->first();
+        $allowedProductRange = (int) optional($activeSub)->product_range;
+
+        // ✅ Option B (recommended if multiple add-on subscription থাকতে পারে):
+        // $allowedProductRange = (int) (clone $activeSubsQuery)->sum('product_range');
+
+        if (!$activeSub) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'No active subscription found. Please renew/activate your plan.');
+        }
+
+        // নতুন প্রোডাক্ট create হলে তবেই limit চেক
+        if (!$isUpdate) {
+            // আপনার সিস্টেমে যেটা “একই outlet” অনুযায়ী limit, সেটা ধরলাম
+            $outletId = $user->outlet_id ?? null;
+
+            $currentCount = Product::query()
+                ->when($outletId, fn($q) => $q->where('outlet_id', $outletId))
+                ->count();
+
+            if ($allowedProductRange > 0 && $currentCount >= $allowedProductRange) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Product limit exceeded! Your plan allows {$allowedProductRange} products. Current: {$currentCount}.");
             }
         }
 
-        // ভ্যালিডেশন রুলস
+        // -----------------------------
+        // 2) variants JSON decode safe
+        // -----------------------------
+        if ($request->has('variants') && is_string($request->variants)) {
+            $decoded = json_decode($request->variants, true);
+            $request->merge(['variants' => is_array($decoded) ? $decoded : []]);
+        }
+
+        // -----------------------------
+        // 3) Validation rules
+        // -----------------------------
         $rules = [
             'product_name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
@@ -219,6 +255,7 @@ class ProductController extends Controller
             'min_sale_unit' => 'nullable|string|max:20',
             'photo' => 'nullable',
             'type' => 'nullable|string|max:20',
+            'is_fraction_allowed' => 'nullable|boolean',
         ];
 
         if ($request->product_type === 'in_house') {
@@ -231,7 +268,7 @@ class ProductController extends Controller
             ]);
         }
 
-        // ইউনিট ভ্যালিডেশন বেসড অন ইউনিট টাইপ
+        // unit based validation
         if ($request->unit_type === 'weight') {
             $rules['default_unit'] = 'required|in:ton,kg,gram,pound';
             $rules['min_sale_unit'] = 'nullable|in:ton,kg,gram,pound';
@@ -255,7 +292,9 @@ class ProductController extends Controller
                 ->with('error', 'Please fix the validation errors');
         }
 
-
+        // -----------------------------
+        // 4) Save product + variants
+        // -----------------------------
         DB::beginTransaction();
         try {
             $product = $isUpdate ? Product::find($request->id) : new Product();
@@ -271,29 +310,30 @@ class ProductController extends Controller
             $product->category_id = $request->category_id;
             $product->description = $request->description;
             $product->product_type = $request->product_type;
-            $product->created_by = Auth::id();
 
-            // ✅ ইউনিট ফিল্ডস
+            // ✅ created_by শুধু create সময় সেট করুন (update এ বদলাবেন না)
+            if (!$isUpdate) {
+                $product->created_by = Auth::id();
+            }
+
+            // ✅ unit fields
             $product->unit_type = $request->unit_type;
             $product->default_unit = $request->default_unit;
-            $product->is_fraction_allowed = $request->is_fraction_allowed ?? false;
+            $product->is_fraction_allowed = (bool) ($request->is_fraction_allowed ?? false);
             $product->min_sale_unit = $request->min_sale_unit;
 
-            // ✅ outlet_id (keep your logic if you use OutletScope or auth outlet)
-            if (!$product->outlet_id && Auth::user() && isset(Auth::user()->outlet_id)) {
-                $product->outlet_id = Auth::user()->outlet_id;
+            // ✅ outlet_id (set only if empty)
+            if (!$product->outlet_id && $user && isset($user->outlet_id)) {
+                $product->outlet_id = $user->outlet_id;
             }
 
             // ✅ Photo upload
             if ($request->hasFile('photo')) {
-                // delete old photo if exists
                 if (!empty($product->photo) && Storage::disk('public')->exists($product->photo)) {
                     Storage::disk('public')->delete($product->photo);
                 }
-
-                // store new
                 $path = $request->file('photo')->store('products', 'public');
-                $product->photo = $path; // store "products/xxx.webp"
+                $product->photo = $path;
             }
 
             // In-house settings
@@ -313,31 +353,24 @@ class ProductController extends Controller
 
             $product->save();
 
-            // Handle variants
+            // -------- variants ----------
             $existingVariantIds = $product->variants()->pluck('id')->toArray();
             $newVariantIds = [];
 
-            if ($request->has('variants') && is_array($request->variants) && count($request->variants) > 0) {
-                foreach ($request->variants as $variantData) {
-                    if (!is_array($variantData)) {
-                        continue;
-                    }
+            $variants = $request->input('variants', []);
 
-                    // Handle attribute_values
+            if (is_array($variants) && count($variants) > 0) {
+                foreach ($variants as $variantData) {
+                    if (!is_array($variantData))
+                        continue;
+
                     $attributeValues = [];
                     if (isset($variantData['attribute_values'])) {
                         if (is_array($variantData['attribute_values'])) {
                             $attributeValues = $variantData['attribute_values'];
                         } elseif (is_string($variantData['attribute_values'])) {
-                            // Try to decode if it's a JSON string
-                            try {
-                                $decoded = json_decode($variantData['attribute_values'], true);
-                                if ($decoded !== null && is_array($decoded)) {
-                                    $attributeValues = $decoded;
-                                }
-                            } catch (\Exception $e) {
-                                $attributeValues = [];
-                            }
+                            $tmp = json_decode($variantData['attribute_values'], true);
+                            $attributeValues = is_array($tmp) ? $tmp : [];
                         }
                     }
 
@@ -355,7 +388,6 @@ class ProductController extends Controller
                             ]);
                             $newVariantIds[] = $variant->id;
 
-                            // Update stock if in-house product
                             if ($product->product_type === 'in_house') {
                                 $this->updateInHouseStock($product, $variant);
                             }
@@ -366,6 +398,7 @@ class ProductController extends Controller
                             'attribute_values' => $attributeValues,
                             'sku' => $sku,
                         ]);
+
                         $newVariantIds[] = $variant->id;
 
                         if ($product->product_type === 'in_house') {
@@ -374,14 +407,14 @@ class ProductController extends Controller
                     }
                 }
 
-                // Delete removed variants + their stock
+                // delete removed variants + their stock
                 $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
                 if (!empty($variantsToDelete)) {
                     Variant::whereIn('id', $variantsToDelete)->delete();
                     Stock::whereIn('variant_id', $variantsToDelete)->delete();
                 }
             } else {
-                // If no variants provided in request, delete all existing variants
+                // no variants sent => delete all existing variants + stock
                 if (!empty($existingVariantIds)) {
                     Variant::whereIn('id', $existingVariantIds)->delete();
                     Stock::whereIn('variant_id', $existingVariantIds)->delete();
@@ -395,7 +428,7 @@ class ProductController extends Controller
 
         } catch (\Exception $th) {
             DB::rollBack();
-            return redirect()->back()->with('error', "Server error: " . $th->getMessage());
+            return redirect()->back()->withInput()->with('error', "Server error: " . $th->getMessage());
         }
     }
 

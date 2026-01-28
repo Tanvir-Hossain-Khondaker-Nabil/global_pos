@@ -21,8 +21,9 @@ return new class extends Migration {
             $table->json('criteria')->nullable();
             $table->boolean('is_active')->default(true);
             $table->unsignedBigInteger('created_by');
-                        $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
+            $table->unsignedBigInteger('owner_id')->nullable();
             $table->timestamps();
         });
     }

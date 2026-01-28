@@ -31,6 +31,7 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
+             $table->unsignedBigInteger('owner_id')->nullable();
             
             $table->foreign('purchase_return_id')->references('id')->on('purchase_returns')->onDelete('cascade');
             $table->foreign('purchase_item_id')->references('id')->on('purchase_items')->onDelete('restrict');

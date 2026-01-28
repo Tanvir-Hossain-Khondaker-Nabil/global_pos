@@ -24,7 +24,7 @@ class Outlet extends Model
         'timezone',
         'is_active',
         'is_main',
-        'created_by'
+        'created_by',
     ];
 
     protected $casts = [

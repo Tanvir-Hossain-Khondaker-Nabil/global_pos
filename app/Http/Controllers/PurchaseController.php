@@ -30,7 +30,104 @@ class PurchaseController extends Controller
         $user = Auth::user();
         $isShadowUser = ($user->type === 'shadow');
 
-        $query = Purchase::latest()
+        $query = Purchase::latest()->globalOnly()
+            ->with(['supplier', 'warehouse', 'items.product', 'items.variant']);
+
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('purchase_no', 'like', '%' . $request->search . '%')
+                    ->orWhereHas('supplier', function ($q) use ($request) {
+                        $q->where('name', 'like', '%' . $request->search . '%')
+                            ->orWhere('company', 'like', '%' . $request->search . '%');
+                    })
+                    ->orWhereHas('warehouse', function ($q) use ($request) {
+                        $q->where('name', 'like', '%' . $request->search . '%')
+                            ->orWhere('code', 'like', '%' . $request->search . '%');
+                    })
+                    ->orWhereHas('items', function ($q) use ($request) {
+                        $q->whereHas('stock', function ($q) use ($request) {
+                            $q->where('barcode', 'like', '%' . $request->search . '%')
+                                ->orWhere('batch_no', 'like', '%' . $request->search . '%');
+                        });
+                    });
+            });
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('date')) {
+            $query->whereDate('purchase_date', $request->date);
+        }
+
+        $purchases = $query->paginate(10)->withQueryString();
+
+        // Attach item-wise stock/barcode info for index page
+        $purchases->getCollection()->transform(function ($purchase) use ($isShadowUser) {
+
+            if ($isShadowUser) {
+                $purchase = $this->transformToShadowData($purchase);
+            }
+
+            if ($purchase->items) {
+                $purchase->items->transform(function ($item) {
+
+                    // Find stock for this purchase item by batch pattern: PO-{item_id}-XXXX
+                    $stock = Stock::where('product_id', $item->product_id)
+                        ->where('variant_id', $item->variant_id)
+                        ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
+                        ->first();
+
+                    $item->stock = $stock ? [
+                        'id' => $stock->id,
+                        'batch_no' => $stock->batch_no,
+                        'barcode' => $stock->barcode,
+                        'barcode_path' => $stock->barcode_path,
+                        'quantity' => $stock->quantity,
+                        'created_at' => $stock->created_at,
+                        'has_barcode' => !empty($stock->barcode),
+                    ] : null;
+
+                    return $item;
+                });
+
+                $barcodes = [];
+                $hasBarcode = false;
+
+                foreach ($purchase->items as $item) {
+                    if ($item->stock && $item->stock['barcode']) {
+                        $barcodes[] = [
+                            'barcode' => $item->stock['barcode'],
+                            'product_name' => $item->product->name ?? '',
+                            'quantity' => $item->stock['quantity'],
+                        ];
+                        $hasBarcode = true;
+                    }
+                }
+
+                $purchase->barcodes = $barcodes;
+                $purchase->has_barcode = $hasBarcode;
+                $purchase->barcode_count = count($barcodes);
+            }
+
+            return $purchase;
+        });
+
+        return Inertia::render('Purchase/PurchaseList', [
+            'filters' => $request->only(['search', 'status', 'date']),
+            'purchases' => $purchases,
+            'isShadowUser' => $isShadowUser,
+            'accounts' => Account::where('is_active', true)->get()
+        ]);
+    }
+
+    public function list_index(Request $request)
+    {
+        $user = Auth::user();
+        $isShadowUser = ($user->type === 'shadow');
+
+        $query = Purchase::latest()->LocalOnly()
             ->with(['supplier', 'warehouse', 'items.product', 'items.variant']);
 
         if ($request->filled('search')) {
@@ -153,8 +250,10 @@ class PurchaseController extends Controller
 
         if ($request->account_id) {
             $account = Account::find($request->account_id);
-            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
-            if (!$account->is_active) return back()->withErrors(['error' => 'Selected account is not active']);
+            if (!$account)
+                return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account->is_active)
+                return back()->withErrors(['error' => 'Selected account is not active']);
             $payment_type = $account->type ?? 'cash';
         }
 
@@ -409,7 +508,8 @@ class PurchaseController extends Controller
                     ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
                     ->first();
 
-                if (!$stock) continue;
+                if (!$stock)
+                    continue;
 
                 if (empty($stock->barcode)) {
                     $this->generateStockBarcodeFromBatch($stock);
@@ -530,8 +630,10 @@ class PurchaseController extends Controller
         $account = null;
         if ($request->account_id) {
             $account = Account::find($request->account_id);
-            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
-            if (!$account->is_active) return back()->withErrors(['error' => 'Selected account is not active']);
+            if (!$account)
+                return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account->is_active)
+                return back()->withErrors(['error' => 'Selected account is not active']);
         }
 
         $adjustamount = $request->adjust_from_advance ?? false;
@@ -717,7 +819,8 @@ class PurchaseController extends Controller
                     ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
                     ->first();
 
-                if ($stock) $stock->delete();
+                if ($stock)
+                    $stock->delete();
             }
 
             $purchase->delete();
@@ -746,7 +849,8 @@ class PurchaseController extends Controller
             $paymentAmount = (float) $request->payment_amount;
             $account = Account::find($request->account_id);
 
-            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account)
+                return back()->withErrors(['error' => 'Selected account not found']);
             if (!$account->canWithdraw($paymentAmount)) {
                 return back()->withErrors(['account_id' => 'Insufficient balance in selected account']);
             }

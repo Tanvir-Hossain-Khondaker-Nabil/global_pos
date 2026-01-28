@@ -452,7 +452,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/ledgers/clear-due/{id}', [LedgerController::class, 'clearDueStore'])->middleware('permission:ledger.clear_due')->name('clearDue.store');
     Route::post('/ledgers/advance-payment/{id}', [LedgerController::class, 'advancePaymentStore'])->middleware('permission:ledger.advance_payment')->name('advancePayment.store');
     Route::get('/product-ledger', [LedgerController::class, 'ProductLedger'])->name('product-ledger.index');
-    
+
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->middleware('permission:subscriptions.renew')->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->middleware('permission:subscriptions.payments_view')->name('subscriptions.payments');
     Route::get('/subscriptions_payments/view/{id}', [SubscriptionController::class, 'paymentView'])->middleware('permission:subscriptions.payments_view')->name('subscriptions.payments.view');
@@ -607,10 +607,15 @@ Route::middleware('auth')->group(function () {
     Route::post('/sms/preview', [SupplierController::class, 'getSmsPreview'])->name('sms.preview');
 
 
-    Route::resource('sms-templates', SmsTemplateController::class);
+    Route::resource('sms-templates', SmsTemplateController::class)
+        ->middleware('permission:sms_templates.view|sms_templates.create|sms_templates.edit|sms_templates.delete');
+
     Route::post('/sms-templates/{smsTemplate}/toggle-status', [SmsTemplateController::class, 'toggleStatus'])
+        ->middleware('permission:sms_templates.toggle_status')
         ->name('sms-templates.toggle-status');
 
+
+        Route::get('/purchases_local_product', [PurchaseController::class, 'list_index'])->name('purchase.list_index');
 });
 
 
@@ -623,7 +628,7 @@ Route::get('/lang/{locale}', [Controller::class, 'setLang'])
 Route::get('/current-lang', [Controller::class, 'getLang'])
     ->middleware('permission:lang.current')->name('lang.current');
 
-    Route::get('/storage-link', function () {
+Route::get('/storage-link', function () {
     Artisan::call('storage:link');
     return 'Storage link created successfully';
 });

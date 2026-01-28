@@ -42,6 +42,7 @@ return new class extends Migration
             $table->unsignedBigInteger('outlet_id');
 
             $table->unsignedBigInteger('unit_id')->nullable();
+             $table->unsignedBigInteger('owner_id')->nullable();
             $table->decimal('sale_quantity', 15, 6)->default(1);
             $table->decimal('base_quantity', 15, 6)->default(1);
 

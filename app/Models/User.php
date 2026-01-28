@@ -2,10 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
-use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
 class User extends Authenticatable
 {
@@ -24,7 +24,8 @@ class User extends Authenticatable
         'current_outlet_id',
         'outlet_logged_in_at',
         'total_deposit',
-        'role_id'
+        'role_id',
+        'created_by',
     ];
 
     protected $hidden = [
@@ -41,6 +42,12 @@ class User extends Authenticatable
         'outlet_logged_in_at' => 'datetime',
         'current_outlet_id' => 'integer',
     ];
+
+    public function ownerId(): int
+    {
+        return $this->parent_id ? (int) $this->parent_id : (int) $this->id;
+    }
+
 
     protected function casts(): array
     {
@@ -80,10 +87,6 @@ class User extends Authenticatable
             ->exists();
     }
 
-    public function subPlanProductCount()
-    {
-        return $this->hasMany(Subscription::class, 'user_id', 'id')->with('plan');
-    }
 
     // আপনার আগের outlet related মেথডগুলো 그대로 থাকবে...
     public function currentOutlet()
@@ -97,7 +100,7 @@ class User extends Authenticatable
     // subscriptions relationship
     public function subscriptions()
     {
-        return $this->hasMany(Subscription::class, 'user_id', 'id')->with('plan');
+        return $this->hasMany(Subscription::class, 'user_id', 'id');
     }
 
     /**

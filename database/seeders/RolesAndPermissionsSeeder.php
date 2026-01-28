@@ -296,13 +296,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'bonus.apply_eid',
             'bonus.apply_festival',
 
-            // Modules
-            'modules.view',
-            'modules.create',
-            'modules.edit',
-            'modules.delete',
-            'modules.update',
-            'modules.show',
 
             // Exchange
             'exchange.view',
@@ -359,6 +352,13 @@ class RolesAndPermissionsSeeder extends Seeder
             'sms_templates.delete',
             'sms_templates.show',
             'sms_templates.toggle_status',
+
+            'sales.scan-barcode',
+            'salesShadow.store',
+            'sms.test.page',
+            'sales.print.request',
+            'product_ledger.view',
+            'sales.items.destroy',
         ];
 
         foreach ($permissions as $permission) {
@@ -395,15 +395,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'modules.delete',
             'modules.update',
             'modules.show',
-            'users.view',
-            'users.create',
-            'users.edit',
-            'users.delete',
-            'roles.view',
-            'roles.create',
-            'roles.edit',
-            'roles.delete',
-            'roles.show',
         ];
 
         $admin->syncPermissions(
@@ -424,39 +415,39 @@ class RolesAndPermissionsSeeder extends Seeder
         $adminUser->syncRoles(['Admin']);
 
 
-                // === Supplier Create ======
+        // === Supplier Create ======
 
         Supplier::updateOrCreate(
             ['email' => 'pickup@mail.com'],
             [
-                'name'            => 'Supplier Pick Up',
-                'contact_person'  => 'Supplier User',
-                'email'           => 'pickup@mail.com',
-                'phone'           => '0123456789',
-                'company'         => 'Pickup Supplier',
-                'address'         => 'N/A',
-                'advance_amount'  => 0,
-                'due_amount'      => 0,
-                'is_active'       => 1,
-                'created_by'      => Auth::id() ?? 1,
-                'outlet_id'       => 1 ?? null,
-                'dealership_id'   => null,
+                'name' => 'Supplier Pick Up',
+                'contact_person' => 'Supplier User',
+                'email' => 'pickup@mail.com',
+                'phone' => '0123456789',
+                'company' => 'Pickup Supplier',
+                'address' => 'N/A',
+                'advance_amount' => 0,
+                'due_amount' => 0,
+                'is_active' => 1,
+                'created_by' => Auth::id() ?? 1,
+                'outlet_id' => 1 ?? null,
+                'dealership_id' => null,
             ]
         );
 
         // === Customer Create ======
 
         Customer::updateOrCreate(
-            ['phone' => '100100100'], 
+            ['phone' => '100100100'],
             [
-                'customer_name'   => 'walk-in-customer',
-                'address'         => 'N/A',
-                'phone'           => '100100100',
-                'is_active'       => 1,
-                'advance_amount'  => 0,
-                'due_amount'      => 0,
-                'created_by'      => Auth::id() ?? 1,
-                'outlet_id'       => 1 ?? null,
+                'customer_name' => 'walk-in-customer',
+                'address' => 'N/A',
+                'phone' => '100100100',
+                'is_active' => 1,
+                'advance_amount' => 0,
+                'due_amount' => 0,
+                'created_by' => Auth::id() ?? 1,
+                'outlet_id' => 1 ?? null,
             ]
         );
 

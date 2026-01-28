@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
+             $table->unsignedBigInteger('owner_id')->nullable();
             
             // Unique constraint for attribute_id and code combination
             $table->unique(['attribute_id', 'code']);

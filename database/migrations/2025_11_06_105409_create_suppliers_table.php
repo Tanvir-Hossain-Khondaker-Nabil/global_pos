@@ -26,6 +26,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
+             $table->unsignedBigInteger('owner_id')->nullable();
             $table->unsignedBigInteger('dealership_id')->nullable();
             $table->enum('type', ['local', 'global'])->default('local');
             $table->timestamps();
