@@ -80,6 +80,11 @@ class User extends Authenticatable
             ->exists();
     }
 
+    public function subPlanProductCount()
+    {
+        return $this->hasMany(Subscription::class, 'user_id', 'id')->with('plan');
+    }
+
     // আপনার আগের outlet related মেথডগুলো 그대로 থাকবে...
     public function currentOutlet()
     {
@@ -92,7 +97,7 @@ class User extends Authenticatable
     // subscriptions relationship
     public function subscriptions()
     {
-        return $this->hasMany(Subscription::class, 'user_id', 'id');
+        return $this->hasMany(Subscription::class, 'user_id', 'id')->with('plan');
     }
 
     /**

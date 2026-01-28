@@ -2,21 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Expense;
+use Carbon\Carbon;
 use App\Models\Sale;
+use App\Models\User;
+use Inertia\Inertia;
+use App\Models\Stock;
+use App\Models\Expense;
 use App\Models\Customer;
 use App\Models\SaleItem;
-use App\Models\Stock;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 class DashboardController extends Controller
 {
     public function index(Request $request)
     {
+        // dd(
+        //     User::where('id', Auth::id())
+        //         ->with('subscriptions')
+        //         ->first()
+        // );
+
         $range = $request->get('timeRange', 'today'); // today|week|month|year
         $payload = $this->buildDashboardPayload($range);
 
@@ -46,8 +53,8 @@ class DashboardController extends Controller
         $isShadowUser = $user->type === 'shadow';
 
         $salesTotalCol = $isShadowUser ? 'shadow_grand_total' : 'grand_total';
-        $paidCol       = $isShadowUser ? 'shadow_paid_amount' : 'paid_amount';
-        $dueCol        = $isShadowUser ? 'shadow_due_amount' : 'due_amount';
+        $paidCol = $isShadowUser ? 'shadow_paid_amount' : 'paid_amount';
+        $dueCol = $isShadowUser ? 'shadow_due_amount' : 'due_amount';
 
         // --------- Period windows (current + previous same length) ----------
         [$from, $to, $prevFrom, $prevTo, $labelMode] = $this->resolveRange($range);
@@ -56,14 +63,14 @@ class DashboardController extends Controller
         $salesPrev = Sale::query()->whereBetween('created_at', [$prevFrom, $prevTo]);
 
         // --------- Totals (ALL TIME) ----------
-        $totalSales  = (float) Sale::selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
-        $totalPaid   = (float) Sale::selectRaw("COALESCE(SUM($paidCol),0) as total")->value('total');
-        $totalDue    = (float) Sale::selectRaw("COALESCE(SUM($dueCol),0) as total")->value('total');
+        $totalSales = (float) Sale::selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
+        $totalPaid = (float) Sale::selectRaw("COALESCE(SUM($paidCol),0) as total")->value('total');
+        $totalDue = (float) Sale::selectRaw("COALESCE(SUM($dueCol),0) as total")->value('total');
         $totalOrders = (int) Sale::count();
 
         // --------- Period sales + growth ----------
         $periodSales = (float) $salesBase->clone()->selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
-        $prevSales   = (float) $salesPrev->clone()->selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
+        $prevSales = (float) $salesPrev->clone()->selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
 
         $salesGrowth = $prevSales > 0 ? (($periodSales - $prevSales) / $prevSales) * 100 : 0;
 
@@ -74,12 +81,12 @@ class DashboardController extends Controller
             ->pluck('c', 'status')
             ->toArray();
 
-        $delivered   = (int)($statusCounts['delivered'] ?? 0);
-        $shipped     = (int)($statusCounts['shipped'] ?? 0);
-        $processing  = (int)($statusCounts['processing'] ?? 0);
-        $pending     = (int)($statusCounts['pending'] ?? 0);
-        $cancelled   = (int)($statusCounts['cancelled'] ?? 0);
-        $returned    = (int)($statusCounts['returned'] ?? 0);
+        $delivered = (int) ($statusCounts['delivered'] ?? 0);
+        $shipped = (int) ($statusCounts['shipped'] ?? 0);
+        $processing = (int) ($statusCounts['processing'] ?? 0);
+        $pending = (int) ($statusCounts['pending'] ?? 0);
+        $cancelled = (int) ($statusCounts['cancelled'] ?? 0);
+        $returned = (int) ($statusCounts['returned'] ?? 0);
 
         $periodOrders = (int) $salesBase->clone()->count();
         $completedOrders = $delivered + $shipped;
@@ -87,7 +94,7 @@ class DashboardController extends Controller
         $returnRate = $periodOrders > 0 ? ($returned / $periodOrders) * 100 : 0;
 
         // --------- Customers ----------
-        $totalCustomers  = (int) Customer::count();
+        $totalCustomers = (int) Customer::count();
         $activeCustomers = (int) Customer::where('is_active', true)->count();
 
         // Real conversion: unique customers who bought in period / active customers
@@ -101,7 +108,7 @@ class DashboardController extends Controller
 
         // --------- Inventory ----------
         $inventoryValue = (float) Stock::selectRaw('COALESCE(SUM(quantity * purchase_price),0) as value')->value('value');
-        $lowStockItems  = (int) Stock::where('quantity', '<=', 10)->where('quantity', '>', 0)->count();
+        $lowStockItems = (int) Stock::where('quantity', '<=', 10)->where('quantity', '>', 0)->count();
         $outOfStockItems = (int) Stock::where('quantity', '<=', 0)->count();
 
         // --------- Expenses + Profit (period) ----------
@@ -146,11 +153,11 @@ class DashboardController extends Controller
                 $growth = $prev > 0 ? (($current - $prev) / $prev) * 100 : 0;
 
                 return [
-                    'id'       => $row->product_id,
-                    'name'     => $row->name,
-                    'sales'    => $current,
+                    'id' => $row->product_id,
+                    'name' => $row->name,
+                    'sales' => $current,
                     'quantity' => (int) $row->total_quantity,
-                    'growth'   => round($growth, 1),
+                    'growth' => round($growth, 1),
                 ];
             });
 
@@ -161,11 +168,11 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($sale) use ($salesTotalCol) {
                 return [
-                    'id'     => $sale->id,
-                    'type'   => 'sale',
-                    'user'   => 'Customer',
+                    'id' => $sale->id,
+                    'type' => 'sale',
+                    'user' => 'Customer',
                     'action' => 'Completed sale ' . $sale->invoice_no,
-                    'time'   => Carbon::parse($sale->created_at)->diffForHumans(),
+                    'time' => Carbon::parse($sale->created_at)->diffForHumans(),
                     'amount' => (float) ($sale->{$salesTotalCol} ?? 0),
                 ];
             })
@@ -245,10 +252,10 @@ class DashboardController extends Controller
 
         if ($range === 'today') {
             $from = $now->copy()->startOfDay();
-            $to   = $now->copy()->endOfDay();
+            $to = $now->copy()->endOfDay();
 
             $prevFrom = $from->copy()->subDay();
-            $prevTo   = $to->copy()->subDay();
+            $prevTo = $to->copy()->subDay();
 
             $labelMode = 'hour';
             return [$from, $to, $prevFrom, $prevTo, $labelMode];
@@ -256,10 +263,10 @@ class DashboardController extends Controller
 
         if ($range === 'week') {
             $from = $now->copy()->startOfWeek();
-            $to   = $now->copy()->endOfWeek();
+            $to = $now->copy()->endOfWeek();
 
             $prevFrom = $from->copy()->subWeek();
-            $prevTo   = $to->copy()->subWeek();
+            $prevTo = $to->copy()->subWeek();
 
             $labelMode = 'day';
             return [$from, $to, $prevFrom, $prevTo, $labelMode];
@@ -267,10 +274,10 @@ class DashboardController extends Controller
 
         if ($range === 'month') {
             $from = $now->copy()->startOfMonth();
-            $to   = $now->copy()->endOfMonth();
+            $to = $now->copy()->endOfMonth();
 
             $prevFrom = $from->copy()->subMonth()->startOfMonth();
-            $prevTo   = $from->copy()->subMonth()->endOfMonth();
+            $prevTo = $from->copy()->subMonth()->endOfMonth();
 
             $labelMode = 'day';
             return [$from, $to, $prevFrom, $prevTo, $labelMode];
@@ -278,10 +285,10 @@ class DashboardController extends Controller
 
         // year
         $from = $now->copy()->startOfYear();
-        $to   = $now->copy()->endOfYear();
+        $to = $now->copy()->endOfYear();
 
         $prevFrom = $from->copy()->subYear()->startOfYear();
-        $prevTo   = $from->copy()->subYear()->endOfYear();
+        $prevTo = $from->copy()->subYear()->endOfYear();
 
         $labelMode = 'month';
         return [$from, $to, $prevFrom, $prevTo, $labelMode];
@@ -304,8 +311,8 @@ class DashboardController extends Controller
             $labels = [];
             $values = [];
             for ($h = 0; $h < 24; $h++) {
-                $labels[] = str_pad((string)$h, 2, '0', STR_PAD_LEFT) . ':00';
-                $values[] = (float)($map[$h] ?? 0);
+                $labels[] = str_pad((string) $h, 2, '0', STR_PAD_LEFT) . ':00';
+                $values[] = (float) ($map[$h] ?? 0);
             }
             return compact('labels', 'values');
         }
@@ -328,7 +335,7 @@ class DashboardController extends Controller
             while ($cursor->lte($to)) {
                 $k = $cursor->toDateString();
                 $labels[] = $cursor->format('d M');
-                $values[] = (float)($map[$k] ?? 0);
+                $values[] = (float) ($map[$k] ?? 0);
                 $cursor->addDay();
             }
             return compact('labels', 'values');
@@ -349,7 +356,7 @@ class DashboardController extends Controller
         $values = [];
         for ($m = 1; $m <= 12; $m++) {
             $labels[] = Carbon::createFromDate($from->year, $m, 1)->format('M');
-            $values[] = (float)($map[$m] ?? 0);
+            $values[] = (float) ($map[$m] ?? 0);
         }
         return compact('labels', 'values');
     }
@@ -379,7 +386,8 @@ class DashboardController extends Controller
         $arr[0]['v'] += $diff;
 
         $out = [];
-        foreach ($arr as $it) $out[$it['k']] = max(0, (int)$it['v']);
+        foreach ($arr as $it)
+            $out[$it['k']] = max(0, (int) $it['v']);
         return $out;
     }
 }
