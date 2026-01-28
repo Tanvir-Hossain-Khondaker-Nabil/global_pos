@@ -272,7 +272,6 @@ class SalesController extends Controller
     {
         $type = $request->input('type', 'pos');
 
-
         $rules = [
             'customer_id' => 'nullable|exists:customers,id',
             'customer_name' => 'nullable|string|max:255',
