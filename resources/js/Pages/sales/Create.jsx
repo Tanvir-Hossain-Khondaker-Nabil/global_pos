@@ -1048,11 +1048,11 @@ export default function AddSale({
     useEffect(() => {
         const handleKeydown = (e) => {
             // Check if user is typing in an input field
-            const isInputElement = 
-                e.target.tagName === 'INPUT' || 
-                e.target.tagName === 'TEXTAREA' || 
+            const isInputElement =
+                e.target.tagName === 'INPUT' ||
+                e.target.tagName === 'TEXTAREA' ||
                 e.target.tagName === 'SELECT';
-            
+
             // If user is typing in an input field, don't interfere
             if (isInputElement) {
                 return;
@@ -1478,33 +1478,36 @@ export default function AddSale({
                         )}
 
                         {/* PAYMENT CARD */}
-                        <div className="card card-compact bg-[#1e4d2b] text-white border border-gray-800 rounded-2xl shadow-lg">
-                            <div className="card-body">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h3 className="card-title text-sm font-black uppercase text-red-500 flex items-center gap-2">
-                                        <CreditCard size={16} /> Payment
+                        <div className="card card-compact bg-[#F8FAF5] text-[#333] border border-gray-200 rounded-xl shadow-sm">
+                            <div className="card-body p-4">
+
+                                {/* Header */}
+                                <div className="flex justify-between items-center mb-3">
+                                    <h3 className="text-xs font-black uppercase text-red-600 flex items-center gap-2">
+                                        <CreditCard size={14} /> Payment
                                     </h3>
 
                                     <button
                                         type="button"
                                         onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
-                                        className="btn btn-xs bg-red-600 hover:bg-red-700 border-none text-white font-black text-[10px] uppercase"
+                                        className="btn btn-xs px-2 bg-red-600 hover:bg-red-700 border-none text-white font-bold text-[10px] uppercase"
                                     >
                                         {manualPaymentOverride ? <X size={10} /> : <Edit size={10} />}
                                         {manualPaymentOverride ? "Cancel" : "Manual"}
                                     </button>
                                 </div>
 
+
                                 {/* Account Selection */}
                                 <div className="form-control mb-3">
                                     <label className="label py-0">
-                                        <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
+                                        <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
                                             Payment Account {paidAmount > 0 && "*"}
                                         </span>
                                     </label>
 
                                     <select
-                                        className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
+                                        className="select select-bordered select-sm w-full bg-white border-gray-300 text-gray-800"
                                         value={selectedAccount}
                                         onChange={(e) => handleAccountSelect(e.target.value)}
                                         required={paidAmount > 0}
@@ -1519,17 +1522,23 @@ export default function AddSale({
                                     </select>
 
                                     {paidAmount > 0 && !selectedAccount && (
-                                        <div className="text-red-400 text-xs mt-1">Please select a payment account</div>
+                                        <div className="text-red-500 text-xs mt-1">
+                                            Please select a payment account
+                                        </div>
                                     )}
 
                                     {/* Selected Account Info */}
                                     {selectedAccountObj && (
-                                        <div className="mt-2 p-2 bg-gray-800 rounded-lg border border-gray-700">
+                                        <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     {getAccountIcon(selectedAccountObj.type)}
-                                                    <span className="text-xs font-bold">{selectedAccountObj.name}</span>
-                                                    <span className="text-xs text-gray-400 capitalize">({selectedAccountObj.type})</span>
+                                                    <span className="text-xs font-bold">
+                                                        {selectedAccountObj.name}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500 capitalize">
+                                                        ({selectedAccountObj.type})
+                                                    </span>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-[10px] text-gray-400">Balance</div>
@@ -1542,50 +1551,67 @@ export default function AddSale({
                                     )}
                                 </div>
 
-                                {/* Payment status */}
-                                <div className="form-control mb-3">
-                                    <select
-                                        className="select select-bordered select-sm w-full bg-gray-800 border-gray-700 text-white"
-                                        value={paymentStatus}
-                                        onChange={(e) => handlePaymentStatusChange(e.target.value)}
-                                    >
-                                        <option value="unpaid">Unpaid</option>
-                                        <option value="partial">Partial</option>
-                                        <option value="paid">Paid</option>
-                                    </select>
-                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
 
-                                {/* Paid amount */}
-                                <div className="form-control mb-3">
-                                    <label className="label py-1">
-                                        <span className="label-text text-[10px] text-gray-400 uppercase font-black tracking-widest">
-                                            Paid Amount
-                                        </span>
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        className="input input-bordered input-sm w-full bg-gray-800 border-gray-700 font-mono"
-                                        value={paidAmount}
-                                        onChange={handleManualPaymentInput}
-                                        disabled={!manualPaymentOverride && adjustFromAdvance}
-                                        onFocus={(e) => e.target.select()}
-                                    />
+                                    {/* Payment Status */}
+                                    <div className="md:col-span-1">
+                                        <div className="form-control">
+                                            <label className="label py-0">
+                                                <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                    Status
+                                                </span>
+                                            </label>
+
+                                            <select
+                                                className="select select-bordered select-sm w-full bg-white border-gray-300 text-gray-800"
+                                                value={paymentStatus}
+                                                onChange={(e) => handlePaymentStatusChange(e.target.value)}
+                                            >
+                                                <option value="unpaid">Unpaid</option>
+                                                <option value="partial">Partial</option>
+                                                <option value="paid">Paid</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Paid Amount */}
+                                    <div className="md:col-span-1">
+                                        <div className="form-control">
+                                            <label className="label py-0">
+                                                <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                    Paid Amount
+                                                </span>
+                                            </label>
+
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                value={paidAmount}
+                                                onChange={handleManualPaymentInput}
+                                                disabled={!manualPaymentOverride && adjustFromAdvance}
+                                                onFocus={(e) => e.target.select()}
+                                            />
+                                        </div>
+                                    </div>
+
                                 </div>
 
                                 {/* Totals */}
-                                <div className="space-y-1 text-xs pt-2 border-t border-gray-800 mt-2 font-bold uppercase tracking-tighter">
+                                <div className="space-y-1 text-xs pt-2 border-t border-gray-200 font-bold uppercase">
                                     <div className="flex justify-between">
-                                        <span>Gross:</span>
+                                        <span>Gross</span>
                                         <span>৳{formatCurrency(grandTotal)}</span>
                                     </div>
-                                    <div className="flex justify-between text-red-500 font-black">
-                                        <span>Due:</span>
+                                    <div className="flex justify-between text-red-600 font-black">
+                                        <span>Due</span>
                                         <span>৳{formatCurrency(dueAmount)}</span>
                                     </div>
                                 </div>
+
                             </div>
                         </div>
+
 
                         {/* Supplier for pickup */}
                         {pickupItems.length > 0 && (

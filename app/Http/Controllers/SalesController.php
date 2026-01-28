@@ -316,7 +316,7 @@ class SalesController extends Controller
                     throw new \Exception('Selected supplier not found.');
             }
 
-            // ✅ Determine customerId
+            //  Determine customerId
             $customerId = null;
             
             if (
@@ -348,7 +348,7 @@ class SalesController extends Controller
                     }
                 }
             }
-            // ✅ Inventory must have a customer
+            //  Inventory must have a customer
             if ($type === 'inventory' && !$customerId) {
                 throw new \Exception('Customer is required for inventory sale.');
             }
@@ -400,7 +400,7 @@ class SalesController extends Controller
                 'shadow_paid_amount' => $paidAmount ?? 0,
                 'shadow_due_amount' => $request->due_amount ?? 0,
 
-                'account_id' => $account->id,
+                'account_id' => $account->id ?? null,
                 'payment_type' => $payment_type ?? 'cash',
                 'status' => $status ?? 'pending',
                 'type' => $type ?? 'pos',

@@ -31,6 +31,7 @@ class Product extends Model
         'default_unit',
         'is_fraction_allowed',
         'min_sale_unit',
+        'type'
     ];
 
     protected $casts = [

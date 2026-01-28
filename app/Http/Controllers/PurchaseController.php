@@ -128,9 +128,9 @@ class PurchaseController extends Controller
         $isShadowUser = ($user->type === 'shadow');
 
         return Inertia::render('Purchase/AddPurchase', [
-            'suppliers' => Supplier::all(),
+            'suppliers' => Supplier::where('type', '!=', 'local')->get(),
             'warehouses' => Warehouse::where('is_active', true)->get(),
-            'products' => Product::with('variants', 'brand')->get(),
+            'products' => Product::where('type', '!=', 'local')->with('variants', 'brand')->get(),
             'accounts' => Account::where('is_active', true)->get(),
             'isShadowUser' => $isShadowUser
         ]);
@@ -382,7 +382,7 @@ class PurchaseController extends Controller
                 $stock->refresh();
             }
 
-            $business = BusinessProfile::where('user_id', auth()->id())->first();
+            $business = BusinessProfile::where('user_id', Auth::id())->first();
 
             return Inertia::render('Purchase/BarcodePrint', [
                 'purchaseItem' => $purchaseItem,
