@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class OutletScope implements Scope
 {
@@ -15,14 +16,19 @@ class OutletScope implements Scope
 
         $user = Auth::user();
 
-        // Super Admin হলে skip
-        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) return;
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+            return;
+        }
 
-        $outletId = $user->current_outlet_id;
+        if (!Schema::hasColumn($model->getTable(), 'outlet_id')) {
+            return;
+        }
 
-        // outlet select না থাকলে scope apply করবেন না
-        if (!$outletId) return;
+        if (!$user->current_outlet_id) return;
 
-        $builder->where($model->qualifyColumn('outlet_id'), $outletId);
+        $builder->where(
+            $model->qualifyColumn('outlet_id'),
+            $user->current_outlet_id
+        );
     }
 }

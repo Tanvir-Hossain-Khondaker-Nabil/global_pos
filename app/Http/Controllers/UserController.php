@@ -46,7 +46,7 @@ class UserController extends Controller
 
         $query = User::query()
             ->with(['roles', 'business'])
-            ->where('id', '!=', $auth->id)
+            ->where('created_by', Auth::id())
             ->latest();
 
         // Always exclude Super Admin from list (safe)

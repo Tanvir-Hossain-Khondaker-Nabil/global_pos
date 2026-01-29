@@ -24,7 +24,7 @@ return new class extends Migration
             $table->boolean('is_default')->default(false);
             $table->boolean('is_active')->default(true);
 
-            $table->unsignedBigInteger('user_id');      // owner
+            $table->unsignedBigInteger('user_id')->nullable();      // owner
 
             $table->timestamps();
             $table->softDeletes();
