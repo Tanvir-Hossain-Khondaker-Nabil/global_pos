@@ -202,6 +202,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/return/store', [SalesReturnController::class, 'store'])
         ->middleware('permission:sales_return.create')
         ->name('return.store');
+    
+    Route::post('/approve/{id}/return', [SalesReturnController::class, 'approve'])
+    // ->middleware('permission:sales_return.approve')
+    ->name('return.approve');
 
     Route::get('/return/{id}', [SalesReturnController::class, 'show'])
         ->middleware('permission:sales_return.show')
@@ -216,8 +220,10 @@ Route::middleware('auth')->group(function () {
         ->name('salesReturn.update');
 
     Route::delete('/return/{id}', [SalesReturnController::class, 'destroy'])
-        ->middleware('permission:sales_return.delete')
+        ->middleware('permission:return.delete')
         ->name('salesReturn.destroy');
+
+
 
 
     // account route will be here

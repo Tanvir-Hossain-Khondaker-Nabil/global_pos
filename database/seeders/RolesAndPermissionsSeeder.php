@@ -90,6 +90,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'salesReturn.destroy',
             'salesReturn.edit',
             'salesReturn.update',
+            'return.approve',
 
             // Sales List
             'sales_list.view',
