@@ -144,34 +144,36 @@ class SalesReturnController extends Controller
         $saleItems = [];
 
         if ($saleId) {
+
             $sale = Sale::with([
                 'items.product',
                 'items.variant',
                 'customer',
-                'items.stock'
-            ])->findOrFail($saleId);
+                'items.warehouse'
+            ])
+            ->whereHas('items', function ($query) {
+                $query->whereNotNull('product_id')
+                ->whereNotNull('stock_id');
+            })
+            ->findOrFail($saleId);
 
-            // শুধু ইনভেন্টরি আইটেমগুলো নিন (পিকআপ আইটেম নয়)
             foreach ($sale->items as $item) {
-                if (is_null($item->product_id) || $item->item_type === 'pickup') {
+
+                if (is_null($item->stock_id)) {
                     continue;
                 }
 
-                // ইউনিট কনভার্সন জন্য প্রোডাক্ট ডিটেইলস
                 $product = $item->product;
                 $unitType = $product->unit_type ?? 'piece';
                 $availableUnits = $this->getAvailableSaleUnits($product);
 
-                // স্টক ক্যালকুলেশন (ইউনিট কনভার্সন সহ)
                 $stock = $item->stock;
                 $availableStock = 0;
                 $availableBaseStock = 0;
 
                 if ($stock) {
-                    // বেস ইউনিটে কনভার্ট করে স্টক চেক করুন
                     $availableBaseStock = $stock->base_quantity ?? $stock->quantity;
                     
-                    // আইটেমের ইউনিটে কনভার্ট করুন
                     if ($item->unit && $item->unit !== $stock->unit) {
                         $availableStock = $this->convertFromBase(
                             $availableBaseStock,
@@ -183,12 +185,10 @@ class SalesReturnController extends Controller
                     }
                 }
 
-                // ইতিমধ্যে রিটার্ন করা পরিমাণ
                 $alreadyReturned = SalesReturnItem::where('sale_item_id', $item->id)
                     ->where('status', 'completed')
                     ->sum('return_quantity');
 
-                // সর্বোচ্চ রিটার্ন করতে পারবে
                 $maxQuantity = max(0, $item->quantity - $alreadyReturned);
                 $maxQuantity = min($maxQuantity, $availableStock);
 
@@ -207,7 +207,7 @@ class SalesReturnController extends Controller
                         'available_units' => $availableUnits,
                         'unit_price' => $item->unit_price,
                         'shadow_unit_price' => $item->shadow_unit_price,
-                        'sale_price' => $item->unit_price, // বিক্রয় মূল্য
+                        'sale_price' => $item->unit_price, 
                         'shadow_sale_price' => $item->shadow_unit_price,
                         'sale_quantity' => $item->quantity,
                         'total_price' => $item->total_price,
@@ -221,16 +221,30 @@ class SalesReturnController extends Controller
             }
         }
 
-        // সাম্প্রতিক বিক্রয়গুলো (ইনভেন্টরি শুধু)
+        // $recentSales = Sale::with(['customer'])
+        //     ->whereHas('items', function ($query) {
+        //         $query->where('item_type', 'real')
+        //             ->whereNotNull('product_id');
+        //     })
+        //     ->whereDate('created_at', '>=', now()->subDays(30))
+        //     ->orderBy('created_at', 'desc')
+        //     ->limit(20)
+        //     ->get();
+
         $recentSales = Sale::with(['customer'])
             ->whereHas('items', function ($query) {
-                $query->where('item_type', 'real')
-                    ->whereNotNull('product_id');
+                $query->whereNotNull('product_id')
+                    ->where('type', 'inventory')
+                    ->whereHas('product', function ($q) {
+                        $q->where('type', 'global');
+                    });
             })
-            ->whereDate('created_at', '>=', now()->subDays(30))
+            ->whereDate('created_at', '>=', now()->subDays(15))
             ->orderBy('created_at', 'desc')
-            ->limit(20)
+            // ->take(20)
             ->get();
+
+
 
         return Inertia::render('SalesReturn/Create', [
             'sale' => $sale,
@@ -242,6 +256,7 @@ class SalesReturnController extends Controller
             'unitConversions' => $this->getUnitConversions()
         ]);
     }
+
 
     // ভেরিয়েন্ট ডিসপ্লে নাম
     private function getVariantDisplayName($variant)
@@ -298,7 +313,6 @@ class SalesReturnController extends Controller
     {
 
         $request->validated();
-
 
         DB::beginTransaction();
         try {

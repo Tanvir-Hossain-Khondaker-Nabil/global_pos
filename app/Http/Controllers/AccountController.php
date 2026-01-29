@@ -69,7 +69,7 @@ class AccountController extends Controller
             $account = Account::create([
                 ...$validated,
                 'current_balance' => $validated['opening_balance'],
-                'user_id' => User::where('role', User::ADMIN_ROLE)->first()?->id, // make sure it's ID
+                'user_id' => User::where('role_id', User::ADMIN_ROLE)->first()?->id, 
                 'created_by' => Auth::id(),
             ]);
 

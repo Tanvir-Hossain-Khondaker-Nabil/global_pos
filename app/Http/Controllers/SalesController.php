@@ -265,7 +265,7 @@ class SalesController extends Controller
     }
 
     /**
-     * ✅ Store sale (FIXED: inventory with unit conversions)
+     *  Store sale (FIXED: inventory with unit conversions)
      */
 
     public function store(Request $request)

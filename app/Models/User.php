@@ -33,8 +33,8 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    const ADMIN_ROLE = 1;
-    const COMPANY_ROLE = 2;
+    const SUPERADMIN_ROLE = 1;
+    const ADMIN_ROLE = 2;
     const USER_ROLE = 3;
 
     protected $casts = [
