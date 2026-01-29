@@ -39,7 +39,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
         in_house_initial_stock: update?.in_house_initial_stock || 0,
         unit_type: update?.unit_type || 'piece',
         default_unit: update?.default_unit || 'piece',
-        is_fraction_allowed: update?.is_fraction_allowed || false,
+        is_fraction_allowed: update?.is_fraction_allowed || true,
         min_sale_unit: update?.min_sale_unit || '',
         variants: [],
         photo: null,
@@ -303,9 +303,17 @@ export default function AddProduct({ category, update, brand, attributes, errors
                                 </div>
                             </div>
                             <label className="flex items-center gap-2 cursor-pointer p-2 bg-slate-50 rounded-lg border border-slate-100">
-                                <input type="checkbox" className="checkbox checkbox-xs checkbox-primary" checked={productForm.data.is_fraction_allowed} onChange={e => productForm.setData("is_fraction_allowed", e.target.checked)} />
-                                <span className="text-xs font-bold text-slate-600">{t("Allow Fractional Sales")}</span>
+                                <input
+                                    type="checkbox"
+                                    className="checkbox checkbox-xs checkbox-primary"
+                                    checked={productForm.data.is_fraction_allowed}
+                                    onChange={e => productForm.setData("is_fraction_allowed", e.target.checked)}
+                                />
+                                <span className="text-xs font-bold text-slate-600">
+                                    {t("Allow Fractional Sales")}
+                                </span>
                             </label>
+
                             {formErrors.is_fraction_allowed && <span className="text-error text-xs mt-1">{formErrors.is_fraction_allowed}</span>}
                         </div>
                     </div>

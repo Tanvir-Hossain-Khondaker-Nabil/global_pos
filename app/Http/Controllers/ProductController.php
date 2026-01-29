@@ -194,18 +194,17 @@ class ProductController extends Controller
         // 1) Active subscription + product_range limit
         // -----------------------------
         $user = Auth::user();
+        $user = Auth::where('id', $user->id)->first();
 
-        // যদি আপনার subscription validity/date আছে, active ধরার safe query:
         $activeSubsQuery = $user->subscriptions()
             ->where('status', 1)
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now());
 
-        // ✅ Option A: শুধু latest active subscription ধরবেন
+        //  Option A: শুধু latest active subscription ধরবেন
         $activeSub = (clone $activeSubsQuery)->latest('end_date')->first();
         $allowedProductRange = (int) optional($activeSub)->product_range;
 
-        // ✅ Option B (recommended if multiple add-on subscription থাকতে পারে):
         // $allowedProductRange = (int) (clone $activeSubsQuery)->sum('product_range');
 
         if (!$activeSub) {
