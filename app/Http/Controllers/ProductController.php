@@ -255,7 +255,7 @@ class ProductController extends Controller
             'min_sale_unit' => 'nullable|string|max:20',
             'photo' => 'nullable',
             'type' => 'nullable|string|max:20',
-            'is_fraction_allowed' => 'nullable|boolean',
+            'is_fraction_allowed' => 'nullable',
         ];
 
         if ($request->product_type === 'in_house') {
