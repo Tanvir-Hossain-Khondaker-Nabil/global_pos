@@ -278,7 +278,7 @@ Route::middleware('auth')->group(function () {
         'edit' => 'modules.edit',
         'update' => 'modules.update',
         'destroy' => 'modules.destroy',
-    ])->middleware('permission:modules.view|modules.create|modules.edit|modules.delete');
+    ]);
 
 
 
