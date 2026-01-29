@@ -319,7 +319,6 @@ class SalesController extends Controller
             $rules['pickup_items.*.sale_price'] = 'required|numeric|min:0.01';
         }
 
-        // dd($request->all());
 
         $request->validate($rules);
 
@@ -344,17 +343,6 @@ class SalesController extends Controller
                 $payment_type = $account->type ?? 'unpaid';
             }
 
-
-            if (count($pickup_items) > 0) {
-
-                $supplier_id = $request->supplier_id ?? Supplier::where('email', 'pickup@mail.com')->first()->id;
-
-                if (!$supplier_id)
-                    throw new \Exception('Supplier is required for pickup items.');
-                $supplier = Supplier::find($supplier_id);
-                if (!$supplier)
-                    throw new \Exception('Selected supplier not found.');
-            }
 
             //  Determine customerId
             $customerId = null;
@@ -388,6 +376,9 @@ class SalesController extends Controller
                     }
                 }
             }
+
+
+
             //  Inventory must have a customer
             if ($type === 'inventory' && !$customerId) {
                 throw new \Exception('Customer is required for inventory sale.');
@@ -868,7 +859,7 @@ class SalesController extends Controller
         }
     }
 
-    
+
 
     private function generateInvoiceNo(): string
     {

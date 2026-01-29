@@ -187,7 +187,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         payment_amount: parseFloat(paymentForm.payment_amount),
         account_id: paymentForm.account_id,
         notes: paymentForm.notes,
-        // _method: "PATCH" // Use PATCH method for update
+        _method: "PATCH" // Use PATCH method for update
       },
       {
         preserveScroll: true,
