@@ -8,6 +8,7 @@ use App\Models\AttributeValue;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class AttributeController extends Controller
 {
@@ -15,9 +16,11 @@ class AttributeController extends Controller
     public function index()
     {
         return Inertia::render('Attributes/AttributeIndex', [
-            'attributes' => Attribute::with(['values' => function($query) {
-                $query->where('is_active', true);
-            }])->latest()->get()
+            'attributes' => Attribute::with([
+                'values' => function ($query) {
+                    $query->where('is_active', true);
+                }
+            ])->get()
         ]);
     }
 
@@ -26,18 +29,17 @@ class AttributeController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:attributes,name',
-            'code' => 'required|string|max:255|unique:attributes,code',
             'values' => 'required|array|min:1',
             'values.*.value' => 'required|string|max:255',
-            'values.*.code' => 'required|string|max:255',
         ]);
 
         DB::beginTransaction();
         try {
+
             // Create attribute
             $attribute = Attribute::create([
                 'name' => $request->name,
-                'code' => $request->code,
+                'code' => Str::slug($request->name . '-' . Str::random(5)),
                 'created_by' => Auth::id(),
             ]);
 
@@ -46,7 +48,7 @@ class AttributeController extends Controller
                 AttributeValue::create([
                     'attribute_id' => $attribute->id,
                     'value' => $valueData['value'],
-                    'code' => $valueData['code'],
+                    'code' => Str::slug($valueData['value'] . '-' . Str::random(5)),
                 ]);
             }
 
@@ -64,10 +66,8 @@ class AttributeController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:attributes,name,' . $attribute->id,
-            'code' => 'required|string|max:255|unique:attributes,code,' . $attribute->id,
             'values' => 'required|array|min:1',
             'values.*.value' => 'required|string|max:255',
-            'values.*.code' => 'required|string|max:255',
         ]);
 
         DB::beginTransaction();
@@ -75,31 +75,29 @@ class AttributeController extends Controller
             // Update attribute
             $attribute->update([
                 'name' => $request->name,
-                'code' => $request->code,
+                'code' => Str::slug($request->name . '-' . Str::random(5))
             ]);
 
             // Update or create values
             $existingValueIds = [];
             foreach ($request->values as $valueData) {
                 if (isset($valueData['id'])) {
-                    // Update existing value
                     $value = AttributeValue::where('id', $valueData['id'])
                         ->where('attribute_id', $attribute->id)
                         ->first();
-                    
+
                     if ($value) {
                         $value->update([
                             'value' => $valueData['value'],
-                            'code' => $valueData['code'],
+                            'code' => Str::slug($valueData['value'] . '-' . Str::random(5)),
                         ]);
                         $existingValueIds[] = $value->id;
                     }
                 } else {
-                    // Create new value
                     $value = AttributeValue::create([
                         'attribute_id' => $attribute->id,
                         'value' => $valueData['value'],
-                        'code' => $valueData['code'],
+                        'code' => Str::slug($valueData['value'] . '-' . Str::random(5)),
                     ]);
                     $existingValueIds[] = $value->id;
                 }
@@ -147,7 +145,7 @@ class AttributeController extends Controller
         try {
             // Soft delete all values first
             AttributeValue::where('attribute_id', $attribute->id)->update(['is_active' => false]);
-            
+
             // Then delete attribute
             $attribute->delete();
 
