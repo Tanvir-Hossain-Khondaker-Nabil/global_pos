@@ -403,17 +403,29 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ========== USERS ==========
         $superAdminUser = User::updateOrCreate(
-            ['email' => 'superadmin@system.com'],
-            ['role_id' => User::SUPERADMIN_ROLE],
-            ['name' => 'Super Admin', 'password' => bcrypt('password123'), 'email_verified_at' => now()]
+            ['email' => 'superadmin@system.com'], // search condition
+            [
+                'name' => 'Super Admin',
+                'role_id' => User::SUPERADMIN_ROLE,
+                'password' => bcrypt('password123'),
+                'email_verified_at' => now(),
+            ]
         );
+
         $superAdminUser->syncRoles(['Super Admin']);
+
 
         $adminUser = User::updateOrCreate(
             ['email' => 'admin@system.com'],
-            ['role_id' => User::ADMIN_ROLE],
-            ['name' => 'Admin User', 'password' => bcrypt('password123'), 'email_verified_at' => now()]
+            [
+                'name' => 'Admin User',
+                'role_id' => User::ADMIN_ROLE,
+                'password' => bcrypt('password123'),
+                'email_verified_at' => now(),
+            ]
         );
+
+
         $adminUser->syncRoles(['Admin']);
 
 

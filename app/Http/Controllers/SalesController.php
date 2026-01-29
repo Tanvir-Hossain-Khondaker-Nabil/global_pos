@@ -273,7 +273,7 @@ class SalesController extends Controller
 
         $type = $request->input('type', 'pos');
 
-         if ($request->filled('discount_type')) {
+        if ($request->filled('discount_type')) {
             $rules['discount_type'] = 'nullable|string|max:255';
         }
 
@@ -424,7 +424,7 @@ class SalesController extends Controller
             }
 
             $sale = Sale::create([
-                'customer_id' => $customerId,
+                'customer_id' => $customerId ?? null,
                 'invoice_no' => $this->generateInvoiceNo(),
                 'sub_total' => $request->sub_amount ?? 0,
                 'discount' =>  $discount ?? 0,
@@ -439,7 +439,6 @@ class SalesController extends Controller
                 'shadow_grand_total' => $request->grand_amount ?? 0,
                 'shadow_paid_amount' => $paidAmount ?? 0,
                 'shadow_due_amount' => $request->due_amount ?? 0,
-
                 'account_id' => $account->id ?? null,
                 'payment_type' => $payment_type ?? 'cash',
                 'status' => $status ?? 'pending',
@@ -637,7 +636,7 @@ class SalesController extends Controller
                 // Update account balance if account exists and not adjusting from advance
                 if ($adjust_amount == false && $account) {
                     // $profit = $pickupSaleTotal - $pickupCostTotal;
-                    $account->updateBalance($paid_amount , 'credit');
+                    $account->updateBalance($paid_amount, 'credit');
                 }
             }
 
@@ -869,19 +868,85 @@ class SalesController extends Controller
         }
     }
 
-    private function generateInvoiceNo()
+    
+
+    private function generateInvoiceNo(): string
     {
-        $prefix = 'INV-' . date('Y-m') . '-';
+        return DB::transaction(function () {
+            $prefix = 'INV-' . now()->format('Y-m') . '-';
 
-        $last = Sale::where('invoice_no', 'like', $prefix . '%')
-            ->latest('id')
-            ->first();
+            $lastInvoice = Sale::where('invoice_no', 'like', $prefix . '%')
+                ->lockForUpdate()
+                ->orderByDesc('invoice_no')
+                ->value('invoice_no');
 
-        $num = $last
-            ? intval(substr($last->invoice_no, -4)) + 1
-            : 1;
+            $num = $lastInvoice
+                ? (int) substr($lastInvoice, -4) + 1
+                : 1;
 
-        return $prefix . str_pad($num, 4, '0', STR_PAD_LEFT);
+            return $prefix . str_pad($num, 4, '0', STR_PAD_LEFT);
+        }, 5);
+    }
+
+
+
+    //clear due of sales order
+
+    public function storePayment(Request $request, Sale $sale)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'account_id' => 'required|exists:accounts,id',
+            'payment_method' => 'required|string',
+        ]);
+
+        $customerId = $sale->customer_id;
+        $account = Account::find($request->account_id);
+
+        if (!$account || !$account->is_active) {
+            return back()->withErrors(['error' => 'Selected account is not active or not found.']);
+        }
+
+        DB::beginTransaction();
+
+        try {
+            // Create payment record
+            Payment::create([
+                'sale_id' => $sale->id,
+                'account_id' => $request->account_id,
+                'customer_id' => $customerId,
+                'amount' => $request->amount,
+                'shadow_amount' => $request->shadow_paid_amount ?? 0,
+                'payment_method' => $request->payment_method,
+                'txn_ref' => $request->txn_ref ?? ('nexoryn-' . Str::random(10)),
+                'note' => $request->notes ?? 'sales due payment clearance',
+                'paid_at' => $request->payment_date ?? Carbon::now(),
+                'created_by' => Auth::id(),
+                'status' => 'completed',
+            ]);
+
+            // Update sale amounts
+            $newPaidAmount = $sale->paid_amount + $request->amount;
+            $newDueAmount = max(0, $sale->due_amount - $request->amount);
+
+            $sale->update([
+                'paid_amount' => $newPaidAmount ?? 0,
+                'shadow_paid_amount' => $sale->shadow_paid_amount + ($request->shadow_paid_amount ?? 0),
+                'due_amount' => $newDueAmount ?? 0,
+                'shadow_due_amount' => max(0, $sale->shadow_due_amount - ($request->shadow_paid_amount ?? 0)),
+                'status' => $newDueAmount <= 0.01 ? 'paid' : 'partial',
+            ]);
+
+            // Update account balance (credit for income from sale)
+            $account->updateBalance($request->amount, 'credit');
+
+            DB::commit();
+
+            return redirect()->back()->with('success', 'Payment recorded successfully!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->withErrors(['error' => 'Payment failed: ' . $e->getMessage()]);
+        }
     }
 
 

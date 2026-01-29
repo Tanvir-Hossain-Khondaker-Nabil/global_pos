@@ -274,8 +274,10 @@ class PurchaseController extends Controller
 
         DB::beginTransaction();
         try {
-            $purchaseCount = Purchase::count();
-            $purchaseNo = 'PUR-' . date('Ymd') . '-' . str_pad($purchaseCount + 1, 4, '0', STR_PAD_LEFT);
+
+            do {
+                $purchaseNo = 'PUR-' . date('Ymd') . '-' . strtoupper(Str::random(6));
+            } while (\App\Models\Purchase::where('purchase_no', $purchaseNo)->exists());
 
             $totalAmount = collect($request->items)->sum(function ($item) {
                 return ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0);
@@ -321,10 +323,10 @@ class PurchaseController extends Controller
                     'warehouse_id' => $request->warehouse_id
                 ]);
 
-                // ✅ Batch no
+                //  Batch no
                 $batchNo = 'PO-' . $purchaseItem->id . '-' . Str::upper(Str::random(4));
 
-                // ✅ Stock create (per purchase item)
+                //  Stock create (per purchase item)
                 $stock = Stock::create([
                     'warehouse_id' => $request->warehouse_id,
                     'product_id' => $item['product_id'],
@@ -336,7 +338,7 @@ class PurchaseController extends Controller
                     'batch_no' => $batchNo,
                 ]);
 
-                // ✅ barcode = batch_no (ALWAYS)
+                //  barcode = batch_no (ALWAYS)
                 $this->generateStockBarcodeFromBatch($stock);
             }
 
@@ -370,7 +372,7 @@ class PurchaseController extends Controller
         }
     }
 
-    // ✅ barcode = batch_no + image
+    // barcode = batch_no + image
     private function generateStockBarcodeFromBatch(Stock $stock)
     {
         try {

@@ -93,8 +93,8 @@ const baseMenu = [
   { title: "Brands", icon: "box", route: "brands.index", active: "brands.index", category: "Inventory", permission: "brands.view" },
 
   // Finance
-  { title: "Extra cash", icon: "banknote-arrow-up", route: "extra.cash.all", active: "extra.cash.all", category: "Finance", permission: "extra_cash.view" },
-  { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expense.view" },
+  { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expenses.category.view" },
+  { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expenses.view" },
   { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Finance", permission: "transactions.view" },
   { title: "Accounts", icon: "dollar-sign", route: "accounts.index", active: "accounts.index", category: "Finance", permission: "accounts.view" },
   { title: "Ledgers", icon: "box", route: "ledgers.index", active: "ledgers.index", category: "Finance", permission: "ledgers.view" },
