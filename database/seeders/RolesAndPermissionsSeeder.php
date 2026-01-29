@@ -82,6 +82,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales.update',
             'sales.rejected',
 
+            // sales return
+            'salesReturn.list',
+            'return.create',
+            'return.store',
+            'salesReturn.show',
+            'salesReturn.destroy',
+            'salesReturn.edit',
+            'salesReturn.update',
+
             // Sales List
             'sales_list.view',
             'sales_list.delete',

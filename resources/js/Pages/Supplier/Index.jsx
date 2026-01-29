@@ -1789,7 +1789,7 @@ export default function Suppliers({ suppliers, filters, accounts }) {
                             </div>
 
                             {/* Status Filter */}
-                            <div className="w-32">
+                            {/* <div className="w-32">
                                 <select
                                     value={localFilters.status}
                                     onChange={(e) => setLocalFilters(prev => ({ ...prev, status: e.target.value }))}
@@ -1799,7 +1799,7 @@ export default function Suppliers({ suppliers, filters, accounts }) {
                                     <option value="active">{t("supplier.active", "Active")}</option>
                                     <option value="inactive">{t("supplier.inactive", "Inactive")}</option>
                                 </select>
-                            </div>
+                            </div> */}
 
                             {/* Action Buttons */}
                             <div className="flex items-center gap-1">

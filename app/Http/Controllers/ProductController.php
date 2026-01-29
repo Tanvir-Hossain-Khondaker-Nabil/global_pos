@@ -194,7 +194,7 @@ class ProductController extends Controller
         // 1) Active subscription + product_range limit
         // -----------------------------
         $user = Auth::user();
-        $user = Auth::where('id', $user->id)->first();
+        // $user = Auth::where('id', $user->id)->first();
 
         $activeSubsQuery = $user->subscriptions()
             ->where('status', 1)

@@ -62,19 +62,19 @@ const baseMenu = [
   { title: "All Orders (Inventory)", icon: "badge-cent", route: "sales.index", active: "sales.index", category: "Sales", permission: "sales.view" },
   { title: "All Orders (POS)", icon: "badge-cent", route: "salesPos.index", routeParams: { pos: "pos" }, active: "salesPos.index", category: "Sales", permission: "sales.view" },
   { title: "All Sales Items", icon: "badge-cent", route: "salesItems.list", active: "salesItems.list", category: "Sales", permission: "sales.view" },
-  { title: "All Sales Return", icon: "badge-cent", route: "salesReturn.list", active: "salesReturn.list", category: "Sales", permission: "sales.return" },
+  { title: "All Sales Return", icon: "badge-cent", route: "salesReturn.list", active: "salesReturn.list", category: "Sales", permission: "salesReturn.list" },
 
   // Purchase
   { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
   { 
-  title: "Local Purchase",
-  icon: "receipt",
-  route: "purchase.list_index",
-  routeParams: null,
-  active: "purchase.list_index",
-  category: "Purchase",
-  permission: "purchase.view",
-},
+    title: "Local Purchase",
+    icon: "receipt",
+    route: "purchase.list_index",
+    routeParams: null,
+    active: "purchase.list_index",
+    category: "Purchase",
+    permission: "purchase.view",
+  },
 
   { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
   { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.view" },
