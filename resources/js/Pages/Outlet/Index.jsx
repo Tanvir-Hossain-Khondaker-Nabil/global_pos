@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
+import axios from "axios";
 import PageHeader from "../../components/PageHeader";
 import {
     Plus, Trash2, Search, Edit, X, User,
     Mail, Phone, MapPin, CheckCircle, AlertCircle,
     Building, ChevronRight, MapPin as MapIcon, Shield,
-    Hash, Store, Clock,LogIn  // Added Hash and Store here
+    Hash, Store, Clock, LogIn
 } from "lucide-react";
 import { router, useForm, usePage } from "@inertiajs/react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -21,17 +22,18 @@ export default function Index({ outlets, filters = {} }) {
     });
 
     // Show flash messages
-    useEffect(() => {
-        if (flash.success) {
-            setNotification({ show: true, type: 'success', message: flash.success });
-            setTimeout(() => setNotification({ show: false, type: '', message: '' }), 3000);
-        }
-    }, [flash]);
+    // useEffect(() => {
+    //     if (flash.success) {
+    //         setNotification({ show: true, type: 'success', message: flash.success });
+    //         setTimeout(() => setNotification({ show: false, type: '', message: '' }), 3000);
+    //     }
+    // }, [flash]);
 
     const [localFilters, setLocalFilters] = useState({
         search: filters?.search || "",
         status: filters?.status || "",
     });
+
 
     const modelClose = () => {
         outletForm.reset();
@@ -51,17 +53,31 @@ export default function Index({ outlets, filters = {} }) {
         id: "", name: "", phone: "", email: "", address: "", is_active: true,
     });
 
+
     const handleOutletEdit = (id) => {
         setEditProcessing(true);
-        axios.get(route("outlets.show", { outlet: id })).then((res) => {
-            const data = res.data.outlet;
-            outletForm.setData({
-                id: data.id, name: data.name, phone: data.phone || "",
-                email: data.email || "", address: data.address || "", is_active: Boolean(data.is_active),
+        axios
+            .get(route("outlets.edit", { id: id }))
+            .then((res) => {
+                const data = res.data.data;
+                outletForm.setData({
+                    id: data.id,
+                    name: data.name,
+                    phone: data.phone,
+                    email: data.email,
+                    address: data.address || "",
+                    is_active: Boolean(data.is_active),
+                });
+                setModel(true);
+            })
+            .catch((error) => {
+                console.error("Error fetching outlet:", error);
+            })
+            .finally(() => {
+                setEditProcessing(false);
             });
-            setModel(true);
-        }).finally(() => setEditProcessing(false));
     };
+
 
     const handleDelete = (id) => {
         if (confirm(t('outlet.delete_confirmation', 'Delete this shop record?'))) {
@@ -72,16 +88,20 @@ export default function Index({ outlets, filters = {} }) {
     const handleOutletCreateForm = (e) => {
         e.preventDefault();
         const action = outletForm.data.id ? "put" : "post";
-        const url = outletForm.data.id ? route("outlets.update", { outlet: outletForm.data.id }) : route("outlets.store");
+        const url = outletForm.data.id ? 
+            route("outlets.update", { id: outletForm.data.id }) : 
+            route("outlets.store");
 
         outletForm[action](url, {
-            onSuccess: () => { outletForm.reset(); setModel(false); }
+            onSuccess: () => { 
+                outletForm.reset(); 
+                setModel(false); 
+            }
         });
     };
 
     return (
         <div className={`bg-[#f4f1ea] min-h-screen p-6 ${locale === 'bn' ? 'bangla-font' : ''}`}>
-            {/* Notification */}
             {notification.show && (
                 <div className="fixed top-6 right-6 z-[100] bg-white border-2 border-[#1e4d2b] p-4 shadow-[8px_8px_0px_rgba(30,77,43,0.2)]">
                     <div className="flex items-center gap-3">
@@ -104,7 +124,10 @@ export default function Index({ outlets, filters = {} }) {
                         />
                     </div>
                     <button
-                        onClick={() => setModel(true)}
+                        onClick={() => {
+                            outletForm.reset();
+                            setModel(true);
+                        }}
                         className="h-10 px-6 bg-[#1e4d2b] text-white font-black uppercase text-[10px] tracking-widest shadow-[4px_4px_0px_#000] active:translate-y-1 active:shadow-none transition-all"
                     >
                         + Register Dokan
@@ -116,7 +139,7 @@ export default function Index({ outlets, filters = {} }) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10">
                 {outlets?.length > 0 ? outlets.map((outlet) => (
                     <div key={outlet.id} className="relative bg-white border-2 border-[#dcd4c3] p-0 shadow-sm hover:shadow-xl transition-all group">
-                        {/* Status Stamp - Physical Look */}
+                        {/* Status Stamp */}
                         <div className={`absolute -top-2 -right-2 border-2 px-3 py-1 font-black text-[10px] uppercase tracking-tighter transform rotate-12 z-10 shadow-sm
                             ${outlet.is_active ? 'border-green-600 text-green-600 bg-white' : 'border-red-600 text-red-600 bg-white'}`}>
                             {outlet.is_active ? '● Verified Open' : '○ Closed'}
@@ -188,16 +211,21 @@ export default function Index({ outlets, filters = {} }) {
 
                                     <button
                                         onClick={() => handleOutletEdit(outlet.id)}
-                                        className="w-9 h-9 flex items-center justify-center border-2 border-gray-100 hover:border-blue-600 hover:text-blue-600 transition-all active:scale-90"
+                                        disabled={editProcessing}
+                                        className="w-9 h-9 flex items-center justify-center border-2 border-gray-100 hover:border-blue-600 hover:text-blue-600 transition-all active:scale-90 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
-                                        <Edit size={14} strokeWidth={3} />
+                                        {editProcessing ? (
+                                            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                        ) : (
+                                            <Edit size={14} strokeWidth={3} />
+                                        )}
                                     </button>
-                                    <button
+                                    {/* <button
                                         onClick={() => handleDelete(outlet.id)}
                                         className="w-9 h-9 flex items-center justify-center border-2 border-gray-100 hover:border-red-600 hover:text-red-600 transition-all active:scale-90"
                                     >
                                         <Trash2 size={14} strokeWidth={3} />
-                                    </button>
+                                    </button> */}
                                 </div>
                             </div>
                         </div>
@@ -216,8 +244,12 @@ export default function Index({ outlets, filters = {} }) {
                     <div className="p-8">
                         <div className="flex justify-between items-start mb-8">
                             <div>
-                                <h3 className="text-2xl font-black uppercase italic tracking-tighter leading-none">Registration Form</h3>
-                                <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest">Entry to Dokan Ledger</p>
+                                <h3 className="text-2xl font-black uppercase italic tracking-tighter leading-none">
+                                    {outletForm.data.id ? 'Edit Shop' : 'Registration Form'}
+                                </h3>
+                                <p className="text-[10px] font-bold text-gray-400 mt-2 uppercase tracking-widest">
+                                    {outletForm.data.id ? 'Update shop details' : 'Entry to Dokan Ledger'}
+                                </p>
                             </div>
                             <button onClick={modelClose} className="p-2 hover:bg-gray-100"><X size={20} /></button>
                         </div>
@@ -285,9 +317,9 @@ export default function Index({ outlets, filters = {} }) {
                                 <button
                                     type="submit"
                                     disabled={outletForm.processing}
-                                    className="bg-[#1e4d2b] text-white px-10 py-4 font-black uppercase text-[10px] tracking-widest shadow-[6px_6px_0px_#000] active:shadow-none active:translate-y-1 transition-all"
+                                    className="bg-[#1e4d2b] text-white px-10 py-4 font-black uppercase text-[10px] tracking-widest shadow-[6px_6px_0px_#000] active:shadow-none active:translate-y-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
-                                    {outletForm.data.id ? 'Update Record' : 'Save To Ledger'}
+                                    {outletForm.processing ? 'Processing...' : (outletForm.data.id ? 'Update Record' : 'Save To Ledger')}
                                 </button>
                             </div>
                         </form>

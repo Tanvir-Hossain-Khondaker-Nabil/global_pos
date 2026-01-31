@@ -88,8 +88,8 @@ Route::middleware('auth')->group(function () {
     Route::controller(OutletController::class)->prefix('outlets')->group(function () {
         Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
         Route::post('/store', 'store')->middleware('permission:outlets.create')->name('outlets.store');
-
         Route::get('/{id}', 'show')->middleware('permission:outlets.show')->name('outlets.show');
+        Route::get('/edit/{id}','edit')->middleware('permission:outlets.edit')->name('outlets.edit');
         Route::put('/{id}', 'update')->middleware('permission:outlets.edit')->name('outlets.update');
         Route::delete('/{id}', 'destroy')->middleware('permission:outlets.delete')->name('outlets.delete');
     });

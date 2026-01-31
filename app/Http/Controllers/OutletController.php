@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Outlet;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth ;
+use Illuminate\Support\Facades\Auth;
 
 class OutletController extends Controller
 {
@@ -12,17 +12,18 @@ class OutletController extends Controller
     // index function will be here
     public function index(Request $request)
     {
-        $outlets = Outlet::where('user_id',Auth::id())
-        ->when($request->search, fn($query) =>
-            $query->search($request->search)
-        )
-        ->when($request->status, fn($query) =>
-            $query->where('is_active', $request->status == 'active' ? true : false)
-        )
-        ->get();
-
-       
-
+        $outlets = Outlet::where('user_id', Auth::id())
+            ->when(
+                $request->search,
+                fn($query) =>
+                $query->search($request->search)
+            )
+            ->when(
+                $request->status,
+                fn($query) =>
+                $query->where('is_active', $request->status == 'active' ? true : false)
+            )
+            ->get();
 
         return inertia('Outlet/Index', [
             'outlets' => $outlets
@@ -55,7 +56,7 @@ class OutletController extends Controller
 
 
         return to_route('outlets.index', $outlet)
-                        ->with('success', 'Outlet created successfully!');
+            ->with('success', 'Outlet created successfully!');
     }
 
 
@@ -63,9 +64,19 @@ class OutletController extends Controller
     public function edit($id)
     {
         $outlet = Outlet::findOrFail($id);
-        return inertia('Outlet/Edit', [
-            'outlet' => $outlet
-        ]); 
+        $outlets = Outlet::with('user')->latest()->get(); 
+
+        return response()->json([
+        'success' => true,
+        'data' => [
+                'id' => $outlet->id,
+                'name' => $outlet->name,
+                'phone' => $outlet->phone,
+                'email' => $outlet->email,
+                'address' => $outlet->address,
+                'is_active' => $outlet->is_active,
+            ]
+        ]);
     }
 
 
@@ -86,7 +97,7 @@ class OutletController extends Controller
         $outlet->update($validated);
 
         return to_route('outlets.index', $outlet)
-                        ->with('success', 'Outlet updated successfully!');
+            ->with('success', 'Outlet updated successfully!');
     }
 
 
@@ -115,7 +126,7 @@ class OutletController extends Controller
         $outlet->delete();
 
         return to_route('outlets.index')
-                        ->with('success', 'Outlet deleted successfully!');
+            ->with('success', 'Outlet deleted successfully!');
     }
 
     public function login(Request $request, $id)
@@ -123,7 +134,6 @@ class OutletController extends Controller
         $outlet = Outlet::where('user_id', Auth::id())
             ->where('id', $id)
             ->firstOrFail();
-
         // User এর current outlet সেট করুন
         Auth::user()->update([
             'current_outlet_id' => $outlet->id,
@@ -140,16 +150,18 @@ class OutletController extends Controller
     public function logout(Request $request)
     {
         $currentOutlet = Auth::user()->currentOutlet;
-        
+
         Auth::user()->update([
             'current_outlet_id' => null,
             'outlet_logged_in_at' => null,
         ]);
 
         return redirect()->route('outlets.index')
-            ->with('success', $currentOutlet 
-                ? "{$currentOutlet->name} outlet থেকে লগআউট করা হয়েছে!" 
-                : 'Outlet থেকে লগআউট করা হয়েছে!'
+            ->with(
+                'success',
+                $currentOutlet
+                    ? "{$currentOutlet->name} outlet থেকে লগআউট করা হয়েছে!"
+                    : 'Outlet থেকে লগআউট করা হয়েছে!'
             );
     }
 
@@ -173,5 +185,4 @@ class OutletController extends Controller
 
         return back()->with('success', "Outlet পরিবর্তন করা হয়েছে: {$outlet->name}");
     }
-
 }
