@@ -21,7 +21,9 @@ return [
     'brand' => 'Brand',
     'not_available' => 'N/A',
     'download_pdf' => 'Download',
-    
+    'notes_placeholder' => 'Enter additional notes here...',
+    'gross_total' => 'Gross Total',
+
     // Payment Information
     'payment_information' => 'Payment Information',
     'shadow_payment_information' => 'Shadow Payment Information',

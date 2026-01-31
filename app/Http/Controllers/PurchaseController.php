@@ -122,6 +122,7 @@ class PurchaseController extends Controller
         ]);
     }
 
+
     public function list_index(Request $request)
     {
         $user = Auth::user();
@@ -219,6 +220,8 @@ class PurchaseController extends Controller
         ]);
     }
 
+
+
     public function create()
     {
         $user = Auth::user();
@@ -232,6 +235,7 @@ class PurchaseController extends Controller
             'isShadowUser' => $isShadowUser
         ]);
     }
+
 
     // Store purchase: barcode ALWAYS created from batch_no
     public function store(PurchaseRequestStore $request)

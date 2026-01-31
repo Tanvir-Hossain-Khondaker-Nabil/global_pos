@@ -18,6 +18,7 @@ return [
     'from_brand' => 'From Brand',
     'generate' => 'Generate',
     'code_tip' => 'Generate a unique product code',
+    'barcodes' => 'Barcodes',
 
     // Table headers
     'product_code' => 'Product Code',
