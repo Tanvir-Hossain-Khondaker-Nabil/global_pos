@@ -11,6 +11,7 @@ return [
     'select_purchase' => 'Select Purchase',
     'select_purchase_placeholder' => 'Select a Sales  to return',
     'select_purchase_help' => 'Select a Sales  to view items available for return',
+    'showing_results' => 'Showing Results',
 
     // Navigation & Actions
     'back_to_list' => 'Back to List',
