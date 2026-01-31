@@ -30,6 +30,7 @@ return [
     'create' => 'Create',
     'cancel' => 'Cancel',
     'update' => 'Update',
+    'get_started_message' => 'Get started with managing your brands.',
 
     //placeholders
     'enter_name' => 'Enter brand name',

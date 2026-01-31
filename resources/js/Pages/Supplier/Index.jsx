@@ -1803,6 +1803,7 @@ export default function Suppliers({ suppliers, filters, accounts }) {
 
                             {/* Action Buttons */}
                             <div className="flex items-center gap-1">
+                                
                                 {hasActiveFilters && (
                                     <button
                                         onClick={clearFilters}
@@ -1813,13 +1814,13 @@ export default function Suppliers({ suppliers, filters, accounts }) {
                                     </button>
                                 )}
                                 
-                                <button
+                                {/* <button
                                     onClick={handleFilter}
                                     className="btn btn-sm btn-primary"
                                     title="Apply Filters"
                                 >
                                     <Filter size={14} />
-                                </button>
+                                </button> */}
                             </div>
                         </div>
 

@@ -28,7 +28,8 @@ class PurchaseReturnItem extends Model
         'reason',
         'status' ,
         'outlet_id',
-        'owner_id'
+        'owner_id',
+        'created_by'
     ];
 
     protected $casts = [

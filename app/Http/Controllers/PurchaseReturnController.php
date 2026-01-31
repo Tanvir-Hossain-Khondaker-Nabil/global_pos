@@ -406,6 +406,7 @@ class PurchaseReturnController extends Controller
                     'shadow_total_price' => $shadowReturnItemTotal,
                     'reason' => $item['reason'] ?? 'Return requested',
                     'status' => 'pending',
+                    'created_by' => $user->id,
                 ]);
             }
 
