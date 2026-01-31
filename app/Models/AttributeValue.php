@@ -13,7 +13,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class AttributeValue extends Model
 {
     protected $fillable = ['attribute_id', 'value', 'code', 'is_active', 'outlet_id', 'created_by', 'owner_id'];
+
     use BelongsToTenant;
+
+    
     public function attribute(): BelongsTo
     {
         return $this->belongsTo(Attribute::class);

@@ -55,14 +55,10 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 });
 
 
-
-
-
 // auth routes
 Route::middleware('auth')->group(function () {
 
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('home');
-
 
     // user deposit route will be here
     Route::resource('deposits', UserDepositController::class)->names([

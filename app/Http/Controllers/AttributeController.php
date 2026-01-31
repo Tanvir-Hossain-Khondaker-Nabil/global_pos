@@ -28,7 +28,7 @@ class AttributeController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:attributes,name',
+            'name' => 'required|string|max:255',
             'values' => 'required|array|min:1',
             'values.*.value' => 'required|string|max:255',
         ]);
@@ -36,10 +36,12 @@ class AttributeController extends Controller
         DB::beginTransaction();
         try {
 
+            $lastId = Attribute::max('id') + 1;
+
             // Create attribute
             $attribute = Attribute::create([
                 'name' => $request->name,
-                'code' => Str::slug($request->name . '-' . Str::random(5)),
+                'code' => Str::slug($request->name) . '-' . Str::upper(Str::random(6)) . $lastId,
                 'created_by' => Auth::id(),
             ]);
 
@@ -48,7 +50,7 @@ class AttributeController extends Controller
                 AttributeValue::create([
                     'attribute_id' => $attribute->id,
                     'value' => $valueData['value'],
-                    'code' => Str::slug($valueData['value'] . '-' . Str::random(5)),
+                    'code' => Str::slug($valueData['value']) . '-' . Str::upper(Str::random(6)) . $lastId,
                 ]);
             }
 
