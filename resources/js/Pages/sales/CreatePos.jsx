@@ -56,6 +56,10 @@ export default function AddSale({
     const [page, setPage] = useState(1);
     const pageSize = 8;
 
+    // Installment payment state
+    const [installmentDuration, setInstallmentDuration] = useState(0);
+    const [totalInstallments, setTotalInstallments] = useState(0);
+
     // Customer state
     const [customerId, setCustomerId] = useState("");
     const [customerName, setCustomerName] = useState("");
@@ -805,6 +809,8 @@ export default function AddSale({
             account_id: selectedAccount || "",
             payment_status: paymentStatus,
             supplier_id: selectedSupplier?.id || null,
+            installment_duration: installmentDuration,
+            total_installments: totalInstallments,
 
             sale_date: saleDate,
             notes: notes,
@@ -813,6 +819,8 @@ export default function AddSale({
     }, [
         cart,
         pickupItems,
+        installmentDuration,
+        totalInstallments,
         customerId,
         customerName,
         customerPhone,
@@ -894,14 +902,36 @@ export default function AddSale({
         if (status === "paid") {
             setPaidAmount(grandTotal);
             setPartialPayment(false);
+            setTotalInstallments(0);
+            setInstallmentDuration(0);
         } else if (status === "unpaid") {
             setPaidAmount(0);
             setPartialPayment(false);
-            setSelectedAccount("");
+            setTotalInstallments(0);
+            setInstallmentDuration(0);
         } else if (status === "partial") {
+            setPaidAmount(grandTotal / 2);
             setPartialPayment(true);
-            if (paidAmount === 0 || paidAmount >= grandTotal) setPaidAmount(grandTotal * 0.5);
+            setTotalInstallments(0);
+            setInstallmentDuration(0);
+        } else if (status === "installment") {
+            setPaidAmount(grandTotal / 3);
+            setPartialPayment(false);
+            setTotalInstallments(3); // Default 3 installments
+            setInstallmentDuration(3); // Default 3 months
         }
+    };
+
+    const handleTotalInstallmentsInput = (e) => {
+        const value = parseInt(e.target.value) || 0;
+        setTotalInstallments(value);
+        form.setData("total_installments", value);
+    };
+
+    const handleInstallmentDurationInput = (e) => {
+        const value = parseInt(e.target.value) || 0;
+        setInstallmentDuration(value);
+        form.setData("installment_duration", value);
     };
 
     const handlePaidAmountChange = (value) => {
@@ -988,6 +1018,18 @@ export default function AddSale({
                 .join(", ");
             alert(`Some items exceed available stock: ${itemNames}`);
             return;
+        }
+
+        // Validate payment
+        if (paymentStatus === "installment") {
+            if (!totalInstallments || totalInstallments <= 0) {
+                alert("Please enter total installments for installment payment");
+                return;
+            }
+            if (!installmentDuration || installmentDuration <= 0) {
+                alert("Please enter installment duration");
+                return;
+            }
         }
 
         form.post(route("sales.store"), {
@@ -1711,6 +1753,7 @@ export default function AddSale({
                                                     <option value="unpaid">Unpaid</option>
                                                     <option value="partial">Partial</option>
                                                     <option value="paid">Paid</option>
+                                                    <option value="installment">Installment</option>
                                                 </select>
                                             </div>
 
@@ -1733,6 +1776,51 @@ export default function AddSale({
                                                 />
                                             </div>
                                         </div>
+
+                                          {/* Installment Fields - Only show when status is installment */}
+                                {paymentStatus === 'installment' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                        {/* Total Installments */}
+                                        <div className="md:col-span-1">
+                                            <div className="form-control">
+                                                <label className="label py-0">
+                                                    <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                        Total Installments *
+                                                    </span>
+                                                </label>
+
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                    value={totalInstallments}
+                                                    onChange={handleTotalInstallmentsInput}
+                                                    onFocus={(e) => e.target.select()}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Installment Duration */}
+                                        <div className="md:col-span-1">
+                                            <div className="form-control">
+                                                <label className="label py-0">
+                                                    <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                        Duration (Months) *
+                                                    </span>
+                                                </label>
+
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                    value={installmentDuration}
+                                                    onChange={handleInstallmentDurationInput}
+                                                    onFocus={(e) => e.target.select()}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
 
                                         {/* Summary */}

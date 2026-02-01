@@ -63,10 +63,8 @@ export default function AddSale({
     const [showSupplierModal, setShowSupplierModal] = useState(false);
     const [pickupProductName, setPickupProductName] = useState("");
     const [pickupProductNo, setPickupProductNo] = useState("");
-
     const [pickupBrand, setPickupBrand] = useState("");
     const [pickupVariant, setPickupVariant] = useState("");
-
     const [selectedSupplier, setSelectedSupplier] = useState(null);
     const [newSupplierName, setNewSupplierName] = useState("");
     const [newSupplierCompany, setNewSupplierCompany] = useState("");
@@ -85,6 +83,9 @@ export default function AddSale({
     const [stockDetails, setStockDetails] = useState({});
     const [basePrices, setBasePrices] = useState({});
 
+    // Installment payment state
+    const [installmentDuration, setInstallmentDuration] = useState(0);
+    const [totalInstallments, setTotalInstallments] = useState(0);
 
     // picup state
     const [pickupProductId, setPickupProductId] = useState("");
@@ -94,7 +95,6 @@ export default function AddSale({
     const [pickupQuantity, setPickupQuantity] = useState(1);
     const [pickupUnitPrice, setPickupUnitPrice] = useState(0);
     const [pickupSalePrice, setPickupSalePrice] = useState(0);
-
 
     // Batch selection modal state
     const [showBatchModal, setShowBatchModal] = useState(false);
@@ -127,6 +127,8 @@ export default function AddSale({
         supplier_id: null,
         payment_status: "unpaid",
         account_id: 0,
+        installment_duration: 0,
+        total_installments: 0,
     });
 
     // ========== HELPER FUNCTIONS ==========
@@ -439,14 +441,26 @@ export default function AddSale({
             setPaidAmount(grandTotal);
             setManualPaymentOverride(false);
             setAdjustFromAdvance(false);
+            setTotalInstallments(0);
+            setInstallmentDuration(0);
         } else if (status === "unpaid") {
             setPaidAmount(0);
             setManualPaymentOverride(false);
             setAdjustFromAdvance(false);
+            setTotalInstallments(0);
+            setInstallmentDuration(0);
         } else if (status === "partial") {
             setPaidAmount(grandTotal / 2);
             setManualPaymentOverride(true);
             setAdjustFromAdvance(false);
+            setTotalInstallments(0);
+            setInstallmentDuration(0);
+        } else if (status === "installment") {
+            setPaidAmount(grandTotal / 3);
+            setManualPaymentOverride(true);
+            setAdjustFromAdvance(false);
+            setTotalInstallments(3); // Default 3 installments
+            setInstallmentDuration(3); // Default 3 months
         }
     };
 
@@ -455,9 +469,21 @@ export default function AddSale({
         const grandTotal = calculateGrandTotal();
         setPaidAmount(value);
 
-        if (value === 0) setPaymentStatus("unpaid");
-        else if (value >= grandTotal) setPaymentStatus("paid");
-        else setPaymentStatus("partial");
+        // if (value === 0) setPaymentStatus("unpaid");
+        // else if (value >= grandTotal) setPaymentStatus("paid");
+        // else setPaymentStatus("partial");
+    };
+
+    const handleTotalInstallmentsInput = (e) => {
+        const value = parseInt(e.target.value) || 0;
+        setTotalInstallments(value);
+        form.setData("total_installments", value);
+    };
+
+    const handleInstallmentDurationInput = (e) => {
+        const value = parseInt(e.target.value) || 0;
+        setInstallmentDuration(value);
+        form.setData("installment_duration", value);
     };
 
     const enableManualPaymentOverride = () => {
@@ -801,7 +827,7 @@ export default function AddSale({
                 variant_id: variant.id,
                 batch_no: selectedStock.batch_no,
                 product_name: product.name,
-                product_no : product.product_no,
+                product_no: product.product_no,
                 variant_attribute:
                     selectedBrand ||
                     Object.keys(variant.attribute_values || {})[0] ||
@@ -1268,7 +1294,7 @@ export default function AddSale({
         const formattedPickupItems = pickupItems.map((item) => ({
             pickup_product_id: item.pickup_product_id,
             pickup_supplier_id: item.pickup_supplier_id,
-            variant_id: item.variant_id, 
+            variant_id: item.variant_id,
             quantity: item.quantity,
             unit_price: item.unit_price,
             sale_price: item.sale_price,
@@ -1295,6 +1321,8 @@ export default function AddSale({
             account_id: selectedAccount,
             customer_name: customerNameInput,
             phone: customerPhoneInput,
+            installment_duration: installmentDuration,
+            total_installments: totalInstallments,
         });
     }, [
         selectedItems,
@@ -1311,6 +1339,8 @@ export default function AddSale({
         paymentStatus,
         customerNameInput,
         customerPhoneInput,
+        installmentDuration,
+        totalInstallments,
         calculateRealSubTotal,
         calculatePickupSubTotal,
         calculateTotalSubTotal,
@@ -1366,12 +1396,22 @@ export default function AddSale({
             return;
         }
 
+        // Validate payment
+        if (paymentStatus === "installment") {
+            if (!totalInstallments || totalInstallments <= 0) {
+                alert("Please enter total installments for installment payment");
+                return;
+            }
+            if (!installmentDuration || installmentDuration <= 0) {
+                alert("Please enter installment duration");
+                return;
+            }
+        }
+
         if (paidAmount > 0 && !selectedAccount) {
             alert("Please select a payment account");
             return;
         }
-
-      
 
         form.post(route("sales.store"), {
             onSuccess: () => router.visit(route("sales.index")),
@@ -1523,18 +1563,9 @@ export default function AddSale({
 
                                 {/* Header */}
                                 <div className="flex justify-between items-center mb-3">
-                                    <h3 className="text-xs font-black uppercase text-red-600 flex items-center gap-2">
+                                    <h3 className="text-xs font-black uppercase text[#1E4D2B] flex items-center gap-2">
                                         <CreditCard size={14} /> Payment
                                     </h3>
-
-                                    <button
-                                        type="button"
-                                        onClick={manualPaymentOverride ? disableManualPaymentOverride : enableManualPaymentOverride}
-                                        className="btn btn-xs px-2 bg-red-600 hover:bg-red-700 border-none text-white font-bold text-[10px] uppercase"
-                                    >
-                                        {manualPaymentOverride ? <X size={10} /> : <Edit size={10} />}
-                                        {manualPaymentOverride ? "Cancel" : "Manual"}
-                                    </button>
                                 </div>
 
 
@@ -1610,6 +1641,7 @@ export default function AddSale({
                                                 <option value="unpaid">Unpaid</option>
                                                 <option value="partial">Partial</option>
                                                 <option value="paid">Paid</option>
+                                                <option value="installment">Installment</option>
                                             </select>
                                         </div>
                                     </div>
@@ -1637,21 +1669,64 @@ export default function AddSale({
 
                                 </div>
 
+                                {/* Installment Fields - Only show when status is installment */}
+                                {paymentStatus === 'installment' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                        {/* Total Installments */}
+                                        <div className="md:col-span-1">
+                                            <div className="form-control">
+                                                <label className="label py-0">
+                                                    <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                        Total Installments *
+                                                    </span>
+                                                </label>
+
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                    value={totalInstallments}
+                                                    onChange={handleTotalInstallmentsInput}
+                                                    onFocus={(e) => e.target.select()}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Installment Duration */}
+                                        <div className="md:col-span-1">
+                                            <div className="form-control">
+                                                <label className="label py-0">
+                                                    <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                        Duration (Months) *
+                                                    </span>
+                                                </label>
+
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                    value={installmentDuration}
+                                                    onChange={handleInstallmentDurationInput}
+                                                    onFocus={(e) => e.target.select()}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Totals */}
                                 <div className="space-y-1 text-xs pt-2 border-t border-gray-200 font-bold uppercase">
                                     <div className="flex justify-between">
                                         <span>Gross</span>
                                         <span>৳{formatCurrency(grandTotal)}</span>
                                     </div>
-                                    <div className="flex justify-between text-red-600 font-black">
+                                    <div className="flex justify-between text[#1E4D2B] font-black">
                                         <span>Due</span>
                                         <span>৳{formatCurrency(dueAmount)}</span>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
-
 
                         {/* Sale date */}
                         <div className="form-control">

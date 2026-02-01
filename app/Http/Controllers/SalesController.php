@@ -11,6 +11,7 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Variant;
 use App\Models\Customer;
+use App\Models\Installment;
 use App\Models\Purchase;
 use App\Models\SaleItem;
 use App\Models\Supplier;
@@ -411,8 +412,10 @@ class SalesController extends Controller
             // status
             if ($type === 'inventory' || ($type === 'pos')) {
                 $status = ((float) $request->paid_amount === (float) $request->grand_amount) ? 'paid' : 'partial';
-            } else {
-                $status = 'paid';
+            }
+
+            if ($request->payment_status == 'installment') {
+                $payment_type = 'installment';
             }
 
             $sale = Sale::create([
@@ -438,6 +441,15 @@ class SalesController extends Controller
                 'sale_type' => count($pickup_items) > 0 ? 'both' : 'real',
                 'created_by' => Auth::id(),
             ]);
+
+
+            if ($request->payment_status === 'installment') {
+                $installmentDuration = (int) $request->installment_duration;
+                $totalInstallments   = (int) $request->total_installments;
+
+                $this->installmentManage($sale, $installmentDuration, $totalInstallments);
+            }
+
 
             $shadowSubTotal = 0;
             $regularSubTotal = 0;
@@ -502,10 +514,10 @@ class SalesController extends Controller
                             'sale_item_id' => $saleItem->id,
                             'start_date'   => now(),
                             'end_date'     => now()->{match ($product->warranty_duration_type) {
-                                    Product::Day   => 'addDays',
-                                    Product::Month => 'addMonths',
-                                    Product::Year  => 'addYears',
-                                }}($product->warranty_duration),
+                                Product::Day   => 'addDays',
+                                Product::Month => 'addMonths',
+                                Product::Year  => 'addYears',
+                            }}($product->warranty_duration),
                             'terms' => $product->warranty_terms,
                         ]);
                     }
@@ -652,6 +664,43 @@ class SalesController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
+        }
+    }
+
+
+
+    //installment manage function
+    private function installmentManage($sale, $installmentDuration, $totalInstallments)
+    {
+        if ($installmentDuration > 0 && $totalInstallments > 0) {
+            $sale->update([
+                'installment_duration' => $installmentDuration,
+                'total_installments'   => $totalInstallments,
+            ]);
+        }
+
+        $installmentTotal = $sale->grand_total - $sale->paid_amount;
+        $perInstallmentAmount = round(
+            $installmentTotal / $totalInstallments,
+            2
+        );
+
+        // months per installment (can be 1.5, 2.5 etc)
+        $monthsPerInstallment = $installmentDuration / $totalInstallments;
+
+        for ($i = 1; $i <= $totalInstallments; $i++) {
+
+            // Convert months → days (approx)
+            $daysToAdd = (int) round($monthsPerInstallment * 30 * $i);
+
+            Installment::create([
+                'sale_id'        => $sale->id,
+                'installment_no' => $i,
+                'amount'         => $perInstallmentAmount,
+                'due_date'       => Carbon::now()->addDays($daysToAdd),
+                'paid_amount'    => 0,
+                'status'         => 'pending',
+            ]);
         }
     }
 
