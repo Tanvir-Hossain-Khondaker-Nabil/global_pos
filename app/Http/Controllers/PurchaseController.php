@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\PurchaseItem;
 use App\Models\Stock;
 use App\Models\Account;
+use App\Models\Warranty;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -183,9 +184,9 @@ class PurchaseController extends Controller
         $isShadowUser = ($user->type === 'shadow');
 
         return Inertia::render('Purchase/AddPurchase', [
-            'suppliers' => Supplier::where('type','global')->get(),
+            'suppliers' => Supplier::where('type', 'global')->get(),
             'warehouses' => Warehouse::where('is_active', true)->get(),
-            'products' => Product::where('type','global')->with('variants', 'brand')->get(),
+            'products' => Product::where('type', 'global')->with('variants', 'brand')->get(),
             'accounts' => Account::where('is_active', true)->get(),
             'isShadowUser' => $isShadowUser,
             'unitConversions' => $this->getUnitConversions()
@@ -290,6 +291,23 @@ class PurchaseController extends Controller
                     'created_by' => $user->id,
                     'warehouse_id' => $request->warehouse_id
                 ]);
+
+
+
+                if ($product->has_warranty) {
+                    Warranty::create([
+                        'purchase_item_id' => $purchaseItem->id,
+                        'start_date'   => now(),
+                        'end_date'     => now()->{match ($product->warranty_duration_type) {
+                                Product::Day   => 'addDays',
+                                Product::Month => 'addMonths',
+                                Product::Year  => 'addYears',
+                            }}($product->warranty_duration),
+                        'terms' => $product->warranty_terms,
+                    ]);
+                }
+
+
 
                 // ✅ Batch no
                 $batchNo = 'PO-' . $purchaseItem->id . '-' . Str::upper(Str::random(4));

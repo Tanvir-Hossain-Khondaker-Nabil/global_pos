@@ -54,6 +54,12 @@ class PurchaseItem extends Model
         return $this->belongsTo(Stock::class);
     }
 
+    // relations with warranty
+    public function warranty()
+    {
+        return $this->hasOne(Warranty::class, 'purchase_item_id');
+    }
+
     //supplier relactionship
     public function supplier()
     {

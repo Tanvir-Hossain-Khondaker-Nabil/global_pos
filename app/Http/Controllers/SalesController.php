@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 use App\Models\PurchaseItem;
 use Illuminate\Http\Request;
 use App\Models\StockMovement;
+use App\Models\Warranty;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Services\ReceiptService;
@@ -477,7 +478,7 @@ class SalesController extends Controller
                     // FIFO stock deduction in base units
                     $stockUsed = $this->fifoOutInBase($product->id, $variant->id, $baseQuantity, $sale->id, $item['stock_id'] ?? null, $unit);
 
-                    SaleItem::create([
+                    $saleItem = SaleItem::create([
                         'sale_id' => $sale->id,
                         'product_id' => $product->id,
                         'variant_id' => $variant->id,
@@ -495,6 +496,19 @@ class SalesController extends Controller
                         'created_by' => Auth::id(),
                         'item_type' => 'real',
                     ]);
+
+                    if ($product->has_warranty) {
+                        Warranty::create([
+                            'sale_item_id' => $saleItem->id,
+                            'start_date'   => now(),
+                            'end_date'     => now()->{match ($product->warranty_duration_type) {
+                                    Product::Day   => 'addDays',
+                                    Product::Month => 'addMonths',
+                                    Product::Year  => 'addYears',
+                                }}($product->warranty_duration),
+                            'terms' => $product->warranty_terms,
+                        ]);
+                    }
 
                     $shadowSubTotal += $unitQuantity * $shadowUnitPrice;
                     $regularSubTotal += $unitQuantity * $unitPrice;
@@ -579,6 +593,7 @@ class SalesController extends Controller
                     $regularSubTotal += $pickupTotalPrice;
                 }
             }
+
 
             if (count($regular_items) == 0 && count($pickup_items) == 0) {
                 throw new \Exception('At least one item is required for a sale.');

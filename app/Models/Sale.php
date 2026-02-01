@@ -35,7 +35,9 @@ class Sale extends Model
         'created_by',
         'outlet_id',
         'discount_type',
-        'owner_id'
+        'owner_id',
+        'installment_duration',
+        'total_installments'
     ];
 
 

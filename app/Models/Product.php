@@ -49,6 +49,9 @@ class Product extends Model
         'has_warranty' => 'boolean',
     ];
 
+    const Day = 'day';
+    const Month = 'month';
+    const Year = 'year';
 
     use BelongsToTenant;
 
