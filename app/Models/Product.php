@@ -33,7 +33,11 @@ class Product extends Model
         'is_fraction_allowed',
         'min_sale_unit',
         'type',
-        'owner_id'
+        'owner_id',
+        'has_warranty',
+        'warranty_duration',
+        'warranty_duration_type',
+        'warranty_terms'
     ];
 
     protected $casts = [
@@ -42,7 +46,9 @@ class Product extends Model
         'in_house_sale_price' => 'decimal:2',
         'in_house_shadow_sale_price' => 'decimal:2',
         'in_house_initial_stock' => 'integer',
+        'has_warranty' => 'boolean',
     ];
+
 
     use BelongsToTenant;
 

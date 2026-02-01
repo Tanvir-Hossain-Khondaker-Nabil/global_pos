@@ -14,9 +14,11 @@ return new class extends Migration
         Schema::create('warranties', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('sale_item_id')->nullable();
+            $table->unsignedBigInteger('purchase_item_id')->nullable();
             $table->dateTime('start_date')->nullable();
             $table->dateTime('end_date')->nullable();
             $table->text('terms')->nullable();
+            $table->enum('status', ['active', 'expired', 'void'])->default('active');
             $table->timestamps();
         });
     }

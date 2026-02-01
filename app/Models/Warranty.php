@@ -11,5 +11,6 @@ class Warranty extends Model
         'start_date',
         'end_date',
         'terms',
+        'purchase_item_id'
     ];
 }

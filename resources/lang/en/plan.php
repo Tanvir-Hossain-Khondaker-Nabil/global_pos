@@ -125,8 +125,8 @@ return [
     // Table Headers
     'sl' => 'SL',
     'type' => 'Type',
-    'validity_days' => 'Validity',
-    'total_features' => 'features',
+    'validity_days' => 'Days',
+    'total_features' => 'Features',
     'actions' => 'Actions',
     
     // Table Content

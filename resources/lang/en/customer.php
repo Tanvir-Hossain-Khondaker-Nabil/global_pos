@@ -110,6 +110,7 @@ return [
     'payment_summary' => 'Payment Summary',
     'payment_reference' => 'Payment Reference',
     'optional' => 'Optional Notes',
+    'add_first_customer' => 'Add First Customer',
 
     // Buttons
     'edit' => 'Edit',

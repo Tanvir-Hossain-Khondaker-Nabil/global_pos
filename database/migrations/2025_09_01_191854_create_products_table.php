@@ -27,8 +27,15 @@ return new class extends Migration {
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('outlet_id');
-             $table->unsignedBigInteger('owner_id')->nullable();
+            $table->unsignedBigInteger('owner_id')->nullable();
             $table->enum('type', ['global', 'local'])->default('global');
+
+            // Warranty
+            $table->boolean('has_warranty')->default(false);
+            $table->integer('warranty_duration')->nullable(); // number
+            $table->enum('warranty_duration_type', ['day', 'month', 'year'])->nullable();
+            $table->text('warranty_terms')->nullable();
+
 
             $table->unsignedBigInteger('unit_id')->nullable();
             $table->string('unit_type')->default('piece');
@@ -37,8 +44,6 @@ return new class extends Migration {
             $table->string('min_sale_unit')->nullable();
             $table->timestamps();
         });
-
-
     }
 
     /**

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useForm, router } from "@inertiajs/react";
-import { Trash, X, Plus, Factory, Package, Image as ImageIcon, Ruler, Hash, LayoutGrid, Settings2, Info } from "lucide-react";
+import { Trash, X, Plus, Factory, Package, Image as ImageIcon, Ruler, Hash, LayoutGrid, Settings2, Info, ShieldCheck } from "lucide-react";
 import { toast } from "react-toastify";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -23,6 +23,12 @@ export default function AddProduct({ category, update, brand, attributes, errors
         length: ['meter', 'cm', 'mm']
     });
 
+    const [warrantyDurationTypes] = useState([
+        { value: 'day', label: 'Day(s)' },
+        { value: 'month', label: 'Month(s)' },
+        { value: 'year', label: 'Year(s)' }
+    ]);
+
     const productForm = useForm({
         id: update?.id || "",
         type: update?.type || "global",
@@ -41,6 +47,11 @@ export default function AddProduct({ category, update, brand, attributes, errors
         default_unit: update?.default_unit || 'piece',
         is_fraction_allowed: update?.is_fraction_allowed || true,
         min_sale_unit: update?.min_sale_unit || '',
+        // Warranty fields
+        has_warranty: Boolean(update?.has_warranty) || false,
+        warranty_duration: update?.warranty_duration || "",
+        warranty_duration_type: update?.warranty_duration_type || "month",
+        warranty_terms: update?.warranty_terms || "",
         variants: [],
         photo: null,
     });
@@ -346,7 +357,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                     )}
                 </div>
 
-                {/* RIGHT COLUMN: Media & Variants */}
+                {/* RIGHT COLUMN: Media, Variants & Warranty */}
                 <div className="col-span-12 lg:col-span-4 space-y-6">
                     {/* Image Card */}
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
@@ -367,6 +378,109 @@ export default function AddProduct({ category, update, brand, attributes, errors
                             ) : <ImageIcon size={32} className="text-slate-200" />}
                         </div>
                         {formErrors.photo && <span className="text-error text-xs mt-2 block">{formErrors.photo}</span>}
+                    </div>
+
+                    {/* Warranty Card */}
+                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <div className="bg-slate-50 px-5 py-3 border-b flex items-center gap-2">
+                            <ShieldCheck size={16} className="text-primary" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-600">{t("Warranty Information")}</span>
+                        </div>
+                        <div className="p-5 space-y-4">
+                            <label className="flex items-center gap-3 cursor-pointer p-3 bg-slate-50 rounded-xl border border-slate-100 hover:bg-slate-100 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    className="toggle toggle-primary"
+                                    checked={!!productForm.data.has_warranty}
+                                    onChange={e =>
+                                        productForm.setData("has_warranty", e.target.checked)
+                                    }
+
+                                />
+                                <div className="flex-1">
+                                    <span className="text-sm font-bold text-slate-700 block">{t("Has Warranty")}</span>
+                                    <span className="text-xs text-slate-500">{t("Enable warranty for this product")}</span>
+                                </div>
+                            </label>
+
+                            {/* Warranty Duration Fields (only show if has_warranty is true) */}
+                            {productForm.data.has_warranty && (
+                                <>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="form-control">
+                                            <label className="label py-1">
+                                                <span className="label-text text-xs font-bold">{t("Duration")}</span>
+                                            </label>
+                                            <input
+                                                type="number"
+                                                className="input input-bordered input-sm"
+                                                placeholder="e.g., 12"
+                                                min="1"
+                                                value={productForm.data.warranty_duration}
+                                                onChange={e => productForm.setData("warranty_duration", e.target.value)}
+                                            />
+                                            {formErrors.warranty_duration && (
+                                                <span className="text-error text-xs mt-1">{formErrors.warranty_duration}</span>
+                                            )}
+                                        </div>
+                                        <div className="form-control">
+                                            <label className="label py-1">
+                                                <span className="label-text text-xs font-bold">{t("Duration Type")}</span>
+                                            </label>
+                                            <select
+                                                className="select select-bordered select-sm"
+                                                value={productForm.data.warranty_duration_type}
+                                                onChange={e => productForm.setData("warranty_duration_type", e.target.value)}
+                                            >
+                                                {warrantyDurationTypes.map(type => (
+                                                    <option key={type.value} value={type.value}>
+                                                        {t(type.label)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {formErrors.warranty_duration_type && (
+                                                <span className="text-error text-xs mt-1">{formErrors.warranty_duration_type}</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="form-control">
+                                        <label className="label py-1">
+                                            <span className="label-text text-xs font-bold">{t("Warranty Terms & Conditions")}</span>
+                                        </label>
+                                        <textarea
+                                            className="textarea textarea-bordered textarea-sm w-full"
+                                            placeholder={t("Enter warranty terms, conditions, coverage details...")}
+                                            rows="4"
+                                            value={productForm.data.warranty_terms}
+                                            onChange={e => productForm.setData("warranty_terms", e.target.value)}
+                                        />
+                                        <div className="text-xs text-slate-500 mt-1">
+                                            {t("Describe what is covered, what's not, claim process, etc.")}
+                                        </div>
+                                        {formErrors.warranty_terms && (
+                                            <span className="text-error text-xs mt-1">{formErrors.warranty_terms}</span>
+                                        )}
+                                    </div>
+
+                                    {/* Warranty Summary Preview */}
+                                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                                        <span className="text-[10px] font-black uppercase text-primary/60 block mb-1">
+                                            {t("Warranty Summary")}
+                                        </span>
+                                        <div className="text-sm font-bold text-slate-700">
+                                            {productForm.data.warranty_duration && productForm.data.warranty_duration_type ? (
+                                                <>
+                                                    {productForm.data.warranty_duration} {t(warrantyDurationTypes.find(t => t.value === productForm.data.warranty_duration_type)?.label)}
+                                                </>
+                                            ) : (
+                                                <span className="text-slate-400 italic">{t("Duration not specified")}</span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
 
                     {/* Variants Card */}
