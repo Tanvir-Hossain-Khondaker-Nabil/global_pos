@@ -477,7 +477,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
               </Link>
             </li>
 
-            <li className="mt-1">
+            {/* <li className="mt-1">
               <button
                 onClick={handleToggleUserType}
                 className={`btn btn-sm ${isShadowUser ? "bg-[#1e4d2b] text-white" : "bg-amber-500 text-white"} gap-2`}
@@ -486,7 +486,7 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
                 <Shield size={16} />
                 {isShadowUser ? "General Mode" : "Shadow Mode"}
               </button>
-            </li>
+            </li> */}
           </ul>
         </div>
       </div>

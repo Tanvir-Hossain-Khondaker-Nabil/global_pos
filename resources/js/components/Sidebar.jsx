@@ -45,6 +45,10 @@ import {
   BoxIcon,
   TagIcon,
   Store,
+  AlertCircle,
+  CheckCircle,
+  Eye,
+  LogIn,
 } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -52,7 +56,30 @@ import { useTranslation } from "../hooks/useTranslation";
  * ✅ MENU (permission based)
  * permission = Spatie permission name (middleware permission:)
  * --------------------------- */
-const baseMenu = [
+
+// Outlet লগইন না করা অবস্থার মেনু
+const outletOverviewMenu = [
+  {
+    title: "Dashboard",
+    icon: "home",
+    route: "home",
+    active: "home",
+    category: "Main",
+    permission: "dashboard.view"
+  },
+  {
+    title: "Outlet Management",
+    icon: "store",
+    route: "outlets.index",
+    routeParams: null,
+    active: "outlets.index",
+    category: "Outlets",
+    permission: "outlets.view"
+  },
+];
+
+// Outlet লগইন করা অবস্থার মেনু
+const outletLoggedInMenu = [
   // Dashboard
   { title: "Dashboard", icon: "home", route: "home", active: "home", category: "Main", permission: "dashboard.view" },
 
@@ -66,7 +93,7 @@ const baseMenu = [
 
   // Purchase
   { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
-  { 
+  {
     title: "Local Purchase",
     icon: "receipt",
     route: "purchase.list_index",
@@ -75,7 +102,6 @@ const baseMenu = [
     category: "Purchase",
     permission: "purchase.view",
   },
-
   { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
   { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.view" },
 
@@ -91,6 +117,13 @@ const baseMenu = [
   { title: "Add Products", icon: "shopping-bag", route: "product.add", active: "product.add", category: "Inventory", permission: "product.create" },
   { title: "Categories", icon: "box", route: "category.view", active: "category.view", category: "Inventory", permission: "category.view" },
   { title: "Brands", icon: "box", route: "brands.index", active: "brands.index", category: "Inventory", permission: "brands.view" },
+
+  // Investments - নতুন ক্যাটেগরি
+  { title: "Investors", icon: "users", route: "investors.index", active: "investors.index", category: "Investments", permission: "investors.view" },
+  { title: "Add Investor", icon: "user-plus", route: "investors.create", active: "investors.create", category: "Investments", permission: "investors.create" },
+  { title: "Investments", icon: "wallet-minimal", route: "investments.index", active: "investments.index", category: "Investments", permission: "investments.view" },
+  { title: "Add Investment", icon: "wallet-minimal", route: "investments.create", active: "investments.create", category: "Investments", permission: "investments.create" },
+  { title: "Investment Returns", icon: "dollar-sign", route: "investmentReturns.index", active: "investmentReturns.index", category: "Investments", permission: "investments.returns.view" },
 
   // Finance
   { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expenses.category.view" },
@@ -169,6 +202,10 @@ const iconComponents = {
   "box-icon": BoxIcon,
   "tag-icon": TagIcon,
   store: Store,
+  "alert-circle": AlertCircle,
+  "check-circle": CheckCircle,
+  eye: Eye,
+  "log-in": LogIn,
 };
 
 export default function Sidebar({ status, setStatus }) {
@@ -182,21 +219,7 @@ export default function Sidebar({ status, setStatus }) {
   // ✅ backend থেকে share করুন: auth.user.permissions = ['sales.view', ...]
   const permissions = auth?.user?.permissions || [];
   const isSuperAdmin = !!auth?.user?.is_super_admin;
-
-  // ✅ Outlet gate
-  const isLoggedIntoOutlet = isSuperAdmin ? true : !!auth?.user?.is_logged_into_outlet;
-
-  const outletOnlyMenu = [
-    {
-      title: "Outlet",
-      icon: "store",
-      route: "outlets.index",
-      routeParams: null,
-      active: "outlets.index",
-      category: "Outlet Management",
-      permission: "outlets.view",
-    },
-  ];
+  const isLoggedIntoOutlet = auth?.user?.is_logged_into_outlet;
 
   const can = (perm) => {
     if (!perm) return true;
@@ -215,18 +238,27 @@ export default function Sidebar({ status, setStatus }) {
 
   const getTranslatedTitle = (englishTitle) => {
     const translationMap = {
+      // Main
       Dashboard: t("auth.dashboard", "Dashboard"),
-      Outlet: t("auth.outlet", "Outlet"),
       "Outlet Management": t("auth.outlet_management", "Outlet Management"),
+
+      // Sales
       "Add Sale (Inventory)": t("auth.add_sale_inventory", "Add Sale (Inventory)"),
       "Add Sale (POS)": t("auth.add_sale_pos", "Add Sale (POS)"),
       "All Orders (Inventory)": t("auth.all_orders_inventory", "All Orders (Inventory)"),
       "All Orders (POS)": t("auth.all_orders_pos", "All Orders (POS)"),
       "All Sales Items": t("auth.all_sales_items", "All Sales Items"),
+      "All Sales Return": t("auth.all_sales_return", "All Sales Return"),
+
+      // Purchase
       Purchase: t("auth.purchase", "Purchase"),
+      "Local Purchase": t("auth.local_purchase", "Local Purchase"),
       "Add Purchase": t("auth.add_purchase", "Add Purchase"),
+      "All Purchase Items": t("auth.all_purchase_items", "All Purchase Items"),
       "Purchase Return": t("auth.purchase_return", "Purchase Return"),
       "Add Purchase Return": t("auth.add_purchase_return", "Add Purchase Return"),
+
+      // Inventory
       Warehouse: t("auth.warehouse", "Warehouse"),
       Supplier: t("auth.supplier", "Supplier"),
       Attribute: t("auth.attribute", "Attribute"),
@@ -234,20 +266,39 @@ export default function Sidebar({ status, setStatus }) {
       "Add Products": t("auth.add_products", "Add Products"),
       Categories: t("auth.categories", "Categories"),
       Brands: t("auth.brands", "Brands"),
-      "Extra cash": t("auth.extra_cash", "Extra Cash"),
+
+      // Investments
+      "Investors": t("auth.investors", "Investors"),
+      "Add Investor": t("auth.add_investor", "Add Investor"),
+      "Investments": t("auth.investments", "Investments"),
+      "Add Investment": t("auth.add_investment", "Add Investment"),
+      "Investment Returns": t("auth.investment_returns", "Investment Returns"),
+
+      // Finance
+      "Expense Category": t("auth.expense_category", "Expense Category"),
       Expense: t("auth.expense", "Expense"),
       Transactions: t("auth.transactions", "Transactions"),
       Accounts: t("auth.accounts", "Accounts"),
       Ledgers: t("auth.ledgers", "Ledgers"),
+
+      // Subscriptions
       Plan: t("auth.plan", "Plan"),
       "Plan Modules": t("auth.plan_modules", "Plan Modules"),
       Subscriptions: t("auth.subscriptions", "Subscriptions"),
       "Subscriptions Payments": t("auth.subscriptions_payments", "Subscriptions Payments"),
+
+      // Partners
       Dealerships: t("auth.dealerships", "Dealerships"),
+
+      // CRM
       Customer: t("auth.customer", "Customer"),
       Companies: t("auth.companies", "Companies"),
+
+      // Admin
       Users: t("auth.users", "Users"),
       Roles: t("auth.roles", "Roles"),
+
+      // HR
       Employees: t("auth.employees", "Employees"),
       Attendance: t("auth.attendance", "Attendance"),
       Salary: t("auth.salary", "Salary"),
@@ -255,6 +306,23 @@ export default function Sidebar({ status, setStatus }) {
       Ranks: t("auth.ranks", "Ranks"),
       Bonus: t("auth.bonus", "Bonus"),
       SMS: t("auth.sms", "SMS"),
+
+      // Outlets
+      Outlet: t("auth.outlet", "Outlet"),
+
+      // Categories
+      "Main": t("auth.category_main", "Main"),
+      "Sales": t("auth.category_sales", "Sales"),
+      "Purchase": t("auth.category_purchase", "Purchase"),
+      "Inventory": t("auth.category_inventory", "Inventory"),
+      "Investments": t("auth.category_investments", "Investments"),
+      "Finance": t("auth.category_finance", "Finance"),
+      "Subscriptions": t("auth.category_subscriptions", "Subscriptions"),
+      "Partners": t("auth.category_partners", "Partners"),
+      "CRM": t("auth.category_crm", "CRM"),
+      "Admin": t("auth.category_admin", "Admin"),
+      "HR": t("auth.category_hr", "HR"),
+      "Outlets": t("auth.category_outlets", "Outlets"),
     };
 
     return translationMap[englishTitle] || englishTitle;
@@ -307,7 +375,8 @@ export default function Sidebar({ status, setStatus }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [status, setStatus]);
 
-  const menuToShow = isLoggedIntoOutlet ? baseMenu : outletOnlyMenu;
+  // menuToShow ডিসিশন
+  const menuToShow = isLoggedIntoOutlet ? outletLoggedInMenu : outletOverviewMenu;
 
   const menuCategories = useMemo(() => {
     const grouped = groupMenuByCategory(menuToShow);
@@ -318,7 +387,7 @@ export default function Sidebar({ status, setStatus }) {
       if (filtered.length) out[cat] = filtered;
     });
     return out;
-  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin]); // eslint-disable-line
+  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet]); // eslint-disable-line
 
   return (
     <>
@@ -332,9 +401,8 @@ export default function Sidebar({ status, setStatus }) {
       <aside
         ref={sidebarRef}
         id="sidebar"
-        className={`w-72 fixed h-full z-50 transition-all duration-300 ${
-          status ? "translate-x-0 shadow-2xl" : "-translate-x-full"
-        } lg:translate-x-0 lg:shadow-xl`}
+        className={`w-72 fixed h-full z-50 transition-all duration-300 ${status ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          } lg:translate-x-0 lg:shadow-xl`}
         style={{ background: "linear-gradient(180deg, #0f2d1a 0%, #1e4d2b 100%)" }}
       >
         <div className="p-6 h-full flex flex-col">
@@ -366,10 +434,10 @@ export default function Sidebar({ status, setStatus }) {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-white font-bold text-sm">
-                    {locale === "bn" ? "আউটলেট নির্বাচন করুন" : "Select an Outlet"}
+                    {locale === "bn" ? "আউটলেট ওভারভিউ" : "Outlet Overview"}
                   </p>
                   <p className="text-white/70 text-xs">
-                    {locale === "bn" ? "সব ফিচার এক্সেস করতে আউটলেটে লগইন করুন" : "Login to an outlet to access all features"}
+                    {locale === "bn" ? "সম্পূর্ণ ফিচার এক্সেস করতে আউটলেটে লগইন করুন" : "Login to an outlet to access all features"}
                   </p>
                 </div>
               </div>
@@ -379,13 +447,13 @@ export default function Sidebar({ status, setStatus }) {
                   className="inline-flex items-center justify-center w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200"
                 >
                   <Store size={16} className="mr-2" />
-                  {locale === "bn" ? "আউটলেট নির্বাচন করুন" : "Select Outlet"}
+                  {locale === "bn" ? "আউটলেট ম্যানেজ করুন" : "Manage Outlets"}
                 </Link>
               </div>
             </div>
           )}
 
-          {/* Search */}
+          {/* Search - শুধু outlet লগইন করা থাকলে দেখান */}
           {isLoggedIntoOutlet && (
             <div className="mb-6 relative">
               <div className="relative">
@@ -425,13 +493,16 @@ export default function Sidebar({ status, setStatus }) {
                     return (
                       <div key={`${category}-${index}`} className="relative group">
                         <div
-                          className={`relative rounded-xl transition-all duration-200 ${
-                            isActive
-                              ? "bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm border border-white/10"
-                              : "hover:bg-white/5"
-                          }`}
+                          className={`relative rounded-xl transition-all duration-200 ${isActive
+                            ? "bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm border border-white/10"
+                            : "hover:bg-white/5"
+                            }`}
                         >
-                          <Link href={getRouteUrl(item)} className="flex items-center gap-3 px-4 py-3 group">
+                          <Link
+                            href={getRouteUrl(item)}
+                            className="flex items-center gap-3 px-4 py-3 group"
+                            onClick={() => setStatus(false)}
+                          >
                             <span className={`${isActive ? "text-white" : "text-white/70 group-hover:text-white"}`}>
                               {getIconComponent(item.icon || "dashboard")}
                             </span>
@@ -451,7 +522,7 @@ export default function Sidebar({ status, setStatus }) {
               <div className="text-center py-8">
                 <Store className="w-12 h-12 text-white/20 mx-auto mb-3" />
                 <p className="text-white text-sm font-medium mb-2">
-                  {locale === "bn" ? "শুধুমাত্র আউটলেট মেনু" : "Outlet Menu Only"}
+                  {locale === "bn" ? "শুধুমাত্র আউটলেট ওভারভিউ" : "Outlet Overview Only"}
                 </p>
                 <p className="text-white/60 text-xs">
                   {locale === "bn" ? "সম্পূর্ণ মেনু দেখতে আউটলেটে লগইন করুন" : "Login to an outlet to see full menu"}
@@ -460,8 +531,50 @@ export default function Sidebar({ status, setStatus }) {
             )}
           </nav>
 
+          {/* Current Outlet Info (যখন লগইন করা থাকে) */}
+          {isLoggedIntoOutlet && auth?.user?.current_outlet && (
+            <div className="relative group">
+              <div className="mt-3 mb-2 px-3 py-2 bg-gradient-to-r from-white/5 to-white/3 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-green-500/80 to-emerald-600/80 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
+                    <Store size={12} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium text-xs truncate">
+                      {auth.user.current_outlet.name}
+                    </p>
+                    <p className="text-white/50 text-[10px] truncate">
+                      {auth.user.current_outlet.code}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floating action button */}
+              <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                <Link
+                  href={route("outlets.logout")}
+                  method="post"
+                  as="button"
+                  className="w-6 h-6 bg-red-500 hover:bg-red-600 rounded-full flex items-center justify-center shadow-lg border border-white/10"
+                  title={locale === "bn" ? "আউটলেট লগআউট" : "Logout from Outlet"}
+                >
+                  <LogOut size={10} className="text-white" />
+                </Link>
+              </div>
+
+              {/* Tooltip on hover */}
+              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                <div className="bg-[#1e4d2b] text-white text-xs px-3 py-1.5 rounded-lg shadow-lg border border-white/10 whitespace-nowrap">
+                  {locale === "bn" ? "বর্তমান আউটলেট" : "Current Outlet"}
+                  <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1e4d2b]"></div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Logout */}
-          <div className="mt-auto pt-6 border-t border-white/10">
+          {/* <div className="mt-auto pt-6 border-t border-white/10">
             <Link
               href={route("logout")}
               onClick={(e) => {
@@ -472,7 +585,7 @@ export default function Sidebar({ status, setStatus }) {
               <LogOut size={16} className="group-hover:rotate-180 transition-transform duration-300" />
               <span>{locale === "bn" ? "লগআউট" : "LOGOUT"}</span>
             </Link>
-          </div>
+          </div> */}
         </div>
       </aside>
 

@@ -1,5 +1,4 @@
 <?php
-// App\Scopes\OwnerScope.php
 
 namespace App\Scopes;
 
@@ -9,7 +8,7 @@ use Illuminate\Database\Eloquent\Scope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 
-class OwnerScope implements Scope
+class CreatedByScope implements Scope
 {
     public function apply(Builder $builder, Model $model)
     {
@@ -19,13 +18,8 @@ class OwnerScope implements Scope
 
         if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) return;
 
-        if (empty($user->current_outlet_id)) return;
+        if (!Schema::hasColumn($model->getTable(), 'created_by')) return;
 
-        if (!Schema::hasColumn($model->getTable(), 'owner_id')) return;
-
-        $builder->where(
-            $model->qualifyColumn('owner_id'),
-            $user->ownerId()
-        );
+        $builder->where($model->qualifyColumn('created_by'), $user->id);
     }
 }

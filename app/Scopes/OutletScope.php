@@ -1,4 +1,5 @@
 <?php
+// App\Scopes\OutletScope.php
 
 namespace App\Scopes;
 
@@ -16,15 +17,11 @@ class OutletScope implements Scope
 
         $user = Auth::user();
 
-        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
-            return;
-        }
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) return;
 
-        if (!Schema::hasColumn($model->getTable(), 'outlet_id')) {
-            return;
-        }
+        if (empty($user->current_outlet_id)) return;
 
-        if (!$user->current_outlet_id) return;
+        if (!Schema::hasColumn($model->getTable(), 'outlet_id')) return;
 
         $builder->where(
             $model->qualifyColumn('outlet_id'),

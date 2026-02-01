@@ -35,13 +35,13 @@ return [
     'website_placeholder' => 'Enter the business website',
     'phone_placeholder' => 'Enter the business phone',
     'no_image' => 'No Image',
-    'tax_number_placeholder' => "Enter the tax number" ,
+    'tax_number_placeholder' => "Enter the tax number",
     'address_placeholder' => 'Enter Business Address',
     'description_placeholder' => "Enter Description",
     'description' => 'Description',
     'logging_in' => 'Logging in...',
 
-    
+
     // HR/Employee Management
     'employees' => 'Employees',
     'attendance' => 'Attendance',
@@ -111,7 +111,7 @@ return [
     'switch_outlet' => 'Switch Outlet',
     'logout_from_outlet' => 'Logout from Outlet',
     'change_outlet' => 'Change Outlet',
-    
+
     // Menu Categories
     'main' => 'Main',
     'sales' => 'Sales',
@@ -124,7 +124,7 @@ return [
     'admin' => 'Admin',
     'hr' => 'HR',
     'outlets' => 'Outlets',
-    
+
     // Other sidebar items
     'accounts' => 'Accounts',
     'all_purchase_items' => 'All Purchase Items',
@@ -135,8 +135,34 @@ return [
     'search_menu' => 'Search menu...',
     'no_menu_items_found' => 'No menu items found',
     'try_different_keyword' => 'Try a different keyword',
-    
+
     // Logout
     'logout' => 'LOGOUT',
     'logout_confirmation' => 'Are you sure you want to logout?',
+
+    // Categories
+    'category_main' => 'Main',
+    'category_sales' => 'Sales',
+    'category_purchase' => 'Purchase',
+    'category_inventory' => 'Inventory',
+    'category_finance' => 'Finance',
+    'category_partners' => 'Partners',
+    'category_crm' => 'CRM',
+    'category_hr' => 'HR',
+    'category_admin' => 'Admin',
+    'category_outlets' => 'Outlets',
+
+    // Purchase
+    'local_purchase' => 'Local Purchase',
+
+    // Investments
+    'investors' => 'Investors',
+    'add_investor' => 'Add Investor',
+    'investments' => 'Investments',
+    'add_investment' => 'Add Investment',
+    'investment_returns' => 'Investment Returns',
+    
+    // Categories
+    'category_investments' => 'Investments',
+    'category_subscriptions' => 'Subscriptions',
 ];

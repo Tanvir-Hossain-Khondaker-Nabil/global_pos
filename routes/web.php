@@ -16,6 +16,7 @@ use App\Http\Controllers\SalesController;
 use App\Http\Controllers\LadgerController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\OutletController;
 use App\Http\Controllers\SalaryController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\AccountController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\ExchangeController;
+use App\Http\Controllers\InvestorController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\AllowanceController;
@@ -36,15 +38,15 @@ use App\Http\Controllers\SalesListController;
 use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DealershipController;
+use App\Http\Controllers\InvestmentController;
 use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\SmsTemplateController;
+use App\Http\Controllers\UserDepositController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
-use App\Http\Controllers\OutletController;
-use App\Http\Controllers\UserDepositController;
 
 
 
@@ -85,7 +87,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/', 'index')->middleware('permission:outlets.view')->name('outlets.index');
         Route::post('/store', 'store')->middleware('permission:outlets.create')->name('outlets.store');
         Route::get('/{id}', 'show')->middleware('permission:outlets.show')->name('outlets.show');
-        Route::get('/edit/{id}','edit')->middleware('permission:outlets.edit')->name('outlets.edit');
+        Route::get('/edit/{id}', 'edit')->middleware('permission:outlets.edit')->name('outlets.edit');
         Route::put('/{id}', 'update')->middleware('permission:outlets.edit')->name('outlets.update');
         Route::delete('/{id}', 'destroy')->middleware('permission:outlets.delete')->name('outlets.delete');
     });
@@ -198,10 +200,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/return/store', [SalesReturnController::class, 'store'])
         ->middleware('permission:sales_return.create')
         ->name('return.store');
-    
+
     Route::post('/approve/{id}/return', [SalesReturnController::class, 'approve'])
-    // ->middleware('permission:sales_return.approve')
-    ->name('return.approve');
+        // ->middleware('permission:sales_return.approve')
+        ->name('return.approve');
 
     Route::get('/return/{id}', [SalesReturnController::class, 'show'])
         ->middleware('permission:sales_return.show')
@@ -617,7 +619,49 @@ Route::middleware('auth')->group(function () {
         ->name('sms-templates.toggle-status');
 
 
-        Route::get('/purchases_local_product', [PurchaseController::class, 'list_index'])->name('purchase.list_index');
+    Route::get('/purchases_local_product', [PurchaseController::class, 'list_index'])->name('purchase.list_index');
+
+
+     // Investors
+    Route::get('/investors', [InvestorController::class, 'index'])
+        ->name('investors.index')->middleware('permission:investors.view');
+    Route::get('/investors/create', [InvestorController::class, 'create'])
+        ->name('investors.create')->middleware('permission:investors.create');
+    Route::post('/investors', [InvestorController::class, 'store'])
+        ->name('investors.store')->middleware('permission:investors.create');
+    Route::get('/investors/{investor}/edit', [InvestorController::class, 'edit'])
+        ->name('investors.edit')->middleware('permission:investors.edit');
+    Route::put('/investors/{investor}', [InvestorController::class, 'update'])
+        ->name('investors.update')->middleware('permission:investors.edit');
+    Route::delete('/investors/{investor}', [InvestorController::class, 'destroy'])
+        ->name('investors.destroy')->middleware('permission:investors.delete');
+
+    // Investments
+    Route::get('/investments', [InvestmentController::class, 'index'])
+        ->name('investments.index')->middleware('permission:investments.view');
+    Route::get('/investments/create', [InvestmentController::class, 'create'])
+        ->name('investments.create')->middleware('permission:investments.create');
+    Route::post('/investments', [InvestmentController::class, 'store'])
+        ->name('investments.store')->middleware('permission:investments.create');
+    Route::get('/investments/{investment}', [InvestmentController::class, 'show'])
+        ->name('investments.show')->middleware('permission:investments.view');
+    Route::get('/investments/{investment}/edit', [InvestmentController::class, 'edit'])
+        ->name('investments.edit')->middleware('permission:investments.edit');
+    Route::put('/investments/{investment}', [InvestmentController::class, 'update'])
+        ->name('investments.update')->middleware('permission:investments.edit');
+    Route::delete('/investments/{investment}', [InvestmentController::class, 'destroy'])
+        ->name('investments.destroy')->middleware('permission:investments.delete');
+
+    // Withdrawal (mid-term)
+    Route::post('/investments/{investment}/withdraw', [InvestmentController::class, 'withdraw'])
+        ->name('investments.withdraw')->middleware('permission:investments.withdraw');
+
+    // Returns list + mark paid (optional for step-2 UI)
+    Route::get('/investment-returns', [InvestmentReturnController::class, 'index'])
+        ->name('investmentReturns.index')->middleware('permission:investments.returns.view');
+
+    Route::post('/investment-returns/{investmentReturn}/mark-paid', [InvestmentReturnController::class, 'markPaid'])
+        ->name('investmentReturns.markPaid')->middleware('permission:investments.returns.mark_paid');
 });
 
 

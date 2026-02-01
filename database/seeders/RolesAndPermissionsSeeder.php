@@ -36,6 +36,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'customer.delete',
             'customer.show',
 
+            // Investors
+            'investors.view',
+            'investors.create',
+            'investors.edit',
+            'investors.delete',
+
+            // Investments
+            'investments.view',
+            'investments.create',
+            'investments.edit',
+            'investments.delete',
+            'investments.withdraw',
+            'investments.returns.view',
+            'investments.returns.mark_paid',
+
             // Categories
             'category.view',
             'category.create',

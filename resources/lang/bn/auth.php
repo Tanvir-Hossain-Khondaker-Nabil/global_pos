@@ -31,7 +31,7 @@ return [
     'users' => 'ব্যবহারকারী',
     'logging_in' => 'লগইন হচ্ছে...',
     'thumbnail_hint' => 'থাম্বনেইল',
-    
+
     // HR/Employee Management
     'employees' => 'কর্মচারী',
     'attendance' => 'উপস্থিতি',
@@ -95,7 +95,7 @@ return [
     'switch_outlet' => 'আউটলেট পরিবর্তন করুন',
     'logout_from_outlet' => 'আউটলেট থেকে লগআউট',
     'change_outlet' => 'আউটলেট পরিবর্তন করুন',
-    
+
     // Menu Categories
     'main' => 'প্রধান',
     'sales' => 'বিক্রয়',
@@ -108,7 +108,7 @@ return [
     'admin' => 'এডমিন',
     'hr' => 'এইচআর',
     'outlets' => 'আউটলেট',
-    
+
     // Other sidebar items
     'accounts' => 'অ্যাকাউন্ট',
     'all_purchase_items' => 'সমস্ত ক্রয় আইটেম',
@@ -119,8 +119,32 @@ return [
     'search_menu' => 'মেনু সার্চ করুন...',
     'no_menu_items_found' => 'কোন মেনু আইটেম পাওয়া যায়নি',
     'try_different_keyword' => 'অন্য কীওয়ার্ড দিয়ে চেষ্টা করুন',
-    
+
     // Logout
     'logout' => 'লগআউট',
     'logout_confirmation' => 'আপনি কি লগআউট করতে চান?',
+    // Categories
+    'category_main' => 'প্রধান',
+    'category_sales' => 'সেলস',
+    'category_purchase' => 'ক্রয়',
+    'category_inventory' => 'ইনভেন্টরি',
+    'category_finance' => 'ফাইন্যান্স',
+    'category_partners' => 'পার্টনার্স',
+    'category_crm' => 'সিআরএম',
+    'category_hr' => 'এইচআর',
+    'category_admin' => 'অ্যাডমিন',
+    'category_outlets' => 'আউটলেট',
+
+    // Purchase
+    'local_purchase' => 'স্থানীয় ক্রয়',
+    // Investments
+    'investors' => 'বিনিয়োগকারী',
+    'add_investor' => 'বিনিয়োগকারী যোগ করুন',
+    'investments' => 'বিনিয়োগ',
+    'add_investment' => 'বিনিয়োগ যোগ করুন',
+    'investment_returns' => 'বিনিয়োগ রিটার্ন',
+    
+    // Categories
+    'category_investments' => 'বিনিয়োগ',
+    'category_subscriptions' => 'সাবস্ক্রিপশন',
 ];
