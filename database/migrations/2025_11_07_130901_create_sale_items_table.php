@@ -24,6 +24,8 @@ return new class extends Migration
             $table->decimal('shadow_unit_price', 10, 2)->default(0);
             $table->decimal('shadow_total_price', 10, 2)->default(0);
 
+            $table->dateTime('expire_date')->nullable();
+            $table->dateTime('warranty_days')->nullable();
 
             $table->string('item_type')->default('real');
             $table->string('product_name')->nullable();
