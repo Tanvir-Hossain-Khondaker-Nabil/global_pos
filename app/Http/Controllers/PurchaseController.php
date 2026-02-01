@@ -24,13 +24,65 @@ use DNS1D;
 
 class PurchaseController extends Controller
 {
+    // ইউনিট কনভার্সন ফ্যাক্টর
+    private function getUnitConversions()
+    {
+        return [
+            'weight' => [
+                'ton' => 1000,
+                'kg' => 1,
+                'gram' => 0.001,
+                'pound' => 0.453592
+            ],
+            'volume' => [
+                'liter' => 1,
+                'ml' => 0.001
+            ],
+            'piece' => [
+                'piece' => 1,
+                'dozen' => 12,
+                'box' => 1
+            ],
+            'length' => [
+                'meter' => 1,
+                'cm' => 0.01,
+                'mm' => 0.001
+            ]
+        ];
+    }
+
+    // কনভার্ট টু বেস ইউনিট
+    private function convertToBase($quantity, $fromUnit, $unitType)
+    {
+        $conversions = $this->getUnitConversions();
+
+        if (!isset($conversions[$unitType][$fromUnit])) {
+            return $quantity;
+        }
+
+        return $quantity * $conversions[$unitType][$fromUnit];
+    }
+
+    // কনভার্ট ফ্রম বেস ইউনিট
+    private function convertFromBase($quantity, $toUnit, $unitType)
+    {
+        $conversions = $this->getUnitConversions();
+
+        if (!isset($conversions[$unitType][$toUnit])) {
+            return $quantity;
+        }
+
+        $conversion = $conversions[$unitType][$toUnit];
+        return $conversion != 0 ? $quantity / $conversion : $quantity;
+    }
+
     // Show purchase list with stocks and barcodes
     public function index(Request $request)
     {
         $user = Auth::user();
         $isShadowUser = ($user->type === 'shadow');
 
-        $query = Purchase::latest()->globalOnly()
+        $query = Purchase::latest()
             ->with(['supplier', 'warehouse', 'items.product', 'items.variant']);
 
         if ($request->filled('search')) {
@@ -85,6 +137,8 @@ class PurchaseController extends Controller
                         'barcode' => $stock->barcode,
                         'barcode_path' => $stock->barcode_path,
                         'quantity' => $stock->quantity,
+                        'base_quantity' => $stock->base_quantity,
+                        'unit' => $stock->unit,
                         'created_at' => $stock->created_at,
                         'has_barcode' => !empty($stock->barcode),
                     ] : null;
@@ -101,6 +155,7 @@ class PurchaseController extends Controller
                             'barcode' => $item->stock['barcode'],
                             'product_name' => $item->product->name ?? '',
                             'quantity' => $item->stock['quantity'],
+                            'unit' => $item->stock['unit'],
                         ];
                         $hasBarcode = true;
                     }
@@ -121,106 +176,6 @@ class PurchaseController extends Controller
             'accounts' => Account::where('is_active', true)->get()
         ]);
     }
-
-
-    public function list_index(Request $request)
-    {
-        $user = Auth::user();
-        $isShadowUser = ($user->type === 'shadow');
-
-        $query = Purchase::latest()->LocalOnly()
-            ->with(['supplier', 'warehouse', 'items.product', 'items.variant']);
-
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('purchase_no', 'like', '%' . $request->search . '%')
-                    ->orWhereHas('supplier', function ($q) use ($request) {
-                        $q->where('name', 'like', '%' . $request->search . '%')
-                            ->orWhere('company', 'like', '%' . $request->search . '%');
-                    })
-                    ->orWhereHas('warehouse', function ($q) use ($request) {
-                        $q->where('name', 'like', '%' . $request->search . '%')
-                            ->orWhere('code', 'like', '%' . $request->search . '%');
-                    })
-                    ->orWhereHas('items', function ($q) use ($request) {
-                        $q->whereHas('stock', function ($q) use ($request) {
-                            $q->where('barcode', 'like', '%' . $request->search . '%')
-                                ->orWhere('batch_no', 'like', '%' . $request->search . '%');
-                        });
-                    });
-            });
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->filled('date')) {
-            $query->whereDate('purchase_date', $request->date);
-        }
-
-        $purchases = $query->paginate(10)->withQueryString();
-
-        // Attach item-wise stock/barcode info for index page
-        $purchases->getCollection()->transform(function ($purchase) use ($isShadowUser) {
-
-            if ($isShadowUser) {
-                $purchase = $this->transformToShadowData($purchase);
-            }
-
-            if ($purchase->items) {
-                $purchase->items->transform(function ($item) {
-
-                    // Find stock for this purchase item by batch pattern: PO-{item_id}-XXXX
-                    $stock = Stock::where('product_id', $item->product_id)
-                        ->where('variant_id', $item->variant_id)
-                        ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
-                        ->first();
-
-                    $item->stock = $stock ? [
-                        'id' => $stock->id,
-                        'batch_no' => $stock->batch_no,
-                        'barcode' => $stock->barcode,
-                        'barcode_path' => $stock->barcode_path,
-                        'quantity' => $stock->quantity,
-                        'created_at' => $stock->created_at,
-                        'has_barcode' => !empty($stock->barcode),
-                    ] : null;
-
-                    return $item;
-                });
-
-                $barcodes = [];
-                $hasBarcode = false;
-
-                foreach ($purchase->items as $item) {
-                    if ($item->stock && $item->stock['barcode']) {
-                        $barcodes[] = [
-                            'barcode' => $item->stock['barcode'],
-                            'product_name' => $item->product->name ?? '',
-                            'quantity' => $item->stock['quantity'],
-                        ];
-                        $hasBarcode = true;
-                    }
-                }
-
-                $purchase->barcodes = $barcodes;
-                $purchase->has_barcode = $hasBarcode;
-                $purchase->barcode_count = count($barcodes);
-            }
-
-            return $purchase;
-        });
-
-        return Inertia::render('Purchase/PurchaseList', [
-            'filters' => $request->only(['search', 'status', 'date']),
-            'purchases' => $purchases,
-            'isShadowUser' => $isShadowUser,
-            'accounts' => Account::where('is_active', true)->get()
-        ]);
-    }
-
-
 
     public function create()
     {
@@ -228,18 +183,19 @@ class PurchaseController extends Controller
         $isShadowUser = ($user->type === 'shadow');
 
         return Inertia::render('Purchase/AddPurchase', [
-            'suppliers' => Supplier::where('type', '!=', 'local')->get(),
+            'suppliers' => Supplier::where('type','global')->get(),
             'warehouses' => Warehouse::where('is_active', true)->get(),
-            'products' => Product::where('type', '!=', 'local')->with('variants', 'brand')->get(),
+            'products' => Product::where('type','global')->with('variants', 'brand')->get(),
             'accounts' => Account::where('is_active', true)->get(),
-            'isShadowUser' => $isShadowUser
+            'isShadowUser' => $isShadowUser,
+            'unitConversions' => $this->getUnitConversions()
         ]);
     }
-
 
     // Store purchase: barcode ALWAYS created from batch_no
     public function store(PurchaseRequestStore $request)
     {
+        logger()->info('Storing purchase', ['request' => $request->all()]);
         $user = Auth::user();
         $isShadowUser = ($user->type === 'shadow');
         $request->validated();
@@ -254,10 +210,8 @@ class PurchaseController extends Controller
 
         if ($request->account_id) {
             $account = Account::find($request->account_id);
-            if (!$account)
-                return back()->withErrors(['error' => 'Selected account not found']);
-            if (!$account->is_active)
-                return back()->withErrors(['error' => 'Selected account is not active']);
+            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account->is_active) return back()->withErrors(['error' => 'Selected account is not active']);
             $payment_type = $account->type ?? 'cash';
         }
 
@@ -278,14 +232,15 @@ class PurchaseController extends Controller
 
         DB::beginTransaction();
         try {
+            $purchaseCount = Purchase::count();
+            $purchaseNo = 'PUR-' . date('Ymd') . '-' . str_pad($purchaseCount + 1, 4, '0', STR_PAD_LEFT);
 
-            do {
-                $purchaseNo = 'PUR-' . date('Ymd') . '-' . strtoupper(Str::random(6));
-            } while (\App\Models\Purchase::where('purchase_no', $purchaseNo)->exists());
-
-            $totalAmount = collect($request->items)->sum(function ($item) {
-                return ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0);
-            });
+            $totalAmount = 0;
+            foreach ($request->items as $item) {
+                $unitQuantity = (float) ($item['unit_quantity'] ?? $item['quantity'] ?? 0);
+                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                $totalAmount += $unitQuantity * $unitPrice;
+            }
 
             $paidAmount = (float) ($request->paid_amount ?? 0);
             $dueAmount = $totalAmount - $paidAmount;
@@ -306,11 +261,17 @@ class PurchaseController extends Controller
             ]);
 
             foreach ($request->items as $item) {
-                $qty = (int) ($item['quantity'] ?? 0);
+                $product = Product::find($item['product_id']);
+                $unitType = $product->unit_type ?? 'piece';
+                $unit = $item['unit'] ?? ($product->default_unit ?? 'piece');
+                $unitQuantity = (float) ($item['unit_quantity'] ?? $item['quantity'] ?? 1);
+
+                // Calculate base quantity
+                $baseQuantity = $this->convertToBase($unitQuantity, $unit, $unitType);
 
                 $unitPrice = $isShadowUser ? 0 : (float) ($item['unit_price'] ?? 0);
                 $salePrice = $isShadowUser ? 0 : (float) ($item['sale_price'] ?? 0);
-                $totalPrice = $qty * $unitPrice;
+                $totalPrice = $unitQuantity * $unitPrice;
 
                 if (!$isShadowUser && $salePrice <= 0) {
                     throw new \Exception("Sale price must be greater than 0 for product ID: {$item['product_id']}");
@@ -319,7 +280,10 @@ class PurchaseController extends Controller
                 $purchaseItem = $purchase->items()->create([
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
-                    'quantity' => $qty,
+                    'quantity' => $unitQuantity,
+                    'unit' => $unit,
+                    'unit_quantity' => $unitQuantity,
+                    'base_quantity' => $baseQuantity,
                     'unit_price' => $unitPrice,
                     'sale_price' => $salePrice,
                     'total_price' => $totalPrice,
@@ -327,22 +291,24 @@ class PurchaseController extends Controller
                     'warehouse_id' => $request->warehouse_id
                 ]);
 
-                //  Batch no
+                // ✅ Batch no
                 $batchNo = 'PO-' . $purchaseItem->id . '-' . Str::upper(Str::random(4));
 
-                //  Stock create (per purchase item)
+                // ✅ Stock create (per purchase item)
                 $stock = Stock::create([
                     'warehouse_id' => $request->warehouse_id,
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
-                    'quantity' => $qty,
+                    'quantity' => $unitQuantity,
+                    'unit' => $unit,
+                    'base_quantity' => $baseQuantity,
                     'purchase_price' => $unitPrice,
                     'sale_price' => $salePrice,
                     'created_by' => $user->id,
                     'batch_no' => $batchNo,
                 ]);
 
-                //  barcode = batch_no (ALWAYS)
+                // ✅ barcode = batch_no (ALWAYS)
                 $this->generateStockBarcodeFromBatch($stock);
             }
 
@@ -376,7 +342,7 @@ class PurchaseController extends Controller
         }
     }
 
-    // barcode = batch_no + image
+    // ✅ barcode = batch_no + image
     private function generateStockBarcodeFromBatch(Stock $stock)
     {
         try {
@@ -487,7 +453,7 @@ class PurchaseController extends Controller
                 $stock->refresh();
             }
 
-            $business = BusinessProfile::where('user_id', Auth::id())->first();
+            $business = BusinessProfile::where('user_id', auth()->id())->first();
 
             return Inertia::render('Purchase/BarcodePrint', [
                 'purchaseItem' => $purchaseItem,
@@ -514,8 +480,7 @@ class PurchaseController extends Controller
                     ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
                     ->first();
 
-                if (!$stock)
-                    continue;
+                if (!$stock) continue;
 
                 if (empty($stock->barcode)) {
                     $this->generateStockBarcodeFromBatch($stock);
@@ -590,6 +555,28 @@ class PurchaseController extends Controller
         ]);
     }
 
+    //show purchase items
+    public function showPurchasesItem($id)
+    {
+        $user = Auth::user();
+        $isShadowUser = $user->type === 'shadow';
+
+        $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse'])
+            ->findOrFail($id);
+
+        if ($isShadowUser) {
+            $purchaseItem = $this->transformToShadowItemData($purchaseItem);
+        }
+
+        $business = BusinessProfile::where('user_id', $user->id)->first();
+
+        return Inertia::render('Purchase/PurchaseItemShow', [
+            'purchaseItem' => $purchaseItem,
+            'isShadowUser' => $isShadowUser,
+            'business' => $business,
+        ]);
+    }
+
     public function edit($id)
     {
         $user = Auth::user();
@@ -608,7 +595,8 @@ class PurchaseController extends Controller
             'warehouses' => Warehouse::where('is_active', true)->get(),
             'products' => Product::with('variants', 'brand')->get(),
             'accounts' => Account::where('is_active', true)->get(),
-            'isShadowUser' => $isShadowUser
+            'isShadowUser' => $isShadowUser,
+            'unitConversions' => $this->getUnitConversions()
         ]);
     }
 
@@ -636,10 +624,8 @@ class PurchaseController extends Controller
         $account = null;
         if ($request->account_id) {
             $account = Account::find($request->account_id);
-            if (!$account)
-                return back()->withErrors(['error' => 'Selected account not found']);
-            if (!$account->is_active)
-                return back()->withErrors(['error' => 'Selected account is not active']);
+            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account->is_active) return back()->withErrors(['error' => 'Selected account is not active']);
         }
 
         $adjustamount = $request->adjust_from_advance ?? false;
@@ -668,9 +654,12 @@ class PurchaseController extends Controller
 
         DB::beginTransaction();
         try {
-            $totalAmount = collect($request->items)->sum(function ($item) {
-                return ($item['quantity'] ?? 0) * ($item['unit_price'] ?? 0);
-            });
+            $totalAmount = 0;
+            foreach ($request->items as $item) {
+                $unitQuantity = (float) ($item['unit_quantity'] ?? $item['quantity'] ?? 0);
+                $unitPrice = (float) ($item['unit_price'] ?? 0);
+                $totalAmount += $unitQuantity * $unitPrice;
+            }
 
             $paidAmount = (float) ($request->paid_amount ?? 0);
             $dueAmount = $totalAmount - $paidAmount;
@@ -704,11 +693,17 @@ class PurchaseController extends Controller
 
             // ✅ Recreate items + stock + barcode
             foreach ($request->items as $item) {
-                $qty = (int) ($item['quantity'] ?? 0);
+                $product = Product::find($item['product_id']);
+                $unitType = $product->unit_type ?? 'piece';
+                $unit = $item['unit'] ?? ($product->default_unit ?? 'piece');
+                $unitQuantity = (float) ($item['unit_quantity'] ?? $item['quantity'] ?? 1);
+
+                // Calculate base quantity
+                $baseQuantity = $this->convertToBase($unitQuantity, $unit, $unitType);
 
                 $unitPrice = $isShadowUser ? 0 : (float) ($item['unit_price'] ?? 0);
                 $salePrice = $isShadowUser ? 0 : (float) ($item['sale_price'] ?? 0);
-                $totalPrice = $qty * $unitPrice;
+                $totalPrice = $unitQuantity * $unitPrice;
 
                 if (!$isShadowUser && $salePrice <= 0) {
                     throw new \Exception("Sale price must be greater than 0 for product ID: {$item['product_id']}");
@@ -717,7 +712,10 @@ class PurchaseController extends Controller
                 $purchaseItem = $purchase->items()->create([
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
-                    'quantity' => $qty,
+                    'quantity' => $unitQuantity,
+                    'unit' => $unit,
+                    'unit_quantity' => $unitQuantity,
+                    'base_quantity' => $baseQuantity,
                     'unit_price' => $unitPrice,
                     'sale_price' => $salePrice,
                     'total_price' => $totalPrice,
@@ -731,7 +729,9 @@ class PurchaseController extends Controller
                     'warehouse_id' => $request->warehouse_id,
                     'product_id' => $item['product_id'],
                     'variant_id' => $item['variant_id'],
-                    'quantity' => $qty,
+                    'quantity' => $unitQuantity,
+                    'unit' => $unit,
+                    'base_quantity' => $baseQuantity,
                     'purchase_price' => $unitPrice,
                     'sale_price' => $salePrice,
                     'created_by' => $user->id,
@@ -825,8 +825,7 @@ class PurchaseController extends Controller
                     ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
                     ->first();
 
-                if ($stock)
-                    $stock->delete();
+                if ($stock) $stock->delete();
             }
 
             $purchase->delete();
@@ -855,10 +854,9 @@ class PurchaseController extends Controller
             $paymentAmount = (float) $request->payment_amount;
             $account = Account::find($request->account_id);
 
-            if (!$account)
-                return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
             if (!$account->canWithdraw($paymentAmount)) {
-                return back()->withErrors(['account_id' => 'Insufficient balance in selected account']);
+                return back()->withErrors(['account_id' => 'Insufficient balance in selected account | Low Balance in your selected account']);
             }
 
             $newPaidAmount = $purchase->paid_amount + $paymentAmount;
@@ -1006,26 +1004,12 @@ class PurchaseController extends Controller
         ]);
     }
 
-
-    //show purchase items
-    public function showPurchasesItem($id)
+    private function transformToShadowItemData($purchaseItem)
     {
-        $user = Auth::user();
-        $isShadowUser = $user->type === 'shadow';
+        $purchaseItem->unit_price = $purchaseItem->shadow_unit_price ?? $purchaseItem->unit_price;
+        $purchaseItem->sale_price = $purchaseItem->shadow_sale_price ?? $purchaseItem->sale_price;
+        $purchaseItem->total_price = $purchaseItem->shadow_total_price ?? $purchaseItem->total_price;
 
-        $purchaseItem = PurchaseItem::with(['purchase.supplier', 'product', 'variant', 'warehouse'])
-            ->findOrFail($id);
-
-        if ($isShadowUser) {
-            $purchaseItem = $this->transformToShadowItemData($purchaseItem);
-        }
-
-        $business = BusinessProfile::where('user_id', $user->id)->first();
-
-        return Inertia::render('Purchase/PurchaseItemShow', [
-            'purchaseItem' => $purchaseItem,
-            'isShadowUser' => $isShadowUser,
-            'business' => $business,
-        ]);
+        return $purchaseItem;
     }
 }
