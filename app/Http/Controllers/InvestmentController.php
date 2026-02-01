@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Investment;
-use App\Models\Investor;
-use App\Models\Outlet;
-use App\Models\InvestmentWithdrawal;
 use Carbon\Carbon;
+use Inertia\Inertia;
+use App\Models\Outlet;
+use App\Models\Investor;
+use App\Models\Investment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Inertia\Inertia;
+use App\Models\InvestmentWithdrawal;
+use Illuminate\Support\Facades\Auth;
 
 class InvestmentController extends Controller
 {
@@ -25,7 +26,7 @@ class InvestmentController extends Controller
             ->when($q, function ($query) use ($q) {
                 $query->where(function ($qq) use ($q) {
                     $qq->where('code', 'like', "%{$q}%")
-                       ->orWhereHas('investor', fn($i) => $i->where('name', 'like', "%{$q}%"));
+                        ->orWhereHas('investor', fn($i) => $i->where('name', 'like', "%{$q}%"));
                 });
             })
             ->when($status !== 'all', fn($query) => $query->where('status', $status))
@@ -63,16 +64,16 @@ class InvestmentController extends Controller
             ],
             'investments' => $investments,
             // dropdowns
-            'investors' => Investor::select('id','name')->orderBy('name')->get(),
-            'outlets' => Outlet::select('id','name','code')->latest()->get(), // আপনার Outlet model আছে
+            'investors' => Investor::select('id', 'name')->orderBy('name')->get(),
+            'outlets' => Outlet::select('id', 'name', 'code')->latest()->get(), // আপনার Outlet model আছে
         ]);
     }
 
     public function create()
     {
         return Inertia::render('Investments/Create', [
-            'investors' => Investor::select('id','name')->orderBy('name')->get(),
-            'outlets' => Outlet::select('id','name','code')->latest()->get(),
+            'investors' => Investor::select('id', 'name')->orderBy('name')->get(),
+            'outlets' => Outlet::where('created_by', Auth::id())->select('id', 'name', 'code')->latest()->get(),
         ]);
     }
 
@@ -91,7 +92,7 @@ class InvestmentController extends Controller
         return DB::transaction(function () use ($data) {
 
             $start = Carbon::parse($data['start_date'])->startOfDay();
-            $end = $start->copy()->addMonthsNoOverflow((int)$data['duration_months'])->subDay(); 
+            $end = $start->copy()->addMonthsNoOverflow((int) $data['duration_months'])->subDay();
             // উদাহরণ: 1 month duration => end = start+1month-1day
 
             $investment = Investment::create([
@@ -171,8 +172,8 @@ class InvestmentController extends Controller
                 'status' => $investment->status,
                 'note' => $investment->note,
             ],
-            'investors' => Investor::select('id','name')->orderBy('name')->get(),
-            'outlets' => Outlet::select('id','name','code')->latest()->get(),
+            'investors' => Investor::select('id', 'name')->orderBy('name')->get(),
+            'outlets' => Outlet::select('id', 'name', 'code')->latest()->get(),
         ]);
     }
 
@@ -191,7 +192,7 @@ class InvestmentController extends Controller
         return DB::transaction(function () use ($data, $investment) {
 
             $start = Carbon::parse($data['start_date'])->startOfDay();
-            $end = $start->copy()->addMonthsNoOverflow((int)$data['duration_months'])->subDay();
+            $end = $start->copy()->addMonthsNoOverflow((int) $data['duration_months'])->subDay();
 
             // ✅ principal edit এখানে allow করছি না (withdraw endpoint দিয়ে হবে)
             $investment->update([
@@ -249,12 +250,12 @@ class InvestmentController extends Controller
 
             // ✅ আপনার requirement: withdraw করলে initial কমবে + current কমবে
             $investment->update([
-                'current_principal' => max(0, (float)$investment->current_principal - $amount),
-                'initial_principal' => max(0, (float)$investment->initial_principal - $amount),
+                'current_principal' => max(0, (float) $investment->current_principal - $amount),
+                'initial_principal' => max(0, (float) $investment->initial_principal - $amount),
             ]);
 
             // যদি principal 0 হয়ে যায়, closed করতে পারেন (optional)
-            if ((float)$investment->current_principal <= 0.00001) {
+            if ((float) $investment->current_principal <= 0.00001) {
                 $investment->update(['status' => 'closed']);
             }
 
@@ -280,6 +281,6 @@ class InvestmentController extends Controller
             $next = $seq + 1;
         }
 
-        return "INV-{$date}-" . str_pad((string)$next, 4, '0', STR_PAD_LEFT);
+        return "INV-{$date}-" . str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     }
 }

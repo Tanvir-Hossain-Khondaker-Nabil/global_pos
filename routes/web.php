@@ -47,6 +47,7 @@ use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
+use App\Http\Controllers\InvestmentReturnController;
 
 
 

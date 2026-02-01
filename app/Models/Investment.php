@@ -22,6 +22,7 @@ class Investment extends Model
         'status',
         'last_profit_date',
         'note',
+        'created_by',
     ];
 
     protected $casts = [
