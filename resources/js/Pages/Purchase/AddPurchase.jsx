@@ -491,6 +491,10 @@ export default function AddPurchase({
           product_id: product.id,
           variant_id: variant.id,
           product_name: product.name,
+          product_no: product.product_no,
+          has_warranty: product.has_warranty,
+          warranty_duration: product.warranty_duration,
+          warranty_duration_type: product.warranty_duration_type,
           brand_name: brandName,
           variant_name: variantDisplayName,
           variant_identifier: variantIdentifier,
@@ -937,19 +941,6 @@ export default function AddPurchase({
                     <h3 className="card-title text-[11px] text-[#2E8E47] font-extrabold uppercase flex items-center gap-1">
                       <DollarSign size={12} /> Payment
                     </h3>
-
-                    {/* <button
-                      type="button"
-                      onClick={
-                        manualPaymentOverride
-                          ? disableManualPaymentOverride
-                          : enableManualPaymentOverride
-                      }
-                      className="btn btn-xs bg-red-500 hover:bg-red-600 border-none text-white font-bold text-[10px] px-2 py-0.5"
-                    >
-                      {manualPaymentOverride ? <X size={10} /> : <Edit size={10} />}
-                      {manualPaymentOverride ? "Cancel" : "Manual"}
-                    </button> */}
                   </div>
 
                   {/* Account Selection */}
@@ -1123,10 +1114,9 @@ export default function AddPurchase({
                       className="border-b border-gray-100 last:border-0"
                     >
                       <div className="bg-gray-100 px-3 py-1 text-xs font-black text-gray-500 uppercase tracking-widest truncate">
-                        {product.name} (
-                        {product.product_no})
+                        {product.name} ({product.product_no})
                         {product.brand?.name && (
-                          <span className="ml-2 text-red-600">
+                          <span className="ml-2 text-[#329D4D]">
                             Brand:{" "}
                             {product.brand.name}
                           </span>
@@ -1246,15 +1236,18 @@ export default function AddPurchase({
                           <div className="flex justify-between items-start">
                             <div className="flex-1 max-w-[70%]">
                               <h4 className="font-black text-gray-900 uppercase text-xs truncate">
-                                {
-                                  item.product_name
-                                }
+                                {item.product_name} ({item.product_no})
+                                <span className="text-xs text-[#329D4D] ml-2 font-black uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded w-fit mt-1">
+                                  {item.brand_name}
+                                </span>
                               </h4>
-                              <p className="text-xs text-red-600 font-black uppercase tracking-wider bg-red-50 px-2 py-0.5 rounded w-fit mt-1">
-                                {
-                                  item.brand_name
-                                }
-                              </p>
+
+                              {item.has_warranty && (
+                                <p className="text-xs text-gray-700 font-medium mt-1 truncate">
+                                  {item.warranty_duration} {item.warranty_duration_type} warranty
+                                </p>
+                              )}
+
                               <p className="text-xs text-gray-700 font-medium mt-1 truncate">
                                 {
                                   item.variant_name
@@ -1275,7 +1268,7 @@ export default function AddPurchase({
                           </div>
 
                           {/* ইউনিট সেটিংস */}
-                          <div className="mt-2 p-2 bg-gray-50 rounded border border-gray-200">
+                          <div className=" p-2 bg-gray-50 rounded border border-gray-200">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
                               {/* Purchase Unit */}
                               <div className="form-control">
@@ -1409,18 +1402,17 @@ export default function AddPurchase({
                               </div>
 
                               {/* Total Price Display */}
-                              <div className="col-span-4 text-right pt-2 border-t border-gray-200">
-                                <span className="text-xs uppercase font-black text-gray-400 block mb-1">
+                              <div className="col-span-4 flex items-center justify-between pt-2 border-t border-gray-200">
+                                <span className="text-xs uppercase font-black text-gray-400">
                                   Total Cost
                                 </span>
+
                                 <span className="font-mono text-sm font-black text-red-600">
-                                  ৳
-                                  {formatCurrency(
-                                    item.total_price ||
-                                    0
-                                  )}
+                                  ৳{formatCurrency(item.total_price || 0)}
                                 </span>
                               </div>
+
+
                             </div>
                           </div>
                         </div>

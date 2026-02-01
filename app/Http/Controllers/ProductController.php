@@ -18,7 +18,11 @@ use Illuminate\Support\Facades\Validator;
 
 class ProductController extends Controller
 {
-    // ইউনিট কনভার্সন ফ্যাক্টর
+
+
+    /**
+     * Get unit conversion factors
+     */
     private function getUnitConversions()
     {
         return [
@@ -45,7 +49,11 @@ class ProductController extends Controller
         ];
     }
 
-    // কনভার্ট টু বেস ইউনিট
+
+
+    /**
+     * Convert to base unit
+     */
     private function convertToBase($quantity, $fromUnit, $unitType)
     {
         $conversions = $this->getUnitConversions();
@@ -57,7 +65,11 @@ class ProductController extends Controller
         return $quantity * $conversions[$unitType][$fromUnit];
     }
 
-    // কনভার্ট ফ্রম বেস ইউনিট
+
+
+    /**
+     * Convert from base unit to target unit
+     */
     private function convertFromBase($quantity, $toUnit, $unitType)
     {
         $conversions = $this->getUnitConversions();
@@ -70,6 +82,22 @@ class ProductController extends Controller
         return $conversion != 0 ? $quantity / $conversion : $quantity;
     }
 
+
+
+    /**
+     * Get stock history for a product
+     */
+    private function getStockHistory($productId)
+    {
+        return Stock::where('product_id', $productId)
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+
+    /**
+     * View method
+     */
     public function view($id)
     {
         $product = Product::with([
@@ -98,6 +126,10 @@ class ProductController extends Controller
         ]);
     }
 
+
+    /**
+     * Index method
+     */
     public function index(Request $request)
     {
         $products = Product::latest()
@@ -131,6 +163,10 @@ class ProductController extends Controller
     }
 
 
+
+    /*
+    * add_index/ create method
+    */
     public function add_index(Request $request)
     {
         $querystring = $request->only('id');
@@ -184,18 +220,25 @@ class ProductController extends Controller
         ]);
     }
 
-    // update or store will be here by this function 
-    // update or store will be here by this function 
+    
+    
+    /*
+    * store/ update method
+    */ 
     public function update(Request $request)
     {
         $isUpdate = !empty($request->id);
+        $data = $request->all();
+        $data['has_warranty'] = filter_var(
+            $request->has_warranty,
+            FILTER_VALIDATE_BOOLEAN
+        );
+
 
         // -----------------------------
         // 1) Active subscription + product_range limit
         // -----------------------------
         $user = Auth::user();
-        // $user = Auth::where('id', $user->id)->first();
-
         $activeSubsQuery = $user->subscriptions()
             ->where('status', 1)
             ->where('start_date', '<=', now())
@@ -255,6 +298,10 @@ class ProductController extends Controller
             'photo' => 'nullable',
             'type' => 'nullable|string|max:20',
             'is_fraction_allowed' => 'nullable',
+            'has_warranty' => 'nullable',
+            'warranty_duration' => 'nullable|integer|min:0',
+            'warranty_duration_type' => 'nullable|string',
+            'warranty_terms' => 'nullable|string',
         ];
 
         if ($request->product_type === 'in_house') {
@@ -310,7 +357,13 @@ class ProductController extends Controller
             $product->description = $request->description;
             $product->product_type = $request->product_type;
 
-            // ✅ created_by শুধু create সময় সেট করুন (update এ বদলাবেন না)
+
+            //has_warranty
+            $product->has_warranty = (bool) ($request->has_warranty ?? false);
+            $product->warranty_duration = $request->warranty_duration;
+            $product->warranty_duration_type = $request->warranty_duration_type;
+            $product->warranty_terms = $request->warranty_terms;
+
             if (!$isUpdate) {
                 $product->created_by = Auth::id();
             }
@@ -432,6 +485,9 @@ class ProductController extends Controller
     }
 
 
+    /**
+     * Create stock entry for a new in-house product variant
+     */
     private function createInHouseStock(Product $product, Variant $variant)
     {
         $inHouseWarehouse = Warehouse::where('code', 'IN-HOUSE')->first();
@@ -478,6 +534,10 @@ class ProductController extends Controller
         }
     }
 
+
+    /**
+     * Update stock entry for an existing in-house product variant
+     */
     private function updateInHouseStock(Product $product, Variant $variant)
     {
         $inHouseWarehouse = Warehouse::where('code', 'IN-HOUSE')->first();
@@ -510,6 +570,11 @@ class ProductController extends Controller
         }
     }
 
+
+
+    /**
+     * Generate SKU for a product variant based on its attributes
+     */
     private function generateSku(Product $product, array $attributeValues): string
     {
         $shortCodes = [];
@@ -530,6 +595,10 @@ class ProductController extends Controller
     }
 
 
+    
+    /*
+    * delete / destroy method
+    */
     public function del($id)
     {
         DB::beginTransaction();
@@ -566,7 +635,10 @@ class ProductController extends Controller
         }
     }
 
-    // Get available units for a product
+
+    /*
+    * Get available units for a product
+    */
     public function getAvailableUnits($productId)
     {
         try {
@@ -626,6 +698,7 @@ class ProductController extends Controller
         }
     }
 
+
     // Get product with stock info
     public function getProductWithStock($productId, $variantId = null)
     {
@@ -669,6 +742,8 @@ class ProductController extends Controller
             return response()->json(['error' => 'Product not found'], 404);
         }
     }
+
+
 
     // Update stock for a product (for manual adjustments)
     public function updateStock(Request $request, $id)
@@ -756,7 +831,10 @@ class ProductController extends Controller
         }
     }
 
-    // Get stock history for a product
+
+    /**
+     * Get stock history for a product
+     */
     public function stockHistory($id)
     {
         $product = Product::findOrFail($id);
@@ -772,7 +850,10 @@ class ProductController extends Controller
         ]);
     }
 
-    // Export products to CSV/Excel
+
+    /**
+     * Export products to CSV/Excel
+     */
     public function export(Request $request)
     {
         $products = Product::with(['category', 'brand', 'variants.stock'])
@@ -835,6 +916,8 @@ class ProductController extends Controller
         return response()->stream($callback, 200, $headers);
     }
 
+
+
     // Import products from CSV/Excel
     public function import(Request $request)
     {
@@ -849,6 +932,8 @@ class ProductController extends Controller
 
         return redirect()->back()->with('error', 'Import feature not implemented yet. Please use the web interface.');
     }
+
+
 
     // Get products for API (for mobile apps or external systems)
     public function apiIndex(Request $request)
@@ -906,7 +991,10 @@ class ProductController extends Controller
         return response()->json($products);
     }
 
-    // Bulk update products
+
+    /**
+     * Bulk update products
+     */
     public function bulkUpdate(Request $request)
     {
         $request->validate([

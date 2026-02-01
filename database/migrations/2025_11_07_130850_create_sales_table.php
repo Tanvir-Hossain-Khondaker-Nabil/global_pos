@@ -34,7 +34,10 @@ return new class extends Migration
             $table->decimal('shadow_due_amount', 10, 2)->default(0);
             $table->string('shadow_type')->default('general');
 
-            $table->enum('payment_type', ['cash', 'mobile_banking', 'bank', 'advance_adjustment'])->default('cash');
+            $table->enum('payment_type', ['cash', 'mobile_banking', 'bank', 'advance_adjustment','installment'])->default('cash');
+            $table->integer('total_installments')->default(1)->nullable();
+            $table->integer('installment_duration')->default(1)->nullable();
+
             $table->enum('type', ['pos', 'inventory'])->default('pos')->nullable();
             $table->enum('status', ['pending', 'paid', 'partial', 'cancelled', 'fully_returned', 'partially_returned'])->default('pending');
 
@@ -46,7 +49,7 @@ return new class extends Migration
             $table->unsignedBigInteger('created_by')->nullable();
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
-             $table->unsignedBigInteger('owner_id')->nullable();
+            $table->unsignedBigInteger('owner_id')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

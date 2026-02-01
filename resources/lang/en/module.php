@@ -27,6 +27,9 @@ return [
     'name_field' => 'Module Name',
     'status_field' => 'Module Status',
     'description_field' => 'Module Description',
+    'add_new_module' => 'Add New Module',
+    'get_started_message' => 'Get started by adding a new module.',
+    'no_modules_found' => 'No modules found.',
 
     // Actions
 

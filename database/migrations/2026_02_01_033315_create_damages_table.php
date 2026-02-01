@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('damages', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('sale_item_id')->nullable();
+            $table->unsignedBigInteger('purchase_item_id')->nullable();
             $table->text('description')->nullable();
             $table->dateTime('damage_date')->nullable();
             $table->enum('action_taken', ['refund', 'replace', 'repair','not_repaired'])->default('not_repaired');

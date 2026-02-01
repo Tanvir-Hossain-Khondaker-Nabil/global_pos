@@ -303,8 +303,7 @@ export default function Product({ product, filters }) {
                         <thead className="bg-[#1e4d2b] text-white">
                             <tr>
                                 <th></th>
-                                <th>{t('product.product_code', 'Product Code')}</th>
-                                <th>{t('product.product_name', 'Product Name')}</th>
+                                <th>{t('product.product_name', 'Product')}</th>
                                 <th>{t('product.category', 'Category')}</th>
                                 <th>{t('product.attributes', 'Attributes')}</th>
                                 <th>{t('product.total_stock', 'Total Stock')}</th>
@@ -340,16 +339,13 @@ export default function Product({ product, filters }) {
                                                     </button>
                                                 )}
                                             </th>
-                                            <td className="font-mono">{productItem.product_no}</td>
                                             <td>
                                                 <div>
                                                     <div className="font-medium">{productItem.name}</div>
-                                                    {productItem.description && (
+                                                    <span className="text-xs text-gray-500 mt-1"> <i>{productItem.product_no}</i> </span>
+                                                    {productItem.has_warranty && (
                                                         <div className="text-xs text-gray-500 mt-1">
-                                                            {productItem.description.length > 50 
-                                                                ? `${productItem.description.substring(0, 50)}...`
-                                                                : productItem.description
-                                                            }
+                                                            {productItem.warranty_duration} {productItem.warranty_duration_type} warranty
                                                         </div>
                                                     )}
                                                 </div>
@@ -408,7 +404,7 @@ export default function Product({ product, filters }) {
                                                                 key={variant.id}
                                                                 className={`border p-2 rounded text-xs ${
                                                                     hasAttributes 
-                                                                        ? 'border-primary bg-[#1e4d2b] text-white' 
+                                                                        ? 'border-primary bg-[#F8FAF5] text-[#333]' 
                                                                         : 'border-dashed border-neutral'
                                                                 }`}
                                                             >
@@ -510,7 +506,8 @@ export default function Product({ product, filters }) {
                                                         className="btn btn-xs btn-warning"
                                                         title={t('product.edit', 'Edit Product')}
                                                     >
-                                                        <Pen size={10} /> {t('product.edit', 'Edit')}
+                                                        <Pen size={10} /> 
+                                                        {/* {t('product.edit', 'Edit')} */}
                                                     </Link>
                                                     
                                                     <Link
@@ -532,7 +529,8 @@ export default function Product({ product, filters }) {
                                                         className="btn btn-xs btn-error"
                                                         title={t('product.delete', 'Delete Product')}
                                                     >
-                                                        <Trash2 size={10} /> {t('product.delete', 'Delete')}
+                                                        <Trash2 size={10} /> 
+                                                        {/* {t('product.delete', 'Delete')} */}
                                                     </Link>
                                                 </div>
                                             </td>

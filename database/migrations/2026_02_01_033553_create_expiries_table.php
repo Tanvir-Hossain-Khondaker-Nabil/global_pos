@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('expiries', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('sale_item_id')->nullable();
+            $table->unsignedBigInteger('purchase_item_id')->nullable();
             $table->dateTime('expire_date')->nullable();
             $table->enum('status', ['valid', 'expired', 'returned'])->default('valid');
             $table->timestamps();

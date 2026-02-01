@@ -10,5 +10,6 @@ class Expiry extends Model
         'sale_item_id',
         'expire_date',
         'status',
+        'purchase_item_id'
     ];
 }
