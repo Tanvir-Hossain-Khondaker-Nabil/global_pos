@@ -23,6 +23,7 @@ return [
     'download_pdf' => 'Download',
     'notes_placeholder' => 'Enter additional notes here...',
     'gross_total' => 'Gross Total',
+    'transportation_cost' => 'Transportation Cost',
 
     // Payment Information
     'payment_information' => 'Payment Information',

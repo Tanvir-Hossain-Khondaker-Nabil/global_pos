@@ -196,7 +196,7 @@ class PurchaseController extends Controller
     // Store purchase: barcode ALWAYS created from batch_no
     public function store(PurchaseRequestStore $request)
     {
-        logger()->info('Storing purchase', ['request' => $request->all()]);
+
         $user = Auth::user();
         $isShadowUser = ($user->type === 'shadow');
         $request->validated();
@@ -243,6 +243,8 @@ class PurchaseController extends Controller
                 $totalAmount += $unitQuantity * $unitPrice;
             }
 
+            $totalAmount += (float) ($request->transportation_cost ?? 0);
+
             $paidAmount = (float) ($request->paid_amount ?? 0);
             $dueAmount = $totalAmount - $paidAmount;
 
@@ -258,7 +260,8 @@ class PurchaseController extends Controller
                 'notes' => $request->notes,
                 'status' => 'completed',
                 'created_by' => $user->id,
-                'payment_type' => $payment_type
+                'payment_type' => $payment_type,
+                'transportation_cost' => (float) ($request->transportation_cost ?? 0)
             ]);
 
             foreach ($request->items as $item) {
@@ -306,7 +309,6 @@ class PurchaseController extends Controller
                         'terms' => $product->warranty_terms,
                     ]);
                 }
-
 
 
                 // ✅ Batch no

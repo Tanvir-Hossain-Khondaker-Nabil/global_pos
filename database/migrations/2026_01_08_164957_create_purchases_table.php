@@ -23,13 +23,17 @@ return new class extends Migration
             $table->decimal('shadow_paid_amount', 12, 2)->default(0);
             $table->decimal('due_amount', 12, 2)->default(0);
             $table->decimal('shadow_due_amount', 12, 2)->default(0);
-            $table->enum('payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
+            $table->decimal('transportation_cost', 12, 2)->default(0);
+            $table->enum('payment_status', ['unpaid', 'partial', 'paid','installment'])->default('unpaid');
             $table->enum('shadow_payment_status', ['unpaid', 'partial', 'paid'])->default('unpaid');
             $table->text('notes')->nullable();
             $table->enum('status', ['pending', 'completed', 'cancelled'])->default('pending');
             $table->enum('user_type', ['shadow', 'general'])->default('general');
             $table->enum('type', ['global', 'local'])->default('global');
-            $table->enum('payment_type', ['cash', 'bank' ,'mobile_banking','advance_adjustment'])->default('cash');
+            $table->enum('payment_type', ['cash', 'bank' ,'mobile_banking','advance_adjustment','installment'])->default('cash');
+            $table->integer('total_installments')->default(1)->nullable();
+            $table->integer('installment_duration')->default(1)->nullable();
+
             $table->timestamps();
 
             $table->unsignedBigInteger('outlet_id');
