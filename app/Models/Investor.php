@@ -11,7 +11,7 @@ class Investor extends Model
     use BelongsToCreator;
 
     protected $fillable = [
-        'name', 'phone', 'email', 'address', 'is_active'
+        'name', 'phone', 'email', 'address', 'is_active','created_by',
     ];
 
     public function investments()

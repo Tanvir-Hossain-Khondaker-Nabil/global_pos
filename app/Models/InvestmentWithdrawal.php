@@ -14,6 +14,7 @@ class InvestmentWithdrawal extends Model
         'withdraw_date',
         'amount',
         'reason',
+        'created_by',
     ];
 
     protected $casts = [
