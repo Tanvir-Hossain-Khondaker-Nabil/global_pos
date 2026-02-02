@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Model;
 
 class Damage extends Model
@@ -12,5 +13,10 @@ class Damage extends Model
         'damage_date',
         'action_taken',
         'cost',
+        'outlet_id',
+        'created_by',
+        'owner_id'
     ];
+
+    use BelongsToTenant;
 }

@@ -19,6 +19,9 @@ return new class extends Migration
             $table->dateTime('damage_date')->nullable();
             $table->enum('action_taken', ['refund', 'replace', 'repair','not_repaired'])->default('not_repaired');
             $table->decimal('cost', 10, 2)->default(0);
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('outlet_id')->nullable();
+            $table->unsignedBigInteger('owner_id')->nullable();
             $table->timestamps();
         });
     }

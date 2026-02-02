@@ -18,6 +18,9 @@ return new class extends Migration
             $table->dateTime('start_date')->nullable();
             $table->dateTime('end_date')->nullable();
             $table->text('terms')->nullable();
+            $table->unsignedBigInteger('created_by')->nullable();
+            $table->unsignedBigInteger('outlet_id')->nullable();
+            $table->unsignedBigInteger('owner_id')->nullable();
             $table->enum('status', ['active', 'expired', 'void'])->default('active');
             $table->timestamps();
         });
