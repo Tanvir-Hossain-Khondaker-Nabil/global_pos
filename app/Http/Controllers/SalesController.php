@@ -11,18 +11,19 @@ use App\Models\Payment;
 use App\Models\Product;
 use App\Models\Variant;
 use App\Models\Customer;
-use App\Models\Installment;
 use App\Models\Purchase;
 use App\Models\SaleItem;
 use App\Models\Supplier;
+use App\Models\Warranty;
+use App\Models\Installment;
 use Illuminate\Support\Str;
 use App\Models\PurchaseItem;
 use Illuminate\Http\Request;
 use App\Models\StockMovement;
-use App\Models\Warranty;
+use App\Models\BusinessProfile;
+use App\Services\ReceiptService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
-use App\Services\ReceiptService;
 
 class SalesController extends Controller
 {
@@ -422,12 +423,12 @@ class SalesController extends Controller
                 'customer_id' => $customerId ?? null,
                 'invoice_no' => $this->generateInvoiceNo(),
                 'sub_total' => $request->sub_amount ?? 0,
-                'discount' =>  $discount ?? 0,
+                'discount' => $discount ?? 0,
                 'discount_type' => $discountType ?? 'percentage',
                 'vat_tax' => $request->vat_rate ?? 0,
                 'grand_total' => $request->grand_amount ?? 0,
                 'paid_amount' => $paidAmount ?? 0,
-                'due_amount' => $request->due_amount ??  ($request->grand_amount - ($paidAmount ?? 0)),
+                'due_amount' => $request->due_amount ?? ($request->grand_amount - ($paidAmount ?? 0)),
                 'shadow_vat_tax' => $request->vat_rate ?? 0,
                 'shadow_discount' => $request->discount_rate ?? 0,
                 'shadow_sub_total' => $request->sub_amount ?? 0,
@@ -445,7 +446,7 @@ class SalesController extends Controller
 
             if ($request->payment_status === 'installment') {
                 $installmentDuration = (int) $request->installment_duration;
-                $totalInstallments   = (int) $request->total_installments;
+                $totalInstallments = (int) $request->total_installments;
 
                 $this->installmentManage($sale, $installmentDuration, $totalInstallments);
             }
@@ -512,12 +513,12 @@ class SalesController extends Controller
                     if ($product->has_warranty) {
                         Warranty::create([
                             'sale_item_id' => $saleItem->id,
-                            'start_date'   => now(),
-                            'end_date'     => now()->{match ($product->warranty_duration_type) {
-                                Product::Day   => 'addDays',
+                            'start_date' => now(),
+                            'end_date' => now()->{match ($product->warranty_duration_type) {
+                                Product::Day => 'addDays',
                                 Product::Month => 'addMonths',
-                                Product::Year  => 'addYears',
-                            }}($product->warranty_duration),
+                                Product::Year => 'addYears',
+                            } }($product->warranty_duration),
                             'terms' => $product->warranty_terms,
                         ]);
                     }
@@ -562,7 +563,7 @@ class SalesController extends Controller
                         'due_amount' => $pickupUnitPrice * $pickupQuantity,
                         'created_by' => Auth::id(),
                         'type' => Purchase::TYPE_LOCAL,
-                        'pickup_sale_id' =>  $sale->id ?? null,
+                        'pickup_sale_id' => $sale->id ?? null,
                     ]);
 
 
@@ -675,7 +676,7 @@ class SalesController extends Controller
         if ($installmentDuration > 0 && $totalInstallments > 0) {
             $sale->update([
                 'installment_duration' => $installmentDuration,
-                'total_installments'   => $totalInstallments,
+                'total_installments' => $totalInstallments,
             ]);
         }
 
@@ -694,12 +695,12 @@ class SalesController extends Controller
             $daysToAdd = (int) round($monthsPerInstallment * 30 * $i);
 
             Installment::create([
-                'sale_id'        => $sale->id,
+                'sale_id' => $sale->id,
                 'installment_no' => $i,
-                'amount'         => $perInstallmentAmount,
-                'due_date'       => Carbon::now()->addDays($daysToAdd),
-                'paid_amount'    => 0,
-                'status'         => 'pending',
+                'amount' => $perInstallmentAmount,
+                'due_date' => Carbon::now()->addDays($daysToAdd),
+                'paid_amount' => 0,
+                'status' => 'pending',
             ]);
         }
     }
@@ -729,7 +730,7 @@ class SalesController extends Controller
         foreach ($stocks as $stock) {
             $stockUnit = $stock->unit ?? ($product?->default_unit ?? 'piece');
             // ✅ base_quantity এর উপর depend না করে quantity+unit থেকে base হিসাব
-            $totalBase += $this->convertToBase((float)$stock->quantity, $stockUnit, $unitType);
+            $totalBase += $this->convertToBase((float) $stock->quantity, $stockUnit, $unitType);
         }
 
         return $totalBase;
@@ -761,14 +762,16 @@ class SalesController extends Controller
         ];
 
         foreach ($stocks as $stock) {
-            if ($neededBaseQty <= 0) break;
+            if ($neededBaseQty <= 0)
+                break;
 
             $stockUnit = $stock->unit ?? ($product?->default_unit ?? 'piece');
 
             // ✅ available base from stock.quantity not base_quantity
-            $availableBaseQty = $this->convertToBase((float)$stock->quantity, $stockUnit, $unitType);
+            $availableBaseQty = $this->convertToBase((float) $stock->quantity, $stockUnit, $unitType);
 
-            if ($availableBaseQty <= 0) continue;
+            if ($availableBaseQty <= 0)
+                continue;
 
             $takeBase = min($availableBaseQty, $neededBaseQty);
             $remainingBaseQty = $availableBaseQty - $takeBase;
@@ -863,6 +866,7 @@ class SalesController extends Controller
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
+
         $sale = Sale::with([
             'customer',
             'items',
@@ -877,11 +881,14 @@ class SalesController extends Controller
             $sale = $this->transformToShadowData($sale);
         }
 
+        $businessProfile = BusinessProfile::where('created_by', $user->id)->first();
+
         $render = $print ? 'sales/ShowPos' : 'sales/Show';
 
         return Inertia::render($render, [
             'sale' => $sale,
-            'business_name' => @$sale->creator->business->name,
+            'isShadowUser' => $isShadowUser,
+            'businessProfile' => $businessProfile,
         ]);
     }
 

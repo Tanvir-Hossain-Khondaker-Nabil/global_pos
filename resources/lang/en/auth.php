@@ -116,9 +116,8 @@ return [
     'main' => 'Main',
     'sales' => 'Sales',
     'purchase' => 'Purchase',
-    'inventory' => 'Inventory',
+    
     'finance' => 'Finance',
-    'subscriptions' => 'Subscriptions',
     'partners' => 'Partners',
     'crm' => 'CRM',
     'admin' => 'Admin',
@@ -165,4 +164,6 @@ return [
     // Categories
     'category_investments' => 'Investments',
     'category_subscriptions' => 'Subscriptions',
+    'expense_category' => 'Expense Category',
+    'all_sales_return' => 'Sale Return'
 ];
