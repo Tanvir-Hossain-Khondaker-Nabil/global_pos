@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('expiries', function (Blueprint $table) {
+        Schema::create('notifications', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('sale_item_id')->nullable();
-            $table->unsignedBigInteger('purchase_item_id')->nullable();
-            $table->dateTime('expire_date')->nullable();
-            $table->enum('status', ['valid', 'expired', 'returned'])->default('valid');
+            $table->unsignedBigInteger('installment_id')->nullable();
+            $table->unsignedBigInteger('sale_id')->nullable();
+            $table->unsignedBigInteger('purchase_id')->nullable();
+            $table->string('title');
+            $table->text('message');
+            $table->date('notify_date');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('outlet_id')->nullable();
             $table->unsignedBigInteger('owner_id')->nullable();
@@ -29,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('expiries');
+        Schema::dropIfExists('notifications');
     }
 };
