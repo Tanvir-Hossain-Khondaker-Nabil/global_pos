@@ -44,6 +44,7 @@ use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\UserDepositController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\BonusSettingController;
+use App\Http\Controllers\DamageController;
 use App\Http\Controllers\InstallmentController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
@@ -326,17 +327,28 @@ Route::middleware('auth')->group(function () {
     });
 
     // installment
-
     Route::controller(InstallmentController::class)->group(function () {
         Route::get('/installments/{id}/{type?}', 'getInstallment')
         // ->middleware('permission:installments.view')
         ->name('installments.show');
-        
+
         Route::put('/installments/{id}', 'updateInstallment')
             // ->middleware('permission:installments.edit')
             ->name('installments.update');
     });
 
+
+    //damaged 
+    Route::controller(DamageController::class)->group(function () {
+        Route::get('/damages/{id}/{type?}', 'getData')
+        // ->middleware('permission:damages.view')
+        ->name('damages.index');
+
+        Route::post('/damages/store', 'storeDamage')
+        // ->middleware('permission:damages.store')
+        ->name('damages.store');
+
+    });
 
     // barcode
     Route::controller(BarcodePrintController::class)->group(function () {
