@@ -212,9 +212,7 @@ export default function Index({ plans }) {
                                         <div className="max-w-xs">
                                             {plan.modules && plan.modules.length > 0 ? (
                                                 <div className="text-sm p-2 border border-gray-200 rounded-lg">
-                                                    <span className="badge badge-outline badge-sm p-4">
-                                                        {plan.modules.length} {t('plan.total_modules', 'modules')}
-                                                    </span>
+                                                    
                                                     <div className="mt-1 text-xs text-gray-500">
                                                         {plan.modules.slice(0, 2).map((module, i) => (
                                                             <div key={i} className="truncate flex items-center gap-1">

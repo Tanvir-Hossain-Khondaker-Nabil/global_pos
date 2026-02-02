@@ -37,9 +37,9 @@ class Variant extends Model
         return $this->hasOne(Stock::class, 'variant_id', 'id');
     }
 
-    public function stocks(): HasOne
+    public function stocks()
     {
-        return $this->hasOne(Stock::class, 'variant_id', 'id');
+        return $this->hasMany(Stock::class, 'variant_id', 'id');
     }
 
     // Remove duplicate stocks() method if it's the same as stock()

@@ -16,7 +16,7 @@ class InstallmentCommand extends Command
     public function handle()
     {
         $today = Carbon::today();
-
+        
         $installments = Installment::where('status', 'due')
             ->whereIn('due_date', [
                 $today,
