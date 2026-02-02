@@ -212,8 +212,10 @@ class PurchaseController extends Controller
 
         if ($request->account_id) {
             $account = Account::find($request->account_id);
-            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
-            if (!$account->is_active) return back()->withErrors(['error' => 'Selected account is not active']);
+            if (!$account)
+                return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account->is_active)
+                return back()->withErrors(['error' => 'Selected account is not active']);
             $payment_type = $account->type ?? 'cash';
         }
 
@@ -309,12 +311,12 @@ class PurchaseController extends Controller
                 if ($product->has_warranty) {
                     Warranty::create([
                         'purchase_item_id' => $purchaseItem->id,
-                        'start_date'   => now(),
-                        'end_date'     => now()->{match ($product->warranty_duration_type) {
-                                Product::Day   => 'addDays',
-                                Product::Month => 'addMonths',
-                                Product::Year  => 'addYears',
-                            }}($product->warranty_duration),
+                        'start_date' => now(),
+                        'end_date' => now()->{match ($product->warranty_duration_type) {
+                            Product::Day => 'addDays',
+                            Product::Month => 'addMonths',
+                            Product::Year => 'addYears',
+                        } }($product->warranty_duration),
                         'terms' => $product->warranty_terms,
                     ]);
                 }
@@ -547,7 +549,8 @@ class PurchaseController extends Controller
                     ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
                     ->first();
 
-                if (!$stock) continue;
+                if (!$stock)
+                    continue;
 
                 if (empty($stock->barcode)) {
                     $this->generateStockBarcodeFromBatch($stock);
@@ -588,20 +591,19 @@ class PurchaseController extends Controller
             'payments.account'
         ])->findOrFail($id);
 
+
         if ($isShadowUser) {
             $purchase = $this->transformToShadowData($purchase);
         }
 
         if ($purchase->items) {
             $purchase->items->transform(function ($item) {
-
                 $stock = Stock::where('product_id', $item->product_id)
                     ->where('variant_id', $item->variant_id)
                     ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
                     ->first();
 
                 $item->stock_details = $stock;
-
                 return $item;
             });
 
@@ -616,11 +618,28 @@ class PurchaseController extends Controller
             ];
         }
 
+        $ownerId = $purchase->created_by ?? $user->created_by ?? $user->id;
+        $outletId = $purchase->outlet_id ?? $user->outlet_id ?? null;
+
+        $bpQuery = BusinessProfile::query()->where('created_by', $ownerId);
+
+        if (!empty($outletId)) {
+            $bpQuery->where('outlet_id', $outletId);
+        }
+
+        $businessProfile = $bpQuery->latest()->first();
+
+        if (!$businessProfile) {
+            $businessProfile = BusinessProfile::latest()->first();
+        }
+
         return Inertia::render('Purchase/PurchaseShow', [
             'purchase' => $purchase,
-            'isShadowUser' => $isShadowUser
+            'isShadowUser' => $isShadowUser,
+            'businessProfile' => $businessProfile,
         ]);
     }
+
 
     //show purchase items
     public function showPurchasesItem($id)
@@ -691,8 +710,10 @@ class PurchaseController extends Controller
         $account = null;
         if ($request->account_id) {
             $account = Account::find($request->account_id);
-            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
-            if (!$account->is_active) return back()->withErrors(['error' => 'Selected account is not active']);
+            if (!$account)
+                return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account->is_active)
+                return back()->withErrors(['error' => 'Selected account is not active']);
         }
 
         $adjustamount = $request->adjust_from_advance ?? false;
@@ -892,7 +913,8 @@ class PurchaseController extends Controller
                     ->where('batch_no', 'LIKE', 'PO-' . $item->id . '-%')
                     ->first();
 
-                if ($stock) $stock->delete();
+                if ($stock)
+                    $stock->delete();
             }
 
             $purchase->delete();
@@ -921,7 +943,8 @@ class PurchaseController extends Controller
             $paymentAmount = (float) $request->payment_amount;
             $account = Account::find($request->account_id);
 
-            if (!$account) return back()->withErrors(['error' => 'Selected account not found']);
+            if (!$account)
+                return back()->withErrors(['error' => 'Selected account not found']);
             if (!$account->canWithdraw($paymentAmount)) {
                 return back()->withErrors(['account_id' => 'Insufficient balance in selected account | Low Balance in your selected account']);
             }

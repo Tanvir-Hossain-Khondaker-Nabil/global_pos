@@ -1,341 +1,735 @@
-import React, { useMemo, useState } from "react";
-import { Link, usePage } from "@inertiajs/react";
+import { router, usePage } from "@inertiajs/react";
 import { ArrowLeft, Printer, Download } from "lucide-react";
+import { useMemo, useState } from "react";
 
-export default function SaleShow({ sale }) {
+export default function SaleShow({ sale, isShadowUser = false, businessProfile }) {
   const { auth } = usePage().props;
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // ========= Bangla Helpers =========
-  const toBanglaDigit = (value) => {
-    const map = { 0: "০", 1: "১", 2: "২", 3: "৩", 4: "৪", 5: "৫", 6: "৬", 7: "৭", 8: "৮", 9: "৯" };
-    return String(value ?? "").replace(/\d/g, (d) => map[d]);
+  const safeItems = useMemo(() => sale?.items || [], [sale]);
+
+  // ================== Helpers ==================
+  const formatMoney = (num) => {
+    const n = Number(num || 0);
+    return n.toFixed(2);
   };
 
-  const formatMoneyBn = (amount) => {
-    const num = new Intl.NumberFormat("en-BD", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(Number(amount || 0));
-    return toBanglaDigit(num);
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
   };
 
-  const formatDateBn = (dateString) => {
-    if (!dateString) return "";
-    const d = new Date(dateString);
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yy = String(d.getFullYear());
-    return toBanglaDigit(`${dd}/${mm}/${yy}`);
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
-  const formatDateTimeBn = (dateString) => {
-    if (!dateString) return "";
-    const d = new Date(dateString);
-    const dd = String(d.getDate()).padStart(2, "0");
-    const mm = String(d.getMonth() + 1).padStart(2, "0");
-    const yy = String(d.getFullYear());
-    const hh = String(d.getHours()).padStart(2, "0");
-    const mi = String(d.getMinutes()).padStart(2, "0");
-    return toBanglaDigit(`${dd}/${mm}/${yy} ${hh}:${mi}`);
+  // ✅ variant attribute_values -> pretty text
+  const normalizeVariantText = (variant) => {
+    if (!variant) return "";
+
+    // 1) best: sku
+    if (variant?.sku) return variant.sku;
+
+    // 2) attribute_values JSON string/object
+    const raw = variant?.attribute_values;
+    if (!raw) return "";
+
+    let obj = null;
+    if (typeof raw === "string") {
+      try {
+        obj = JSON.parse(raw);
+      } catch (e) {
+        obj = null;
+      }
+    } else if (typeof raw === "object") {
+      obj = raw;
+    }
+
+    if (!obj || typeof obj !== "object") return "";
+
+    const parts = Object.entries(obj)
+      .map(([k, v]) => {
+        const key = String(k || "").split("-")[0] || k;
+        const val = String(v ?? "");
+        if (!key && !val) return "";
+        return `${key}: ${val}`;
+      })
+      .filter(Boolean);
+
+    return parts.join(", ");
   };
 
-  // ========= Data =========
-  const items = useMemo(() => sale?.items || [], [sale]);
+  // ================== Shadow price support (SALE) ==================
+  // যদি আপনার sale আইটেমে shadow fields থাকে, এখানে পড়বে
+  const getItemPrice = (item, field) => {
+    if (!item) return 0;
+
+    if (isShadowUser) {
+      if (field === "unit_price") return item.shadow_unit_price ?? item.unit_price ?? 0;
+      if (field === "total_price") return item.shadow_total_price ?? item.total_price ?? 0;
+    }
+    return item[field] ?? 0;
+  };
+
+  const getSaleAmount = (field) => {
+    if (!sale) return 0;
+
+    if (isShadowUser) {
+      if (field === "grand_total") return sale.shadow_grand_total ?? sale.grand_total ?? 0;
+      if (field === "paid_amount") return sale.shadow_paid_amount ?? sale.paid_amount ?? 0;
+      if (field === "due_amount") return sale.shadow_due_amount ?? sale.due_amount ?? 0;
+    }
+    return sale[field] ?? 0;
+  };
 
   const totalQty = useMemo(
-    () => items.reduce((sum, it) => sum + Number(it?.quantity || 0), 0),
-    [items]
+    () => safeItems.reduce((s, it) => s + Number(it?.quantity || 0), 0),
+    [safeItems]
   );
 
-  // ========= আল-মদিনা স্টোর Theme =========
-  const MB_DARK = "rgb(15, 45, 26)";
-  const MB_LIGHT = "rgb(30, 77, 43)";
-  const MB_GRADIENT = "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)";
+  const totals = useMemo(() => {
+    const grandTotal = Number(getSaleAmount("grand_total") || 0);
+    const paid = Number(getSaleAmount("paid_amount") || 0);
+    const due = Number(getSaleAmount("due_amount") || (grandTotal - paid) || 0);
+    return { grandTotal, paid, due };
+  }, [sale, isShadowUser]);
 
-  const BORDER = "border-[#0f2d1a]";
-  const TEXT = "text-[#1e4d2b]";
+  const paymentStatus = useMemo(() => {
+    // যদি আপনার sale.payment_status থাকে, সেটাও ব্যবহার হবে
+    const statusRaw = String(
+      (isShadowUser ? sale?.shadow_payment_status : sale?.payment_status) || ""
+    ).toLowerCase();
 
-  // ========= Dynamic Header =========
-  const PAD_TITLE = sale?.creator?.business?.name || "আল-মদিনা স্টোর";
-  const PAD_OWNER = "প্রোঃ মোঃ সবুজ হোসেন";
-  const PAD_NOTE =
-    "এখানে বেবী ফুডস, মুদি মালামাল, কসমেটিকস সামগ্রী সুলভ মূল্যে ক্রয়-বিক্রয় করা হয়। বিশেষ অর্ডারে সকল ধরনের কেক পাওয়া যায় এবং অর্ডার নেয়া হয়।";
+    if (statusRaw) {
+      if (statusRaw === "paid") return "PAID";
+      if (statusRaw === "partial") return "PARTIAL";
+      if (statusRaw === "unpaid") return "UNPAID";
+    }
 
-  const padAddressLine =
-    sale?.creator?.business?.address ||
-    "নেভী চেকপোস্ট, খালিশপুর, খুলনা";
+    const due = Number(totals.due || 0);
+    if (due <= 0) return "PAID";
+    if (due > 0 && Number(totals.paid || 0) > 0) return "PARTIAL";
+    return "UNPAID";
+  }, [totals, sale, isShadowUser]);
 
-  const padMobile = sale?.creator?.business?.phone || "০১৬৭৪-০০৭৪৭২";
+  // ================== Business Profile Dynamic ==================
+  const bp = businessProfile || {};
+  const companyName = bp?.name || "আল-মদিনা স্টোর";
+  const companyPhone = bp?.phone || "";
+  const companyEmail = bp?.email || "";
+  const companyAddress = bp?.address || "";
+  const companyWebsite = bp?.website || "";
 
-  const memoNo = sale?.invoice_no || sale?.id || "";
-  const invoiceDate = formatDateBn(sale?.created_at);
+  const logoUrl = bp?.logo ? `/storage/${bp.logo}` : null;
+  const watermarkUrl = bp?.thum ? `/storage/${bp.thum}` : logoUrl;
+
+  // ================== Invoice Data (SALE) ==================
+  const billNo = sale?.invoice_no || sale?.sale_no || `#SALE-${sale?.id || ""}`;
+  const invoiceDate = formatDate(sale?.sale_date || sale?.created_at);
+  const dateTime = formatDateTime(sale?.sale_date || sale?.created_at);
 
   const customerName =
-    sale?.customer?.customer_name || sale?.customer?.name || "Walk-in Customer";
+    sale?.customer?.customer_name ||
+    sale?.customer?.name ||
+    sale?.customer?.company ||
+    "Walk-in Customer";
 
   const customerAddress =
-    sale?.customer?.address || sale?.customer?.customer_address || "";
+    sale?.customer?.address ||
+    sale?.customer?.customer_address ||
+    "N/A";
 
-  const tableRows = useMemo(() => {
-    return items.map((item) => {
-      const desc =
-        item?.product?.name || item?.product_name || item?.description || "N/A";
+  const warehouseName =
+    sale?.warehouse?.name ||
+    safeItems?.[0]?.warehouse?.name ||
+    "N/A";
+
+  const servedBy =
+    sale?.served_by ||
+    sale?.creator?.name ||
+    sale?.user?.name ||
+    "N/A";
+
+  const referenceNo =
+    sale?.reference_no ||
+    sale?.reference ||
+    "";
+
+  const totalItems = safeItems.length;
+
+  // ================== Rows mapping (same columns like PurchaseShow) ==================
+  const rows = useMemo(() => {
+    return safeItems.map((item, idx) => {
+      const code =
+        item?.product?.product_no ||
+        item?.product?.sku ||
+        item?.product?.code ||
+        item?.code ||
+        item?.variant?.sku ||
+        "N/A";
+
+      const itemName =
+        item?.product?.name ||
+        item?.product_name ||
+        item?.description ||
+        "N/A";
+
+      const variantText =
+        normalizeVariantText(item?.variant) ||
+        item?.variant?.name ||
+        item?.variant?.title ||
+        item?.model ||
+        item?.variant_name ||
+        "";
+
+      const brandName =
+        item?.product?.brand?.name ||
+        item?.brand?.name ||
+        item?.brand_name ||
+        "N/A";
+
       const qty = Number(item?.quantity || 0);
-      const rate = Number(item?.unit_price || 0);
-      const amount = Number(item?.total_price || 0);
-      return { desc, qty, rate, amount };
-    });
-  }, [items]);
+      const unitPrice = Number(getItemPrice(item, "unit_price") || 0);
+      const amount = Number(getItemPrice(item, "total_price") || (qty * unitPrice) || 0);
 
-  // ========= Print =========
-  const handlePrint = () => {
-    setIsPrinting(true);
-    requestAnimationFrame(() => {
-      setTimeout(() => {
-        window.print();
-        setTimeout(() => setIsPrinting(false), 400);
-      }, 80);
+      // add 5% (যদি sale আইটেমে vat/tax থাকে)
+      const add5 = Number(item?.tax_amount || item?.vat_amount || 0);
+
+      const totalValue = amount + add5;
+
+      return {
+        sl: idx + 1,
+        code,
+        itemName,
+        variantText,
+        brandName,
+        qty,
+        unitPrice,
+        add5,
+        totalValue,
+      };
     });
+  }, [safeItems, isShadowUser]);
+
+  // ================== Print (ONLY invoice) ==================
+  const handlePrint = () => {
+       window.print();
+        // document.body.innerHTML = originalContents;
+        window.location.reload(); 
   };
 
-  const handleDownload = () => handlePrint();
+  const handleDownloadPDF = () => handlePrint();
 
-  // ✅ Component (SAFE) — no crash
-  const InvoicePad = ({ isPrint = false } = {}) => {
-    return (
-      <div className={`pad-border border-2 ${BORDER} p-4`}>
-        {/* Title gradient text */}
-        <div
-          className={`text-center ${isPrint ? "text-[34px]" : "text-[34px] sm:text-[38px]"} font-extrabold leading-tight`}
-          style={{
-            background: MB_GRADIENT,
-            WebkitBackgroundClip: "text",
-            color: "transparent",
-          }}
-        >
-          {PAD_TITLE}
-        </div>
+  // ================== Invoice Template (SAME design) ==================
+  const Invoice = () => (
+    <div className="invoice-wrap">
+      <div className="invoice-sheet">
+        {watermarkUrl ? (
+          <div className="invoice-watermark" style={{ backgroundImage: `url('${watermarkUrl}')` }} />
+        ) : null}
 
-        <div className="text-center mt-2">
-          <span
-            className="inline-block text-white px-4 py-1 rounded-full text-sm font-bold"
-            style={{ background: MB_GRADIENT }}
-          >
-            {PAD_OWNER}
-          </span>
-        </div>
-
-        <div className="text-center text-xs sm:text-sm leading-relaxed mt-2 px-1">
-          {PAD_NOTE}
-        </div>
-
-        <div className="text-center text-xs sm:text-sm font-bold mt-2">
-          {padAddressLine}
-        </div>
-
-        <div className="text-center text-xs sm:text-sm font-semibold mt-1">
-          মোবাঃ {toBanglaDigit(padMobile)}
-        </div>
-
-        {/* dotted fields */}
-        <div className="mt-3 space-y-2 text-sm font-bold">
-          <div className="grid grid-cols-[42px_1fr_38px_1fr] gap-2 items-end">
-            <div>নং-</div>
-            <div className="flex items-end gap-2">
-              <span className="text-xs font-semibold">{toBanglaDigit(memoNo)}</span>
-              <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
+        {/* HEADER */}
+        <div className="invoice-header">
+          <div className="header-left">
+            <div className="logo-circle">
+              {logoUrl ? <img src={logoUrl} alt="logo" /> : <div className="logo-fallback">LOGO</div>}
             </div>
-            <div>তারিখ</div>
-            <div className="flex items-end gap-2">
-              <span className="text-xs font-semibold">{invoiceDate}</span>
-              <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
-            </div>
+            <div className="company-title">{companyName}</div>
           </div>
 
-          <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
-            <div>নাম</div>
-            <div className="flex items-end gap-2">
-              <span className="text-xs font-semibold">{customerName}</span>
-              <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
-            <div>ঠিকানা</div>
-            <div className="flex items-end gap-2">
-              <span className="text-xs font-semibold">{customerAddress}</span>
-              <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
+          <div className="header-right">
+            <div className="office-title">অফিস</div>
+            <div className="office-text">
+              {companyAddress ? <div>{companyAddress}</div> : null}
+              {companyPhone ? <div>{companyPhone}</div> : null}
+              {companyEmail ? <div>{companyEmail}</div> : null}
+              {companyWebsite ? <div>{companyWebsite}</div> : null}
             </div>
           </div>
         </div>
 
-        {/* Table */}
-        <div className="mt-4">
-          <table className="w-full table-fixed border-collapse">
+        <div className="hr-thin" />
+
+        {/* TITLE */}
+        <div className="invoice-title-row">
+          <div className="invoice-title-box">SALE INVOICE</div>
+        </div>
+
+        {/* INFO GRID (same layout) */}
+        <div className="info-grid">
+          <div className="info-col">
+            <div className="info-row">
+              <div className="k">Bill No</div>
+              <div className="v">{billNo}</div>
+            </div>
+            <div className="info-row">
+              <div className="k">Sale Date</div>
+              <div className="v">{invoiceDate}</div>
+            </div>
+            <div className="info-row">
+              <div className="k">Customer</div>
+              <div className="v">{customerName}</div>
+            </div>
+            <div className="info-row">
+              <div className="k">Customer Address</div>
+              <div className="v">{customerAddress}</div>
+            </div>
+          </div>
+
+          <div className="info-col">
+            <div className="info-row">
+              <div className="k">Reference No</div>
+              <div className="v">{referenceNo || "—"}</div>
+            </div>
+            <div className="info-row">
+              <div className="k">Warehouse</div>
+              <div className="v">{warehouseName}</div>
+            </div>
+            <div className="info-row">
+              <div className="k">Served By</div>
+              <div className="v">{servedBy}</div>
+            </div>
+            <div className="info-row">
+              <div className="k">Date &amp; Time</div>
+              <div className="v">{dateTime}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* TABLE */}
+        <div className="table-wrap">
+          <table className="invoice-table">
             <thead>
               <tr>
-                <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[55%]`} style={{ color: MB_LIGHT }}>
-                  বিবরণ
-                </th>
-                <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[15%]`} style={{ color: MB_LIGHT }}>
-                  পরিমাণ
-                </th>
-                <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[15%]`} style={{ color: MB_LIGHT }}>
-                  দর
-                </th>
-                <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[15%]`} style={{ color: MB_LIGHT }}>
-                  টাকা
-                </th>
+                <th className="w-sl">SL</th>
+                <th className="w-code">Code</th>
+                <th className="w-item">Item Name</th>
+                <th className="w-variant">Model / Variant</th>
+                <th className="w-brand">Brand</th>
+                <th className="w-qty">Qty</th>
+                <th className="w-unit">Unit Price</th>
+                <th className="w-add">Add (5%)</th>
+                <th className="w-total">Total Value</th>
               </tr>
             </thead>
 
             <tbody>
-              {tableRows.length ? (
-                tableRows.map((r, idx) => (
-                  <tr key={idx}>
-                    <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm`}>{r.desc}</td>
-                    <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm text-center`}>
-                      {toBanglaDigit(r.qty)}
+              {rows.length ? (
+                rows.map((r) => (
+                  <tr key={r.sl}>
+                    <td className="center">{r.sl}</td>
+                    <td className="center">{r.code}</td>
+                    <td>
+                      <div className="item-strong">{r.itemName}</div>
                     </td>
-                    <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm text-center`}>
-                      {formatMoneyBn(r.rate)}
-                    </td>
-                    <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm text-center`}>
-                      {formatMoneyBn(r.amount)}
-                    </td>
+                    <td>{r.variantText || "—"}</td>
+                    <td className="center">{r.brandName}</td>
+                    <td className="center">{r.qty}</td>
+                    <td className="right">{formatMoney(r.unitPrice)}</td>
+                    <td className="right">{formatMoney(r.add5)}</td>
+                    <td className="right total-blue">{formatMoney(r.totalValue)}</td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className={`border-l-2 border-r-2 border-b-2 ${BORDER} px-3 py-8 text-center text-gray-500`}>
+                  <td colSpan={9} className="empty">
                     কোনো আইটেম পাওয়া যায়নি
                   </td>
                 </tr>
               )}
 
-              <tr>
-                <td colSpan={4} className={`border-b-2 ${BORDER}`} style={{ height: 1 }} />
+              <tr className="table-summary-row">
+                <td colSpan={5} className="right bold">
+                  Total Items: {totalItems}
+                </td>
+                <td className="center bold">{totalQty}</td>
+                <td colSpan={2}></td>
+                <td className="right bold total-blue">{formatMoney(totals.grandTotal)}</td>
               </tr>
             </tbody>
           </table>
+        </div>
 
-          <div className="mt-3 flex flex-wrap justify-end gap-4 text-xs font-extrabold">
-            <span>
-              মোট পরিমাণ: <b className={TEXT}>{toBanglaDigit(totalQty)}</b>
-            </span>
-            <span>
-              মোট টাকা: <b className={TEXT}>{formatMoneyBn(sale?.grand_total)}</b>
-            </span>
-            <span>
-              পরিশোধ: <b className={TEXT}>{formatMoneyBn(sale?.paid_amount)}</b>
-            </span>
-            <span>
-              বকেয়া: <b className={TEXT}>{formatMoneyBn(sale?.due_amount)}</b>
-            </span>
+        {/* SUMMARY */}
+        <div className="summary-grid">
+          <div className="sum-box">
+            <div className="sum-row">
+              <div>Total Items</div>
+              <div className="bold">{totalItems}</div>
+            </div>
+            <div className="sum-row">
+              <div>Total Quantity</div>
+              <div className="bold">{totalQty}</div>
+            </div>
+            <div className="sum-row">
+              <div className="bold">Grand Total</div>
+              <div className="bold total-blue">{formatMoney(totals.grandTotal)}</div>
+            </div>
           </div>
 
-          <div className="mt-2 text-[11px] text-gray-700">
-            সময়: {formatDateTimeBn(sale?.created_at)}
+          <div className="sum-box">
+            <div className="sum-row">
+              <div>Paid Amount</div>
+              <div className="bold">{formatMoney(totals.paid)}</div>
+            </div>
+            <div className="sum-row">
+              <div>Due Amount</div>
+              <div className="bold">{formatMoney(totals.due)}</div>
+            </div>
+            <div className="sum-row status-row">
+              <div>Payment Status</div>
+              <div
+                className={`status-pill ${
+                  paymentStatus === "PAID" ? "paid" : paymentStatus === "PARTIAL" ? "partial" : "unpaid"
+                }`}
+              >
+                {paymentStatus}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* SIGNATURES */}
+        <div className="sign-grid">
+          <div className="sign">
+            <div className="sign-line" />
+            <div className="sign-title">Checked By</div>
+            <div className="sign-sub">(Name, seal, time)</div>
+          </div>
+          <div className="sign">
+            <div className="sign-line" />
+            <div className="sign-title">Authorised</div>
+            <div className="sign-sub">(Signature &amp; Seal)</div>
+          </div>
+          <div className="sign">
+            <div className="sign-line" />
+            <div className="sign-title">Received</div>
+            <div className="sign-sub">(Signature &amp; Seal)</div>
+          </div>
+          <div className="sign">
+            <div className="sign-line" />
+            <div className="sign-title">Delivery By</div>
+            <div className="sign-sub">(Signature &amp; Seal)</div>
+          </div>
+        </div>
+
+        {/* NOTE */}
+        {/* <div className="bottom-note">
+          বিক্রয়কৃত পণ্য ৭ দিনের মধ্যে ফেরত দেওয়া যাবে। পণ্য ফেরতের সময় অবশ্যই মেমোসহ উপস্থিত থাকতে হবে।
+        </div> */}
       </div>
-    );
-  };
+    </div>
+  );
 
   return (
-    <div className="bg-white rounded-box">
-      {/* ✅ Print CSS: prints ONLY #printPad */}
+    <div className="bg-gray-50 min-h-screen p-4">
       <style>{`
-        /* screen default */
-        #printPad { display: none; }
+        #printArea { display: none; }
 
+        /* ✅ Print only invoice + proper A4 spacing */
+        
         @media print {
           @page { size: A4 portrait; margin: 10mm; }
           html, body { height: auto !important; }
-          body { margin: 0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-
+          body {
+            margin: 0 !important;
+            background: #fff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body * { visibility: hidden !important; }
-          #printPad, #printPad * { visibility: visible !important; }
-
-          #printPad {
+          #printArea, #printArea * { visibility: visible !important; }
+          #printArea {
             display: block !important;
             position: fixed !important;
             inset: 0 !important;
-            width: 100% !important;
-            background: #fff !important;
             padding: 0 !important;
+            background: #fff !important;
           }
+          #printArea .invoice-sheet { box-shadow: none !important; }
+        }
 
-          #printPad .pad-border {
-            max-width: 190mm !important;
-            margin: 0 auto !important;
-            border: 2px solid ${MB_DARK} !important;
-            padding: 16px !important;
-            min-height: 277mm !important;
-            display: flex !important;
-            flex-direction: column !important;
-          }
+        /* ====== SAME DESIGN CSS (copied from purchase show) ====== */
+        .invoice-wrap{ display:flex; justify-content:center; }
+        .invoice-sheet{
+          position:relative;
+          background:#fff;
+          border:1px solid #d6d6d6;
+          border-radius:8px;
+          padding:16px 16px 12px 16px;
+          box-shadow: 0 1px 10px rgba(0,0,0,.06);
+          overflow:hidden;
+        }
 
-          table { page-break-inside: auto; }
-          tr { page-break-inside: avoid; page-break-after: auto; }
-          .no-print { display: none !important; }
+        .invoice-watermark{
+          position:absolute;
+          inset:0;
+          background-repeat:no-repeat;
+          background-position:center;
+          background-size: 420px;
+          opacity:.06;
+          pointer-events:none;
+        }
+
+        .hr-thin{ border-top:1px solid #cfcfcf; margin:10px 0; }
+
+        .invoice-header{
+          display:flex;
+          justify-content:space-between;
+          align-items:flex-start;
+          gap:14px;
+        }
+        .header-left{
+          display:flex;
+          align-items:center;
+          gap:10px;
+          flex: 1;
+          min-width: 0;
+        }
+        .logo-circle{
+          width:54px;
+          height:54px;
+          border-radius:999px;
+          border:2px solid #ef4444;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          overflow:hidden;
+          background:#fff;
+          flex: 0 0 auto;
+        }
+        .logo-circle img{ width:100%; height:100%; object-fit:cover; }
+        .logo-fallback{ font-size:10px; color:#666; }
+        .company-title{
+          font-size:28px;
+          font-weight:800;
+          color:#111;
+          line-height:1.1;
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
+        }
+
+        .header-right{
+          width: 260px;
+          border-left: 1px solid #dedede;
+          padding-left: 12px;
+        }
+        .office-title{ color:#dc2626; font-weight:800; margin-bottom:4px; }
+        .office-text{ font-size:12px; color:#333; line-height:1.35; white-space:pre-wrap; }
+
+        .invoice-title-row{ display:flex; justify-content:center; margin: 2px 0 10px 0; }
+        .invoice-title-box{
+          border:1px solid #bdbdbd;
+          padding:6px 18px;
+          font-weight:800;
+          letter-spacing:.5px;
+          font-size:14px;
+          background:#fff;
+          border-radius:4px;
+        }
+
+        .info-grid{
+          display:grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 18px;
+          font-size:12px;
+          color:#222;
+          margin-bottom:10px;
+        }
+        .info-row{
+          display:grid;
+          grid-template-columns: 110px 1fr;
+          gap: 10px;
+          margin: 6px 0;
+        }
+        .info-row .k{ font-weight:700; color:#444; }
+        .info-row .v{ color:#111; }
+
+        .table-wrap{ margin-top:6px; }
+        .invoice-table{
+          border-collapse:collapse;
+          table-layout:fixed;
+          font-size:12px;
+        }
+        .invoice-table thead th{
+          border:1px solid #cfcfcf;
+          padding:8px 6px;
+          background:#f6f7f8;
+          font-weight:800;
+          text-align:center;
+          color:#111;
+        }
+        .invoice-table tbody td{
+          border-left:1px solid #d6d6d6;
+          border-right:1px solid #d6d6d6;
+          border-bottom:1px solid #ededed;
+          padding:8px 6px;
+          vertical-align:top;
+        }
+        .invoice-table tbody tr:last-child td{ border-bottom:1px solid #d6d6d6; }
+
+        .invoice-table .center{ text-align:center; }
+        .invoice-table .right{ text-align:right; }
+        .invoice-table .empty{
+          text-align:center;
+          padding:22px 8px;
+          color:#666;
+          border:1px solid #d6d6d6;
+        }
+        .item-strong{ font-weight:800; }
+        .total-blue{ color:#1d4ed8; font-weight:900; }
+
+        .w-sl{ width: 36px; }
+        .w-code{ width: 90px; }
+        .w-item{ width: 240px; }
+        .w-variant{ width: 170px; }
+        .w-brand{ width: 80px; }
+        .w-qty{ width: 55px; }
+        .w-unit{ width: 80px; }
+        .w-add{ width: 70px; }
+        .w-total{ width: 90px; }
+
+        .table-summary-row td{
+          border-top:1px solid #cfcfcf;
+          border-bottom:1px solid #cfcfcf;
+          padding:8px 6px;
+          background:#fbfbfb;
+        }
+        .bold{ font-weight:900; }
+
+        .summary-grid{
+          display:grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+          margin-top: 12px;
+        }
+        .sum-box{
+          border:1px solid #dedede;
+          padding:10px 12px;
+          font-size:12px;
+          background:#fff;
+          border-radius:6px;
+        }
+        .sum-row{
+          display:flex;
+          justify-content:space-between;
+          padding:4px 0;
+        }
+
+        .status-pill{
+          padding:4px 10px;
+          border-radius:4px;
+          font-weight:900;
+          font-size:12px;
+          border:1px solid #ddd;
+        }
+        .status-pill.unpaid{ color:#b91c1c; border-color:#fecaca; background:#fff5f5; }
+        .status-pill.paid{ color:#166534; border-color:#bbf7d0; background:#f0fdf4; }
+        .status-pill.partial{ color:#92400e; border-color:#fde68a; background:#fffbeb; }
+
+        .sign-grid{
+          display:grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 14px;
+          margin-top: 18px;
+          font-size:12px;
+        }
+        .sign{ text-align:center; color:#333; }
+        .sign-line{
+          border-top:1px solid #9a9a9a;
+          margin: 18px 10px 8px 10px;
+        }
+        .sign-title{ font-weight:800; }
+        .sign-sub{ font-size:11px; color:#666; margin-top:2px; }
+        .rightText{ text-align:right; }
+        .rightText .sign-line{ margin-left:auto; margin-right:0; width: 80%; }
+
+        .bottom-note{
+          margin-top:10px;
+          font-size:11px;
+          color:#444;
+          display:flex;
+          justify-content:space-between;
+          gap:10px;
+          flex-wrap:wrap;
+        }
+
+        @media (max-width: 860px){
+          .company-title{ font-size:22px; }
+          .header-right{ width: 220px; }
+          .info-grid{ grid-template-columns:1fr; }
+          .sign-grid{ grid-template-columns: repeat(2, 1fr); }
         }
       `}</style>
 
-      {/* Header Actions */}
-      <div className="p-5 border-b border-gray-200 no-print">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      {/* ACTIONS */}
+      <div className="mb-4 bg-white p-4 rounded-lg shadow-sm no-print">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Link href={route("sales.index")} className="btn btn-ghost btn-sm btn-circle">
-                <ArrowLeft size={16} />
-              </Link>
-              <h1 className="text-2xl font-bold text-gray-900">Sale Invoice (Pad)</h1>
-            </div>
-            <p className="text-gray-600">
-              Invoice #:{" "}
-              <span className="font-mono font-semibold">{toBanglaDigit(memoNo)}</span>
+            <h1 className="text-xl font-bold text-gray-800">Sale Invoice</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Bill: <span className="font-semibold">{billNo}</span> • Date:{" "}
+              <span className="font-semibold">{invoiceDate}</span>
+              {isShadowUser && (
+                <span className="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">
+                  Shadow
+                </span>
+              )}
             </p>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => router.visit(route("sales.index"))}
+              className="btn btn-sm btn-ghost border border-gray-300"
+            >
+              <ArrowLeft size={15} className="mr-1" />
+              Back
+            </button>
+
             <button
               onClick={handlePrint}
-              className="btn text-white btn-sm"
-              style={{ background: MB_GRADIENT }}
-              disabled={isPrinting}
+              className="btn btn-sm text-white bg-gray-900"
+              // disabled={isPrinting}
             >
-              <Printer size={16} />
+              <Printer size={15} className="mr-1" />
               Print
               {isPrinting && <span className="loading loading-spinner loading-xs ml-2"></span>}
             </button>
 
             <button
-              onClick={handleDownload}
-              className="btn btn-outline btn-sm"
+              onClick={handleDownloadPDF}
+              className="btn btn-sm text-white bg-gray-900"
               disabled={isPrinting}
             >
-              <Download size={16} />
-              Download PDF
+              <Download size={15} className="mr-1" />
+              PDF
               {isPrinting && <span className="loading loading-spinner loading-xs ml-2"></span>}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Screen Preview */}
-      <div className="p-5 bg-gray-50 no-print">
-        <div className="mx-auto max-w-[860px] bg-white">
-          <InvoicePad />
-        </div>
+      {/* SCREEN PREVIEW */}
+      <div className="no-print">
+        <Invoice />
       </div>
 
       {/* ✅ PRINT ONLY */}
-      <div id="printPad">
-        <div className="mx-auto max-w-[860px] bg-white">
-          <InvoicePad isPrint />
-        </div>
+      <div id="printArea">
+        <Invoice />
       </div>
     </div>
   );
