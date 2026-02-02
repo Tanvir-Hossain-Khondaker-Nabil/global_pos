@@ -22,7 +22,6 @@ import {
   HelpCircle,
   Search,
   Menu,
-  ChevronRight,
   ArrowRightLeft,
   BadgeCent,
   BaggageClaim,
@@ -54,18 +53,17 @@ import { useTranslation } from "../hooks/useTranslation";
 
 /** ---------------------------
  * ✅ MENU (permission based)
- * permission = Spatie permission name (middleware permission:)
  * --------------------------- */
 
-// Outlet লগইন না করা অবস্থার মেনু
-const outletOverviewMenu = [
+// Outlet লগইন না করা অবস্থার বেস মেনু
+const outletOverviewMenuBase = [
   {
     title: "Dashboard",
     icon: "home",
     route: "home",
     active: "home",
     category: "Main",
-    permission: "dashboard.view"
+    permission: "dashboard.view",
   },
   {
     title: "Outlet Management",
@@ -74,11 +72,31 @@ const outletOverviewMenu = [
     routeParams: null,
     active: "outlets.index",
     category: "Outlets",
-    permission: "outlets.view"
+    permission: "outlets.view",
   },
 ];
 
-// Outlet লগইন করা অবস্থার মেনু
+// Overview mode এ (outlet login নাই) Owner/Admin দের জন্য Investments দেখাতে চাইলে
+const investmentsOverviewMenu = [
+  { title: "Investors", icon: "users", route: "investors.index", active: "investors.index", category: "Investments", permission: "investors.view" },
+  { title: "Add Investor", icon: "user-plus", route: "investors.create", active: "investors.create", category: "Investments", permission: "investors.create" },
+  { title: "Investments", icon: "wallet-minimal", route: "investments.index", active: "investments.index", category: "Investments", permission: "investments.view" },
+  { title: "Add Investment", icon: "wallet-minimal", route: "investments.create", active: "investments.create", category: "Investments", permission: "investments.create" },
+  { title: "Investment Returns", icon: "dollar-sign", route: "investmentReturns.index", active: "investmentReturns.index", category: "Investments", permission: "investments.returns.view" },
+];
+
+// ✅ Overview mode এ User/Role দেখাতে চাইলে
+const adminOverviewMenu = [
+  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
+];
+
+// ✅ Overview mode এ Outlet মেনু (Outlet/Outlet Management) দেখাতে চাইলে
+const outletsOverviewExtraMenu = [
+  { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
+];
+
+// Outlet লগইন করা অবস্থার ফুল মেনু
 const outletLoggedInMenu = [
   // Dashboard
   { title: "Dashboard", icon: "home", route: "home", active: "home", category: "Main", permission: "dashboard.view" },
@@ -93,15 +111,7 @@ const outletLoggedInMenu = [
 
   // Purchase
   { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
-  {
-    title: "Local Purchase",
-    icon: "receipt",
-    route: "purchase.list_index",
-    routeParams: null,
-    active: "purchase.list_index",
-    category: "Purchase",
-    permission: "purchase.view",
-  },
+  { title: "Local Purchase", icon: "receipt", route: "purchase.list_index", routeParams: null, active: "purchase.list_index", category: "Purchase", permission: "purchase.view" },
   { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
   { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.view" },
 
@@ -118,7 +128,7 @@ const outletLoggedInMenu = [
   { title: "Categories", icon: "box", route: "category.view", active: "category.view", category: "Inventory", permission: "category.view" },
   { title: "Brands", icon: "box", route: "brands.index", active: "brands.index", category: "Inventory", permission: "brands.view" },
 
-  // Investments - নতুন ক্যাটেগরি
+  // Investments (⚠️ outlet user হলে outlet login অবস্থায় এটাকে আমরা runtime এ hide করবো)
   { title: "Investors", icon: "users", route: "investors.index", active: "investors.index", category: "Investments", permission: "investors.view" },
   { title: "Add Investor", icon: "user-plus", route: "investors.create", active: "investors.create", category: "Investments", permission: "investors.create" },
   { title: "Investments", icon: "wallet-minimal", route: "investments.index", active: "investments.index", category: "Investments", permission: "investments.view" },
@@ -145,10 +155,6 @@ const outletLoggedInMenu = [
   { title: "Customer", icon: "user-plus", route: "customer.index", active: "customer.index", category: "CRM", permission: "customer.view" },
   { title: "Companies", icon: "user-plus", route: "companies.index", active: "companies.index", category: "CRM", permission: "companies.view" },
 
-  // Admin
-  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
-  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
-
   // HR
   { title: "Employees", icon: "users", route: "employees.index", active: "employees.index", category: "HR", permission: "employees.view" },
   { title: "Attendance", icon: "calendar", route: "attendance.index", active: "attendance.index", category: "HR", permission: "attendance.view" },
@@ -158,8 +164,8 @@ const outletLoggedInMenu = [
   { title: "Bonus", icon: "gift", route: "bonus.index", active: "bonus.index", category: "HR", permission: "bonus.view" },
   { title: "SMS", icon: "gift", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms.view" },
 
-  // Outlets
-  { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
+  // ❌ IMPORTANT: Outlet login থাকা অবস্থায় Admin/Outlets মেনু দেখাবেন না
+  // তাই এগুলো এখানে রাখার দরকার নেই (বা থাকলেও runtime এ hide হবে)
 ];
 
 const iconComponents = {
@@ -219,7 +225,10 @@ export default function Sidebar({ status, setStatus }) {
   // ✅ backend থেকে share করুন: auth.user.permissions = ['sales.view', ...]
   const permissions = auth?.user?.permissions || [];
   const isSuperAdmin = !!auth?.user?.is_super_admin;
-  const isLoggedIntoOutlet = auth?.user?.is_logged_into_outlet;
+  const isLoggedIntoOutlet = !!auth?.user?.is_logged_into_outlet;
+
+  // ✅ outlet user detect: outlet_id থাকলে outlet user
+  const isOutletUser = !!auth?.user?.outlet_id;
 
   const can = (perm) => {
     if (!perm) return true;
@@ -232,9 +241,8 @@ export default function Sidebar({ status, setStatus }) {
     return <IconComponent size={18} />;
   };
 
-  const toggleMenu = (menuId) => setOpenMenus((p) => ({ ...p, [menuId]: !p[menuId] }));
-
-  const hasActiveChild = (item) => (item.children ? item.children.some((c) => currentRoute === c.active) : false);
+  const toggleMenu = (menuId) =>
+    setOpenMenus((p) => ({ ...p, [menuId]: !p[menuId] }));
 
   const getTranslatedTitle = (englishTitle) => {
     const translationMap = {
@@ -268,9 +276,9 @@ export default function Sidebar({ status, setStatus }) {
       Brands: t("auth.brands", "Brands"),
 
       // Investments
-      "Investors": t("auth.investors", "Investors"),
+      Investors: t("auth.investors", "Investors"),
       "Add Investor": t("auth.add_investor", "Add Investor"),
-      "Investments": t("auth.investments", "Investments"),
+      Investments: t("auth.investments", "Investments"),
       "Add Investment": t("auth.add_investment", "Add Investment"),
       "Investment Returns": t("auth.investment_returns", "Investment Returns"),
 
@@ -311,18 +319,18 @@ export default function Sidebar({ status, setStatus }) {
       Outlet: t("auth.outlet", "Outlet"),
 
       // Categories
-      "Main": t("auth.category_main", "Main"),
-      "Sales": t("auth.category_sales", "Sales"),
-      "Purchase": t("auth.category_purchase", "Purchase"),
-      "Inventory": t("auth.category_inventory", "Inventory"),
-      "Investments": t("auth.category_investments", "Investments"),
-      "Finance": t("auth.category_finance", "Finance"),
-      "Subscriptions": t("auth.category_subscriptions", "Subscriptions"),
-      "Partners": t("auth.category_partners", "Partners"),
-      "CRM": t("auth.category_crm", "CRM"),
-      "Admin": t("auth.category_admin", "Admin"),
-      "HR": t("auth.category_hr", "HR"),
-      "Outlets": t("auth.category_outlets", "Outlets"),
+      Main: t("auth.category_main", "Main"),
+      Sales: t("auth.category_sales", "Sales"),
+      Purchase: t("auth.category_purchase", "Purchase"),
+      Inventory: t("auth.category_inventory", "Inventory"),
+      Investments: t("auth.category_investments", "Investments"),
+      Finance: t("auth.category_finance", "Finance"),
+      Subscriptions: t("auth.category_subscriptions", "Subscriptions"),
+      Partners: t("auth.category_partners", "Partners"),
+      CRM: t("auth.category_crm", "CRM"),
+      Admin: t("auth.category_admin", "Admin"),
+      HR: t("auth.category_hr", "HR"),
+      Outlets: t("auth.category_outlets", "Outlets"),
     };
 
     return translationMap[englishTitle] || englishTitle;
@@ -337,18 +345,6 @@ export default function Sidebar({ status, setStatus }) {
     }
   };
 
-  const groupMenuByCategory = (menuItems) => {
-    const categories = {};
-    menuItems.forEach((item) => {
-      if (!can(item.permission)) return;
-
-      const category = item.category || "General";
-      categories[category] ||= [];
-      categories[category].push(item);
-    });
-    return categories;
-  };
-
   const filterMenuItems = (items) => {
     if (!searchQuery) return items;
     const q = searchQuery.toLowerCase();
@@ -358,11 +354,38 @@ export default function Sidebar({ status, setStatus }) {
       const matchesTitle = title.includes(q);
 
       const matchesChildren = item.children
-        ? item.children.some((child) => getTranslatedTitle(child.title).toLowerCase().includes(q))
+        ? item.children.some((child) =>
+            getTranslatedTitle(child.title).toLowerCase().includes(q)
+          )
         : false;
 
       return matchesTitle || matchesChildren;
     });
+  };
+
+  const groupMenuByCategory = (menuItems) => {
+    const categories = {};
+    menuItems.forEach((item) => {
+      // ✅ Permission gate
+      if (!can(item.permission)) return;
+
+      /**
+       * ✅ আপনার নতুন রিকোয়ারমেন্ট:
+       * Outlet login অবস্থায় => Users/Roles/Outlets menu দেখাবেন না
+       */
+      if (isLoggedIntoOutlet && (item.category === "Admin" || item.category === "Outlets")) return;
+
+      /**
+       * ✅ আগের রিকোয়ারমেন্ট:
+       * Outlet user + outlet login => Investments লুকিয়ে ফেলুন
+       */
+      if (isOutletUser && isLoggedIntoOutlet && item.category === "Investments") return;
+
+      const category = item.category || "General";
+      categories[category] ||= [];
+      categories[category].push(item);
+    });
+    return categories;
   };
 
   useEffect(() => {
@@ -375,11 +398,32 @@ export default function Sidebar({ status, setStatus }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [status, setStatus]);
 
-  // menuToShow ডিসিশন
-  const menuToShow = isLoggedIntoOutlet ? outletLoggedInMenu : outletOverviewMenu;
+  /**
+   * ✅ menuToShow ডিসিশন:
+   * - outlet login থাকলে => outletLoggedInMenu
+   * - outlet login না থাকলে => overview menu
+   *   - কিন্তু user এর outlet_id না থাকলে (Owner/Admin) =>
+   *     overview তে Investments + Admin + Outlets দেখাবেন
+   */
+  const menuToShow = useMemo(() => {
+    if (isLoggedIntoOutlet) return outletLoggedInMenu;
+
+    // Overview mode
+    const base = [...outletOverviewMenuBase];
+
+    // ✅ outlet_id না থাকলে overview এ Investments + Admin + Outlets দেখান
+    if (!isOutletUser) {
+      base.push(...investmentsOverviewMenu);
+      base.push(...adminOverviewMenu);
+      base.push(...outletsOverviewExtraMenu);
+    }
+
+    return base;
+  }, [isLoggedIntoOutlet, isOutletUser]);
 
   const menuCategories = useMemo(() => {
     const grouped = groupMenuByCategory(menuToShow);
+
     // search filter apply per category
     const out = {};
     Object.entries(grouped).forEach(([cat, items]) => {
@@ -387,7 +431,7 @@ export default function Sidebar({ status, setStatus }) {
       if (filtered.length) out[cat] = filtered;
     });
     return out;
-  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet]); // eslint-disable-line
+  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet, isOutletUser]); // eslint-disable-line
 
   return (
     <>
@@ -401,8 +445,9 @@ export default function Sidebar({ status, setStatus }) {
       <aside
         ref={sidebarRef}
         id="sidebar"
-        className={`w-72 fixed h-full z-50 transition-all duration-300 ${status ? "translate-x-0 shadow-2xl" : "-translate-x-full"
-          } lg:translate-x-0 lg:shadow-xl`}
+        className={`w-72 fixed h-full z-50 transition-all duration-300 ${
+          status ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+        } lg:translate-x-0 lg:shadow-xl`}
         style={{ background: "linear-gradient(180deg, #0f2d1a 0%, #1e4d2b 100%)" }}
       >
         <div className="p-6 h-full flex flex-col">
@@ -437,7 +482,9 @@ export default function Sidebar({ status, setStatus }) {
                     {locale === "bn" ? "আউটলেট ওভারভিউ" : "Outlet Overview"}
                   </p>
                   <p className="text-white/70 text-xs">
-                    {locale === "bn" ? "সম্পূর্ণ ফিচার এক্সেস করতে আউটলেটে লগইন করুন" : "Login to an outlet to access all features"}
+                    {locale === "bn"
+                      ? "সম্পূর্ণ ফিচার এক্সেস করতে আউটলেটে লগইন করুন"
+                      : "Login to an outlet to access all features"}
                   </p>
                 </div>
               </div>
@@ -487,26 +534,34 @@ export default function Sidebar({ status, setStatus }) {
 
                 <div className="space-y-1">
                   {items.map((item, index) => {
-                    const isActive = currentRoute === item.active || (item.children ? item.children.some((c) => currentRoute === c.active) : false);
+                    const isActive =
+                      currentRoute === item.active ||
+                      (item.children ? item.children.some((c) => currentRoute === c.active) : false);
+
                     const translatedTitle = getTranslatedTitle(item.title);
 
                     return (
                       <div key={`${category}-${index}`} className="relative group">
                         <div
-                          className={`relative rounded-xl transition-all duration-200 ${isActive
-                            ? "bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm border border-white/10"
-                            : "hover:bg-white/5"
-                            }`}
+                          className={`relative rounded-xl transition-all duration-200 ${
+                            isActive
+                              ? "bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm border border-white/10"
+                              : "hover:bg-white/5"
+                          }`}
                         >
                           <Link
-                            href={getRouteUrl(item)}
+                            href={item.route ? getRouteUrl(item) : "#"}
                             className="flex items-center gap-3 px-4 py-3 group"
                             onClick={() => setStatus(false)}
                           >
                             <span className={`${isActive ? "text-white" : "text-white/70 group-hover:text-white"}`}>
                               {getIconComponent(item.icon || "dashboard")}
                             </span>
-                            <span className={`font-medium ${locale === "bn" ? "text-sm leading-relaxed" : ""} ${isActive ? "text-white" : "text-white/90 group-hover:text-white"}`}>
+                            <span
+                              className={`font-medium ${
+                                locale === "bn" ? "text-sm leading-relaxed" : ""
+                              } ${isActive ? "text-white" : "text-white/90 group-hover:text-white"}`}
+                            >
                               {translatedTitle}
                             </span>
                           </Link>
@@ -525,7 +580,9 @@ export default function Sidebar({ status, setStatus }) {
                   {locale === "bn" ? "শুধুমাত্র আউটলেট ওভারভিউ" : "Outlet Overview Only"}
                 </p>
                 <p className="text-white/60 text-xs">
-                  {locale === "bn" ? "সম্পূর্ণ মেনু দেখতে আউটলেটে লগইন করুন" : "Login to an outlet to see full menu"}
+                  {locale === "bn"
+                    ? "সম্পূর্ণ মেনু দেখতে আউটলেটে লগইন করুন"
+                    : "Login to an outlet to see full menu"}
                 </p>
               </div>
             )}
@@ -572,20 +629,6 @@ export default function Sidebar({ status, setStatus }) {
               </div>
             </div>
           )}
-
-          {/* Logout */}
-          {/* <div className="mt-auto pt-6 border-t border-white/10">
-            <Link
-              href={route("logout")}
-              onClick={(e) => {
-                if (!confirm(locale === "bn" ? "আপনি কি লগআউট করতে চান?" : "Are you sure you want to logout?")) e.preventDefault();
-              }}
-              className="w-full bg-gradient-to-r from-red-500/20 to-red-600/10 hover:from-red-500/30 hover:to-red-600/20 border border-red-500/20 rounded-xl px-4 py-3 transition-all duration-200 flex items-center justify-center gap-2 text-white text-sm font-semibold group"
-            >
-              <LogOut size={16} className="group-hover:rotate-180 transition-transform duration-300" />
-              <span>{locale === "bn" ? "লগআউট" : "LOGOUT"}</span>
-            </Link>
-          </div> */}
         </div>
       </aside>
 

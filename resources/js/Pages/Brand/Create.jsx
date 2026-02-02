@@ -243,57 +243,6 @@ export default function Create() {
                         </div>
                     </div>
 
-                    {/* Preview Card */}
-                    <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className=" px-6 py-4"
-                            style={{
-                                background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
-                            }}
-                        >
-                            <div className="flex items-center gap-3">
-                                <Image className="text-white" size={24} />
-                                <h2 className="text-xl font-semibold text-white">
-                                    {t('brand.preview', 'Brand Preview')}
-                                </h2>
-                            </div>
-                        </div>
-                        <div className="p-6">
-                            <div className="flex items-start gap-6 p-4 bg-gray-50 rounded-xl">
-                                <div className="w-24 h-24 flex-shrink-0 border border-gray-200 rounded-lg bg-white flex items-center justify-center overflow-hidden">
-                                    {logoPreview ? (
-                                        <img
-                                            src={logoPreview}
-                                            alt="Brand logo preview"
-                                            className="w-full h-full object-contain p-2"
-                                        />
-                                    ) : (
-                                        <div className="text-gray-400">
-                                            <Image size={32} />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="text-xl font-bold text-gray-800 mb-2">
-                                        {data.name || t('brand.preview_name', 'Brand Name')}
-                                    </h3>
-                                    {data.slug && (
-                                        <p className="text-sm text-gray-600 mb-3">
-                                            <span className="font-medium">URL:</span> /brands/{data.slug}
-                                        </p>
-                                    )}
-                                    {data.description ? (
-                                        <p className="text-gray-700">{data.description}</p>
-                                    ) : (
-                                        <p className="text-gray-500 italic">
-                                            {t('brand.preview_description', 'Brand description will appear here...')}
-                                        </p>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-
                     {/* Submit Button */}
                     <div className="flex justify-end gap-4">
                         <button

@@ -133,9 +133,9 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products = Product::latest()
-            ->with(['category', 'brand', 'variants.stock'])
-            ->filter($request->only('search'))
-            ->paginate(10);
+    ->with(['category', 'brand', 'variants', 'variants.stocks']) // ✅ stocks (many)
+    ->filter($request->only('search'))
+    ->paginate(10);
 
         // Calculate stock for each product
         $products->getCollection()->transform(function ($product) {
