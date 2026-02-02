@@ -10,14 +10,15 @@ use Illuminate\Console\Command;
 class InstallmentCommand extends Command
 {
     protected $signature = 'installments:due-notification';
-
     protected $description = 'Send notification before installment due date';
+    
 
     public function handle()
     {
         $today = Carbon::today();
-        
-        $installments = Installment::where('status', 'due')
+
+        $installments = Installment::with(['sale', 'purchase'])
+            ->where('status', 'pending')
             ->whereIn('due_date', [
                 $today,
                 $today->copy()->addDay(),
@@ -44,6 +45,9 @@ class InstallmentCommand extends Command
                                     ' amount ৳' . $installment->amount .
                                     ' is due on ' . $installment->due_date,
                 'notify_date'    => $installment->due_date,
+                'outlet_id'      => $installment->sale->outlet_id ?? $installment->purchase->outlet_id,
+                'created_by'     => $installment->sale->created_by ?? $installment->purchase->created_by,
+                'owner_id'      => $installment->sale->owner_id ?? $installment->purchase->owner_id
             ]);
         }
 
