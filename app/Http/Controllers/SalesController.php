@@ -380,12 +380,10 @@ class SalesController extends Controller
             }
 
 
-
             //  Inventory must have a customer
             if ($type === 'inventory' && !$customerId) {
                 throw new \Exception('Customer is required for inventory sale.');
             }
-
 
 
             if ($adjust_amount === true && $customerId) {
