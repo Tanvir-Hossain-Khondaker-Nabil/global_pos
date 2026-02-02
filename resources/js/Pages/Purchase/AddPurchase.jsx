@@ -24,6 +24,7 @@ import {
   Landmark,
   Smartphone,
   Ruler,
+  Truck,
 } from "lucide-react";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -54,6 +55,11 @@ export default function AddPurchase({
   const [showDropdown, setShowDropdown] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState(null);
   const [brands, setBrands] = useState([]);
+  const [transportationCost, setTransportationCost] = useState(0);
+
+  // Installment payment state
+  const [installmentDuration, setInstallmentDuration] = useState(0);
+  const [totalInstallments, setTotalInstallments] = useState(0);
 
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
@@ -118,13 +124,20 @@ export default function AddPurchase({
     }
   };
 
-  // Calculate total amount
+  // Calculate total amount including transportation cost
   const calculateTotal = useCallback(() => {
-    return selectedItems.reduce(
+    const itemsTotal = selectedItems.reduce(
       (total, item) => total + (item.total_price || 0),
       0
     );
-  }, [selectedItems]);
+    const itemTransportationCost = selectedItems.reduce(
+      (total, item) => total + (parseFloat(item.transportation_cost) || 0),
+      0
+    );
+    const overallTransportationCost = parseFloat(transportationCost) || 0;
+
+    return itemsTotal + itemTransportationCost + overallTransportationCost;
+  }, [selectedItems, transportationCost]);
 
   const getDueAmount = useCallback(() => {
     const totalAmount = calculateTotal();
@@ -164,6 +177,9 @@ export default function AddPurchase({
     account_id: "",
     payment_method: "cash",
     txn_ref: "",
+    installment_duration: 0,
+    total_installments: 0,
+    transportation_cost: 0,
   });
 
   useEffect(() => {
@@ -176,6 +192,7 @@ export default function AddPurchase({
       unit_price: item.unit_price,
       total_price: item.total_price,
       sale_price: item.sale_price,
+      transportation_cost: item.transportation_cost || 0
     }));
 
     form.setData("items", itemsWithUnits);
@@ -189,6 +206,9 @@ export default function AddPurchase({
       use_partial_payment: usePartialPayment,
       adjust_from_advance: adjustFromAdvance,
       manual_payment_override: manualPaymentOverride,
+      installment_duration: installmentDuration,
+      total_installments: totalInstallments,
+      transportation_cost: transportationCost,
     };
 
     if (isShadowUser) {
@@ -205,6 +225,7 @@ export default function AddPurchase({
     adjustFromAdvance,
     manualPaymentOverride,
     isShadowUser,
+    transportationCost,
   ]);
 
   const handleSupplierChange = (e) => {
@@ -305,13 +326,15 @@ export default function AddPurchase({
     const totalAmount = calculateTotal();
     setPaidAmount(value);
     if (value === 0) {
-      setPaymentStatus("unpaid");
       form.setData("account_id", "");
-    } else if (value >= totalAmount) {
-      setPaymentStatus("paid");
-    } else {
-      setPaymentStatus("partial");
     }
+  };
+
+  // Handle transportation cost change
+  const handleTransportationCostChange = (e) => {
+    const value = parseFloat(e.target.value) || 0;
+    setTransportationCost(value);
+    form.setData("transportation_cost", value);
   };
 
   // Filter products logic
@@ -504,6 +527,7 @@ export default function AddPurchase({
           unit: defaultUnit,
           unit_price: unitCost,
           sale_price: salePrice,
+          transportation_cost: 0,
           total_price: unitCost * 1,
           // Store all attributes for reference
           attributes: variant.attribute_values || {},
@@ -583,6 +607,9 @@ export default function AddPurchase({
     } else if (field === "sale_price") {
       const numericValue = parseFloat(value) || 0;
       updated[index][field] = numericValue;
+    } else if (field === "transportation_cost") {
+      const numericValue = parseFloat(value) || 0;
+      updated[index][field] = numericValue;
     } else {
       const numericValue = parseFloat(value) || 0;
       updated[index][field] = numericValue;
@@ -594,19 +621,32 @@ export default function AddPurchase({
   const handlePaymentStatusChange = (status) => {
     setPaymentStatus(status);
     const totalAmount = calculateTotal();
+    setManualPaymentOverride(false);
+    setAdjustFromAdvance(false);
+    setTotalInstallments(0);
+    setInstallmentDuration(0);
 
-    if (status == "paid") {
-      setPaidAmount(totalAmount);
-      setManualPaymentOverride(false);
-      setAdjustFromAdvance(false);
-    } else if (status == "unpaid") {
-      setPaidAmount(0);
-      setManualPaymentOverride(false);
-      setAdjustFromAdvance(false);
-      form.setData("account_id", "");
-    } else if (status == "partial") {
-      setManualPaymentOverride(true);
-      setAdjustFromAdvance(false);
+    switch (status) {
+      case "paid":
+        setPaidAmount(totalAmount);
+        break;
+
+      case "unpaid":
+        setPaidAmount(0);
+        form.setData("account_id", "");
+        break;
+
+      case "partial":
+        setPaidAmount(totalAmount / 2);
+        setManualPaymentOverride(true);
+        break;
+
+      case "installment":
+        setPaidAmount(totalAmount / 3);
+        setManualPaymentOverride(true);
+        setTotalInstallments(3);
+        setInstallmentDuration(3);
+        break;
     }
   };
 
@@ -617,78 +657,79 @@ export default function AddPurchase({
     setShowDropdown(false);
   };
 
+  const handleTotalInstallmentsInput = (e) => {
+    const value = parseInt(e.target.value) || 0;
+    setTotalInstallments(value);
+    form.setData("total_installments", value);
+  };
+
+  const handleInstallmentDurationInput = (e) => {
+    const value = parseInt(e.target.value) || 0;
+    setInstallmentDuration(value);
+    form.setData("installment_duration", value);
+  };
+
   const submit = (e) => {
-    console.log("Submitting purchase:", paidAmount);
     e.preventDefault();
+    console.log("Submitting purchase:", paidAmount);
 
-    // Validation
-    if (selectedItems.length === 0) {
-      alert(
-        t("purchase.no_items_selected", "Please add at least one item")
-      );
-      return;
+    const fail = (msg) => {
+      alert(msg);
+      return true;
+    };
+
+    // Basic validation
+    if (selectedItems.length === 0)
+      return fail(t("purchase.no_items_selected", "Please add at least one item"));
+
+    if (!form.data.supplier_id)
+      return fail(t("purchase.no_supplier_selected", "Please select a supplier"));
+
+    if (!form.data.warehouse_id)
+      return fail(t("purchase.no_warehouse_selected", "Please select a warehouse"));
+
+    // Installment validation
+    if (
+      paymentStatus === "installment" &&
+      (!totalInstallments || totalInstallments <= 0 ||
+        !installmentDuration || installmentDuration <= 0)
+    ) {
+      return fail("Please enter valid installment details");
     }
 
-    if (!form.data.supplier_id) {
-      alert(
-        t("purchase.no_supplier_selected", "Please select a supplier")
-      );
-      return;
-    }
-
-    if (!form.data.warehouse_id) {
-      alert(
-        t("purchase.no_warehouse_selected", "Please select a warehouse")
-      );
-      return;
-    }
-
+    // Item & account validation (non-shadow users)
     if (!isShadowUser) {
       for (const item of selectedItems) {
-        if (item.unit_price <= 0) {
-          alert(`Item "${item.product_name}" has invalid unit price`);
-          return;
-        }
-        if (item.sale_price <= 0) {
-          alert(`Item "${item.product_name}" has invalid sale price`);
-          return;
-        }
+        if (item.unit_price <= 0)
+          return fail(`Item "${item.product_name}" has invalid unit price`);
 
-        // Validate unit quantity
-        if (item.unit_quantity <= 0) {
-          alert(`Item "${item.product_name}" has invalid quantity`);
-          return;
-        }
+        if (item.sale_price <= 0)
+          return fail(`Item "${item.product_name}" has invalid sale price`);
+
+        if (item.unit_quantity <= 0)
+          return fail(`Item "${item.product_name}" has invalid quantity`);
       }
 
-      // Account validation for paid purchases
-      if (paidAmount > 0 && !selectedAccount) {
-        alert("Please select a payment account for the payment");
-        return;
-      }
+      if (paidAmount > 0 && !selectedAccount)
+        return fail("Please select a payment account for the payment");
 
-      // Check account balance if account is selected and payment is being made
       if (form.data.account_id && paidAmount > 0) {
-        const selectedAccount = accounts.find(
+        const account = accounts.find(
           (acc) => acc.id == form.data.account_id
         );
-        if (selectedAccount) {
-          if (selectedAccount.current_balance < paidAmount) {
-            alert(
-              `Insufficient balance in ${selectedAccount.name
-              }. Available: ৳${formatCurrency(
-                selectedAccount.current_balance
-              )} . 
-                        Deposit more funds to this account before proceeding.`
-            );
-            return;
-          }
+
+        if (account && account.current_balance < paidAmount) {
+          return fail(
+            `Insufficient balance in ${account.name}. Available: ৳${formatCurrency(
+              account.current_balance
+            )}`
+          );
         }
       }
     }
 
-    // Prepare items with proper structure
-    const itemsToSubmit = selectedItems.map((item) => ({
+    // Prepare items
+    const items = selectedItems.map((item) => ({
       product_id: item.product_id,
       variant_id: item.variant_id,
       unit: item.unit || "piece",
@@ -697,29 +738,26 @@ export default function AddPurchase({
       unit_price: item.unit_price,
       sale_price: item.sale_price,
       total_price: item.total_price,
+      transportation_cost: item.transportation_cost || 0,
       attributes: item.attributes || {},
     }));
 
-    const submitData = {
-      ...form.data,
-      items: itemsToSubmit,
-      paid_amount: paidAmount,
-      payment_status: paymentStatus,
-    };
-
+    // Submit
     form.post(route("purchase.store"), {
-      data: submitData,
-      preserveScroll: true,
-      onSuccess: () => {
-        router.visit(route("purchase.list"));
+      data: {
+        ...form.data,
+        items,
+        paid_amount: paidAmount,
+        payment_status: paymentStatus,
       },
+      preserveScroll: true,
+      onSuccess: () => router.visit(route("purchase.list")),
       onError: (errors) => {
-        const message =
+        alert(
           errors.error ||
           errors.advance_adjustment ||
-          "Form submission failed";
-
-        alert(message);
+          "Form submission failed"
+        );
         console.error("Form submission errors:", errors);
       },
     });
@@ -729,6 +767,12 @@ export default function AddPurchase({
   const dueAmount = getDueAmount();
   const advanceUsage = getAdvanceUsage();
   const remainingAdvance = getRemainingAdvance();
+
+  // Calculate item transportation cost total
+  const itemTransportationCostTotal = selectedItems.reduce(
+    (total, item) => total + (parseFloat(item.transportation_cost) || 0),
+    0
+  );
 
   // Get selected account
   const selectedAccount = form.data.account_id
@@ -933,6 +977,28 @@ export default function AddPurchase({
               />
             </div>
 
+            {/* Transportation Cost Input */}
+            <div className="form-control">
+              <label className="label py-1">
+                <span className="label-text font-bold text-gray-600 text-sm flex items-center gap-2">
+                  <Truck size={14} className="text-gray-500" />
+                  {t("purchase.transportation_cost", "Transportation Cost")}
+                </span>
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-3 text-gray-500">৳</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input input-bordered w-full rounded-xl text-sm pl-8"
+                  value={transportationCost}
+                  onChange={handleTransportationCostChange}
+                  placeholder="0.00"
+                />
+              </div>
+            </div>
+
             {/* Payment Info Card */}
             {!isShadowUser && (
               <div className="card card-compact bg-white text-gray-800 border border-gray-200 rounded-lg shadow-sm">
@@ -984,7 +1050,7 @@ export default function AddPurchase({
                       ))}
                     </select>
 
-                    {(paymentStatus === "paid" ||
+                    {(paymentStatus === "paid" || paymentStatus === "installment" ||
                       paymentStatus === "partial") &&
                       !form.data.account_id && (
                         <div className="text-red-500 text-[10px] mt-0.5">
@@ -1006,6 +1072,7 @@ export default function AddPurchase({
                         <option value="unpaid">Unpaid</option>
                         <option value="partial">Partial</option>
                         <option value="paid">Paid</option>
+                        <option value="installment">Installment</option>
                       </select>
                     </div>
 
@@ -1022,6 +1089,49 @@ export default function AddPurchase({
                     </div>
                   </div>
 
+                  {paymentStatus === 'installment' && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                      {/* Total Installments */}
+                      <div className="md:col-span-1">
+                        <div className="form-control">
+                          <label className="label py-0">
+                            <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                              Total Installments *
+                            </span>
+                          </label>
+
+                          <input
+                            type="number"
+                            min="1"
+                            className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                            value={totalInstallments}
+                            onChange={handleTotalInstallmentsInput}
+                            onFocus={(e) => e.target.select()}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Installment Duration */}
+                      <div className="md:col-span-1">
+                        <div className="form-control">
+                          <label className="label py-0">
+                            <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                              Duration (Months) *
+                            </span>
+                          </label>
+
+                          <input
+                            type="number"
+                            min="1"
+                            className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                            value={installmentDuration}
+                            onChange={handleInstallmentDurationInput}
+                            onFocus={(e) => e.target.select()}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-0.5 text-[11px] pt-1 border-t border-gray-200 mt-1 font-semibold uppercase">
                     <div className="flex justify-between">
@@ -1035,7 +1145,6 @@ export default function AddPurchase({
                   </div>
                 </div>
               </div>
-
             )}
 
             {/* Notes */}
@@ -1402,17 +1511,34 @@ export default function AddPurchase({
                               </div>
 
                               {/* Total Price Display */}
-                              <div className="col-span-4 flex items-center justify-between pt-2 border-t border-gray-200">
-                                <span className="text-xs uppercase font-black text-gray-400">
-                                  Total Cost
-                                </span>
+                              <div className="col-span-4 flex items-center justify-end pt-2 border-t border-gray-200">
+                                {/* <div className="form-control flex-1 mr-4">
+                                  <label className="label py-0">
+                                    <span className="label-text text-xs uppercase font-black text-gray-400">
+                                      Transportation Cost
+                                    </span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    className="input input-bordered input-sm w-full font-mono text-xs rounded"
+                                    value={item.transportation_cost || 0}
+                                    onChange={(e) =>
+                                      updateItem(index, "transportation_cost", e.target.value)
+                                    }
+                                  />
+                                </div> */}
 
-                                <span className="font-mono text-sm font-black text-red-600">
-                                  ৳{formatCurrency(item.total_price || 0)}
-                                </span>
+                                <div className="flex flex-col items-end">
+                                  <span className="text-xs uppercase font-black text-gray-400 mb-1">
+                                    Item Total
+                                  </span>
+                                  <span className="font-mono text-sm font-black text-red-600">
+                                    ৳{formatCurrency(item.total_price || 0)}
+                                  </span>
+                                </div>
                               </div>
-
-
                             </div>
                           </div>
                         </div>
@@ -1443,42 +1569,117 @@ export default function AddPurchase({
         {/* Summary Section */}
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="text-center">
-                <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
-                  {t("purchase.gross_total", "Gross Total")}
+            {/* <div className="mb-4 pb-3 border-b border-gray-200">
+              <h4 className="font-bold text-gray-700 text-sm mb-2 flex items-center gap-2">
+                <Info size={14} />
+                Purchase Breakdown
+              </h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
+                    Items Cost
+                  </div>
+                  <div className="text-lg font-black text-gray-900">
+                    ৳{formatCurrency(selectedItems.reduce((total, item) => total + (item.total_price || 0), 0))}
+                  </div>
                 </div>
-                <div className="text-xl font-black text-gray-900">
-                  ৳{formatCurrency(totalAmount)}
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
+                    <Truck size={12} />
+                    Item Transportation
+                  </div>
+                  <div className="text-lg font-black text-gray-900">
+                    ৳{formatCurrency(itemTransportationCostTotal)}
+                  </div>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
+                    <Truck size={12} />
+                    Overall Transportation
+                  </div>
+                  <div className="text-lg font-black text-gray-900">
+                    ৳{formatCurrency(transportationCost)}
+                  </div>
+                </div>
+                <div className="bg-white p-3 rounded-lg border border-gray-200">
+                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
+                    Total Transportation
+                  </div>
+                  <div className="text-lg font-black text-gray-900">
+                    ৳{formatCurrency(itemTransportationCostTotal + parseFloat(transportationCost || 0))}
+                  </div>
                 </div>
               </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
-                  {t("purchase.paid_amount", "Paid Amount")}
-                </div>
-                <div
-                  className={`text-xl font-black ${paidAmount > 0
-                    ? "text-green-600"
-                    : "text-gray-400"
+            </div> */}
+
+            {/* Total Summary */}
+            <div className="col-span-full flex items-center justify-between gap-4 bg-white border border-gray-200 rounded-lg px-4 py-2 text-xs">
+
+              {/* Items Cost */}
+              <div className="flex flex-col">
+                <span className="uppercase font-bold text-gray-400">
+                  Items
+                </span>
+                <span className="font-mono font-black text-gray-800">
+                  ৳{formatCurrency(
+                    selectedItems.reduce(
+                      (total, item) => total + (item.total_price || 0),
+                      0
+                    )
+                  )}
+                </span>
+              </div>
+
+              {/* Gross */}
+              <div className="flex flex-col text-center">
+                <span className="uppercase font-bold text-gray-400">
+                  Gross
+                </span>
+                <span className="font-mono font-black text-gray-900">
+                  ৳{formatCurrency(totalAmount)}
+                </span>
+              </div>
+
+              {/* Transport */}
+              <div className="flex flex-col text-center">
+                <span className="uppercase font-bold text-gray-400">
+                  Transport
+                </span>
+                <span className="font-mono font-black text-gray-800">
+                  ৳{formatCurrency(
+                    itemTransportationCostTotal + Number(transportationCost || 0)
+                  )}
+                </span>
+              </div>
+
+              {/* Paid */}
+              <div className="flex flex-col text-center">
+                <span className="uppercase font-bold text-gray-400">
+                  Paid
+                </span>
+                <span
+                  className={`font-mono font-black ${paidAmount > 0 ? "text-green-600" : "text-gray-400"
                     }`}
                 >
                   ৳{formatCurrency(paidAmount)}
-                </div>
+                </span>
               </div>
-              <div className="text-center">
-                <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
-                  {t("purchase.due_amount", "Due Amount")}
-                </div>
-                <div
-                  className={`text-xl font-black ${dueAmount > 0
-                    ? "text-red-600"
-                    : "text-gray-400"
+
+              {/* Due */}
+              <div className="flex flex-col text-center">
+                <span className="uppercase font-bold text-gray-400">
+                  Due
+                </span>
+                <span
+                  className={`font-mono font-black ${dueAmount > 0 ? "text-red-600" : "text-gray-400"
                     }`}
                 >
                   ৳{formatCurrency(dueAmount)}
-                </div>
+                </span>
               </div>
+
             </div>
+
 
             {/* Account Info Summary */}
             {selectedAccount && (
@@ -1522,7 +1723,8 @@ export default function AddPurchase({
                     : "Purchase Summary"}
                 </h4>
                 <p className="text-xs text-gray-500">
-                  {selectedItems.length} items
+                  {selectedItems.length} items • Transportation: ৳
+                  {formatCurrency(itemTransportationCostTotal + parseFloat(transportationCost || 0))}
                 </p>
               </div>
               {selectedBrand && (

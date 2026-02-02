@@ -154,7 +154,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
       ...prev,
       [field]: value
     }));
-    
+
     // Clear error for this field when user starts typing
     if (paymentErrors[field]) {
       setPaymentErrors(prev => ({
@@ -167,7 +167,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
   // Handle payment submission
   const handlePaymentSubmit = (e) => {
     e.preventDefault();
-    
+
     if (!selectedPurchase) {
       console.error("No purchase selected");
       return;
@@ -180,7 +180,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     }
 
     setProcessingPayment(true);
-    
+
     router.post(
       route("purchase.updatePayment", selectedPurchase.id),
       {
@@ -194,9 +194,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         onSuccess: () => {
           closePaymentModal();
           // Refresh the purchases data
-          router.reload({ 
+          router.reload({
             only: ['purchases'],
-            preserveScroll: true 
+            preserveScroll: true
           });
         },
         onError: (errors) => {
@@ -551,17 +551,34 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                           </span>
                         </div>
 
-                        {hasDueAmount  && (
-                          <div className="mt-2">
-                            <button
-                              onClick={() => openPaymentModal(purchase)}
-                              className="btn btn-xs btn-primary w-full flex items-center justify-center gap-1"
-                            >
-                              <CreditCard size={12} />
-                              Pay Now
-                            </button>
-                          </div>
+                        {hasDueAmount && (
+                          purchase.payment_status == "installment" ? (
+                            <div className="mt-2">
+                              <Link
+                                href={route("installments.show", {
+                                  id: purchase.id,
+                                  type: "purchase",
+                                })}
+                                className="btn btn-xs btn-primary w-full flex items-center justify-center gap-1"
+                              >
+                                <CreditCard size={12} />
+                                View Installments
+                              </Link>
+                            </div>
+
+                          ) : (
+                            <div className="mt-2">
+                              <button
+                                onClick={() => openPaymentModal(purchase)}
+                                className="btn btn-xs btn-primary w-full flex items-center justify-center gap-1"
+                              >
+                                <CreditCard size={12} />
+                                Pay Now
+                              </button>
+                            </div>
+                          )
                         )}
+
                       </div>
                     </td>
                     <td className="text-right">
@@ -591,6 +608,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                         >
                           <Edit size={16} />
                         </Link>
+
+
 
                         {auth?.role === "admin" && (
                           <button

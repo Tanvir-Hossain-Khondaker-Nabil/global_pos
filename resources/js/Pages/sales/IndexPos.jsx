@@ -369,11 +369,10 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                     {sales.data.length > 0 ? (
                         <table className="table table-auto w-full">
                             <thead
-                                className={`${
-                                    isShadowUser
+                                className={`${isShadowUser
                                         ? "bg-warning"
                                         : "bg-[#1e4d2b] text-white"
-                                } text-white`}
+                                    } text-white`}
                             >
                                 <tr>
                                     <th>Invoice No</th>
@@ -428,24 +427,22 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                             Tk
                                         </td>
                                         <td
-                                            className={`font-semibold ${
-                                                sale.due_amount > 0
+                                            className={`font-semibold ${sale.due_amount > 0
                                                     ? "text-error"
                                                     : "text-success"
-                                            }`}
+                                                }`}
                                         >
                                             {formatCurrency(sale.due_amount)} Tk
                                         </td>
                                         <td>
                                             <span
-                                                className={`badge capitalize ${
-                                                    sale.status === "paid"
+                                                className={`badge capitalize ${sale.status === "paid"
                                                         ? "badge-success"
                                                         : sale.status ===
-                                                          "cancelled"
-                                                        ? "badge-error"
-                                                        : "badge-warning"
-                                                }`}
+                                                            "cancelled"
+                                                            ? "badge-error"
+                                                            : "badge-warning"
+                                                    }`}
                                             >
                                                 {sale.status}
                                             </span>
@@ -551,30 +548,39 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     <Printer size={16} />
                                                 </Link> */}
 
-                                                {sale.shadow_type ==
-                                                    "general" && (
+                                                {sale.payment_type == 'installment' && (
                                                     <Link
-                                                        href={route(
-                                                            "sales.destroy",
-                                                            { sale: sale.id }
-                                                        )}
-                                                        method="delete"
-                                                        as="button"
-                                                        onClick={(e) => {
-                                                            if (
-                                                                !confirm(
-                                                                    "Are you sure you want to delete this sale?"
-                                                                )
-                                                            ) {
-                                                                e.preventDefault();
-                                                            }
-                                                        }}
-                                                        className="btn btn-xs btn-error"
+                                                        href={route("installments.show", { id: sale.id })}
+                                                        className="btn btn-xs btn-primary"
                                                     >
-                                                        <Trash2 size={13} />
-                                                        Delete
+                                                        View Installments
                                                     </Link>
                                                 )}
+
+                                                {sale.shadow_type ==
+                                                    "general" && (
+                                                        <Link
+                                                            href={route(
+                                                                "sales.destroy",
+                                                                { sale: sale.id }
+                                                            )}
+                                                            method="delete"
+                                                            as="button"
+                                                            onClick={(e) => {
+                                                                if (
+                                                                    !confirm(
+                                                                        "Are you sure you want to delete this sale?"
+                                                                    )
+                                                                ) {
+                                                                    e.preventDefault();
+                                                                }
+                                                            }}
+                                                            className="btn btn-xs btn-error"
+                                                        >
+                                                            <Trash2 size={13} />
+                                                            Delete
+                                                        </Link>
+                                                    )}
                                             </div>
                                         </td>
                                     </tr>
@@ -695,12 +701,11 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     Due Amount:
                                                 </span>
                                                 <p
-                                                    className={`font-semibold ${
-                                                        selectedSale.due_amount >
-                                                        0
+                                                    className={`font-semibold ${selectedSale.due_amount >
+                                                            0
                                                             ? "text-error"
                                                             : "text-success"
-                                                    }`}
+                                                        }`}
                                                 >
                                                     {formatCurrency(
                                                         selectedSale.due_amount
@@ -1018,14 +1023,14 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                         className={
                                                             selectedSale.due_amount -
                                                                 paymentData.paid_amount >
-                                                            0
+                                                                0
                                                                 ? "text-error"
                                                                 : "text-success"
                                                         }
                                                     >
                                                         {formatCurrency(
                                                             selectedSale.due_amount -
-                                                                paymentData.paid_amount
+                                                            paymentData.paid_amount
                                                         )}{" "}
                                                         Tk
                                                     </span>
@@ -1048,9 +1053,9 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                 disabled={
                                                     processingPayment ||
                                                     paymentData.paid_amount <=
-                                                        0 ||
+                                                    0 ||
                                                     paymentData.paid_amount >
-                                                        selectedSale.due_amount ||
+                                                    selectedSale.due_amount ||
                                                     !paymentData.account_id
                                                 }
                                             >

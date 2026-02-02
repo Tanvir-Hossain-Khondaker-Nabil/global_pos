@@ -462,6 +462,15 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                         Delete
                                                     </button>
                                                 )}
+
+                                                {sale.payment_type == 'installment' && (
+                                                    <Link
+                                                        href={route("installments.show", { id: sale.id })}
+                                                        className="btn btn-xs btn-primary"
+                                                    >
+                                                        View Installments
+                                                    </Link>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

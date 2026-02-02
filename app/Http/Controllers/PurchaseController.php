@@ -13,6 +13,7 @@ use App\Models\Product;
 use App\Models\PurchaseItem;
 use App\Models\Stock;
 use App\Models\Account;
+use App\Models\Installment;
 use App\Models\Warranty;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -196,7 +197,7 @@ class PurchaseController extends Controller
     // Store purchase: barcode ALWAYS created from batch_no
     public function store(PurchaseRequestStore $request)
     {
-        logger()->info('Storing purchase', ['request' => $request->all()]);
+
         $user = Auth::user();
         $isShadowUser = ($user->type === 'shadow');
         $request->validated();
@@ -245,6 +246,8 @@ class PurchaseController extends Controller
                 $totalAmount += $unitQuantity * $unitPrice;
             }
 
+            $totalAmount += (float) ($request->transportation_cost ?? 0);
+
             $paidAmount = (float) ($request->paid_amount ?? 0);
             $dueAmount = $totalAmount - $paidAmount;
 
@@ -260,8 +263,17 @@ class PurchaseController extends Controller
                 'notes' => $request->notes,
                 'status' => 'completed',
                 'created_by' => $user->id,
-                'payment_type' => $payment_type
+                'payment_type' => $payment_type,
+                'transportation_cost' => (float) ($request->transportation_cost ?? 0)
             ]);
+
+            if ($request->payment_status === 'installment') {
+                $installmentDuration = (int) $request->installment_duration;
+                $totalInstallments   = (int) $request->total_installments;
+
+                $this->installmentManage($purchase, $installmentDuration, $totalInstallments);
+            }
+
 
             foreach ($request->items as $item) {
                 $product = Product::find($item['product_id']);
@@ -308,7 +320,6 @@ class PurchaseController extends Controller
                         'terms' => $product->warranty_terms,
                     ]);
                 }
-
 
 
                 // ✅ Batch no
@@ -361,6 +372,44 @@ class PurchaseController extends Controller
             return redirect()->back()->with('error', 'Error creating purchase: ' . $e->getMessage());
         }
     }
+
+
+
+       //installment manage function
+    private function installmentManage($purchase, $installmentDuration, $totalInstallments)
+    {
+        if ($installmentDuration > 0 && $totalInstallments > 0) {
+            $purchase->update([
+                'installment_duration' => $installmentDuration,
+                'total_installments'   => $totalInstallments,
+            ]);
+        }
+
+        $installmentTotal = $purchase->grand_total - $purchase->paid_amount;
+        $perInstallmentAmount = round(
+            $installmentTotal / $totalInstallments,
+            2
+        );
+
+        // months per installment (can be 1.5, 2.5 etc)
+        $monthsPerInstallment = $installmentDuration / $totalInstallments;
+
+        for ($i = 1; $i <= $totalInstallments; $i++) {
+            $daysToAdd = (int) round($monthsPerInstallment * 30 * $i);
+
+            Installment::create([
+                'purchase_id'        => $purchase->id,
+                'installment_no' => $i,
+                'amount'         => $perInstallmentAmount,
+                'due_date'       => Carbon::now()->addDays($daysToAdd),
+                'paid_amount'    => 0,
+                'status'         => 'pending',
+            ]);
+        }
+    }
+
+
+
 
     // ✅ barcode = batch_no + image
     private function generateStockBarcodeFromBatch(Stock $stock)

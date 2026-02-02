@@ -13,14 +13,14 @@ return new class extends Migration
     {
         Schema::create('brands', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->unique();
-            $table->string('slug')->unique();
-            $table->string('logo')->nullable(); // optional
-            $table->text('description')->nullable(); // optional
-             $table->unsignedBigInteger('created_by');
+            $table->string('name')->nullable();
+            $table->string('slug')->nullable();
+            $table->string('logo')->nullable(); 
+            $table->text('description')->nullable(); 
+            $table->unsignedBigInteger('created_by');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('cascade');
             $table->unsignedBigInteger('outlet_id');
-             $table->unsignedBigInteger('owner_id')->nullable();
+            $table->unsignedBigInteger('owner_id')->nullable();
             $table->timestamps();
         });
     }

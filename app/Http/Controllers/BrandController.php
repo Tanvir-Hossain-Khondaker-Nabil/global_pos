@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
+use Illuminate\Validation\Rule;
 
 class BrandController extends Controller
 {
@@ -41,12 +42,28 @@ class BrandController extends Controller
      */
     public function store(Request $request)
     {
+
         $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name',
-            'slug' => 'nullable|string|max:255|unique:brands,slug',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('brands')
+                    ->where('outlet_id', $request->outlet_id)
+                    ->where('owner_id', $request->owner_id),
+            ],
+            'slug' => [
+                'nullable',
+                'string',
+                'max:255',
+                Rule::unique('brands')
+                    ->where('outlet_id', $request->outlet_id)
+                    ->where('owner_id', $request->owner_id),
+            ],
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'description' => 'nullable|string',
         ]);
+
 
         // Generate slug if not provided
         $slug = $request->slug ?? Str::slug($request->name);

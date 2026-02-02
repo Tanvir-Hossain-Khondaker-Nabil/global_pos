@@ -34,7 +34,10 @@ class Purchase extends Model
         'pickup_sale_id',
         'outlet_id',
         'type',
-        'owner_id'
+        'owner_id',
+        'total_installments',
+        'installment_duration',
+        'transportation_cost'
     ];
 
     // protected $casts = [
