@@ -85,6 +85,17 @@ const investmentsOverviewMenu = [
   { title: "Investment Returns", icon: "dollar-sign", route: "investmentReturns.index", active: "investmentReturns.index", category: "Investments", permission: "investments.returns.view" },
 ];
 
+// ✅ Overview mode এ User/Role দেখাতে চাইলে
+const adminOverviewMenu = [
+  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
+];
+
+// ✅ Overview mode এ Outlet মেনু (Outlet/Outlet Management) দেখাতে চাইলে
+const outletsOverviewExtraMenu = [
+  { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
+];
+
 // Outlet লগইন করা অবস্থার ফুল মেনু
 const outletLoggedInMenu = [
   // Dashboard
@@ -100,15 +111,7 @@ const outletLoggedInMenu = [
 
   // Purchase
   { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
-  {
-    title: "Local Purchase",
-    icon: "receipt",
-    route: "purchase.list_index",
-    routeParams: null,
-    active: "purchase.list_index",
-    category: "Purchase",
-    permission: "purchase.view",
-  },
+  { title: "Local Purchase", icon: "receipt", route: "purchase.list_index", routeParams: null, active: "purchase.list_index", category: "Purchase", permission: "purchase.view" },
   { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
   { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.view" },
 
@@ -152,10 +155,6 @@ const outletLoggedInMenu = [
   { title: "Customer", icon: "user-plus", route: "customer.index", active: "customer.index", category: "CRM", permission: "customer.view" },
   { title: "Companies", icon: "user-plus", route: "companies.index", active: "companies.index", category: "CRM", permission: "companies.view" },
 
-  // Admin
-  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
-  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
-
   // HR
   { title: "Employees", icon: "users", route: "employees.index", active: "employees.index", category: "HR", permission: "employees.view" },
   { title: "Attendance", icon: "calendar", route: "attendance.index", active: "attendance.index", category: "HR", permission: "attendance.view" },
@@ -165,8 +164,8 @@ const outletLoggedInMenu = [
   { title: "Bonus", icon: "gift", route: "bonus.index", active: "bonus.index", category: "HR", permission: "bonus.view" },
   { title: "SMS", icon: "gift", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms.view" },
 
-  // Outlets
-  { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
+  // ❌ IMPORTANT: Outlet login থাকা অবস্থায় Admin/Outlets মেনু দেখাবেন না
+  // তাই এগুলো এখানে রাখার দরকার নেই (বা থাকলেও runtime এ hide হবে)
 ];
 
 const iconComponents = {
@@ -228,7 +227,7 @@ export default function Sidebar({ status, setStatus }) {
   const isSuperAdmin = !!auth?.user?.is_super_admin;
   const isLoggedIntoOutlet = !!auth?.user?.is_logged_into_outlet;
 
-  // ✅ আপনার কথামতো outlet user detect: outlet_id থাকলে outlet user
+  // ✅ outlet user detect: outlet_id থাকলে outlet user
   const isOutletUser = !!auth?.user?.outlet_id;
 
   const can = (perm) => {
@@ -370,8 +369,16 @@ export default function Sidebar({ status, setStatus }) {
       // ✅ Permission gate
       if (!can(item.permission)) return;
 
-      // ✅ আপনার রিকোয়ারমেন্ট:
-      // Outlet user (outlet_id আছে) + outlet login (is_logged_into_outlet true) => Investments লুকিয়ে ফেলুন
+      /**
+       * ✅ আপনার নতুন রিকোয়ারমেন্ট:
+       * Outlet login অবস্থায় => Users/Roles/Outlets menu দেখাবেন না
+       */
+      if (isLoggedIntoOutlet && (item.category === "Admin" || item.category === "Outlets")) return;
+
+      /**
+       * ✅ আগের রিকোয়ারমেন্ট:
+       * Outlet user + outlet login => Investments লুকিয়ে ফেলুন
+       */
       if (isOutletUser && isLoggedIntoOutlet && item.category === "Investments") return;
 
       const category = item.category || "General";
@@ -391,19 +398,24 @@ export default function Sidebar({ status, setStatus }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [status, setStatus]);
 
-  // ✅ menuToShow ডিসিশন:
-  // - outlet login থাকলে => outletLoggedInMenu
-  // - outlet login না থাকলে => overview menu
-  //   - কিন্তু user এর outlet_id না থাকলে (Owner/Admin) => overview তেও Investments add হবে
+  /**
+   * ✅ menuToShow ডিসিশন:
+   * - outlet login থাকলে => outletLoggedInMenu
+   * - outlet login না থাকলে => overview menu
+   *   - কিন্তু user এর outlet_id না থাকলে (Owner/Admin) =>
+   *     overview তে Investments + Admin + Outlets দেখাবেন
+   */
   const menuToShow = useMemo(() => {
     if (isLoggedIntoOutlet) return outletLoggedInMenu;
 
     // Overview mode
     const base = [...outletOverviewMenuBase];
 
-    // ✅ outlet_id না থাকলে overview এ Investments দেখান
+    // ✅ outlet_id না থাকলে overview এ Investments + Admin + Outlets দেখান
     if (!isOutletUser) {
       base.push(...investmentsOverviewMenu);
+      base.push(...adminOverviewMenu);
+      base.push(...outletsOverviewExtraMenu);
     }
 
     return base;
@@ -538,7 +550,7 @@ export default function Sidebar({ status, setStatus }) {
                           }`}
                         >
                           <Link
-                            href={getRouteUrl(item)}
+                            href={item.route ? getRouteUrl(item) : "#"}
                             className="flex items-center gap-3 px-4 py-3 group"
                             onClick={() => setStatus(false)}
                           >
