@@ -275,7 +275,7 @@ export default function ShowInstallment({ installments, accounts }) {
                                                 </td>
                                                 <td className="py-4 px-4">
                                                     <div className="text-gray-700">
-                                                        {installment.payment_date ? formatDate(installment.payment_date) : '—'}
+                                                        {installment.paid_date ? formatDate(installment.paid_date) : '—'}
                                                     </div>
                                                 </td>
                                                 <td className="py-4 px-4">
