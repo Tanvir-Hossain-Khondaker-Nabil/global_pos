@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Eye, Search, Filter, Frown, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, Search, RefreshCw, Frown, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "react-toastify";
 import Select from "react-select";
 
@@ -281,7 +281,7 @@ export default function AllSalesItems({ salesItems }) {
                                             </div>
                                         </td>
                                         <td>
-                                            <div className="flex items-center gap-1">
+                                            <div className="flex items-center ">
                                                 <Link
                                                     href={route('sales.items.show', { id: item.id })}
                                                     className="btn btn-ghost btn-xs"
@@ -289,6 +289,20 @@ export default function AllSalesItems({ salesItems }) {
                                                 >
                                                     <Eye size={12} />
                                                 </Link>
+
+                                                {Boolean(item?.stock_id) && (!item?.damage) && (
+                                                    <Link
+                                                        href={route('damages.create', {
+                                                            id: item.id,
+                                                            type: 'sale',
+                                                        })}
+                                                        className="btn text-[red] btn-ghost btn-xs"
+                                                        title="Create Damage"
+                                                    >
+                                                        <RefreshCw size={12} />
+                                                    </Link>
+                                                )}
+
                                             </div>
                                         </td>
                                     </tr>
@@ -302,27 +316,27 @@ export default function AllSalesItems({ salesItems }) {
                                                         <strong style={{ fontSize: '16px' }}>Product Details:</strong>
                                                         <div><strong>Name:</strong> {item.product?.name || item?.product_name}</div>
                                                         {item.variant && (
-                                                        <div><strong>Brand:</strong>
-                                                            {(() => {
-                                                                const variant = item.variant;
-                                                                let attrsText = '';
+                                                            <div><strong>Brand:</strong>
+                                                                {(() => {
+                                                                    const variant = item.variant;
+                                                                    let attrsText = '';
 
-                                                                if (variant.attribute_values) {
-                                                                    if (typeof variant.attribute_values === 'object') {
-                                                                        attrsText = Object.entries(variant.attribute_values)
-                                                                            .map(([key, value]) => ` ${key}`)
-                                                                            .join(', ');
-                                                                    } else {
-                                                                        attrsText = variant.attribute_values;
+                                                                    if (variant.attribute_values) {
+                                                                        if (typeof variant.attribute_values === 'object') {
+                                                                            attrsText = Object.entries(variant.attribute_values)
+                                                                                .map(([key, value]) => ` ${key}`)
+                                                                                .join(', ');
+                                                                        } else {
+                                                                            attrsText = variant.attribute_values;
+                                                                        }
                                                                     }
-                                                                }
 
-                                                                return (
-                                                                    <>
-                                                                        {attrsText || 'N/A'}
-                                                                    </>
-                                                                );
-                                                            })()}<br />
+                                                                    return (
+                                                                        <>
+                                                                            {attrsText || 'N/A'}
+                                                                        </>
+                                                                    );
+                                                                })()}<br />
                                                             </div>
                                                         )}
 

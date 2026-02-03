@@ -196,6 +196,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:sales_return.view')
         ->name('salesReturn.list');
 
+     Route::get('/return/pickup', [SalesReturnController::class, 'indexPickup'])
+        // ->middleware('permission:sales_return.pickup')
+        ->name('salesReturn.pickup');
+
     Route::get('/return/create', [SalesReturnController::class, 'create'])
         ->middleware('permission:sales_return.create')
         ->name('return.create');
