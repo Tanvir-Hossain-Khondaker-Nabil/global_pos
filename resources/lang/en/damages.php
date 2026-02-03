@@ -46,7 +46,9 @@ return [
         'select_account' => 'Select Account',
         // Required field indicator (common for all forms)
         'required_field' => '*',
-    
+        'loss_amount_locked' => 'Loss Amount Locked',
+        'summary_hint' => 'Please provide a brief summary of the damage.',
+
     // Common translations that might be reused
         'back_to_list' => 'Back to List',
         'submit' => 'Submit',
