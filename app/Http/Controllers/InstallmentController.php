@@ -72,7 +72,7 @@ class InstallmentController extends Controller
                 }
 
                 // deduct account balance
-                $account->updateBalance('current_balance', $request->amount,'credit');
+                $account->updateBalance($request->amount,'credit');
             }
 
             // PURCHASE
@@ -87,7 +87,7 @@ class InstallmentController extends Controller
                 }
 
                 // deduct account balance
-                $account->updateBalance('current_balance', $request->amount,'withdraw');
+                $account->updateBalance($request->amount,'withdraw');
             }
 
         });

@@ -79,11 +79,7 @@ class DamageController extends Controller
             $account = Account::find($request->account_id);
 
             if ($account) {
-                $account->updateBalance(
-                    'current_balance',
-                    $cost,
-                    $request->type === 'sale' ? 'withdraw' : 'credit'
-                );
+                $account->updateBalance($cost,$request->type == 'sale' ? 'withdraw' : 'credit');
             }
         }
 
