@@ -279,9 +279,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                     <Package size={12} />
                                                 </Link>
 
-                                                {Boolean(item?.warehouse_id) 
-                                                && !item?.damage && 
-                                                (
+                                                {Boolean(item?.warehouse_id) && !item?.damage && (
                                                     <Link
                                                         href={route('damages.create', {
                                                             id: item.id,
@@ -293,6 +291,20 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                         <RefreshCw size={12} />
                                                     </Link>
                                                 )}
+
+                                                 {/* {!item?.damage && 
+                                                (
+                                                    <Link
+                                                        href={route('damages.create', {
+                                                            id: item.id,
+                                                            type: 'purchase',
+                                                        })}
+                                                        className="btn text-[red] btn-ghost btn-xs"
+                                                        title={Boolean(item?.warehouse_id) ? "Create Damage" : "Pickup Item Refund"}
+                                                    >
+                                                        <RefreshCw size={12} />
+                                                    </Link>
+                                                )} */}
 
 
 

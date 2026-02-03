@@ -290,14 +290,14 @@ export default function AllSalesItems({ salesItems }) {
                                                     <Eye size={12} />
                                                 </Link>
 
-                                                {Boolean(item?.stock_id) && (!item?.damage) && (
+                                                {!item?.damage && (
                                                     <Link
                                                         href={route('damages.create', {
                                                             id: item.id,
                                                             type: 'sale',
                                                         })}
                                                         className="btn text-[red] btn-ghost btn-xs"
-                                                        title="Create Damage"
+                                                        title={Boolean(item?.stock_id) ? "Create Damage" : "Pickup Item Refund"}
                                                     >
                                                         <RefreshCw size={12} />
                                                     </Link>
