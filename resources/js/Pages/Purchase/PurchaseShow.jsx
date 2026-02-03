@@ -415,7 +415,7 @@ export default function PurchaseShow({ purchase, isShadowUser = false, businessP
             width: 100% !important;
             margin: 0 !important;
             padding: 0 !important;
-            position: static !important;   /* ✅ prevent repeating */
+            position: static !important;
           }
 
           .invoice-sheet {
