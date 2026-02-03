@@ -8,6 +8,8 @@ export default function DamageIndex({ damages, filters }) {
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
 
+    console.log(damages);
+
     const searchForm = useForm({
         search: filters.search || "",
         type: filters.type || "",
@@ -220,7 +222,7 @@ export default function DamageIndex({ damages, filters }) {
                                             <Package size={16} className="text-primary" />
                                             <div>
                                                 <div className="font-medium">
-                                                    {damage.saleItem?.product?.name || damage.purchaseItem?.product?.name || 'N/A'}
+                                                    {damage.sale_item?.product?.name || damage.purchase_item?.product?.name || 'N/A'}
                                                 </div>
                                                 <div className="text-xs text-gray-500">
                                                     {damage.type === 'sale' 
@@ -232,7 +234,7 @@ export default function DamageIndex({ damages, filters }) {
                                         </div>
                                     </td>
                                     <td>
-                                        <span className={`badge ${getDamageTypeBadge(damage.type)}`}>
+                                        <span className={`p-4 rounded badge ${getDamageTypeBadge(damage.type)}`}>
                                             {damageTypes.find(t => t.value === damage.type)?.label || damage.type}
                                         </span>
                                     </td>

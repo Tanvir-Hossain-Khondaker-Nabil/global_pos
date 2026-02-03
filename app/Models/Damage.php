@@ -28,11 +28,26 @@ class Damage extends Model
 
     public function saleItem()
     {
-        return $this->belongsTo(SaleItem::class,'sale_item_id')->with('product');
+        return $this->belongsTo(SaleItem::class, 'sale_item_id')->with('product');
     }
 
     public function purchaseItem()
     {
-        return $this->belongsTo(PurchaseItem::class,'purchase_item_id')->with('product');
+        return $this->belongsTo(PurchaseItem::class, 'purchase_item_id')->with('product');
+    }
+
+    public function outlet()
+    {
+        return $this->belongsTo(Outlet::class);
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function owner()
+    {
+        return $this->belongsTo(User::class, 'owner_id');
     }
 }

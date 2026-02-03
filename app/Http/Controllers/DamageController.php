@@ -98,6 +98,8 @@ class DamageController extends Controller
                 'paid_at' => now(),
                 'status' => 'completed',
                 'created_by' => Auth::id(),
+                'outlet_id' => $saleItemId->outlet_id ?? $purchaseItemId->outlet_id ?? null,
+                'owner_id' => $saleItemId->owner_id ?? $purchaseItemId->owner_id ?? null,
             ]);
         }
 
@@ -159,6 +161,7 @@ class DamageController extends Controller
 
         $damages = $query->paginate(15)->withQueryString();
 
+
         return inertia('Damages/Index', [
             'damages' => $damages,
             'filters' => $request->only(['search', 'type', 'reason', 'start_date', 'end_date']),
@@ -166,4 +169,23 @@ class DamageController extends Controller
     }
 
 
+
+    /**
+     * show damges
+     */
+
+    public function show($id)
+    {
+        $damage = Damage::with([
+            'saleItem.product',
+            'purchaseItem.product',
+            'outlet',
+            'createdBy',
+            'owner'
+        ])->findOrFail($id);
+
+        return inertia('Damages/Show', [
+            'damage' => $damage,
+        ]);
+    }
 }

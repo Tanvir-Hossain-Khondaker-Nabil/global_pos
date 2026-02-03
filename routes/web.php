@@ -352,7 +352,7 @@ Route::middleware('auth')->group(function () {
         // ->middleware('permission:damages.index')
         ->name('damages.index');
 
-        Route::get('/damages/{id}', 'show')
+        Route::get('/damage/show/{id}', 'show')
         // ->middleware('permission:damages.show')
         ->name('damages.show');
 
