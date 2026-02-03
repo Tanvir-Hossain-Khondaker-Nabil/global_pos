@@ -9,9 +9,9 @@ class Expiry extends Model
 {
     protected $fillable = [
         'sale_item_id',
+        'purchase_item_id',
         'expire_date',
         'status',
-        'purchase_item_id',
         'outlet_id',
         'created_by',
         'owner_id'

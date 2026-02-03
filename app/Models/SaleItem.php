@@ -44,6 +44,11 @@ class SaleItem extends Model
 
     use BelongsToTenant;
 
+    public function damage()
+    {
+        return $this->hasOne(Damage::class, 'sale_item_id');
+    }
+
     //stock relation
     public function stock()
     {

@@ -18,7 +18,10 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->dateTime('damage_date')->nullable();
             $table->enum('action_taken', ['refund', 'replace', 'repair','not_repaired'])->default('not_repaired');
+            $table->enum('type', ['sale', 'purchase'])->default('sale');
             $table->decimal('cost', 10, 2)->default(0);
+            $table->integer('damage_quantity')->default(0);
+            $table->text('reason')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('outlet_id')->nullable();
             $table->unsignedBigInteger('owner_id')->nullable();

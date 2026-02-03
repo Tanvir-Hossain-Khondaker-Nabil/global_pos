@@ -49,6 +49,14 @@ class PurchaseItem extends Model
 
     use BelongsToTenant;
 
+    //damage relation ship
+
+    public function damage()
+    {
+        return $this->hasOne(Damage::class, 'purchase_item_id');
+    }
+
+
     public function stock()
     {
         return $this->belongsTo(Stock::class);

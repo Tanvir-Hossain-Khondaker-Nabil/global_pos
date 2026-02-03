@@ -54,11 +54,11 @@ class SalesReturnController extends Controller
     private function convertToBase($quantity, $fromUnit, $unitType)
     {
         $conversions = $this->getUnitConversions();
-        
+
         if (!isset($conversions[$unitType][$fromUnit])) {
             return $quantity;
         }
-        
+
         return $quantity * $conversions[$unitType][$fromUnit];
     }
 
@@ -66,17 +66,63 @@ class SalesReturnController extends Controller
     private function convertFromBase($quantity, $toUnit, $unitType)
     {
         $conversions = $this->getUnitConversions();
-        
+
         if (!isset($conversions[$unitType][$toUnit])) {
             return $quantity;
         }
-        
+
         $conversion = $conversions[$unitType][$toUnit];
         return $conversion != 0 ? $quantity / $conversion : $quantity;
     }
 
-    // ইনডেক্স ফাংশন
+
+    /**
+     * Display a listing of the resource.
+     */
     public function index(Request $request)
+    {
+        return $this->renderIndex(
+            $request,
+            'sale_return',
+            'SalesReturn/Index'
+        );
+    }
+
+
+
+    /**
+     * Show the form for index a new resource.
+     */
+    public function indexPickup(Request $request)
+    {
+        return $this->renderIndex(
+            $request,
+            'pickup_return',
+            'SalesReturn/IndexPickup'
+        );
+    }
+
+
+
+    private function renderIndex(Request $request, string $type, string $view)
+    {
+        $salesReturns = $this->buildQuery($request, $type);
+
+        return Inertia::render($view, [
+            'salesReturns' => $salesReturns,
+            'filters' => $request->only([
+                'search',
+                'status',
+                'date_from',
+                'date_to',
+                'type'
+            ]),
+        ]);
+    }
+
+
+
+    private function buildQuery(Request $request, string $type)
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
@@ -86,55 +132,53 @@ class SalesReturnController extends Controller
             'customer',
             'sale.items.product',
             'sale.items.variant',
-        ]);
+        ])
+            ->where('type', $type)
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $q->where(function ($q) use ($request) {
+                    $q->where('return_no', 'like', "%{$request->search}%")
+                        ->orWhereHas(
+                            'sale',
+                            fn($q) =>
+                            $q->where('invoice_no', 'like', "%{$request->search}%")
+                        )
+                        ->orWhereHas(
+                            'customer',
+                            fn($q) =>
+                            $q->where('customer_name', 'like', "%{$request->search}%")
+                                ->orWhere('phone', 'like', "%{$request->search}%")
+                        );
+                });
+            })
+            ->when(
+                $request->filled('status'),
+                fn($q) =>
+                $q->where('status', $request->status)
+            )
+            ->when(
+                $request->filled('date_from') && $request->filled('date_to'),
+                fn($q) =>
+                $q->whereBetween('return_date', [
+                    $request->date_from,
+                    $request->date_to
+                ])
+            );
 
-        // সার্চ ফিল্টার
-        if ($request->filled('search')) {
-            $query->where(function ($q) use ($request) {
-                $q->where('return_no', 'like', '%' . $request->search . '%')
-                    ->orWhereHas('sale', function ($q) use ($request) {
-                        $q->where('invoice_no', 'like', '%' . $request->search . '%');
-                    })
-                    ->orWhereHas('customer', function ($q) use ($request) {
-                        $q->where('customer_name', 'like', '%' . $request->search . '%')
-                            ->orWhere('phone', 'like', '%' . $request->search . '%');
-                    });
-            });
-        }
-
-        // স্ট্যাটাস ফিল্টার
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        // তারিখ ফিল্টার
-        if ($request->filled('date_from') && $request->filled('date_to')) {
-            $query->whereBetween('return_date', [
-                $request->date_from,
-                $request->date_to
-            ]);
-        }
-
-        // টাইপ ফিল্টার
-        if ($request->filled('type')) {
-            $query->where('type', $request->type);
-        }
-
-        $salesReturns = $query->orderBy('created_at', 'desc')
+        $salesReturns = $query
+            ->orderByDesc('created_at')
             ->paginate(15);
 
-        // শ্যাডো ইউজারের জন্য ডেটা ট্রান্সফর্ম
         if ($isShadowUser) {
-            $salesReturns->getCollection()->transform(function ($return) {
-                return $this->transformToShadowData($return);
-            });
+            $salesReturns->getCollection()->transform(
+                fn($return) => $this->transformToShadowData($return)
+            );
         }
 
-        return Inertia::render('SalesReturn/Index', [
-            'salesReturns' => $salesReturns,
-            'filters' => $request->only(['search', 'status', 'date_from', 'date_to', 'type'])
-        ]);
+        return $salesReturns;
     }
+
+
+
 
     // ক্রিয়েট পেজ
     public function create(Request $request)
@@ -151,11 +195,11 @@ class SalesReturnController extends Controller
                 'customer',
                 'items.warehouse'
             ])
-            ->whereHas('items', function ($query) {
-                $query->whereNotNull('product_id')
-                ->whereNotNull('stock_id');
-            })
-            ->findOrFail($saleId);
+                ->whereHas('items', function ($query) {
+                    $query->whereNotNull('product_id')
+                        ->whereNotNull('stock_id');
+                })
+                ->findOrFail($saleId);
 
             foreach ($sale->items as $item) {
 
@@ -173,7 +217,7 @@ class SalesReturnController extends Controller
 
                 if ($stock) {
                     $availableBaseStock = $stock->base_quantity ?? $stock->quantity;
-                    
+
                     if ($item->unit && $item->unit !== $stock->unit) {
                         $availableStock = $this->convertFromBase(
                             $availableBaseStock,
@@ -207,7 +251,7 @@ class SalesReturnController extends Controller
                         'available_units' => $availableUnits,
                         'unit_price' => $item->unit_price,
                         'shadow_unit_price' => $item->shadow_unit_price,
-                        'sale_price' => $item->unit_price, 
+                        'sale_price' => $item->unit_price,
                         'shadow_sale_price' => $item->shadow_unit_price,
                         'sale_quantity' => $item->quantity,
                         'total_price' => $item->total_price,
@@ -283,15 +327,15 @@ class SalesReturnController extends Controller
     {
         $unitType = $product->unit_type ?? 'piece';
         $conversions = $this->getUnitConversions();
-        
+
         if (!isset($conversions[$unitType])) {
             return [$product->default_unit ?? 'piece'];
         }
-        
+
         // পুচ্ছেজ ইউনিট (ডিফল্ট ইউনিট)
         $purchaseUnit = $product->default_unit ?? 'piece';
         $purchaseFactor = $conversions[$unitType][$purchaseUnit] ?? 1;
-        
+
         // ছোট বা সমান ইউনিটগুলো
         $available = [];
         foreach ($conversions[$unitType] as $unit => $factor) {
@@ -299,12 +343,12 @@ class SalesReturnController extends Controller
                 $available[] = $unit;
             }
         }
-        
+
         // সর্ট করুন (ছোট থেকে বড়)
-        usort($available, function($a, $b) use ($conversions, $unitType) {
+        usort($available, function ($a, $b) use ($conversions, $unitType) {
             return ($conversions[$unitType][$a] ?? 0) <=> ($conversions[$unitType][$b] ?? 0);
         });
-        
+
         return $available;
     }
 
@@ -334,23 +378,23 @@ class SalesReturnController extends Controller
 
             foreach ($request->items as $itemData) {
                 $saleItem = SaleItem::with(['product', 'variant'])->findOrFail($itemData['sale_item_id']);
-                
+
                 $quantity = $itemData['return_quantity'];
                 $unit = $itemData['unit'];
-                
+
                 // প্রোডাক্ট ইউনিট টাইপ
                 $product = $saleItem->product;
                 $unitType = $product->unit_type ?? 'piece';
-                
+
                 // ইউনিট ভ্যালিডেশন
                 $availableUnits = $this->getAvailableSaleUnits($product);
                 if (!in_array($unit, $availableUnits)) {
                     throw new \Exception("Invalid unit {$unit} for product {$product->name}. Allowed units: " . implode(', ', $availableUnits));
                 }
-                
+
                 // বেস ইউনিটে কনভার্ট
                 $baseQuantity = $this->convertToBase($quantity, $unit, $unitType);
-                
+
                 // টোটাল ক্যালকুলেট
                 $totalReturnValue += $quantity * $saleItem->unit_price;
                 $shadowTotalReturnValue += $quantity * $saleItem->shadow_unit_price;
@@ -359,13 +403,13 @@ class SalesReturnController extends Controller
             // রিপ্লেসমেন্ট টোটাল
             $replacementTotal = 0;
             $shadowReplacementTotal = 0;
-            
+
             if ($request->return_type === 'product_replacement' && !empty($request->replacement_products)) {
                 foreach ($request->replacement_products as $replacement) {
                     $quantity = $replacement['quantity'] ?? 1;
                     $salePrice = $replacement['sale_price'] ?? 0;
                     $shadowSalePrice = $replacement['shadow_sale_price'] ?? $salePrice;
-                    
+
                     $replacementTotal += $quantity * $salePrice;
                     $shadowReplacementTotal += $quantity * $shadowSalePrice;
                 }
@@ -374,7 +418,7 @@ class SalesReturnController extends Controller
             // রিফান্ড আমাউন্ট
             $refundedAmount = $request->refunded_amount ?? 0;
             $shadowRefundedAmount = $request->shadow_refunded_amount ?? 0;
-            
+
             if ($request->return_type === 'money_back') {
                 $refundedAmount = $totalReturnValue;
                 $shadowRefundedAmount = $shadowTotalReturnValue;
@@ -403,15 +447,15 @@ class SalesReturnController extends Controller
             // আইটেমস প্রসেস
             foreach ($request->items as $itemData) {
                 $saleItem = SaleItem::with(['product', 'variant', 'stock'])->findOrFail($itemData['sale_item_id']);
-                
+
                 $quantity = $itemData['return_quantity'];
                 $unit = $itemData['unit'];
                 $product = $saleItem->product;
                 $unitType = $product->unit_type ?? 'piece';
-                
+
                 // বেস ইউনিটে কনভার্ট
                 $baseQuantity = $this->convertToBase($quantity, $unit, $unitType);
-                
+
                 // সেলস রিটার্ন আইটেম ক্রিয়েট
                 SalesReturnItem::create([
                     'sales_return_id' => $salesReturn->id,
@@ -439,20 +483,20 @@ class SalesReturnController extends Controller
                 foreach ($request->replacement_products as $replacement) {
                     $product = Product::with('variants')->findOrFail($replacement['product_id']);
                     $variant = $product->variants()->find($replacement['variant_id']);
-                    
+
                     $quantity = $replacement['quantity'] ?? 1;
                     $unit = $replacement['unit'];
                     $unitType = $product->unit_type ?? 'piece';
-                    
+
                     // ইউনিট ভ্যালিডেশন
                     $availableUnits = $this->getAvailableSaleUnits($product);
                     if (!in_array($unit, $availableUnits)) {
                         throw new \Exception("Invalid unit {$unit} for replacement product {$product->name}");
                     }
-                    
+
                     // বেস ইউনিটে কনভার্ট
                     $baseQuantity = $this->convertToBase($quantity, $unit, $unitType);
-                    
+
                     $salePrice = $replacement['sale_price'] ?? 0;
                     $shadowSalePrice = $replacement['shadow_sale_price'] ?? $salePrice;
                     $unitPrice = $replacement['unit_price'] ?? $salePrice;
@@ -522,7 +566,7 @@ class SalesReturnController extends Controller
                     // রিটার্ন: স্টক ইনক্রিজ
                     $this->processReturnItem($item);
                 }
-                
+
                 $item->update(['status' => 'completed']);
             }
 
@@ -550,7 +594,7 @@ class SalesReturnController extends Controller
         $saleItem = $item->saleItem;
         $product = $item->product;
         $unitType = $product->unit_type ?? 'piece';
-        
+
         // বেস ইউনিটে কনভার্ট
         $baseQuantity = $this->convertToBase(
             $item->return_quantity,
@@ -605,7 +649,7 @@ class SalesReturnController extends Controller
     {
         $product = $item->product;
         $unitType = $product->unit_type ?? 'piece';
-        
+
         // বেস ইউনিটে কনভার্ট
         $baseQuantity = $this->convertToBase(
             $item->return_quantity,
@@ -624,7 +668,7 @@ class SalesReturnController extends Controller
             if ($stock->quantity < $item->return_quantity) {
                 throw new \Exception('Insufficient stock for replacement product: ' . $product->name);
             }
-            
+
             $stock->decrement('quantity', $item->return_quantity);
             $stock->decrement('base_quantity', $baseQuantity);
         } else {
@@ -659,7 +703,7 @@ class SalesReturnController extends Controller
                     // ডিউ কমাতে হবে
                     $deduction = min($salesReturn->refunded_amount, $customer->due_amount);
                     $customer->decrement('due_amount', $deduction);
-                    
+
                     // বাকি থাকলে অ্যাডভান্সে যোগ
                     $remaining = $salesReturn->refunded_amount - $deduction;
                     if ($remaining > 0) {
@@ -669,9 +713,9 @@ class SalesReturnController extends Controller
                     // সরাসরি অ্যাডভান্সে যোগ
                     $customer->increment('advance_amount', $salesReturn->refunded_amount);
                 }
-                
+
                 $customer->save();
-                
+
                 // পেমেন্ট রেকর্ড
                 Payment::create([
                     'sale_id' => $salesReturn->sale_id,
@@ -687,21 +731,21 @@ class SalesReturnController extends Controller
                 ]);
             }
         }
-        
+
         // প্রোডাক্ট রিপ্লেসমেন্ট
         if ($salesReturn->return_type === 'product_replacement') {
             $netDifference = $salesReturn->replacement_total - $salesReturn->total_return_value;
-            
+
             if ($netDifference > 0) {
                 // কাস্টমারকে অতিরিক্ত পেতে হবে
                 $customer->increment('due_amount', $netDifference);
                 $customer->save();
-                
+
                 Payment::create([
                     'sale_id' => $salesReturn->sale_id,
                     'customer_id' => $customer->id,
                     'amount' => -$netDifference, // নেগেটিভ = কাস্টমার ডিউ
-                    'shadow_amount' => -($salesReturn->shadow_replacement_total - $salesReturn->shadow_total_return_value),
+                    'shadow_amount' => - ($salesReturn->shadow_replacement_total - $salesReturn->shadow_total_return_value),
                     'payment_method' => 'adjustment',
                     'txn_ref' => 'ADJ-' . Str::random(10),
                     'note' => 'Adjustment for replacement return #' . $salesReturn->return_no,
@@ -713,11 +757,11 @@ class SalesReturnController extends Controller
             } elseif ($netDifference < 0) {
                 // আমরা রিফান্ড দিতে হবে
                 $refundAmount = abs($netDifference);
-                
+
                 if ($customer->due_amount > 0) {
                     $deduction = min($refundAmount, $customer->due_amount);
                     $customer->decrement('due_amount', $deduction);
-                    
+
                     $remaining = $refundAmount - $deduction;
                     if ($remaining > 0) {
                         $customer->increment('advance_amount', $remaining);
@@ -725,9 +769,9 @@ class SalesReturnController extends Controller
                 } else {
                     $customer->increment('advance_amount', $refundAmount);
                 }
-                
+
                 $customer->save();
-                
+
                 Payment::create([
                     'sale_id' => $salesReturn->sale_id,
                     'customer_id' => $customer->id,

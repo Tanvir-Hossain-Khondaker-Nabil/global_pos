@@ -41,7 +41,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
 
     const handleFilter = () => {
         const queryParams = {};
-        
+
         if (filterForm.data.search.trim()) queryParams.search = filterForm.data.search.trim();
         if (filterForm.data.status) queryParams.status = filterForm.data.status;
         if (filterForm.data.date_from) queryParams.date_from = filterForm.data.date_from;
@@ -113,7 +113,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
 
     const handlePaymentSubmit = (e) => {
         e.preventDefault();
-        
+
         if (!selectedSale) return;
 
         setProcessingPayment(true);
@@ -123,19 +123,19 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
 
         // Validate before submitting
         const errors = {};
-        
+
         if (!paymentData.account_id) {
             errors.account_id = "Please select an account";
         }
-        
+
         if (paymentData.paid_amount <= 0 && paymentData.shadow_paid_amount <= 0) {
             errors.amount = "Please enter a payment amount";
         }
-        
+
         if (paymentData.paid_amount > selectedSale.due_amount) {
             errors.paid_amount = "Payment cannot exceed due amount";
         }
-        
+
         if (paymentData.shadow_paid_amount > selectedSale.shadow_due_amount) {
             errors.shadow_paid_amount = "Shadow payment cannot exceed shadow due amount";
         }
@@ -211,7 +211,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
             default: return <CreditCard size={14} />;
         }
     };
-    
+
     // Simple number format
     const formatNumber = (amount) => {
         const num = parseFloat(amount) || 0;
@@ -223,7 +223,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
 
     const calculateTotals = () => {
         const salesData = sales?.data || [];
-        
+
         const totalRevenue = salesData.reduce((sum, sale) => sum + (parseFloat(sale.grand_total) || 0), 0);
         const totalPaid = salesData.reduce((sum, sale) => sum + (parseFloat(sale.paid_amount) || 0), 0);
         const totalDue = salesData.reduce((sum, sale) => sum + (parseFloat(sale.due_amount) || 0), 0);
@@ -239,7 +239,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
     // Get payments for selected sale - with multiple fallback options
     const getPayments = (sale) => {
         if (!sale) return [];
-        
+
         // Try different possible property names
         return sale.payments || sale.payment_history || sale.payment_records || [];
     };
@@ -268,7 +268,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                             className="input input-sm input-bordered join-item"
                         />
                     </div>
-                    
+
                     <select
                         value={filterForm.data.status}
                         onChange={(e) => filterForm.setData("status", e.target.value)}
@@ -280,7 +280,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                         <option value="completed">Completed</option>
                         <option value="cancelled">Cancelled</option>
                     </select>
-                    
+
                     <input
                         type="date"
                         value={filterForm.data.date_from}
@@ -288,7 +288,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                         onKeyPress={handleKeyPress}
                         className="input input-sm input-bordered"
                     />
-                    
+
                     <input
                         type="date"
                         value={filterForm.data.date_to}
@@ -296,7 +296,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                         onKeyPress={handleKeyPress}
                         className="input input-sm input-bordered"
                     />
-                    
+
                     {hasActiveFilters && (
                         <button
                             onClick={clearFilters}
@@ -313,7 +313,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                         <Search size={16} />
                         Search
                     </button>
-                    
+
                     <Link
                         className="btn bg-[#1e4d2b] text-white btn-sm"
                         href={route("sales.create")}
@@ -374,19 +374,17 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                         <td className="text-success font-semibold">
                                             {formatCurrency(sale.paid_amount)} Tk
                                         </td>
-                                        <td className={`font-semibold ${
-                                            (sale.due_amount > 0 || sale.shadow_due_amount > 0) ? "text-error" : "text-success"
-                                        }`}>
+                                        <td className={`font-semibold ${(sale.due_amount > 0 || sale.shadow_due_amount > 0) ? "text-error" : "text-success"
+                                            }`}>
                                             {formatCurrency(sale.due_amount)} Tk
                                         </td>
                                         <td>
-                                            <span className={`badge capitalize ${
-                                                sale.status === 'paid' 
-                                                    ? 'badge-success' 
-                                                    : sale.status === 'cancelled'
+                                            <span className={`badge capitalize ${sale.status === 'paid'
+                                                ? 'badge-success'
+                                                : sale.status === 'cancelled'
                                                     ? 'badge-error'
                                                     : 'badge-warning'
-                                            }`}>
+                                                }`}>
                                                 {sale.status}
                                             </span>
                                         </td>
@@ -410,14 +408,8 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     View
                                                 </Link>
 
-                                                <button
-                                                    onClick={() => openPaymentModal(sale)}
-                                                    className="btn btn-xs btn-warning btn-outline"
-                                                    disabled={isPaymentDisabled(sale)}
-                                                >
-                                                    <Edit size={12} /> Payment
-                                                </button>
-                                             
+
+
                                                 {sale.shadow_type == 'shadow' && !isShadowUser && (
                                                     <>
                                                         <Link
@@ -463,14 +455,27 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     </button>
                                                 )}
 
-                                                {sale.payment_type == 'installment' && (
-                                                    <Link
-                                                        href={route("installments.show", { id: sale.id })}
-                                                        className="btn btn-xs btn-primary"
-                                                    >
-                                                        View Installments
-                                                    </Link>
+                                                {sale.due_amount > 0 && (
+                                                    sale.payment_type === 'installment' ? (
+                                                        <Link
+                                                            href={route("installments.show", { id: sale.id })}
+                                                            className="btn btn-xs btn-primary"
+                                                        >
+                                                            View Installments
+                                                        </Link>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => openPaymentModal(sale)}
+                                                            className="btn btn-xs btn-warning btn-outline"
+                                                            disabled={isPaymentDisabled(sale)}
+                                                        >
+                                                            <Edit size={12} /> Payment
+                                                        </button>
+                                                    )
                                                 )}
+
+
+
                                             </div>
                                         </td>
                                     </tr>
@@ -544,7 +549,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                 <DollarSign size={20} />
                                 Payment Management - {selectedSale.invoice_no}
                             </h3>
-                            <button 
+                            <button
                                 onClick={closePaymentModal}
                                 className="btn btn-sm btn-circle btn-ghost"
                             >
@@ -559,7 +564,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                     <History size={16} />
                                     Payment History
                                 </h4>
-                                
+
                                 <div className="bg-gray-50 rounded-box p-4 mb-4">
                                     <div className="grid grid-cols-2 gap-3 text-sm">
                                         <div>
@@ -569,13 +574,13 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                         <div className="hidden">
                                             <span className="text-gray-600">Shadow Grand Total:</span>
                                             <p className="font-semibold">{formatCurrency(selectedSale.shadow_grand_total)} Tk</p>
-                                        </div> 
+                                        </div>
 
                                         <div>
                                             <span className="text-gray-600">Total Paid:</span>
                                             <p className="font-semibold text-success">{formatCurrency(selectedSale.paid_amount)} Tk</p>
                                         </div>
-                                        <div className="hidden"> 
+                                        <div className="hidden">
                                             <span className="text-gray-600">Shadow Total Paid:</span>
                                             <p className="font-semibold text-success">{formatCurrency(selectedSale.shadow_paid_amount)} Tk</p>
                                         </div>
@@ -591,7 +596,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                             <p className={`font-semibold ${selectedSale.shadow_due_amount > 0 ? 'text-error' : 'text-success'}`}>
                                                 {formatCurrency(selectedSale.shadow_due_amount)} Tk
                                             </p>
-                                        </div> 
+                                        </div>
                                         <div>
                                             <span className="text-gray-600">Payment Status:</span>
                                             <p className="font-semibold capitalize">{selectedSale.payment_status || selectedSale.status}</p>
@@ -603,7 +608,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                             {/* Right Column: Payment Form */}
                             <div>
                                 <h4 className="font-semibold mb-3">Receive Payment</h4>
-                                
+
                                 <form onSubmit={handlePaymentSubmit}>
                                     <div className="space-y-4">
                                         <div className="form-control">
@@ -651,7 +656,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     {paymentErrors.shadow_paid_amount}
                                                 </div>
                                             )}
-                                        </div> 
+                                        </div>
 
                                         <div className="form-control">
                                             <label className="label">
@@ -702,7 +707,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                         {paymentErrors.account_id}
                                                     </div>
                                                 )}
-                                                
+
                                                 {/* Selected Account Info */}
                                                 {selectedAccount && (
                                                     <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
@@ -751,7 +756,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                 <div className="hidden">
                                                     <span>Shadow Current Due:</span>
                                                     <span>{formatCurrency(selectedSale.shadow_due_amount)} Tk</span>
-                                                </div> 
+                                                </div>
                                                 <div className="flex justify-between">
                                                     <span>Paying Now:</span>
                                                     <span className="text-success">{formatCurrency(paymentData.paid_amount)} Tk</span>
@@ -771,7 +776,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     <span className={selectedSale.shadow_due_amount - paymentData.shadow_paid_amount > 0 ? 'text-error' : 'text-success'}>
                                                         {formatCurrency(selectedSale.shadow_due_amount - paymentData.shadow_paid_amount)} Tk
                                                     </span>
-                                                </div> 
+                                                </div>
                                             </div>
                                         </div>
 
@@ -787,7 +792,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                             <button
                                                 type="submit"
                                                 className="btn bg-[#1e4d2b] text-white"
-                                                disabled={processingPayment || 
+                                                disabled={processingPayment ||
                                                     (paymentData.paid_amount <= 0 && paymentData.shadow_paid_amount <= 0) ||
                                                     paymentData.paid_amount > selectedSale.due_amount ||
                                                     paymentData.shadow_paid_amount > selectedSale.shadow_due_amount ||

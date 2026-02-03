@@ -1068,7 +1068,7 @@ class PurchaseController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse'])
+        $purchaseItems = PurchaseItem::with(['purchase', 'product', 'variant', 'warehouse', 'damage'])
             ->when($request->filled('product_id'), function ($query) use ($request) {
                 $query->where('product_id', $request->product_id);
             })

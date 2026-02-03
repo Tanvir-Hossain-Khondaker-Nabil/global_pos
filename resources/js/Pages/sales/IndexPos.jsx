@@ -370,8 +370,8 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                         <table className="table table-auto w-full">
                             <thead
                                 className={`${isShadowUser
-                                        ? "bg-warning"
-                                        : "bg-[#1e4d2b] text-white"
+                                    ? "bg-warning"
+                                    : "bg-[#1e4d2b] text-white"
                                     } text-white`}
                             >
                                 <tr>
@@ -428,8 +428,8 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                         </td>
                                         <td
                                             className={`font-semibold ${sale.due_amount > 0
-                                                    ? "text-error"
-                                                    : "text-success"
+                                                ? "text-error"
+                                                : "text-success"
                                                 }`}
                                         >
                                             {formatCurrency(sale.due_amount)} Tk
@@ -437,11 +437,11 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                         <td>
                                             <span
                                                 className={`badge capitalize ${sale.status === "paid"
-                                                        ? "badge-success"
-                                                        : sale.status ===
-                                                            "cancelled"
-                                                            ? "badge-error"
-                                                            : "badge-warning"
+                                                    ? "badge-success"
+                                                    : sale.status ===
+                                                        "cancelled"
+                                                        ? "badge-error"
+                                                        : "badge-warning"
                                                     }`}
                                             >
                                                 {sale.status}
@@ -462,36 +462,32 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                         <td>
                                             <div className="flex items-center gap-1 flex-wrap">
                                                 <Link
-                                                    href={route(
-                                                        "salesPrint.show",
-                                                        {
-                                                            sale: sale.id,
-                                                            print: "print",
-                                                        }
-                                                    )}
+                                                    href={route("salesPrint.show", { sale: sale.id, print: 'print' })}
                                                     className="btn btn-xs btn-info"
                                                 >
                                                     <Eye size={13} />
                                                     View
                                                 </Link>
 
-                                                {/* Payment Button - Only show for sales with due amount */}
                                                 {sale.due_amount > 0 && (
-                                                    <button
-                                                        onClick={() =>
-                                                            openPaymentModal(
-                                                                sale
-                                                            )
-                                                        }
-                                                        className="btn btn-xs btn-warning btn-outline"
-                                                        disabled={isPaymentDisabled(
-                                                            sale
-                                                        )}
-                                                    >
-                                                        <DollarSign size={12} />{" "}
-                                                        Payment
-                                                    </button>
+                                                    sale.payment_type === 'installment' ? (
+                                                        <Link
+                                                            href={route("installments.show", { id: sale.id })}
+                                                            className="btn btn-xs btn-primary"
+                                                        >
+                                                            View Installments
+                                                        </Link>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => openPaymentModal(sale)}
+                                                            className="btn btn-xs btn-warning btn-outline"
+                                                            disabled={isPaymentDisabled(sale)}
+                                                        >
+                                                            <Edit size={12} /> Payment
+                                                        </button>
+                                                    )
                                                 )}
+
 
                                                 {sale.shadow_type == "shadow" &&
                                                     !isShadowUser && (
@@ -548,14 +544,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     <Printer size={16} />
                                                 </Link> */}
 
-                                                {sale.payment_type == 'installment' && (
-                                                    <Link
-                                                        href={route("installments.show", { id: sale.id })}
-                                                        className="btn btn-xs btn-primary"
-                                                    >
-                                                        View Installments
-                                                    </Link>
-                                                )}
+                                         
 
                                                 {sale.shadow_type ==
                                                     "general" && (
@@ -702,9 +691,9 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                 </span>
                                                 <p
                                                     className={`font-semibold ${selectedSale.due_amount >
-                                                            0
-                                                            ? "text-error"
-                                                            : "text-success"
+                                                        0
+                                                        ? "text-error"
+                                                        : "text-success"
                                                         }`}
                                                 >
                                                     {formatCurrency(

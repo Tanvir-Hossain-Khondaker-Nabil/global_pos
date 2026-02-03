@@ -1174,7 +1174,7 @@ class SalesController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'stock', 'warehouse'])
+        $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'stock', 'warehouse','damage'])
             ->where('status', '!=', 'cancelled')
             ->orderBy('created_at', 'desc')
             ->filter(request()->all())

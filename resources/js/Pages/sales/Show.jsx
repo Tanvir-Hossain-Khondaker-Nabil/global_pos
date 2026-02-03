@@ -1,18 +1,17 @@
-import { router, usePage } from "@inertiajs/react";
+// resources/js/Pages/sales/SaleShow.jsx
+import React, { useMemo } from "react";
+import { Link, usePage } from "@inertiajs/react";
 import { ArrowLeft, Printer, Download } from "lucide-react";
-import { useMemo, useState } from "react";
 
-export default function SaleShow({ sale, isShadowUser = false, businessProfile }) {
+export default function SaleShow({ sale }) {
   const { auth } = usePage().props;
-  const [isPrinting, setIsPrinting] = useState(false);
 
-  const safeItems = useMemo(() => sale?.items || [], [sale]);
-
-  // ================== Helpers ==================
-  const formatMoney = (num) => {
-    const n = Number(num || 0);
+  // ---------- helpers ----------
+  const formatCurrency = (amount) => {
+    const n = Number(amount || 0);
     return n.toFixed(2);
   };
+  const money = (amount) => `৳ ${formatCurrency(amount)}`;
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -25,711 +24,408 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
 
   const formatDateTime = (dateString) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleString("en-GB", {
+    return new Date(dateString).toLocaleDateString("en-GB", {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
+      hour12: false,
     });
   };
 
-  // ✅ variant attribute_values -> pretty text
-  const normalizeVariantText = (variant) => {
-    if (!variant) return "";
-
-    // 1) best: sku
-    if (variant?.sku) return variant.sku;
-
-    // 2) attribute_values JSON string/object
-    const raw = variant?.attribute_values;
-    if (!raw) return "";
-
-    let obj = null;
-    if (typeof raw === "string") {
-      try {
-        obj = JSON.parse(raw);
-      } catch (e) {
-        obj = null;
-      }
-    } else if (typeof raw === "object") {
-      obj = raw;
-    }
-
-    if (!obj || typeof obj !== "object") return "";
-
-    const parts = Object.entries(obj)
-      .map(([k, v]) => {
-        const key = String(k || "").split("-")[0] || k;
-        const val = String(v ?? "");
-        if (!key && !val) return "";
-        return `${key}: ${val}`;
-      })
-      .filter(Boolean);
-
-    return parts.join(", ");
+  const getProductDisplayName = (item) => {
+    if (item.item_type === "pickup") return item.product_name || "Pickup Item";
+    return item.product?.name || "N/A";
   };
 
-  // ================== Shadow price support (SALE) ==================
-  // যদি আপনার sale আইটেমে shadow fields থাকে, এখানে পড়বে
-  const getItemPrice = (item, field) => {
-    if (!item) return 0;
-
-    if (isShadowUser) {
-      if (field === "unit_price") return item.shadow_unit_price ?? item.unit_price ?? 0;
-      if (field === "total_price") return item.shadow_total_price ?? item.total_price ?? 0;
-    }
-    return item[field] ?? 0;
+  const getProductCode = (item) => {
+    if (item.item_type === "pickup") return "PICKUP";
+    return item.product?.product_no || item.product_id || "N/A";
   };
 
-  const getSaleAmount = (field) => {
-    if (!sale) return 0;
-
-    if (isShadowUser) {
-      if (field === "grand_total") return sale.shadow_grand_total ?? sale.grand_total ?? 0;
-      if (field === "paid_amount") return sale.shadow_paid_amount ?? sale.paid_amount ?? 0;
-      if (field === "due_amount") return sale.shadow_due_amount ?? sale.due_amount ?? 0;
+  const getVariantDisplayName = (item) => {
+    // if (item.item_type === "pickup") return item.variant_name || item.variant || "N/A";
+    // if (!item.variant) return "N/A";
+    // if (item.variant?.name) return item.variant.name;
+    if (item.variant?.attribute_values && typeof item.variant.attribute_values === "object") {
+      return Object.values(item.variant.attribute_values).join(", ");
     }
-    return sale[field] ?? 0;
+    return item.variant?.attribute_values || "N/A";
   };
 
-  const totalQty = useMemo(
-    () => safeItems.reduce((s, it) => s + Number(it?.quantity || 0), 0),
-    [safeItems]
-  );
+  const getBrandName = (item) => {
+    // if (item.item_type === "pickup") return item.brand || "N/A";
+    return item.product?.brand?.name || item.brand?.name || item.product?.brand || "N/A";
+  };
 
-  const totals = useMemo(() => {
-    const grandTotal = Number(getSaleAmount("grand_total") || 0);
-    const paid = Number(getSaleAmount("paid_amount") || 0);
-    const due = Number(getSaleAmount("due_amount") || (grandTotal - paid) || 0);
-    return { grandTotal, paid, due };
-  }, [sale, isShadowUser]);
+  // const getBrandName = (item) => {
+  //      if (item.variant?.attribute_values && typeof item.variant.attribute_values === "object") {
+  //         return Object.keys(item.variant.attribute_values).join(", ");
+  //     }
+  //     return item.variant?.attribute_values || "N/A";
+  // };
 
-  const paymentStatus = useMemo(() => {
-    // যদি আপনার sale.payment_status থাকে, সেটাও ব্যবহার হবে
-    const statusRaw = String(
-      (isShadowUser ? sale?.shadow_payment_status : sale?.payment_status) || ""
-    ).toLowerCase();
+  const totalQty = useMemo(() => {
+    return sale.items?.reduce((t, it) => t + Number(it.quantity || 0), 0) || 0;
+  }, [sale]);
 
-    if (statusRaw) {
-      if (statusRaw === "paid") return "PAID";
-      if (statusRaw === "partial") return "PARTIAL";
-      if (statusRaw === "unpaid") return "UNPAID";
-    }
+  const getAddAmount = (item) => {
+    return Number(item.add_amount || item.vat_amount || item.tax_amount || 0);
+  };
 
-    const due = Number(totals.due || 0);
-    if (due <= 0) return "PAID";
-    if (due > 0 && Number(totals.paid || 0) > 0) return "PARTIAL";
-    return "UNPAID";
-  }, [totals, sale, isShadowUser]);
+  const rowTotal = (item) => {
+    // prefer backend total_price; else calculate
+    const backend = Number(item.total_price || 0);
+    if (backend) return backend;
+    const qty = Number(item.quantity || 0);
+    const unit = Number(item.unit_price || 0);
+    return qty * unit + getAddAmount(item);
+  };
 
-  // ================== Business Profile Dynamic ==================
-  const bp = businessProfile || {};
-  const companyName = bp?.name || "আল-মদিনা স্টোর";
-  const companyPhone = bp?.phone || "";
-  const companyEmail = bp?.email || "";
-  const companyAddress = bp?.address || "";
-  const companyWebsite = bp?.website || "";
+  const items = sale.items || [];
 
-  const logoUrl = bp?.logo ? `/storage/${bp.logo}` : null;
-  const watermarkUrl = bp?.thum ? `/storage/${bp.thum}` : logoUrl;
-
-  // ================== Invoice Data (SALE) ==================
-  const billNo = sale?.invoice_no || sale?.sale_no || `#SALE-${sale?.id || ""}`;
-  const invoiceDate = formatDate(sale?.sale_date || sale?.created_at);
-  const dateTime = formatDateTime(sale?.sale_date || sale?.created_at);
-
-  const customerName =
-    sale?.customer?.customer_name ||
-    sale?.customer?.name ||
-    sale?.customer?.company ||
-    "Walk-in Customer";
-
-  const customerAddress =
-    sale?.customer?.address ||
-    sale?.customer?.customer_address ||
-    "N/A";
-
-  const warehouseName =
-    sale?.warehouse?.name ||
-    safeItems?.[0]?.warehouse?.name ||
-    "N/A";
-
-  const servedBy =
-    sale?.served_by ||
-    sale?.creator?.name ||
-    sale?.user?.name ||
-    "N/A";
-
-  const referenceNo =
-    sale?.reference_no ||
-    sale?.reference ||
-    "";
-
-  const totalItems = safeItems.length;
-
-  // ================== Rows mapping (same columns like PurchaseShow) ==================
-  const rows = useMemo(() => {
-    return safeItems.map((item, idx) => {
-      const code =
-        item?.product?.product_no ||
-        item?.product?.sku ||
-        item?.product?.code ||
-        item?.code ||
-        item?.variant?.sku ||
-        "N/A";
-
-      const itemName =
-        item?.product?.name ||
-        item?.product_name ||
-        item?.description ||
-        "N/A";
-
-      const variantText =
-        normalizeVariantText(item?.variant) ||
-        item?.variant?.name ||
-        item?.variant?.title ||
-        item?.model ||
-        item?.variant_name ||
-        "";
-
-      const brandName =
-        item?.product?.brand?.name ||
-        item?.brand?.name ||
-        item?.brand_name ||
-        "N/A";
-
-      const qty = Number(item?.quantity || 0);
-      const unitPrice = Number(getItemPrice(item, "unit_price") || 0);
-      const amount = Number(getItemPrice(item, "total_price") || (qty * unitPrice) || 0);
-
-      // add 5% (যদি sale আইটেমে vat/tax থাকে)
-      const add5 = Number(item?.tax_amount || item?.vat_amount || 0);
-
-      const totalValue = amount + add5;
-
-      return {
-        sl: idx + 1,
-        code,
-        itemName,
-        variantText,
-        brandName,
-        qty,
-        unitPrice,
-        add5,
-        totalValue,
-      };
-    });
-  }, [safeItems, isShadowUser]);
-
-  // ================== Print (ONLY invoice) ==================
+  // ---------- actions ----------
   const handlePrint = () => {
-       window.print();
-        // document.body.innerHTML = originalContents;
-        window.location.reload(); 
+    const printContents = document.getElementById("invoiceArea")?.innerHTML;
+    if (!printContents) return;
+
+    const originalContents = document.body.innerHTML;
+
+    document.body.innerHTML = `
+        <html>
+        <head>
+            <title>Invoice Print</title>
+            <style>
+            @page { size: A4; margin: 10mm; }
+            body { background: white; }
+            table { width: 100%; border-collapse: collapse; }
+            </style>
+        </head>
+        <body>${printContents}</body>
+        </html>
+    `;
+
+    window.print();
+    document.body.innerHTML = originalContents;
+    window.location.reload(); // page back to normal
   };
 
-  const handleDownloadPDF = () => handlePrint();
 
-  // ================== Invoice Template (SAME design) ==================
-  const Invoice = () => (
-    <div className="invoice-wrap">
-      <div className="invoice-sheet">
-        {watermarkUrl ? (
-          <div className="invoice-watermark" style={{ backgroundImage: `url('${watermarkUrl}')` }} />
-        ) : null}
+  // “PDF” button: open print dialog -> user selects Save as PDF (no extra package)
+  const handleDownloadPDF = () => {
+    handlePrint();
+  };
 
-        {/* HEADER */}
-        <div className="invoice-header">
-          <div className="header-left">
-            <div className="logo-circle">
-              {logoUrl ? <img src={logoUrl} alt="logo" /> : <div className="logo-fallback">LOGO</div>}
-            </div>
-            <div className="company-title">{companyName}</div>
-          </div>
 
-          <div className="header-right">
-            <div className="office-title">অফিস</div>
-            <div className="office-text">
-              {companyAddress ? <div>{companyAddress}</div> : null}
-              {companyPhone ? <div>{companyPhone}</div> : null}
-              {companyEmail ? <div>{companyEmail}</div> : null}
-              {companyWebsite ? <div>{companyWebsite}</div> : null}
-            </div>
-          </div>
-        </div>
-
-        <div className="hr-thin" />
-
-        {/* TITLE */}
-        <div className="invoice-title-row">
-          <div className="invoice-title-box">SALE INVOICE</div>
-        </div>
-
-        {/* INFO GRID (same layout) */}
-        <div className="info-grid">
-          <div className="info-col">
-            <div className="info-row">
-              <div className="k">Bill No</div>
-              <div className="v">{billNo}</div>
-            </div>
-            <div className="info-row">
-              <div className="k">Sale Date</div>
-              <div className="v">{invoiceDate}</div>
-            </div>
-            <div className="info-row">
-              <div className="k">Customer</div>
-              <div className="v">{customerName}</div>
-            </div>
-            <div className="info-row">
-              <div className="k">Customer Address</div>
-              <div className="v">{customerAddress}</div>
-            </div>
-          </div>
-
-          <div className="info-col">
-            <div className="info-row">
-              <div className="k">Reference No</div>
-              <div className="v">{referenceNo || "—"}</div>
-            </div>
-            <div className="info-row">
-              <div className="k">Warehouse</div>
-              <div className="v">{warehouseName}</div>
-            </div>
-            <div className="info-row">
-              <div className="k">Served By</div>
-              <div className="v">{servedBy}</div>
-            </div>
-            <div className="info-row">
-              <div className="k">Date &amp; Time</div>
-              <div className="v">{dateTime}</div>
-            </div>
-          </div>
-        </div>
-
-        {/* TABLE */}
-        <div className="table-wrap">
-          <table className="invoice-table">
-            <thead>
-              <tr>
-                <th className="w-sl">SL</th>
-                <th className="w-code">Code</th>
-                <th className="w-item">Item Name</th>
-                <th className="w-variant">Model / Variant</th>
-                <th className="w-brand">Brand</th>
-                <th className="w-qty">Qty</th>
-                <th className="w-unit">Unit Price</th>
-                <th className="w-add">Add (5%)</th>
-                <th className="w-total">Total Value</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {rows.length ? (
-                rows.map((r) => (
-                  <tr key={r.sl}>
-                    <td className="center">{r.sl}</td>
-                    <td className="center">{r.code}</td>
-                    <td>
-                      <div className="item-strong">{r.itemName}</div>
-                    </td>
-                    <td>{r.variantText || "—"}</td>
-                    <td className="center">{r.brandName}</td>
-                    <td className="center">{r.qty}</td>
-                    <td className="right">{formatMoney(r.unitPrice)}</td>
-                    <td className="right">{formatMoney(r.add5)}</td>
-                    <td className="right total-blue">{formatMoney(r.totalValue)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={9} className="empty">
-                    কোনো আইটেম পাওয়া যায়নি
-                  </td>
-                </tr>
-              )}
-
-              <tr className="table-summary-row">
-                <td colSpan={5} className="right bold">
-                  Total Items: {totalItems}
-                </td>
-                <td className="center bold">{totalQty}</td>
-                <td colSpan={2}></td>
-                <td className="right bold total-blue">{formatMoney(totals.grandTotal)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        {/* SUMMARY */}
-        <div className="summary-grid">
-          <div className="sum-box">
-            <div className="sum-row">
-              <div>Total Items</div>
-              <div className="bold">{totalItems}</div>
-            </div>
-            <div className="sum-row">
-              <div>Total Quantity</div>
-              <div className="bold">{totalQty}</div>
-            </div>
-            <div className="sum-row">
-              <div className="bold">Grand Total</div>
-              <div className="bold total-blue">{formatMoney(totals.grandTotal)}</div>
-            </div>
-          </div>
-
-          <div className="sum-box">
-            <div className="sum-row">
-              <div>Paid Amount</div>
-              <div className="bold">{formatMoney(totals.paid)}</div>
-            </div>
-            <div className="sum-row">
-              <div>Due Amount</div>
-              <div className="bold">{formatMoney(totals.due)}</div>
-            </div>
-            <div className="sum-row status-row">
-              <div>Payment Status</div>
-              <div
-                className={`status-pill ${
-                  paymentStatus === "PAID" ? "paid" : paymentStatus === "PARTIAL" ? "partial" : "unpaid"
-                }`}
-              >
-                {paymentStatus}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* SIGNATURES */}
-        <div className="sign-grid">
-          <div className="sign">
-            <div className="sign-line" />
-            <div className="sign-title">Checked By</div>
-            <div className="sign-sub">(Name, seal, time)</div>
-          </div>
-          <div className="sign">
-            <div className="sign-line" />
-            <div className="sign-title">Authorised</div>
-            <div className="sign-sub">(Signature &amp; Seal)</div>
-          </div>
-          <div className="sign">
-            <div className="sign-line" />
-            <div className="sign-title">Received</div>
-            <div className="sign-sub">(Signature &amp; Seal)</div>
-          </div>
-          <div className="sign">
-            <div className="sign-line" />
-            <div className="sign-title">Delivery By</div>
-            <div className="sign-sub">(Signature &amp; Seal)</div>
-          </div>
-        </div>
-
-        {/* NOTE */}
-        {/* <div className="bottom-note">
-          বিক্রয়কৃত পণ্য ৭ দিনের মধ্যে ফেরত দেওয়া যাবে। পণ্য ফেরতের সময় অবশ্যই মেমোসহ উপস্থিত থাকতে হবে।
-        </div> */}
-      </div>
-    </div>
-  );
+  // ---------- business info ----------
+  const business = sale?.creator?.business || "Business Name";
+  const headOfficeTitle = business?.name || business?.business_name || "মেসার্স মোটর সাইকেল এন্টারপ্রাইজ";
+  const headOfficeAddr = business?.address || "Address";
+  const headOfficePhone = business?.phone || "phone number";
+  const headOfficeEmail = "email";
 
   return (
-    <div className="bg-gray-50 min-h-screen p-4">
+    <div className="bg-gray-100 min-h-screen p-3">
       <style>{`
-        #printArea { display: none; }
-
-        /* ✅ Print only invoice + proper A4 spacing */
-        
         @media print {
-          @page { size: A4 portrait; margin: 10mm; }
-          html, body { height: auto !important; }
-          body {
-            margin: 0 !important;
-            background: #fff !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-          }
-          body * { visibility: hidden !important; }
-          #printArea, #printArea * { visibility: visible !important; }
-          #printArea {
-            display: block !important;
-            position: fixed !important;
-            inset: 0 !important;
-            padding: 0 !important;
-            background: #fff !important;
-          }
-          #printArea .invoice-sheet { box-shadow: none !important; }
-        }
-
-        /* ====== SAME DESIGN CSS (copied from purchase show) ====== */
-        .invoice-wrap{ display:flex; justify-content:center; }
-        .invoice-sheet{
-          position:relative;
-          background:#fff;
-          border:1px solid #d6d6d6;
-          border-radius:8px;
-          padding:16px 16px 12px 16px;
-          box-shadow: 0 1px 10px rgba(0,0,0,.06);
-          overflow:hidden;
-        }
-
-        .invoice-watermark{
-          position:absolute;
-          inset:0;
-          background-repeat:no-repeat;
-          background-position:center;
-          background-size: 420px;
-          opacity:.06;
-          pointer-events:none;
-        }
-
-        .hr-thin{ border-top:1px solid #cfcfcf; margin:10px 0; }
-
-        .invoice-header{
-          display:flex;
-          justify-content:space-between;
-          align-items:flex-start;
-          gap:14px;
-        }
-        .header-left{
-          display:flex;
-          align-items:center;
-          gap:10px;
-          flex: 1;
-          min-width: 0;
-        }
-        .logo-circle{
-          width:54px;
-          height:54px;
-          border-radius:999px;
-          border:2px solid #ef4444;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          overflow:hidden;
-          background:#fff;
-          flex: 0 0 auto;
-        }
-        .logo-circle img{ width:100%; height:100%; object-fit:cover; }
-        .logo-fallback{ font-size:10px; color:#666; }
-        .company-title{
-          font-size:28px;
-          font-weight:800;
-          color:#111;
-          line-height:1.1;
-          white-space:nowrap;
-          overflow:hidden;
-          text-overflow:ellipsis;
-        }
-
-        .header-right{
-          width: 260px;
-          border-left: 1px solid #dedede;
-          padding-left: 12px;
-        }
-        .office-title{ color:#dc2626; font-weight:800; margin-bottom:4px; }
-        .office-text{ font-size:12px; color:#333; line-height:1.35; white-space:pre-wrap; }
-
-        .invoice-title-row{ display:flex; justify-content:center; margin: 2px 0 10px 0; }
-        .invoice-title-box{
-          border:1px solid #bdbdbd;
-          padding:6px 18px;
-          font-weight:800;
-          letter-spacing:.5px;
-          font-size:14px;
-          background:#fff;
-          border-radius:4px;
-        }
-
-        .info-grid{
-          display:grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 18px;
-          font-size:12px;
-          color:#222;
-          margin-bottom:10px;
-        }
-        .info-row{
-          display:grid;
-          grid-template-columns: 110px 1fr;
-          gap: 10px;
-          margin: 6px 0;
-        }
-        .info-row .k{ font-weight:700; color:#444; }
-        .info-row .v{ color:#111; }
-
-        .table-wrap{ margin-top:6px; }
-        .invoice-table{
-          border-collapse:collapse;
-          table-layout:fixed;
-          font-size:12px;
-        }
-        .invoice-table thead th{
-          border:1px solid #cfcfcf;
-          padding:8px 6px;
-          background:#f6f7f8;
-          font-weight:800;
-          text-align:center;
-          color:#111;
-        }
-        .invoice-table tbody td{
-          border-left:1px solid #d6d6d6;
-          border-right:1px solid #d6d6d6;
-          border-bottom:1px solid #ededed;
-          padding:8px 6px;
-          vertical-align:top;
-        }
-        .invoice-table tbody tr:last-child td{ border-bottom:1px solid #d6d6d6; }
-
-        .invoice-table .center{ text-align:center; }
-        .invoice-table .right{ text-align:right; }
-        .invoice-table .empty{
-          text-align:center;
-          padding:22px 8px;
-          color:#666;
-          border:1px solid #d6d6d6;
-        }
-        .item-strong{ font-weight:800; }
-        .total-blue{ color:#1d4ed8; font-weight:900; }
-
-        .w-sl{ width: 36px; }
-        .w-code{ width: 90px; }
-        .w-item{ width: 240px; }
-        .w-variant{ width: 170px; }
-        .w-brand{ width: 80px; }
-        .w-qty{ width: 55px; }
-        .w-unit{ width: 80px; }
-        .w-add{ width: 70px; }
-        .w-total{ width: 90px; }
-
-        .table-summary-row td{
-          border-top:1px solid #cfcfcf;
-          border-bottom:1px solid #cfcfcf;
-          padding:8px 6px;
-          background:#fbfbfb;
-        }
-        .bold{ font-weight:900; }
-
-        .summary-grid{
-          display:grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 12px;
-          margin-top: 12px;
-        }
-        .sum-box{
-          border:1px solid #dedede;
-          padding:10px 12px;
-          font-size:12px;
-          background:#fff;
-          border-radius:6px;
-        }
-        .sum-row{
-          display:flex;
-          justify-content:space-between;
-          padding:4px 0;
-        }
-
-        .status-pill{
-          padding:4px 10px;
-          border-radius:4px;
-          font-weight:900;
-          font-size:12px;
-          border:1px solid #ddd;
-        }
-        .status-pill.unpaid{ color:#b91c1c; border-color:#fecaca; background:#fff5f5; }
-        .status-pill.paid{ color:#166534; border-color:#bbf7d0; background:#f0fdf4; }
-        .status-pill.partial{ color:#92400e; border-color:#fde68a; background:#fffbeb; }
-
-        .sign-grid{
-          display:grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 14px;
-          margin-top: 18px;
-          font-size:12px;
-        }
-        .sign{ text-align:center; color:#333; }
-        .sign-line{
-          border-top:1px solid #9a9a9a;
-          margin: 18px 10px 8px 10px;
-        }
-        .sign-title{ font-weight:800; }
-        .sign-sub{ font-size:11px; color:#666; margin-top:2px; }
-        .rightText{ text-align:right; }
-        .rightText .sign-line{ margin-left:auto; margin-right:0; width: 80%; }
-
-        .bottom-note{
-          margin-top:10px;
-          font-size:11px;
-          color:#444;
-          display:flex;
-          justify-content:space-between;
-          gap:10px;
-          flex-wrap:wrap;
-        }
-
-        @media (max-width: 860px){
-          .company-title{ font-size:22px; }
-          .header-right{ width: 220px; }
-          .info-grid{ grid-template-columns:1fr; }
-          .sign-grid{ grid-template-columns: repeat(2, 1fr); }
+          .no-print { display: none !important; }
+          body { background: white !important; }
+          @page { size: A4; margin: 10mm; }
         }
       `}</style>
 
-      {/* ACTIONS */}
-      <div className="mb-4 bg-white p-4 rounded-lg shadow-sm no-print">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-gray-800">Sale Invoice</h1>
-            <p className="text-sm text-gray-600 mt-1">
-              Bill: <span className="font-semibold">{billNo}</span> • Date:{" "}
-              <span className="font-semibold">{invoiceDate}</span>
-              {isShadowUser && (
-                <span className="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">
-                  Shadow
-                </span>
-              )}
-            </p>
-          </div>
+      {/* Top actions (hidden on print) */}
+      <div className="no-print mb-3 bg-white border border-gray-300 rounded-md p-3 flex flex-wrap items-center justify-between gap-2">
+        <div className="text-sm">
+          <div className="font-semibold text-gray-800">Invoice: {sale.invoice_no}</div>
+          <div className="text-gray-600">Date: {formatDate(sale.created_at)}</div>
+        </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => router.visit(route("sales.index"))}
-              className="btn btn-sm btn-ghost border border-gray-300"
-            >
-              <ArrowLeft size={15} className="mr-1" />
-              Back
-            </button>
-
-            <button
-              onClick={handlePrint}
-              className="btn btn-sm text-white bg-gray-900"
-              // disabled={isPrinting}
-            >
-              <Printer size={15} className="mr-1" />
-              Print
-              {isPrinting && <span className="loading loading-spinner loading-xs ml-2"></span>}
-            </button>
-
-            <button
-              onClick={handleDownloadPDF}
-              className="btn btn-sm text-white bg-gray-900"
-              disabled={isPrinting}
-            >
-              <Download size={15} className="mr-1" />
-              PDF
-              {isPrinting && <span className="loading loading-spinner loading-xs ml-2"></span>}
-            </button>
-          </div>
+        <div className="flex gap-2">
+          <Link href={route("sales.index")} className="btn btn-sm btn-ghost border border-gray-300">
+            <ArrowLeft size={16} className="mr-1" />
+            Back
+          </Link>
+          <button onClick={handlePrint} className="btn btn-sm bg-gray-900 hover:bg-black text-white">
+            <Printer size={16} className="mr-1" />
+            Print
+          </button>
+          <button onClick={handleDownloadPDF} className="btn btn-sm bg-gray-700 hover:bg-gray-800 text-white">
+            <Download size={16} className="mr-1" />
+          </button>
         </div>
       </div>
 
-      {/* SCREEN PREVIEW */}
-      <div className="no-print">
-        <Invoice />
-      </div>
+      {/* Invoice Paper */}
+      <div id="invoiceArea"
+        className="bg-white border border-gray-400 mx-auto rounded-md shadow-sm relative overflow-hidden"
+        style={{ maxWidth: "210mm" }}
+      >
+        {/* Watermark (like image) */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-10">
+          <div className="w-[200px] h-[200px] rounded-full border-[10px] border-red-700 flex items-center justify-center">
+            <div className="text-[80px] font-black text-red-200">
+              <img
+                src="/media/uploads/logo.png"
+                className="h-full w-full object-contain p-1 "
+                style={
+                  { borderRadius: "50%" }
+                }
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/media/uploads/logo.png";
+                }}
+              />
+            </div>
+          </div>
+        </div>
 
-      {/* ✅ PRINT ONLY */}
-      <div id="printArea">
-        <Invoice />
+        <div className="relative p-4">
+          {/* Header line like image */}
+          <div className="flex items-start justify-between gap-4 border-b border-black pb-2">
+            {/* Left brand */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full border-2 border-red-400 flex items-center justify-center">
+                <img
+                  src="/media/uploads/logo.png"
+                  className="h-full w-full object-contain p-1 "
+                  style={
+                    { borderRadius: "50%" }
+                  }
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = "/media/uploads/logo.png";
+                  }}
+                />
+              </div>
+              <div>
+                <div className="text-xl font-black tracking-wide text-gray-900">
+                  {headOfficeTitle}
+                </div>
+                <div className="text-[11px] font-semibold tracking-[0.22em] text-gray-700 -mt-0.5">
+
+                </div>
+              </div>
+            </div>
+
+            {/* Offices (2 blocks) */}
+            <div className="flex gap-4 text-[10px] leading-4 text-gray-800">
+              <div className="border-l border-gray-300 pl-3">
+                <div className="font-bold text-red-700">অফিস</div>
+                <div className="max-w-[240px]">{headOfficeAddr}</div>
+                <div>{headOfficePhone}</div>
+                <div>{headOfficeEmail}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Invoice Title row */}
+          <div className="flex items-center justify-center py-2">
+            <div className="px-4 py-1 border border-black text-[12px] font-bold uppercase tracking-wider">
+              Invoice
+            </div>
+          </div>
+
+          {/* Meta info grid (like image small fields) */}
+          <div className="grid grid-cols-2 gap-3 text-[10px] border-b border-gray-300 pb-2">
+            <div className="space-y-1">
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Bill No</span>
+                <span className="font-mono">{sale.invoice_no}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Delivery Date</span>
+                <span>{formatDate(sale.delivery_date || sale.created_at)}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Bill To</span>
+                <span className="text-right">{sale.customer?.customer_name || "Walk-in Customer"}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Address</span>
+                <span className="text-right">{sale.customer?.address || "N/A"}</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Project</span>
+                <span>{sale.project_name || "Ms Motors"}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Memo No</span>
+                <span>{sale.reference_no || sale.id}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Served By</span>
+                <span>{sale.creator?.name || auth?.user?.name || "N/A"}</span>
+              </div>
+              <div className="flex justify-between gap-3">
+                <span className="font-semibold">Date & Time</span>
+                <span>{formatDateTime(sale.created_at)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Items table like image */}
+          <div className="mt-2 overflow-x-auto">
+            <table className="w-full text-[10px] border border-black">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border border-black p-1 w-[4%]">SL</th>
+                  <th className="border border-black p-1 w-[10%]">Code</th>
+                  <th className="border border-black p-1 text-left w-[30%]">Item Name</th>
+                  <th className="border border-black p-1 text-left w-[16%]">Model / Variant</th>
+                  <th className="border border-black p-1 w-[10%]">Brand</th>
+                  <th className="border border-black p-1 w-[6%]">Qty</th>
+                  <th className="border border-black p-1 w-[10%]">Trade Price</th>
+                  <th className="border border-black p-1 w-[6%]">Add</th>
+                  <th className="border border-black p-1 w-[8%]">Total Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((item, idx) => {
+                  const add = getAddAmount(item);
+                  const total = rowTotal(item);
+                  return (
+                    <tr key={item.id || idx}>
+                      <td className="border border-black p-1 text-center">{idx + 1}</td>
+                      <td className="border border-black p-1 text-center font-mono">{getProductCode(item)}</td>
+                      <td className="border border-black p-1">
+                        <div className="font-semibold">{getProductDisplayName(item)}</div>
+                        {item.item_type === "pickup" ? (
+                          <div className="text-[9px] text-gray-600">Pickup Item</div>
+                        ) : (
+                          <div className="text-[9px] text-gray-600">
+                            {item.variant?.sku ? `SKU: ${item.variant.sku}` : ""}
+                          </div>
+                        )}
+                      </td>
+                      <td className="border border-black p-1">
+                        {getVariantDisplayName(item)}
+                      </td>
+                      <td className="border border-black p-1 text-center">{getBrandName(item)}</td>
+                      <td className="border border-black p-1 text-center font-bold">
+                        {item.quantity}
+                        {item.unit ? (
+                          <span className="text-[9px] text-gray-600"> {item.unit}</span>
+                        ) : null}
+                      </td>
+                      <td className="border border-black p-1 text-right font-mono">{formatCurrency(item.unit_price)}</td>
+                      <td className="border border-black p-1 text-right font-mono">{formatCurrency(add)}</td>
+                      <td className="border border-black p-1 text-right font-mono font-bold">{formatCurrency(total)}</td>
+                    </tr>
+                  );
+                })}
+
+                {items.length === 0 && (
+                  <tr>
+                    <td colSpan={9} className="border border-black p-3 text-center text-gray-600">
+                      No items found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+
+              {/* Footer totals row like image */}
+              <tfoot>
+                <tr>
+                  <td colSpan={5} className="border border-black p-1 text-right font-bold">
+                    Pcs.
+                  </td>
+                  <td className="border border-black p-1 text-center font-bold">{totalQty}
+                
+                  </td>
+                  <td className="border border-black p-1"></td>
+                  <td className="border border-black p-1"></td>
+                  <td className="border border-black p-1 text-right font-bold">
+                    {formatCurrency(sale.grand_total)}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Bottom summary (compact like invoice) */}
+          <div className="mt-3 grid grid-cols-2 gap-3 text-[10px]">
+            <div className="border border-gray-300 p-2">
+              <div className="flex justify-between">
+                <span className="font-semibold">Sub Total</span>
+                <span className="font-mono">{formatCurrency(sale.sub_total)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">VAT/Tax</span>
+                <span className="font-mono">
+                  {sale.vat_tax || 0}% ({formatCurrency((Number(sale.sub_total || 0) * Number(sale.vat_tax || 0)) / 100)})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Discount</span>
+                <span className="font-mono">
+                  {sale.discount || 0}% ({formatCurrency((Number(sale.sub_total || 0) * Number(sale.discount || 0)) / 100)})
+                </span>
+              </div>
+              <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
+                <span>Grand Total</span>
+                <span className="font-mono">{formatCurrency(sale.grand_total)}</span>
+              </div>
+            </div>
+
+            <div className="border border-gray-300 p-2">
+              <div className="flex justify-between">
+                <span className="font-semibold">Paid Amount</span>
+                <span className="font-mono">{formatCurrency(sale.paid_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Due Amount</span>
+                <span className="font-mono">{formatCurrency(sale.due_amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Payment Method</span>
+                <span className="font-semibold">{(sale.payment_type || "CASH").toUpperCase()}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Signature row like image */}
+          <div className="mt-5 grid grid-cols-4 gap-4 text-[10px]">
+            <div className="text-center">
+              <div className="border-t border-black pt-1 font-semibold">Checked By</div>
+            </div>
+            <div className="text-center">
+              <div className="border-t border-black pt-1 font-semibold">Authorised</div>
+            </div>
+            <div className="text-center">
+              <div className="border-t border-black pt-1 font-semibold">Received</div>
+            </div>
+            <div className="text-center">
+              <div className="border-t border-black pt-1 font-semibold">Delivery By</div>
+            </div>
+          </div>
+
+          {/* Footer note line */}
+          <div className="mt-3 text-[9px] text-gray-600 flex justify-between border-t border-gray-300 pt-2">
+            <div>
+              <span>বিক্রয়িত পণ্য  ১৫  দিনের  মধ্যে ফেরত যোগ্য । পণ্য  ফেরতের সময়  অবশ্যই মেমোর ফটোকপি  দিতে হবে </span>
+            </div>
+            <div>
+              Powered by: Nexoryn
+              <br />
+              {/* Phone: 01676-773088 */}
+            </div>
+
+          </div>
+          {/* <br /> <hr /> */}
+          {/* Signatures images like image */}
+          {/* <div className="flex space-x-2 pt-2">
+            <img src="/media/uploads/sig4.png" alt="Signature 1" className="w-1/5 h-12" />
+            <img src="/media/uploads/sig5.png" alt="Signature 2" className="w-1/5 h-12" />
+            <img src="/media/uploads/sig6.png" alt="Signature 3" className="w-1/8 h-12" />
+            <img src="/media/uploads/sig7.png" alt="Signature 4" className="w-1/5 h-12" />
+            <img src="/media/uploads/sig8.png" alt="Signature 5" className="w-1/5 h-12" />
+          </div> */}
+        </div>
       </div>
     </div>
   );

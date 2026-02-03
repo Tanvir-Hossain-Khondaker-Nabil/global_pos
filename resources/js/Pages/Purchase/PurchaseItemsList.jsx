@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Eye, Search, Filter, Frown, ChevronDown, ChevronUp, Package, Building, Calendar } from "lucide-react";
+import { Eye, Search, RefreshCw, Frown, ChevronDown, ChevronUp, Package, Building, Calendar } from "lucide-react";
 import { toast } from "react-toastify";
 
 export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser }) {
     const { flash } = usePage().props;
     const [expandedRow, setExpandedRow] = useState(null);
-    
+
     // Handle search and filtering
     const searchForm = useForm({
         product_id: filters.product_id || "",
@@ -58,7 +58,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
         const price = parseFloat(item.unit_price) || 0;
         const quantity = parseFloat(item.quantity) || 0;
         const discount = parseFloat(item.discount) || 0;
-        
+
         const subtotal = price * quantity;
         const discountAmount = (subtotal * discount) / 100;
         return (subtotal - discountAmount).toFixed(2);
@@ -67,7 +67,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
     // Get variant text
     const getVariantText = (variant) => {
         if (!variant) return 'N/A';
-        
+
         let attrsText = '';
         if (variant.attribute_values) {
             if (typeof variant.attribute_values === 'object') {
@@ -78,7 +78,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                 attrsText = variant.attribute_values;
             }
         }
-        
+
         return attrsText || 'N/A';
     };
 
@@ -113,8 +113,8 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
 
     return (
         <div className="bg-white rounded-box p-5">
-            <PageHeader 
-                title="All Purchase Items" 
+            <PageHeader
+                title="All Purchase Items"
                 description="Comprehensive list of all purchased items with detailed information"
             />
 
@@ -213,7 +213,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                         <td>
                                             <div className="max-w-[200px]">
                                                 <div className="font-medium text-sm">
-                                                    {item.product?.name || item?.product_name} 
+                                                    {item.product?.name || item?.product_name}
                                                     {item.product?.product_no && ` (${item.product.product_no})`}
                                                 </div>
                                                 {item.variant && (
@@ -222,7 +222,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                         {item.variant?.sku && ` (${item.variant.sku})`}
                                                     </div>
                                                 )}
-                                                    {item?.variant_name} 
+                                                {item?.variant_name}
 
                                             </div>
                                         </td>
@@ -270,7 +270,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-1">
-                                          
+
                                                 <Link
                                                     href={route('purchaseItems.show', { id: item.id })}
                                                     className="btn btn-ghost btn-xs"
@@ -278,6 +278,36 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                 >
                                                     <Package size={12} />
                                                 </Link>
+
+                                                {Boolean(item?.warehouse_id) && !item?.damage && (
+                                                    <Link
+                                                        href={route('damages.create', {
+                                                            id: item.id,
+                                                            type: 'purchase',
+                                                        })}
+                                                        className="btn text-[red] btn-ghost btn-xs"
+                                                        title="Create Damage"
+                                                    >
+                                                        <RefreshCw size={12} />
+                                                    </Link>
+                                                )}
+
+                                                 {/* {!item?.damage && 
+                                                (
+                                                    <Link
+                                                        href={route('damages.create', {
+                                                            id: item.id,
+                                                            type: 'purchase',
+                                                        })}
+                                                        className="btn text-[red] btn-ghost btn-xs"
+                                                        title={Boolean(item?.warehouse_id) ? "Create Damage" : "Pickup Item Refund"}
+                                                    >
+                                                        <RefreshCw size={12} />
+                                                    </Link>
+                                                )} */}
+
+
+
                                                 {/* {item.product && (
                                                     <Link
                                                         href={route('products.show', { id: item.product_id })}
@@ -290,7 +320,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                             </div>
                                         </td>
                                     </tr>
-                                    
+
                                     {/* Expanded Row Details */}
                                     {expandedRow === index && (
                                         <tr className="bg-base-200">
@@ -404,9 +434,8 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                             <Link
                                 key={index}
                                 href={link.url}
-                                className={`join-item btn btn-sm ${
-                                    link.active ? 'bg-[#1e4d2b] text-white' : ''
-                                }`}
+                                className={`join-item btn btn-sm ${link.active ? 'bg-[#1e4d2b] text-white' : ''
+                                    }`}
                                 preserveScroll
                                 preserveState
                                 dangerouslySetInnerHTML={{ __html: link.label }}
