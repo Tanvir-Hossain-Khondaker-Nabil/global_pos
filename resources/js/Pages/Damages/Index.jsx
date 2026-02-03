@@ -8,8 +8,6 @@ export default function DamageIndex({ damages, filters }) {
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
 
-    console.log(damages);
-
     const searchForm = useForm({
         search: filters.search || "",
         type: filters.type || "",
@@ -18,10 +16,13 @@ export default function DamageIndex({ damages, filters }) {
         end_date: filters.end_date || "",
     });
 
-    const handleSearch = (e) => {
+    const handleInputChange = (e) => {
         const { name, value } = e.target;
         searchForm.setData(name, value);
+    };
 
+    const handleSubmit = (e) => {
+        e?.preventDefault();
         router.get(route("damages.index"), searchForm.data, {
             preserveScroll: true,
             preserveState: true,
@@ -65,10 +66,6 @@ export default function DamageIndex({ damages, filters }) {
     const damageTypes = [
         { value: 'sale', label: t('damage.type_sale', 'Sale Return') },
         { value: 'purchase', label: t('damage.type_purchase', 'Purchase Return') },
-        { value: 'internal', label: t('damage.type_internal', 'Internal Damage') },
-        { value: 'expired', label: t('damage.type_expired', 'Expired') },
-        { value: 'defective', label: t('damage.type_defective', 'Defective') },
-        { value: 'other', label: t('damage.type_other', 'Other') },
     ];
 
     // Reason options
@@ -101,101 +98,109 @@ export default function DamageIndex({ damages, filters }) {
             >
                 <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
                     <div className="flex gap-2">
-                        <input
-                            type="search"
-                            name="search"
-                            onChange={handleSearch}
-                            value={searchForm.data.search}
-                            placeholder={t('damage.search_placeholder', 'Search damages...')}
-                            className="input input-sm input-bordered"
-                        />
-                        {/* <Link
-                            href={route("damages.create")}
-                            className="btn btn-sm bg-[#1e4d2b] text-white"
-                        >
-                            <Plus size={15} /> 
-                            {t('damage.add_damage', 'Add Damage Record')}
-                        </Link> */}
+                        <form onSubmit={handleSubmit} className="flex gap-2">
+                            <input
+                                type="search"
+                                name="search"
+                                onChange={handleInputChange}
+                                value={searchForm.data.search}
+                                placeholder={t('damage.search_placeholder', 'Search damages...')}
+                                className="input input-sm input-bordered"
+                            />
+                            <button type="submit" className="btn btn-sm bg-[#1e4d2b] text-white">
+                                {t('damage.search', 'Search')}
+                            </button>
+                        </form>
+
                     </div>
                 </div>
             </PageHeader>
 
             {/* Filters */}
-            <div className="bg-base-100 rounded-box p-4 mb-4 border border-base-300">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text text-sm">{t('damage.type', 'Damage Type')}</span>
-                        </label>
-                        <select
-                            name="type"
-                            onChange={handleSearch}
-                            value={searchForm.data.type}
-                            className="select select-sm select-bordered"
+            <form onSubmit={handleSubmit}>
+                <div className="bg-base-100 rounded-box p-4 mb-4 border border-base-300">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text text-sm">{t('damage.type', 'Damage Type')}</span>
+                            </label>
+                            <select
+                                name="type"
+                                onChange={handleInputChange}
+                                value={searchForm.data.type}
+                                className="select select-sm select-bordered"
+                            >
+                                <option value="">{t('damage.all_types', 'All Types')}</option>
+                                {damageTypes.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text text-sm">{t('damage.reason', 'Reason')}</span>
+                            </label>
+                            <select
+                                name="reason"
+                                onChange={handleInputChange}
+                                value={searchForm.data.reason}
+                                className="select select-sm select-bordered"
+                            >
+                                <option value="">{t('damage.all_reasons', 'All Reasons')}</option>
+                                {reasonOptions.map(option => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text text-sm">{t('damage.start_date', 'Start Date')}</span>
+                            </label>
+                            <input
+                                type="date"
+                                name="start_date"
+                                onChange={handleInputChange}
+                                value={searchForm.data.start_date}
+                                className="input input-sm input-bordered"
+                            />
+                        </div>
+
+                        <div className="form-control">
+                            <label className="label">
+                                <span className="label-text text-sm">{t('damage.end_date', 'End Date')}</span>
+                            </label>
+                            <input
+                                type="date"
+                                name="end_date"
+                                onChange={handleInputChange}
+                                value={searchForm.data.end_date}
+                                className="input input-sm input-bordered"
+                            />
+                        </div>
+                    </div>
+                    <div className="mt-3 flex justify-between">
+                        <button
+                            type="submit"
+                            className="btn btn-sm bg-[#1e4d2b] text-white"
                         >
-                            <option value="">{t('damage.all_types', 'All Types')}</option>
-                            {damageTypes.map(option => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text text-sm">{t('damage.reason', 'Reason')}</span>
-                        </label>
-                        <select
-                            name="reason"
-                            onChange={handleSearch}
-                            value={searchForm.data.reason}
-                            className="select select-sm select-bordered"
+                            {t('damage.apply_filters', 'Apply Filters')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleReset}
+                            className="btn btn-sm btn-ghost"
                         >
-                            <option value="">{t('damage.all_reasons', 'All Reasons')}</option>
-                            {reasonOptions.map(option => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text text-sm">{t('damage.start_date', 'Start Date')}</span>
-                        </label>
-                        <input
-                            type="date"
-                            name="start_date"
-                            onChange={handleSearch}
-                            value={searchForm.data.start_date}
-                            className="input input-sm input-bordered"
-                        />
-                    </div>
-
-                    <div className="form-control">
-                        <label className="label">
-                            <span className="label-text text-sm">{t('damage.end_date', 'End Date')}</span>
-                        </label>
-                        <input
-                            type="date"
-                            name="end_date"
-                            onChange={handleSearch}
-                            value={searchForm.data.end_date}
-                            className="input input-sm input-bordered"
-                        />
+                            {t('damage.reset_filters', 'Reset Filters')}
+                        </button>
                     </div>
                 </div>
-                <div className="mt-3 flex justify-end">
-                    <button
-                        onClick={handleReset}
-                        className="btn btn-sm btn-ghost"
-                    >
-                        {t('damage.reset_filters', 'Reset Filters')}
-                    </button>
-                </div>
-            </div>
+            </form>
 
             <div className="overflow-x-auto">
                 {damages.data.length > 0 ? (

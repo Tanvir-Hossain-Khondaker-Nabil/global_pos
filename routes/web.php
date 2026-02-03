@@ -341,8 +341,8 @@ Route::middleware('auth')->group(function () {
     //damaged 
     Route::controller(DamageController::class)->group(function () {
         Route::get('/damages/{id}/{type?}', 'getData')
-        // ->middleware('permission:damages.view')
-        ->name('damages.index');
+        // ->middleware('permission:damages.create')
+        ->name('damages.create');
 
         Route::post('/damages/store', 'storeDamage')
         // ->middleware('permission:damages.store')

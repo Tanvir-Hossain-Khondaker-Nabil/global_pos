@@ -255,18 +255,19 @@ export default function AllSalesItems({ salesItems }) {
                                         </td>
                                         <td>
                                             <div className="text-sm">
-                                                {item.sale.discount}%
+                                                {item?.sale?.discount || 0}
+                                                {item?.sale?.discount_type === 'percentage' ? ' %' : ' Tk'}
                                             </div>
                                         </td>
 
                                         <td>
                                             <div className="badge badge-info badge-sm">
-                                                <strong>{item.sale.type}</strong>
+                                                <strong>{item?.sale?.type || 'N/A'}</strong>
                                             </div>
                                         </td>
                                         <td>
                                             <div className="font-semibold text-primary">
-                                                {calculateItemTotal(item)} Tk
+                                                {item?.sale?.grand_total || 0} Tk
                                             </div>
                                         </td>
                                         <td>

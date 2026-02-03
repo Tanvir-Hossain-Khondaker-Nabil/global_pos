@@ -130,7 +130,6 @@ class DamageController extends Controller
         $query = Damage::with(['saleItem.product', 'purchaseItem.product'])
             ->orderBy('created_at', 'desc');
 
-        // Apply filters
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('description', 'like', '%' . $request->search . '%')
@@ -171,7 +170,7 @@ class DamageController extends Controller
 
 
     /**
-     * show damges
+     * show damages
      */
 
     public function show($id)

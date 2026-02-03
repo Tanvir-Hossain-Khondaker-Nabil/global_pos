@@ -20,7 +20,8 @@ return [
     'reason'=> 'Reason',
     'action_taken'=> 'Action Taken',
     'actions'=> 'Actions',
-    
+    'searche'=> 'Searches',
+
     // Damage types
     'type_sale'=> 'Sale Return',
     'type_purchase'=> 'Purchase Return',
@@ -77,6 +78,7 @@ return [
     'damage_type'=> 'Damage Type',
     'damage_quantity'=> 'Damage Quantity',
     'total_cost'=> 'Total Cost',
+    'apply_filters'=> 'Apply Filters',
     'unit_cost'=> 'Unit Cost',
     'damage_date'=> 'Damage Date',
     'created_at'=> 'Record Created',
