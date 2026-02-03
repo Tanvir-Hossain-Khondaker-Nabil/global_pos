@@ -348,6 +348,14 @@ Route::middleware('auth')->group(function () {
         // ->middleware('permission:damages.store')
         ->name('damages.store');
 
+        Route::get('/damages', 'index')
+        // ->middleware('permission:damages.index')
+        ->name('damages.index');
+
+        Route::get('/damages/{id}', 'show')
+        // ->middleware('permission:damages.show')
+        ->name('damages.show');
+
     });
 
     // barcode

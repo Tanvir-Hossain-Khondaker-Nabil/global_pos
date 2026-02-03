@@ -123,13 +123,47 @@ class DamageController extends Controller
     /**
      * Index damages.
      */
-
-    public function index()
+    public function index(Request $request)
     {
-        $damages = Damage::with(['saleItem.product', 'purchaseItem.product'])->orderBy('created_at', 'desc')->get();
+        $query = Damage::with(['saleItem.product', 'purchaseItem.product'])
+            ->orderBy('created_at', 'desc');
+
+        // Apply filters
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('description', 'like', '%' . $request->search . '%')
+                    ->orWhereHas('saleItem.product', function ($q) use ($request) {
+                        $q->where('name', 'like', '%' . $request->search . '%');
+                    })
+                    ->orWhereHas('purchaseItem.product', function ($q) use ($request) {
+                        $q->where('name', 'like', '%' . $request->search . '%');
+                    });
+            });
+        }
+
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        if ($request->filled('reason')) {
+            $query->where('reason', $request->reason);
+        }
+
+        if ($request->filled('start_date')) {
+            $query->whereDate('damage_date', '>=', $request->start_date);
+        }
+
+        if ($request->filled('end_date')) {
+            $query->whereDate('damage_date', '<=', $request->end_date);
+        }
+
+        $damages = $query->paginate(15)->withQueryString();
 
         return inertia('Damages/Index', [
             'damages' => $damages,
+            'filters' => $request->only(['search', 'type', 'reason', 'start_date', 'end_date']),
         ]);
     }
+
+
 }
