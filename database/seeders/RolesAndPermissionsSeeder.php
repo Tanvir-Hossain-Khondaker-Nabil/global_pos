@@ -23,6 +23,28 @@ class RolesAndPermissionsSeeder extends Seeder
             // Dashboard
             'dashboard.view',
 
+            'sales_return.pickup',
+
+            'locale.switch',
+
+            // Installments
+            'installments.view',
+            'installments.edit',
+
+            'purchase.list_index',
+
+            // Damages
+            'damages.create',
+            'damages.store',
+            'damages.index',
+            'damages.show',
+
+            'headers.index',
+            'headers.create',
+            'headers.edit',
+            'headers.delete',
+            'headers.show',
+
             // Users
             'users.view',
             'users.create',

@@ -4,9 +4,6 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Total Biz Pos</title>
-    <link rel="shortcut icon" href="https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png"
-        type="image/x-icon">
     @routes
     @viteReactRefresh
     @vite('resources/js/app.jsx')
@@ -18,8 +15,8 @@
         }
     </style>
 
-    {{-- <link rel="stylesheet" href="{{ asset('build/assetsrW/app-DiTok4F-.css') }}">
-    <script src="{{ asset('build/assets/app-DBHT9m69.js') }}" type="module"></script> --}}
+    <link rel="stylesheet" href="{{ asset('build/assetsrW/app-DiTok4F-.css') }}">
+    <script src="{{ asset('build/assets/app-DBHT9m69.js') }}" type="module"></script>
 </head>
 
 

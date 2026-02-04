@@ -623,11 +623,13 @@ class PurchaseController extends Controller
 
         $bpQuery = BusinessProfile::query()->where('created_by', $ownerId);
 
+
         if (!empty($outletId)) {
             $bpQuery->where('outlet_id', $outletId);
         }
 
         $businessProfile = $bpQuery->latest()->first();
+
 
         if (!$businessProfile) {
             $businessProfile = BusinessProfile::latest()->first();

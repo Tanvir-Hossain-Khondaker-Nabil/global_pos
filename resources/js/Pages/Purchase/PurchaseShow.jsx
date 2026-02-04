@@ -1,27 +1,127 @@
 import PageHeader from "../../components/PageHeader";
-import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { ArrowLeft, Printer, Download, ChevronRight } from "lucide-react";
+import { Link, router, usePage } from "@inertiajs/react";
+import { ArrowLeft, Printer, Download, SlidersHorizontal, X, Check } from "lucide-react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 
-export default function PurchaseShow({ purchase, isShadowUser }) {
+/**
+ * ✅ 0% DESIGN CHANGE (Design-1 and Design-2 as you provided)
+ * ✅ ONLY FIXES:
+ *  - sidebar + floating icon + persist design (cookie + localStorage)
+ *  - print routes (Design-1 => invoiceArea html replace print, Design-2 => printPad css print)
+ *  - removed duplicate function names (handlePrintDesign2 only once)
+ *  - Bangla Pad header uses businessProfile dynamic (name/phone/address/email/web/logo/description)
+ */
+
+export default function PurchaseShow({ purchase, isShadowUser, businessProfile }) {
   const { auth } = usePage().props;
   const { t, locale } = useTranslation();
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // ---------- helpers ----------
+  // =========================
+  // ✅ Persisted invoice type
+  // =========================
+  const STORAGE_KEY = "purchase_invoice_design";
+  const COOKIE_KEY = "purchase_invoice_design";
+
+  const getCookie = (name) => {
+    if (typeof document === "undefined") return null;
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return decodeURIComponent(parts.pop().split(";").shift() || "");
+    return null;
+  };
+
+  const setCookie = (name, value, days = 30) => {
+    if (typeof document === "undefined") return;
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    document.cookie = `${name}=${encodeURIComponent(value)}; expires=${d.toUTCString()}; path=/`;
+  };
+
+  const readPersistedDesign = () => {
+    // ✅ priority: cookie -> localStorage -> default 1
+    const ck = getCookie(COOKIE_KEY);
+    if (ck === "1" || ck === "2") return ck;
+
+    try {
+      const ls = localStorage.getItem(STORAGE_KEY);
+      if (ls === "1" || ls === "2") return ls;
+    } catch (_) {}
+
+    return "1"; // ✅ default must be 1
+  };
+
+  const [invoiceDesign, setInvoiceDesign] = useState("1");
+
+  useEffect(() => {
+    setInvoiceDesign(readPersistedDesign());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const persistDesign = (value) => {
+    setInvoiceDesign(value);
+    setCookie(COOKIE_KEY, value, 30);
+    try {
+      localStorage.setItem(STORAGE_KEY, value);
+    } catch (_) {}
+  };
+
+  // =========================
+  // ✅ Sidebar states
+  // =========================
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const openSidebar = () => setSidebarOpen(true);
+  const closeSidebar = () => setSidebarOpen(false);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") closeSidebar();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  // =========================
+  // ✅ Business profile (shared)
+  // =========================
+  const resolveAssetUrl = (path) => {
+    if (!path) return "";
+    if (typeof path !== "string") return "";
+    if (path.startsWith("http://") || path.startsWith("https://")) return path;
+    if (path.startsWith("/")) return path;
+    return `/storage/${path}`;
+  };
+
+  const profile = businessProfile || null;
+
+  const bpName = profile?.name || "Business Name";
+  const bpEmail = profile?.email || "mail@example.com";
+  const bpPhone = profile?.phone || "০১৬******৮৮";
+  const bpAddr = profile?.address || "Address ";
+  const bpWebsite = profile?.website || "";
+  const bpDesc = profile?.description || "ধন্যবাদ।";
+
+  const bpLogo =
+    resolveAssetUrl(profile?.logo) ||
+    resolveAssetUrl(profile?.thum) ||
+    "/media/uploads/logo.png";
+
+  // =========================
+  // ✅ Design-1 helpers (UNCHANGED)
+  // =========================
   const formatCurrency = (amount) => {
     const n = Number(amount || 0);
     return n.toFixed(2);
   };
-  const money = (amount) => `৳ ${formatCurrency(amount)}`;
 
   const formatDate = (date) => {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString('en-GB', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric'
+    if (!date) return "N/A";
+    return new Date(date).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
     });
   };
 
@@ -37,104 +137,60 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
     });
   };
 
-  // Calculate total quantity
   const totalQty = useMemo(() => {
-    return purchase.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0;
+    return purchase.items?.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0) || 0;
   }, [purchase]);
 
-  // Get the correct price based on user type
   const getPrice = (item, field) => {
     if (isShadowUser) {
       switch (field) {
-        case 'unit_price': return item.shadow_unit_price;
-        case 'total_price': return item.shadow_total_price;
-        case 'sale_price': return item.shadow_sale_price;
-        default: return item[field];
+        case "unit_price":
+          return item.shadow_unit_price;
+        case "total_price":
+          return item.shadow_total_price;
+        case "sale_price":
+          return item.shadow_sale_price;
+        default:
+          return item[field];
       }
     }
     return item[field];
   };
 
-  // Get purchase amounts based on user type
   const getPurchaseAmount = (field) => {
     if (isShadowUser) {
       switch (field) {
-        case 'grand_total': return purchase.shadow_grand_total;
-        case 'paid_amount': return purchase.shadow_paid_amount;
-        case 'due_amount': return purchase.shadow_due_amount;
-        default: return purchase[field];
+        case "grand_total":
+          return purchase.shadow_grand_total;
+        case "paid_amount":
+          return purchase.shadow_paid_amount;
+        case "due_amount":
+          return purchase.shadow_due_amount;
+        default:
+          return purchase[field];
       }
     }
     return purchase[field];
   };
 
-  // Helper function to get variant display name
-  // const getVariantDisplayName = (variant) => {
-  //     if (!variant) return 'N/A';
-
-  //     const parts = [];
-  //     if (variant.attribute_values) {
-  //         if (typeof variant.attribute_values === 'object') {
-  //             const attrs = Object.entries(variant.attribute_values)
-  //                 .map(([key, value]) => `${value}`)
-  //                 .join(', ');
-  //             parts.push(attrs);
-  //         } else {
-  //             parts.push(variant.attribute_values);
-  //         }
-  //     }
-
-  //     if (variant.sku) {
-  //         parts.push(`SKU: ${variant.sku}`);
-  //     }
-
-  //     return parts.join(', ') || 'N/A';
-  // };
-
   const getVariantDisplayName = (variant) => {
-
     if (variant?.attribute_values && typeof variant.attribute_values === "object") {
       return Object.values(variant.attribute_values).join(", ");
     }
     return variant?.attribute_values || "N/A";
   };
 
-  // const getBrandName = (variant) => {
-  //     if (variant?.attribute_values && typeof variant.attribute_values === "object") {
-  //         return Object.keys(variant.attribute_values).join(", ");
-  //     }
-  //     return variant?.attribute_values || "N/A";
-  // };
-
   const getBrandName = (item) => {
-    // if (item.item_type === "pickup") return item.brand || "N/A";
     return item.product?.brand?.name || item.brand?.name || item.product?.brand || "N/A";
   };
 
+  const getProductDisplayName = (item) => item.product?.name || "N/A";
+  const getProductCode = (item) => item.product?.product_no || item.product_id || "N/A";
 
-  const getProductDisplayName = (item) => {
-    return item.product?.name || 'N/A';
-  };
+  const items = purchase.items || [];
 
-  const getProductCode = (item) => {
-    return item.product?.product_no || item.product_id || 'N/A';
-  };
-
-  // Get company name from supplier or default
-  const getCompanyName = () => {
-    return "Business Name";
-  };
-
-  // Get supplier business info
-  const getSupplierBusiness = () => {
-    if (purchase.supplier?.business) {
-      return purchase.supplier.business;
-    }
-    return "Supplier Business";
-  };
-
-  // ---------- actions ----------
-  const handlePrint = () => {
+  // ✅ Print Design-1 (invoiceArea only) (UNCHANGED METHOD)
+  const handlePrintDesign1 = () => {
     const printContents = document.getElementById("invoiceArea")?.innerHTML;
     if (!printContents) return;
 
@@ -159,20 +215,510 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
     window.location.reload();
   };
 
-  const handleDownloadPDF = () => {
-    handlePrint();
+  // =========================
+  // ✅ Design-2 (Bangla Pad) helpers (UNCHANGED)
+  // =========================
+  const safeItems = useMemo(() => purchase?.items || [], [purchase]);
+
+  const toBanglaDigit = (value) => {
+    const map = { 0: "০", 1: "১", 2: "২", 3: "৩", 4: "৪", 5: "৫", 6: "৬", 7: "৭", 8: "৮", 9: "৯" };
+    return String(value ?? "").replace(/\d/g, (d) => map[d]);
   };
 
-  // ---------- business info ----------
-  const business = purchase?.supplier?.business || "Supplier Business";
-  const headOfficeTitle = business?.name || business?.business_name || 'Business Name';
-  const headOfficeAddr = business?.address || "Address ";
-  const headOfficePhone = business?.phone || "০১৬******৮৮";
-  const headOfficeEmail = "mail@example.com";
+  const formatMoneyBn = (num) => {
+    const n = Number(num || 0);
+    const s = new Intl.NumberFormat("en-BD", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(n);
+    return toBanglaDigit(s);
+  };
 
-  const items = purchase.items || [];
+  const formatNumberBn = (num) => {
+    const n = Number(num || 0);
+    const s = new Intl.NumberFormat("en-BD", { maximumFractionDigits: 2 }).format(n);
+    return toBanglaDigit(s);
+  };
 
-  return (
+  const formatDateBn = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yy = String(d.getFullYear());
+    return toBanglaDigit(`${dd}/${mm}/${yy}`);
+  };
+
+  const formatDateTimeBn = (date) => {
+    if (!date) return "";
+    const d = new Date(date);
+    const dd = String(d.getDate()).padStart(2, "0");
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const yy = String(d.getFullYear());
+    const hh = String(d.getHours()).padStart(2, "0");
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    return toBanglaDigit(`${dd}/${mm}/${yy} ${hh}:${mi}`);
+  };
+
+  const getPrice2 = (item, field) => {
+    if (!item) return 0;
+    if (isShadowUser) {
+      if (field === "unit_price") return item.shadow_unit_price ?? item.unit_price ?? 0;
+      if (field === "total_price") return item.shadow_total_price ?? item.total_price ?? 0;
+    }
+    return item[field] ?? 0;
+  };
+
+  const getPurchaseAmount2 = (field) => {
+    if (!purchase) return 0;
+    if (isShadowUser) {
+      if (field === "grand_total") return purchase.shadow_grand_total ?? purchase.grand_total ?? 0;
+      if (field === "paid_amount") return purchase.shadow_paid_amount ?? purchase.paid_amount ?? 0;
+      if (field === "due_amount") return purchase.shadow_due_amount ?? purchase.due_amount ?? 0;
+    }
+    return purchase[field] ?? 0;
+  };
+
+  const totalQty2 = useMemo(
+    () => safeItems.reduce((s, it) => s + Number(it?.quantity || 0), 0),
+    [safeItems]
+  );
+
+  const rows2 = useMemo(() => {
+    return safeItems.map((item) => {
+      const desc = item?.product?.name || item?.product_name || item?.description || "N/A";
+      const qty = Number(item?.quantity || 0);
+      const rate = Number(getPrice2(item, "unit_price") || 0);
+      const amount = Number(getPrice2(item, "total_price") || 0);
+      return { desc, qty, rate, amount };
+    });
+  }, [safeItems, isShadowUser]);
+
+  const totals2 = useMemo(() => {
+    const grandTotal = Number(getPurchaseAmount2("grand_total") || 0);
+    const paid = Number(getPurchaseAmount2("paid_amount") || 0);
+    const due = grandTotal - paid;
+    return { grandTotal, paid, due };
+  }, [purchase, isShadowUser]);
+
+  // ========= Al Modina Theme (UNCHANGED)
+  const MB_DARK = "rgb(15, 45, 26)";
+  const MB_LIGHT = "rgb(30, 77, 43)";
+  const MB_GRADIENT = "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)";
+
+  const BORDER = "border-[#0f2d1a]";
+  const TEXT = "text-[#1e4d2b]";
+
+  // ====== Header content (Pad style) (ONLY dynamic replacements)
+  const STORE_NAME = bpName; // ✅ dynamic (was Al Modina)
+  const OWNER_NAME = bpPhone ? `ফোন: ${bpPhone}` : ""; // ✅ dynamic (was owner name)
+  const STORE_NOTE = bpDesc; // ✅ dynamic (was static note)
+
+  const customerName =
+    purchase?.supplier?.company ||
+    purchase?.supplier?.name ||
+    purchase?.supplier?.contact_person ||
+    "";
+
+  const customerAddress =
+    purchase?.supplier?.address ||
+    purchase?.warehouse?.address ||
+    "";
+
+  const memoNo = purchase?.purchase_no || purchase?.id || "";
+  const invoiceDate2 = formatDateBn(purchase?.purchase_date);
+
+  // ========= Print Design-2 only (UNCHANGED)
+  const handlePrintDesign2 = () => {
+    setIsPrinting(true);
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.print();
+        setTimeout(() => setIsPrinting(false), 400);
+      }, 80);
+    });
+  };
+
+  // ========= Print switch =========
+  const handlePrint = () => {
+    if (invoiceDesign === "2") return handlePrintDesign2();
+    return handlePrintDesign1();
+  };
+
+  const handleDownloadPDF = () => handlePrint();
+
+  // =========================
+  // ✅ Floating button (Portal to body) (ONLY UI add)
+  // =========================
+  function FloatingSettingsButton({ onClick }) {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+
+    return createPortal(
+      <button
+        type="button"
+        onClick={onClick}
+        className="no-print fixed right-3 top-1/2 -translate-y-1/2 bg-white border border-gray-200 shadow-lg rounded-full w-11 h-11 flex items-center justify-center hover:bg-gray-50"
+        style={{ zIndex: 2147483647, pointerEvents: "auto" }}
+        title="Invoice Settings"
+      >
+        <SlidersHorizontal size={18} />
+      </button>,
+      document.body
+    );
+  }
+
+  function DesignCard({ title, desc, active, onSelect }) {
+    return (
+      <button
+        type="button"
+        onClick={onSelect}
+        className={`w-full text-left p-3 rounded-xl border transition ${
+          active ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm font-bold text-gray-900">{title}</div>
+            <div className="text-xs text-gray-600 mt-1">{desc}</div>
+          </div>
+          {active ? (
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-green-700">
+              <Check size={16} /> Active
+            </span>
+          ) : (
+            <span className="text-xs font-semibold text-gray-500">Select</span>
+          )}
+        </div>
+      </button>
+    );
+  }
+
+  function SidebarDrawer() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    if (!mounted) return null;
+
+    return createPortal(
+      <>
+        {sidebarOpen && (
+          <div
+            className="no-print fixed inset-0 bg-black/40"
+            style={{ zIndex: 2147483646 }}
+            onClick={closeSidebar}
+          />
+        )}
+
+        <div
+          className={`no-print fixed top-0 right-0 h-full w-[320px] bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-200 ${
+            sidebarOpen ? "translate-x-0" : "translate-x-full"
+          }`}
+          style={{ zIndex: 2147483647 }}
+        >
+          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-bold text-gray-900">Invoice Settings</div>
+              <div className="text-xs text-gray-500">Select invoice design (saved)</div>
+            </div>
+            <button
+              type="button"
+              onClick={closeSidebar}
+              className="w-9 h-9 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50"
+              title="Close"
+            >
+              <X size={16} />
+            </button>
+          </div>
+
+          <div className="p-4 space-y-3">
+            <DesignCard
+              title="Design 1 (Default)"
+              desc="Standard A4 invoice"
+              active={invoiceDesign === "1"}
+              onSelect={() => persistDesign("1")}
+            />
+            <DesignCard
+              title="Design 2 (Bangla Pad)"
+              desc="Bangla pad invoice"
+              active={invoiceDesign === "2"}
+              onSelect={() => persistDesign("2")}
+            />
+          </div>
+        </div>
+      </>,
+      document.body
+    );
+  }
+
+  // =========================
+  // ✅ Design-2 component (0% design change, only dynamic data)
+  // =========================
+  const InvoicePad = ({ isPrint = false } = {}) => (
+    <div className={`pad-border border-2 ${BORDER} p-3 sm:p-4`}>
+      <div
+        className={`text-center ${isPrint ? "text-[34px]" : "text-[34px] sm:text-[38px]"} font-extrabold leading-tight`}
+        style={{
+          background: MB_GRADIENT,
+          WebkitBackgroundClip: "text",
+          color: "transparent",
+        }}
+      >
+        {STORE_NAME}
+      </div>
+
+      <div className="text-center mt-2">
+        <span
+          className="inline-block text-white px-4 py-1 rounded-full text-sm font-bold"
+          style={{ background: MB_GRADIENT }}
+        >
+          {OWNER_NAME || " "}
+        </span>
+      </div>
+
+      <div className="text-center text-xs sm:text-sm leading-relaxed mt-2 px-1">
+        {STORE_NOTE}
+      </div>
+
+      <div className="text-center text-xs sm:text-sm font-semibold mt-2">
+        {bpAddr}
+      </div>
+
+      {/* dotted fields */}
+      <div className="mt-3 space-y-2 text-sm font-semibold">
+        <div className="grid grid-cols-[42px_1fr_38px_1fr] gap-2 items-end">
+          <div>নং-</div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-medium">{toBanglaDigit(memoNo)}</span>
+            <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
+          </div>
+          <div>তারিখ</div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-medium">{invoiceDate2}</span>
+            <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
+          <div>নাম</div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-medium">{customerName}</span>
+            <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-[42px_1fr] gap-2 items-end">
+          <div>ঠিকানা</div>
+          <div className="flex items-end gap-2">
+            <span className="text-xs font-medium">{customerAddress}</span>
+            <span className={`flex-1 border-b-2 border-dotted ${BORDER} h-4`} />
+          </div>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="mt-4">
+        <table className="w-full table-fixed border-collapse">
+          <thead>
+            <tr>
+              <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[55%]`} style={{ color: MB_LIGHT }}>
+                বিবরণ
+              </th>
+              <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[15%]`} style={{ color: MB_LIGHT }}>
+                পরিমাণ
+              </th>
+              <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[15%]`} style={{ color: MB_LIGHT }}>
+                দর
+              </th>
+              <th className={`border-2 ${BORDER} font-extrabold text-sm py-2 w-[15%]`} style={{ color: MB_LIGHT }}>
+                টাকা
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {rows2.length ? (
+              rows2.map((r, idx) => (
+                <tr key={idx}>
+                  <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm`}>{r.desc}</td>
+                  <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm text-center`}>
+                    {formatNumberBn(r.qty)}
+                  </td>
+                  <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm text-center`}>
+                    {formatMoneyBn(r.rate)}
+                  </td>
+                  <td className={`border-l-2 border-r-2 ${BORDER} px-2 py-2 text-sm text-center`}>
+                    {formatMoneyBn(r.amount)}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td
+                  colSpan={4}
+                  className={`border-l-2 border-r-2 border-b-2 ${BORDER} px-3 py-8 text-center text-gray-500`}
+                >
+                  কোনো আইটেম পাওয়া যায়নি
+                </td>
+              </tr>
+            )}
+
+            <tr>
+              <td colSpan={4} className={`border-b-2 ${BORDER}`} style={{ height: 1 }} />
+            </tr>
+          </tbody>
+        </table>
+
+        {/* Totals */}
+        <div className="mt-3 flex flex-wrap justify-end gap-4 text-xs font-bold">
+          <span>
+            মোট পরিমাণ: <b className={TEXT}>{formatNumberBn(totalQty2)}</b>
+          </span>
+          <span>
+            মোট টাকা: <b className={TEXT}>{formatMoneyBn(totals2.grandTotal)}</b>
+          </span>
+          <span>
+            পরিশোধ: <b className={TEXT}>{formatMoneyBn(totals2.paid)}</b>
+          </span>
+          <span>
+            বকেয়া: <b className={TEXT}>{formatMoneyBn(totals2.due)}</b>
+          </span>
+        </div>
+
+        <div className="mt-2 text-[11px] text-gray-700">
+          সময়: {formatDateTimeBn(purchase?.purchase_date || purchase?.created_at)}
+        </div>
+
+        {purchase?.notes && (
+          <div className="mt-2 text-xs text-gray-700">
+            <b>নোট:</b> {purchase.notes}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // =========================
+  // ✅ Design-2 full page wrapper (UNCHANGED)
+  // =========================
+  const InvoiceDesign2 = () => (
+    <div className="bg-gray-50 min-h-screen p-4">
+      <style>{`
+        /* screen default */
+        #printPad { display: none; }
+
+        @media print {
+          @page { size: A4 portrait; margin: 10mm; }
+          html, body { height: auto !important; }
+          body {
+            margin: 0 !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          body * { visibility: hidden !important; }
+          #printPad, #printPad * { visibility: visible !important; }
+
+          #printPad {
+            display: block !important;
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100% !important;
+            background: #fff !important;
+            padding: 0 !important;
+          }
+
+          #printPad .pad-border {
+            max-width: 190mm !important;
+            margin: 0 auto !important;
+            border: 2px solid ${MB_DARK} !important;
+            padding: 16px !important;
+            min-height: 277mm !important;
+          }
+
+          table { page-break-inside: auto; }
+          tr { page-break-inside: avoid; page-break-after: auto; }
+
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      {/* Actions */}
+      <div className="mb-4 bg-white p-4 rounded-lg shadow-sm no-print">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800">
+              Purchase Invoice (Pad Style)
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              নং: <span className="font-semibold">{toBanglaDigit(memoNo)}</span> • তারিখ:{" "}
+              <span className="font-semibold">{invoiceDate2}</span>
+              {isShadowUser && (
+                <span className="ml-2 text-xs px-2 py-0.5 rounded bg-yellow-100 text-yellow-800">
+                  Shadow
+                </span>
+              )}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => router.visit(route("purchase.list"))}
+              className="btn btn-sm btn-ghost border border-gray-300"
+            >
+              <ArrowLeft size={15} className="mr-1" />
+              Back
+            </button>
+
+            <button
+              onClick={handlePrint}
+              className="btn btn-sm text-white"
+              style={{ background: MB_GRADIENT }}
+              disabled={isPrinting}
+            >
+              <Printer size={15} className="mr-1" />
+              Print
+              {isPrinting && (
+                <span className="loading loading-spinner loading-xs ml-2"></span>
+              )}
+            </button>
+
+            <button
+              onClick={handleDownloadPDF}
+              className="btn btn-sm text-white"
+              style={{ background: MB_GRADIENT }}
+              disabled={isPrinting}
+            >
+              <Download size={15} className="mr-1" />
+              PDF
+              {isPrinting && (
+                <span className="loading loading-spinner loading-xs ml-2"></span>
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Screen invoice preview (same style) */}
+      <div className="mx-auto max-w-[860px] bg-white shadow-sm rounded-lg border no-print">
+        <div className="p-4 sm:p-6">
+          <InvoicePad />
+        </div>
+      </div>
+
+      {/* ✅ PRINT ONLY (same design) */}
+      <div id="printPad">
+        <div className="mx-auto max-w-[860px] bg-white">
+          <InvoicePad isPrint />
+        </div>
+      </div>
+    </div>
+  );
+
+  // =========================
+  // ✅ Design-1 full (YOUR ORIGINAL DESIGN, ONLY businessProfile dynamic already)
+  // =========================
+  const InvoiceDesign1 = () => (
     <div className="bg-gray-100 min-h-screen p-3">
       <style>{`
                 @media print {
@@ -223,7 +769,8 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
       </div>
 
       {/* Invoice Paper */}
-      <div id="invoiceArea"
+      <div
+        id="invoiceArea"
         className="bg-white border border-gray-400 mx-auto rounded-md shadow-sm relative overflow-hidden"
         style={{ maxWidth: "210mm" }}
       >
@@ -232,7 +779,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
           <div className="w-[200px] h-[200px] rounded-full border-[10px] border-red-700 flex items-center justify-center">
             <div className="text-[80px] font-black text-red-200">
               <img
-                src="/media/uploads/logo.png"
+                src={bpLogo}
                 className="h-full w-full object-contain p-1"
                 style={{ borderRadius: "50%" }}
                 onError={(e) => {
@@ -250,9 +797,9 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
           <div className="flex items-start justify-between gap-4 border-b border-black pb-2">
             {/* Left brand */}
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full border-2 border-red-400 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full border-2 border-red-400 flex items-center justify-center overflow-hidden">
                 <img
-                  src="/media/uploads/logo.png"
+                  src={bpLogo}
                   className="h-full w-full object-contain p-1"
                   style={{ borderRadius: "50%" }}
                   onError={(e) => {
@@ -263,9 +810,7 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                 />
               </div>
               <div>
-                <div className="text-xl font-black tracking-wide text-gray-900">
-                  {getCompanyName()}
-                </div>
+                <div className="text-xl font-black tracking-wide text-gray-900">{bpName}</div>
               </div>
             </div>
 
@@ -273,9 +818,10 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
             <div className="flex gap-4 text-[10px] leading-4 text-gray-800">
               <div className="border-l border-gray-300 pl-3">
                 <div className="font-bold text-red-700">অফিস</div>
-                <div className="max-w-[240px]">{headOfficeAddr}</div>
-                <div>{headOfficePhone}</div>
-                <div>{headOfficeEmail}</div>
+                <div className="max-w-[240px]">{bpAddr}</div>
+                <div>{bpPhone}</div>
+                <div>{bpEmail}</div>
+                {bpWebsite ? <div>{bpWebsite}</div> : null}
               </div>
             </div>
           </div>
@@ -300,11 +846,11 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
               </div>
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Supplier</span>
-                <span className="text-right">{purchase.supplier?.company || purchase.supplier?.name || 'N/A'}</span>
+                <span className="text-right">{purchase.supplier?.company || purchase.supplier?.name || "N/A"}</span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Supplier Address</span>
-                <span className="text-right">{purchase.supplier?.address || 'N/A'}</span>
+                <span className="text-right">{purchase.supplier?.address || "N/A"}</span>
               </div>
             </div>
 
@@ -315,11 +861,11 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
               </div>
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Warehouse</span>
-                <span>{purchase.warehouse?.name || 'N/A'}</span>
+                <span>{purchase.warehouse?.name || "N/A"}</span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Served By</span>
-                <span>{purchase.created_by?.name || auth.user?.name || 'N/A'}</span>
+                <span>{purchase.created_by?.name || auth.user?.name || "N/A"}</span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Date & Time</span>
@@ -346,44 +892,30 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
               </thead>
               <tbody>
                 {items.map((item, index) => {
-                  const unitPrice = getPrice(item, 'unit_price');
-                  const totalPrice = getPrice(item, 'total_price');
-                  const addAmount = totalPrice - (unitPrice * item.quantity);
+                  const unitPrice = Number(getPrice(item, "unit_price") || 0);
+                  const totalPrice = Number(getPrice(item, "total_price") || 0);
+                  const qty = Number(item.quantity || 0);
+                  const addAmount = totalPrice - unitPrice * qty;
 
                   return (
                     <tr key={item.id || index}>
                       <td className="border border-black p-1 text-center">{index + 1}</td>
-                      <td className="border border-black p-1 text-center font-mono">
-                        {getProductCode(item)}
-                      </td>
+                      <td className="border border-black p-1 text-center font-mono">{getProductCode(item)}</td>
                       <td className="border border-black p-1">
                         <div className="font-semibold">{getProductDisplayName(item)}</div>
                         {item.variant?.sku && (
-                          <div className="text-[9px] text-gray-600">
-                            SKU: {item.variant.sku}
-                          </div>
+                          <div className="text-[9px] text-gray-600">SKU: {item.variant.sku}</div>
                         )}
                       </td>
-                      <td className="border border-black p-1">
-                        {getVariantDisplayName(item.variant)}
-                      </td>
-                      <td className="border border-black p-1 text-center">
-                        {getBrandName(item.variant)}
-                      </td>
-                      <td className="border border-black p-1 text-center font-bold">
-                        {item.quantity}
-                        {item.unit ? (
-                          <span className="text-[9px] text-gray-600"> {item.unit}</span>
-                        ) : null}
-                      </td>
-                      <td className="border border-black p-1 text-right font-mono">
-                        {formatCurrency(unitPrice)}
-                      </td>
-                      <td className="border border-black p-1 text-right font-mono">
-                        {formatCurrency(addAmount)}
-                      </td>
-                      <td className="border border-black p-1 text-right font-mono font-bold"
-                        style={{ color: isShadowUser ? '#d97706' : '#1d4ed8' }}>
+                      <td className="border border-black p-1">{getVariantDisplayName(item.variant)}</td>
+                      <td className="border border-black p-1 text-center">{getBrandName(item)}</td>
+                      <td className="border border-black p-1 text-center font-bold">{item.quantity}</td>
+                      <td className="border border-black p-1 text-right font-mono">{formatCurrency(unitPrice)}</td>
+                      <td className="border border-black p-1 text-right font-mono">{formatCurrency(addAmount)}</td>
+                      <td
+                        className="border border-black p-1 text-right font-mono font-bold"
+                        style={{ color: isShadowUser ? "#d97706" : "#1d4ed8" }}
+                      >
                         {formatCurrency(totalPrice)}
                       </td>
                     </tr>
@@ -408,9 +940,11 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
                   <td className="border border-black p-1 text-center font-bold">{totalQty}</td>
                   <td className="border border-black p-1"></td>
                   <td className="border border-black p-1"></td>
-                  <td className="border border-black p-1 text-right font-bold"
-                    style={{ color: isShadowUser ? '#d97706' : '#1d4ed8' }}>
-                    {formatCurrency(getPurchaseAmount('grand_total'))}
+                  <td
+                    className="border border-black p-1 text-right font-bold"
+                    style={{ color: isShadowUser ? "#d97706" : "#1d4ed8" }}
+                  >
+                    {formatCurrency(getPurchaseAmount("grand_total"))}
                   </td>
                 </tr>
               </tfoot>
@@ -430,8 +964,8 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
               </div>
               <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
                 <span>Grand Total</span>
-                <span className="font-mono" style={{ color: isShadowUser ? '#d97706' : '#1d4ed8' }}>
-                  {formatCurrency(getPurchaseAmount('grand_total'))}
+                <span className="font-mono" style={{ color: isShadowUser ? "#d97706" : "#1d4ed8" }}>
+                  {formatCurrency(getPurchaseAmount("grand_total"))}
                 </span>
               </div>
             </div>
@@ -439,18 +973,26 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
             <div className="border border-gray-300 p-2">
               <div className="flex justify-between">
                 <span className="font-semibold">Paid Amount</span>
-                <span className="font-mono">{formatCurrency(getPurchaseAmount('paid_amount'))}</span>
+                <span className="font-mono">{formatCurrency(getPurchaseAmount("paid_amount"))}</span>
               </div>
               <div className="flex justify-between">
                 <span className="font-semibold">Due Amount</span>
                 <span className="font-mono">
-                  {formatCurrency(getPurchaseAmount('grand_total') - getPurchaseAmount('paid_amount'))}
+                  {formatCurrency(getPurchaseAmount("grand_total") - getPurchaseAmount("paid_amount"))}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="font-semibold">Payment Status</span>
-                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${purchase.payment_status === 'paid' ? 'bg-green-100 text-green-800' : purchase.payment_status === 'partial' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>
-                  {purchase.payment_status?.toUpperCase() || 'UNPAID'}
+                <span
+                  className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                    purchase.payment_status === "paid"
+                      ? "bg-green-100 text-green-800"
+                      : purchase.payment_status === "partial"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-red-100 text-red-800"
+                  }`}
+                >
+                  {purchase.payment_status?.toUpperCase() || "UNPAID"}
                 </span>
               </div>
             </div>
@@ -488,17 +1030,6 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
             </div>
           </div>
 
-          {/* <br /> <hr /> */}
-
-          {/* Signatures images */}
-          {/* <div className="flex space-x-2 pt-2">
-                        <img src="/media/uploads/sig4.png" alt="Signature 1" className="w-1/5 h-12" />
-                        <img src="/media/uploads/sig5.png" alt="Signature 2" className="w-1/5 h-12" />
-                        <img src="/media/uploads/sig6.png" alt="Signature 3" className="w-1/8 h-12" />
-                        <img src="/media/uploads/sig7.png" alt="Signature 4" className="w-1/5 h-12" />
-                        <img src="/media/uploads/sig8.png" alt="Signature 5" className="w-1/5 h-12" />
-                    </div> */}
-
           {/* Notes Section */}
           {purchase.notes && (
             <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded">
@@ -508,6 +1039,17 @@ export default function PurchaseShow({ purchase, isShadowUser }) {
           )}
         </div>
       </div>
+    </div>
+  );
+
+  // =========================
+  // ✅ Render (0% design change)
+  // =========================
+  return (
+    <div className="relative">
+      <FloatingSettingsButton onClick={openSidebar} />
+      <SidebarDrawer />
+      {invoiceDesign === "2" ? <InvoiceDesign2 /> : <InvoiceDesign1 />}
     </div>
   );
 }

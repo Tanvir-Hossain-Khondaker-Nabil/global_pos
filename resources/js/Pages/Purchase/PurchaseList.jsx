@@ -106,6 +106,21 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     return new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
   };
 
+  const copyText = (txt) => {
+    const text = String(txt || "");
+    if (!text) return;
+    navigator.clipboard?.writeText(text).catch(() => { });
+  };
+
+  const escapeHtml = (str) => {
+    return String(str ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  };
+
   // ===================== Filters =====================
   const handleFilter = (field, value) => {
     const newFilters = { ...localFilters, [field]: value };
@@ -272,13 +287,20 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
   };
   const closeBarcodeModal = () => setShowBarcodeModal(false);
 
-  const updateBarcodeConfig = (key, value) => setBarcodeConfig((prev) => ({ ...prev, [key]: value }));
+  // ✅ FIX: parse number fields correctly
+  const updateBarcodeConfig = (key, value) => {
+    const numberKeys = ["labelWidthMm", "labelHeightMm", "gapMm", "fixedCopies", "barcodeImgHeightPx"];
+    setBarcodeConfig((prev) => ({
+      ...prev,
+      [key]: numberKeys.includes(key) ? Number(value) : value,
+    }));
+  };
 
   // ===================== Barcode Image Generator =====================
   const getBarcodeImageUrl = (codeValue) => {
     const code = String(codeValue || "").trim();
     if (!code) return "";
-    return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(code)}&code=Code128&dpi=96&dataseparator=`;
+    return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(code)}&code=Code128&dpi=120&quiet=0`;
   };
 
   // ===================== Build Labels =====================
@@ -306,8 +328,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
           const code = String(barcode || "").trim();
           if (!code) return;
 
-          // ✅ Dedup by code + batch (same product different batch print allowed)
-          const batchNo = String(stock?.batch_no || "").trim();
+          const batchNo = String(stock?.batch_no || item?.batch_no || "").trim();
           const key = `${code}__${batchNo || "-"}`;
           if (seen.has(key)) return;
           seen.add(key);
@@ -320,7 +341,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
               imgSrc: getBarcodeImageUrl(code),
               productName: product?.name || item?.product_name || "Product",
               batchNo,
-              salePrice: item?.sale_price || product?.sale_price || "",
+              salePrice: item?.sale_price ?? product?.sale_price ?? "",
             });
           }
         });
@@ -345,13 +366,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     return labels;
   };
 
-  // ===================== PRINT FUNCTION - RIGHT/LEFT FIXED =====================
+  // ===================== PRINT FUNCTION (settings apply properly) =====================
   const handleBarcodePrint = () => {
     const labels = buildBarcodeLabels();
-    if (!labels.length) {
-      alert("No barcodes found to print.");
-      return;
-    }
+    if (!labels.length) return alert("No barcodes found to print.");
 
     const {
       showProductName,
@@ -365,174 +383,174 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     } = barcodeConfig;
 
     const printWindow = window.open("", "_blank");
-    if (!printWindow) {
-      alert("Please allow popups to print barcodes.");
-      return;
+    if (!printWindow) return alert("Please allow popups to print barcodes.");
+
+    const css = `
+    @page { margin: 6mm; }
+    @media print { .no-print { display:none !important; } body { padding:0; } }
+
+    * { box-sizing:border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body {
+      margin:0;
+      padding:10px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      background:#fff;
+      color:#0f172a;
     }
 
-    // ✅ KEY FIX:
-    // - grid has fixed column width: repeat(auto-fill, ${labelWidthMm}mm)
-    // - wrap grid inside .sheet (flex) and align with justify-content (left/right)
-    const css = `
-      @page { margin: 5mm; }
-      @media print {
-        body { margin: 0; padding: 0; }
-        .no-print { display: none !important; }
-      }
-      * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-      body {
-        margin: 0;
-        padding: 10px;
-        font-family: Arial, sans-serif;
-        background: white;
-      }
+    .sheet {
+      width:100%;
+      display:flex;
+      justify-content:${align === "right" ? "flex-end" : "flex-start"};
+    }
 
-      .sheet {
-        display: flex;
-        justify-content: ${align === "right" ? "flex-end" : "flex-start"};
-        width: 100%;
-      }
+    .grid {
+      display:grid;
+      grid-template-columns: repeat(auto-fill, ${Number(labelWidthMm)}mm);
+      gap:${Number(gapMm)}mm;
+      align-content:start;
+    }
 
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, ${labelWidthMm}mm);
-        gap: ${gapMm}mm;
-        align-content: start;
-      }
+    .label {
+      width:${Number(labelWidthMm)}mm;
+      height:${Number(labelHeightMm)}mm;
+      padding:7px 8px;
+      border-radius:12px;
+      background:#fff;
+      border: 1px solid #e5e7eb;
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+      break-inside:avoid;
+      page-break-inside:avoid;
+    }
 
-      .label {
-        width: ${labelWidthMm}mm;
-        height: ${labelHeightMm}mm;
-        padding: 5px;
-        border: 1px solid #eee;
-        border-radius: 4px;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
-        page-break-inside: avoid;
-        break-inside: avoid;
-        overflow: hidden;
-        background: #fff;
-      }
+    /* Your simple centered design */
+    .barcodeArea {
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:4px;
+      height:100%;
+      width:100%;
+      text-align:center;
+    }
 
-      .label-top { font-size: 10px; line-height: 1.2; }
-      .product-name { font-weight: bold; font-size: 11px; margin-bottom: 3px; color: #333; }
-      .label-details {
-        font-size: 9px;
-        color: #666;
-        display: flex;
-        justify-content: space-between;
-        margin: 2px 0;
-        gap: 8px;
-      }
+    .name {
+      width:100%;
+      font-weight:900;
+      font-size:11px;
+      line-height:1.15;
+      color:#0f172a;
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
 
-      .barcode-container {
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        margin: 5px 0;
-      }
+    .barcodeImg {
+      width:100%;
+      height:${Number(barcodeImgHeightPx)}px;
+      object-fit:contain;
+      display:block;
+    }
 
-      .barcode-img { max-width: 100%; height: ${barcodeImgHeightPx}px; object-fit: contain; }
-      .barcode-text {
-        text-align: center;
-        font-family: monospace;
-        font-size: 10px;
-        font-weight: bold;
-        letter-spacing: 1px;
-        margin-top: 3px;
-        color: #000;
-      }
+    .batch,
+    .price {
+      width:100%;
+      font-size:10px;
+      font-weight:900;
+      line-height:1.1;
+      color:#0f172a;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
 
-      .print-info { font-size: 8px; color: #999; text-align: center; margin-top: 5px; }
+    .batch { color:#475569; font-weight:800; font-size:9px; }
+    .price { letter-spacing: .2px; }
 
-      .no-print {
-        text-align: center;
-        margin-top: 20px;
-        padding: 10px;
-      }
-      .print-btn {
-        background: #111827;
-        color: white;
-        border: none;
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 14px;
-        margin: 0 6px;
-        font-weight: 700;
-      }
-      .print-btn:hover { opacity: .9; }
-    `;
+    .no-print { text-align:center; margin-top:14px; color:#64748b; font-weight:900; }
+    .btn { border:none; padding:8px 14px; border-radius:12px; font-weight:900; cursor:pointer; margin:0 6px; background:#111827; color:#fff; }
+    .btn.ghost { background:#f1f5f9; color:#111827; }
+  `;
 
     const labelsHtml = labels
-      .map((label, index) => `
-        <div class="label">
-          <div class="label-top">
-            ${showProductName ? `<div class="product-name">${escapeHtml(label.productName)}</div>` : ""}
-          </div>
+      .map((l) => {
+        const productName = escapeHtml(l.productName || "");
+        const batchNo = escapeHtml(l.batchNo || "");
+        const codeValue = escapeHtml(l.codeValue || "");
+        const imgSrc = escapeHtml(l.imgSrc || "");
 
-          <div class="barcode-container">
-            <img
-              src="${escapeHtml(label.imgSrc)}"
-              class="barcode-img"
-              alt="Barcode ${escapeHtml(label.codeValue)}"
-            />
-            <div class="barcode-text "> ${label.salePrice ? `৳${Number(label.salePrice).toFixed(2)}` : "-"}</div>
+        const nameHtml = showProductName ? `<div class="name">${productName}</div>` : "";
+        const batchHtml =
+          showBatchNo
+            ? `<div class="batch">${batchNo ? `Batch: ${batchNo}` : "Batch: -"}</div>`
+            : "";
+
+        const priceHtml =
+          showSalePrice
+            ? `<div class="price">${l.salePrice ? `৳${Number(l.salePrice).toFixed(2)}` : "-"}</div>`
+            : "";
+
+        return `
+        <div class="label">
+          <div class="barcodeArea">
+            ${nameHtml}
+            <img class="barcodeImg" src="${imgSrc}" alt="Barcode ${codeValue}" />
+            ${batchHtml}
+            ${priceHtml}
           </div>
         </div>
-      `)
+      `;
+      })
       .join("");
 
-    // ✅ Single reliable print trigger: wait for images load/error
     const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <title>Print Barcodes</title>
-        <style>${css}</style>
-      </head>
-      <body>
-        <div class="sheet">
-          <div class="grid">${labelsHtml}</div>
+    <!doctype html>
+    <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>Barcode Labels</title>
+      <style>${css}</style>
+    </head>
+    <body>
+      <div class="sheet">
+        <div class="grid">${labelsHtml}</div>
+      </div>
+
+      <div class="no-print">
+        Total: ${labels.length} labels
+        <div style="margin-top:10px;">
+          <button class="btn" onclick="window.print()">Print</button>
+          <button class="btn ghost" onclick="window.close()">Close</button>
         </div>
+      </div>
 
-        <div class="no-print">
-          <div style="margin-bottom:8px;color:#6b7280;font-size:12px;font-weight:700;">
-            Total: ${labels.length} labels
-          </div>
-          <button class="print-btn" onclick="window.print()">Print Now</button>
-          <button class="print-btn" onclick="window.close()">Close</button>
-        </div>
+      <script>
+        (function(){
+          var imgs = Array.from(document.images || []);
+          if(!imgs.length){ setTimeout(function(){ window.print(); }, 250); return; }
 
-        <script>
-          (function() {
-            var imgs = Array.from(document.images || []);
-            if (!imgs.length) { setTimeout(function(){ window.print(); }, 300); return; }
+          var done = 0;
+          function finish(){
+            done++;
+            if(done >= imgs.length) setTimeout(function(){ window.print(); }, 250);
+          }
 
-            var done = 0;
-            function finish() {
-              done++;
-              if (done >= imgs.length) setTimeout(function(){ window.print(); }, 250);
-            }
+          imgs.forEach(function(img){
+            if(img.complete) return finish();
+            img.onload = finish;
+            img.onerror = finish;
+          });
 
-            imgs.forEach(function(img) {
-              // Force re-check complete state
-              if (img.complete) return finish();
-              img.onload = finish;
-              img.onerror = finish;
-            });
-
-            // Hard fallback
-            setTimeout(function(){ window.print(); }, 4000);
-          })();
-        </script>
-      </body>
-      </html>
-    `;
+          setTimeout(function(){ window.print(); }, 5000);
+        })();
+      </script>
+    </body>
+    </html>
+  `;
 
     printWindow.document.open();
     printWindow.document.write(html);
@@ -541,20 +559,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     closeBarcodeModal();
   };
 
-  const copyText = (txt) => {
-    const text = String(txt || "");
-    if (!text) return;
-    navigator.clipboard?.writeText(text).catch(() => { });
-  };
-
-  function escapeHtml(str) {
-    return String(str)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#039;");
-  }
 
   // ===================== UI =====================
   return (
@@ -578,15 +582,11 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
                     <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Total</div>
-                    <div className="text-lg font-black text-gray-900">
-                      {formatCurrency(getDisplayAmounts(selectedPurchase).total)}
-                    </div>
+                    <div className="text-lg font-black text-gray-900">{formatCurrency(getDisplayAmounts(selectedPurchase).total)}</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">Due</div>
-                    <div className="text-lg font-black text-red-600">
-                      {formatCurrency(getDisplayAmounts(selectedPurchase).due)}
-                    </div>
+                    <div className="text-lg font-black text-red-600">{formatCurrency(getDisplayAmounts(selectedPurchase).due)}</div>
                   </div>
                 </div>
 
@@ -637,20 +637,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                     </label>
 
                     <div className="flex gap-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={setHalfPayment}
-                        className="btn btn-sm btn-outline flex-1"
-                        disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
-                      >
+                      <button type="button" onClick={setHalfPayment} className="btn btn-sm btn-outline flex-1" disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}>
                         50%
                       </button>
-                      <button
-                        type="button"
-                        onClick={setFullPayment}
-                        className="btn btn-sm btn-outline btn-primary flex-1"
-                        disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
-                      >
+                      <button type="button" onClick={setFullPayment} className="btn btn-sm btn-outline btn-primary flex-1" disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}>
                         Full
                       </button>
                     </div>
@@ -677,9 +667,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                       </div>
                     )}
 
-                    <div className="text-xs text-gray-500 mt-1">
-                      Maximum: {formatCurrency(getDisplayAmounts(selectedPurchase).due)}
-                    </div>
+                    <div className="text-xs text-gray-500 mt-1">Maximum: {formatCurrency(getDisplayAmounts(selectedPurchase).due)}</div>
                   </div>
 
                   <div className="form-control">
@@ -701,11 +689,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                     <button type="button" onClick={closePaymentModal} className="btn btn-ghost flex-1" disabled={processingPayment}>
                       Cancel
                     </button>
-                    <button
-                      type="submit"
-                      className="btn btn-primary flex-1"
-                      disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
-                    >
+                    <button type="submit" className="btn btn-primary flex-1" disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}>
                       {processingPayment ? (
                         <>
                           <span className="loading loading-spinner loading-sm"></span>
@@ -721,6 +705,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                   </div>
                 </div>
               </form>
+
             </div>
           </div>
         </div>
@@ -753,10 +738,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 cursor-pointer">
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={barcodeConfig.showProductName}
+                      checked={!!barcodeConfig.showProductName}
                       onChange={(e) => updateBarcodeConfig("showProductName", e.target.checked)}
                       className="checkbox checkbox-sm"
                     />
@@ -766,20 +751,20 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                     </span>
                   </label>
 
-                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 cursor-pointer">
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={barcodeConfig.showBatchNo}
+                      checked={!!barcodeConfig.showBatchNo}
                       onChange={(e) => updateBarcodeConfig("showBatchNo", e.target.checked)}
                       className="checkbox checkbox-sm"
                     />
                     <span className="font-black text-sm">Batch No</span>
                   </label>
 
-                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 cursor-pointer">
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      checked={barcodeConfig.showSalePrice}
+                      checked={!!barcodeConfig.showSalePrice}
                       onChange={(e) => updateBarcodeConfig("showSalePrice", e.target.checked)}
                       className="checkbox checkbox-sm"
                     />
@@ -795,23 +780,15 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                     Print Alignment
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      onClick={() => updateBarcodeConfig("align", "left")}
-                      className={`btn btn-sm flex-1 ${barcodeConfig.align === "left" ? "btn-primary" : "btn-outline"}`}
-                    >
+                    <button type="button" onClick={() => updateBarcodeConfig("align", "left")} className={`btn btn-sm flex-1 ${barcodeConfig.align === "left" ? "btn-primary" : "btn-outline"}`}>
                       <AlignLeft size={16} /> Left
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => updateBarcodeConfig("align", "right")}
-                      className={`btn btn-sm flex-1 ${barcodeConfig.align === "right" ? "btn-primary" : "btn-outline"}`}
-                    >
+                    <button type="button" onClick={() => updateBarcodeConfig("align", "right")} className={`btn btn-sm flex-1 ${barcodeConfig.align === "right" ? "btn-primary" : "btn-outline"}`}>
                       <AlignRight size={16} /> Right
                     </button>
                   </div>
                   <div className="text-[11px] font-bold text-gray-500 mt-2">
-                    Current: <span className="text-gray-900">{barcodeConfig.align.toUpperCase()}</span>
+                    Current: <span className="text-gray-900">{String(barcodeConfig.align || "left").toUpperCase()}</span>
                   </div>
                 </div>
 
@@ -822,33 +799,18 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                   </div>
 
                   <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 font-black text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="copiesMode"
-                        checked={barcodeConfig.copiesMode === "one"}
-                        onChange={() => updateBarcodeConfig("copiesMode", "one")}
-                      />
+                    <label className="flex items-center gap-2 font-black text-sm cursor-pointer select-none">
+                      <input type="radio" name="copiesMode" checked={barcodeConfig.copiesMode === "one"} onChange={() => updateBarcodeConfig("copiesMode", "one")} />
                       One label per item
                     </label>
 
-                    <label className="flex items-center gap-2 font-black text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="copiesMode"
-                        checked={barcodeConfig.copiesMode === "byQty"}
-                        onChange={() => updateBarcodeConfig("copiesMode", "byQty")}
-                      />
+                    <label className="flex items-center gap-2 font-black text-sm cursor-pointer select-none">
+                      <input type="radio" name="copiesMode" checked={barcodeConfig.copiesMode === "byQty"} onChange={() => updateBarcodeConfig("copiesMode", "byQty")} />
                       Print by item quantity
                     </label>
 
-                    <label className="flex items-center gap-2 font-black text-sm cursor-pointer">
-                      <input
-                        type="radio"
-                        name="copiesMode"
-                        checked={barcodeConfig.copiesMode === "fixed"}
-                        onChange={() => updateBarcodeConfig("copiesMode", "fixed")}
-                      />
+                    <label className="flex items-center gap-2 font-black text-sm cursor-pointer select-none">
+                      <input type="radio" name="copiesMode" checked={barcodeConfig.copiesMode === "fixed"} onChange={() => updateBarcodeConfig("copiesMode", "fixed")} />
                       Fixed copies
                     </label>
 
@@ -869,41 +831,19 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl border border-gray-100 p-4">
                   <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2">Label W (mm)</div>
-                  <input
-                    type="number"
-                    min="20"
-                    step="1"
-                    value={barcodeConfig.labelWidthMm}
-                    onChange={(e) => updateBarcodeConfig("labelWidthMm", e.target.value)}
-                    className="input input-sm input-bordered font-mono w-full"
-                  />
+                  <input type="number" min="20" step="1" value={barcodeConfig.labelWidthMm} onChange={(e) => updateBarcodeConfig("labelWidthMm", e.target.value)} className="input input-sm input-bordered font-mono w-full" />
                 </div>
 
                 <div className="rounded-xl border border-gray-100 p-4">
                   <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2">Label H (mm)</div>
-                  <input
-                    type="number"
-                    min="15"
-                    step="1"
-                    value={barcodeConfig.labelHeightMm}
-                    onChange={(e) => updateBarcodeConfig("labelHeightMm", e.target.value)}
-                    className="input input-sm input-bordered font-mono w-full"
-                  />
+                  <input type="number" min="15" step="1" value={barcodeConfig.labelHeightMm} onChange={(e) => updateBarcodeConfig("labelHeightMm", e.target.value)} className="input input-sm input-bordered font-mono w-full" />
                 </div>
 
                 <div className="rounded-xl border border-gray-100 p-4">
                   <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2">Gap (mm)</div>
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={barcodeConfig.gapMm}
-                    onChange={(e) => updateBarcodeConfig("gapMm", e.target.value)}
-                    className="input input-sm input-bordered font-mono w-full"
-                  />
+                  <input type="number" min="0" step="1" value={barcodeConfig.gapMm} onChange={(e) => updateBarcodeConfig("gapMm", e.target.value)} className="input input-sm input-bordered font-mono w-full" />
                 </div>
               </div>
-
 
               <div className="mt-4 flex gap-2">
                 <button type="button" onClick={closeBarcodeModal} className="btn btn-ghost flex-1">
@@ -915,10 +855,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                 </button>
               </div>
 
-              <div className="mt-3 text-xs text-gray-500">
-                <div className="font-bold">Note:</div>
-                <div>Uses tec-it.com barcode service. Make sure your browser allows images from external sources.</div>
-              </div>
+              <div className="mt-3 text-xs text-gray-500 font-bold">Note: Uses tec-it.com barcode service (external). Ensure external images allowed.</div>
             </div>
           </div>
         </div>
@@ -929,13 +866,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         <div className="flex flex-wrap gap-2 items-center">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              onChange={(e) => handleFilter("search", e.target.value)}
-              value={localFilters.search}
-              placeholder="ID or Number..."
-              className="input input-sm input-bordered rounded-lg pl-8 font-bold"
-            />
+            <input type="search" onChange={(e) => handleFilter("search", e.target.value)} value={localFilters.search} placeholder="ID or Number..." className="input input-sm input-bordered rounded-lg pl-8 font-bold" />
           </div>
 
           <select onChange={(e) => handleFilter("status", e.target.value)} value={localFilters.status} className="select select-sm select-bordered rounded-lg font-bold">
@@ -952,8 +883,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
           <button
             type="button"
             onClick={openBarcodeModal}
-            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${selectedPurchaseIds.size > 0 ? "bg-gray-900 text-white hover:bg-black" : "bg-gray-100 text-gray-400 cursor-not-allowed"
-              }`}
+            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${selectedPurchaseIds.size > 0 ? "bg-gray-900 text-white hover:bg-black" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
             disabled={selectedPurchaseIds.size === 0}
             title="Print selected barcodes"
           >
@@ -966,11 +896,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             </button>
           )}
 
-          <Link
-            href={route("purchase.create")}
-            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"
-              }`}
-          >
+          <Link href={route("purchase.create")} className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"}`}>
             <Plus size={15} /> {t("purchase.new_purchase", "New Entry")}
           </Link>
         </div>
@@ -983,12 +909,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <thead className={`text-white uppercase text-[10px] tracking-widest ${isShadowUser ? "bg-amber-500" : "bg-primary"}`}>
               <tr>
                 <th className="py-4 w-[40px]">
-                  <button
-                    type="button"
-                    onClick={toggleSelectAll}
-                    className="btn btn-ghost btn-xs text-white hover:bg-white/10"
-                    title={isAllSelected ? "Unselect all" : "Select all"}
-                  >
+                  <button type="button" onClick={toggleSelectAll} className="btn btn-ghost btn-xs text-white hover:bg-white/10" title={isAllSelected ? "Unselect all" : "Select all"}>
                     {isAllSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                   </button>
                 </th>
@@ -1059,16 +980,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                         </div>
 
                         <div className="flex gap-1 items-center mt-1">
-                          <span
-                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${isPaid ? "bg-green-100 text-green-700" : isPartial ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-600"
-                              }`}
-                          >
+                          <span className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${isPaid ? "bg-green-100 text-green-700" : isPartial ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-600"}`}>
                             {displayPaymentStatus}
                           </span>
-                          <span
-                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${purchase.status === "completed" ? "bg-blue-100 text-blue-700" : purchase.status === "pending" ? "bg-gray-100 text-gray-600" : "bg-red-100 text-red-400"
-                              }`}
-                          >
+                          <span className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${purchase.status === "completed" ? "bg-blue-100 text-blue-700" : purchase.status === "pending" ? "bg-gray-100 text-gray-600" : "bg-red-100 text-red-400"}`}>
                             {purchase.status}
                           </span>
                         </div>
@@ -1086,11 +1001,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
                     <td className="text-right">
                       <div className="flex justify-end gap-1">
-                        <Link
-                          href={route("purchase.show", purchase.id)}
-                          className="btn btn-ghost btn-square btn-xs hover:bg-gray-900 hover:text-white"
-                          title="View Details"
-                        >
+                        <Link href={route("purchase.show", purchase.id)} className="btn btn-ghost btn-square btn-xs hover:bg-gray-900 hover:text-white" title="View Details">
                           <Eye size={16} />
                         </Link>
 
@@ -1104,28 +1015,16 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                           </button>
                         )}
 
-                        <button
-                          onClick={() => copyText(purchase?.purchase_no)}
-                          className="btn btn-ghost btn-square btn-xs hover:bg-gray-200"
-                          title="Copy Purchase No"
-                        >
+                        <button onClick={() => copyText(purchase?.purchase_no)} className="btn btn-ghost btn-square btn-xs hover:bg-gray-200" title="Copy Purchase No">
                           <Copy size={16} />
                         </button>
 
-                        <Link
-                          href={route("purchase.edit", purchase.id)}
-                          className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600"
-                          title="Edit Purchase"
-                        >
+                        <Link href={route("purchase.edit", purchase.id)} className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600" title="Edit Purchase">
                           <Edit size={16} />
                         </Link>
 
                         {auth?.role === "admin" && (
-                          <button
-                            onClick={() => handleDelete(purchase.id)}
-                            className="btn btn-ghost btn-square btn-xs text-red-400 hover:bg-red-600 hover:text-white"
-                            title="Delete Purchase"
-                          >
+                          <button onClick={() => handleDelete(purchase.id)} className="btn btn-ghost btn-square btn-xs text-red-400 hover:bg-red-600 hover:text-white" title="Delete Purchase">
                             <Trash2 size={16} />
                           </button>
                         )}

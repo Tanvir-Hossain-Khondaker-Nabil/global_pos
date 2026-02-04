@@ -48,14 +48,19 @@ import {
   CheckCircle,
   Eye,
   LogIn,
+  Globe,
+  Headphones,
+  Palette,
+  Image as ImageIcon,
+  FileImage,
 } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
 /** ---------------------------
- * ✅ MENU (permission based)
+ * ✅ MENUS
  * --------------------------- */
 
-// Outlet লগইন না করা অবস্থার বেস মেনু
+// Overview base menu (outlet login নাই)
 const outletOverviewMenuBase = [
   {
     title: "Dashboard",
@@ -76,7 +81,7 @@ const outletOverviewMenuBase = [
   },
 ];
 
-// Overview mode এ (outlet login নাই) Owner/Admin দের জন্য Investments দেখাতে চাইলে
+// Overview Investments (Owner/Admin)
 const investmentsOverviewMenu = [
   { title: "Investors", icon: "users", route: "investors.index", active: "investors.index", category: "Investments", permission: "investors.view" },
   { title: "Add Investor", icon: "user-plus", route: "investors.create", active: "investors.create", category: "Investments", permission: "investors.create" },
@@ -85,20 +90,21 @@ const investmentsOverviewMenu = [
   { title: "Investment Returns", icon: "dollar-sign", route: "investmentReturns.index", active: "investmentReturns.index", category: "Investments", permission: "investments.returns.view" },
 ];
 
-// ✅ Overview mode এ User/Role দেখাতে চাইলে
+// Overview Admin
 const adminOverviewMenu = [
   { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
   { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
 ];
 
-// ✅ Overview mode এ Outlet মেনু (Outlet/Outlet Management) দেখাতে চাইলে
+
+
 const outletsOverviewExtraMenu = [
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
 ];
 
-// Outlet লগইন করা অবস্থার ফুল মেনু
+// Outlet login menu (full app menu)
 const outletLoggedInMenu = [
-  // Dashboard
+  // Main
   { title: "Dashboard", icon: "home", route: "home", active: "home", category: "Main", permission: "dashboard.view" },
 
   // Sales
@@ -111,13 +117,13 @@ const outletLoggedInMenu = [
 
   // Purchase
   { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
-  { title: "Local Purchase", icon: "receipt", route: "purchase.list_index", routeParams: null, active: "purchase.list_index", category: "Purchase", permission: "purchase.view" },
+  { title: "Local Purchase", icon: "receipt", route: "purchase.list_index", active: "purchase.list_index", category: "Purchase", permission: "purchase.list_index" },
   { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
-  { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.view" },
+  { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.items_view" },
 
   // Purchase Return
-  { title: "Purchase Return", icon: "receipt", route: "purchase-return.list", active: "purchase-return.list", category: "Purchase", permission: "purchase.return" },
-  { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", active: "purchase-return.create", category: "Purchase", permission: "purchase.return" },
+  { title: "Purchase Return", icon: "receipt", route: "purchase-return.list", active: "purchase-return.list", category: "Purchase", permission: "purchase_return.view" },
+  { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", active: "purchase-return.create", category: "Purchase", permission: "purchase_return.create" },
 
   // Inventory
   { title: "Warehouse", icon: "warehouse", route: "warehouse.list", active: "warehouse.list", category: "Inventory", permission: "warehouse.view" },
@@ -128,7 +134,7 @@ const outletLoggedInMenu = [
   { title: "Categories", icon: "box", route: "category.view", active: "category.view", category: "Inventory", permission: "category.view" },
   { title: "Brands", icon: "box", route: "brands.index", active: "brands.index", category: "Inventory", permission: "brands.view" },
 
-  // Investments (⚠️ outlet user হলে outlet login অবস্থায় এটাকে আমরা runtime এ hide করবো)
+  // Investments
   { title: "Investors", icon: "users", route: "investors.index", active: "investors.index", category: "Investments", permission: "investors.view" },
   { title: "Add Investor", icon: "user-plus", route: "investors.create", active: "investors.create", category: "Investments", permission: "investors.create" },
   { title: "Investments", icon: "wallet-minimal", route: "investments.index", active: "investments.index", category: "Investments", permission: "investments.view" },
@@ -136,17 +142,17 @@ const outletLoggedInMenu = [
   { title: "Investment Returns", icon: "dollar-sign", route: "investmentReturns.index", active: "investmentReturns.index", category: "Investments", permission: "investments.returns.view" },
 
   // Finance
-  { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expenses.category.view" },
-  { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expenses.view" },
-  { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Finance", permission: "transactions.view" },
+  { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expense.category_view" },
+  { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expense.view" },
+  { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Finance", permission: "payments.view" },
   { title: "Accounts", icon: "dollar-sign", route: "accounts.index", active: "accounts.index", category: "Finance", permission: "accounts.view" },
-  { title: "Ledgers", icon: "box", route: "ledgers.index", active: "ledgers.index", category: "Finance", permission: "ledgers.view" },
+  { title: "Ledgers", icon: "box", route: "ledgers.index", active: "ledgers.index", category: "Finance", permission: "ledger.view" },
 
   // Subscriptions
-  { title: "Plan", icon: "barcode", route: "plans.index", active: "plans.index", category: "Subscriptions", permission: "plan.view" },
+  { title: "Plan", icon: "barcode", route: "plans.index", active: "plans.index", category: "Subscriptions", permission: "plans.view" },
   { title: "Plan Modules", icon: "barcode", route: "modules.index", active: "modules.index", category: "Subscriptions", permission: "modules.view" },
   { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", active: "subscriptions.index", category: "Subscriptions", permission: "subscriptions.view" },
-  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments" },
+  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments_view" },
 
   // Partners
   { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
@@ -162,10 +168,14 @@ const outletLoggedInMenu = [
   { title: "Allowances", icon: "trending-up", route: "allowances.index", active: "allowances.index", category: "HR", permission: "allowances.view" },
   { title: "Ranks", icon: "star", route: "ranks.index", active: "ranks.index", category: "HR", permission: "ranks.view" },
   { title: "Bonus", icon: "gift", route: "bonus.index", active: "bonus.index", category: "HR", permission: "bonus.view" },
-  { title: "SMS", icon: "gift", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms.view" },
+  { title: "SMS", icon: "gift", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms_templates.view" },
 
-  // ❌ IMPORTANT: Outlet login থাকা অবস্থায় Admin/Outlets মেনু দেখাবেন না
-  // তাই এগুলো এখানে রাখার দরকার নেই (বা থাকলেও runtime এ hide হবে)
+  // Admin (super admin will see even inside outlet)
+  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
+
+  // Outlets (super admin will see even inside outlet)
+  { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
 ];
 
 const iconComponents = {
@@ -212,27 +222,36 @@ const iconComponents = {
   "check-circle": CheckCircle,
   eye: Eye,
   "log-in": LogIn,
+  globe: Globe,
+  headphones: Headphones,
+  palette: Palette,
+  image: ImageIcon,
+  "file-image": FileImage,
 };
 
 export default function Sidebar({ status, setStatus }) {
-  const { auth, currentRoute } = usePage().props;
+  const { auth, currentRoute, headerSettings } = usePage().props;
   const { t, locale } = useTranslation();
   const sidebarRef = useRef(null);
 
-  const [openMenus, setOpenMenus] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
 
-  // ✅ backend থেকে share করুন: auth.user.permissions = ['sales.view', ...]
   const permissions = auth?.user?.permissions || [];
-  const isSuperAdmin = !!auth?.user?.is_super_admin;
-  const isLoggedIntoOutlet = !!auth?.user?.is_logged_into_outlet;
 
-  // ✅ outlet user detect: outlet_id থাকলে outlet user
+  // ✅ Super Admin detect (fallbacks)
+  const isSuperAdmin =
+    !!auth?.user?.is_super_admin ||
+    auth?.user?.role_id === 1 ||
+    auth?.user?.role?.name === "Super Admin" ||
+    (Array.isArray(auth?.user?.roles) && auth.user.roles.includes("Super Admin"));
+
+  const isLoggedIntoOutlet = !!auth?.user?.is_logged_into_outlet;
   const isOutletUser = !!auth?.user?.outlet_id;
 
+  // ✅ superadmin: ignore permission checks
   const can = (perm) => {
-    if (!perm) return true;
     if (isSuperAdmin) return true;
+    if (!perm) return true;
     return permissions.includes(perm);
   };
 
@@ -240,9 +259,6 @@ export default function Sidebar({ status, setStatus }) {
     const IconComponent = iconComponents[iconName] || LayoutDashboard;
     return <IconComponent size={18} />;
   };
-
-  const toggleMenu = (menuId) =>
-    setOpenMenus((p) => ({ ...p, [menuId]: !p[menuId] }));
 
   const getTranslatedTitle = (englishTitle) => {
     const translationMap = {
@@ -315,6 +331,7 @@ export default function Sidebar({ status, setStatus }) {
       Bonus: t("auth.bonus", "Bonus"),
       SMS: t("auth.sms", "SMS"),
 
+
       // Outlets
       Outlet: t("auth.outlet", "Outlet"),
 
@@ -355,36 +372,33 @@ export default function Sidebar({ status, setStatus }) {
 
       const matchesChildren = item.children
         ? item.children.some((child) =>
-            getTranslatedTitle(child.title).toLowerCase().includes(q)
-          )
+          getTranslatedTitle(child.title).toLowerCase().includes(q)
+        )
         : false;
 
       return matchesTitle || matchesChildren;
     });
   };
 
+  // ✅ grouping + all hide logic (superadmin bypass)
   const groupMenuByCategory = (menuItems) => {
     const categories = {};
+
     menuItems.forEach((item) => {
-      // ✅ Permission gate
-      if (!can(item.permission)) return;
+      // ✅ Permission gate (SuperAdmin bypass)
+      if (!isSuperAdmin && !can(item.permission)) return;
 
-      /**
-       * ✅ আপনার নতুন রিকোয়ারমেন্ট:
-       * Outlet login অবস্থায় => Users/Roles/Outlets menu দেখাবেন না
-       */
-      if (isLoggedIntoOutlet && (item.category === "Admin" || item.category === "Outlets")) return;
+      // ✅ Outlet login অবস্থায় => Users/Roles/Outlets hide (শুধু non-superadmin)
+      if (!isSuperAdmin && isLoggedIntoOutlet && (item.category === "Admin" || item.category === "Outlets")) return;
 
-      /**
-       * ✅ আগের রিকোয়ারমেন্ট:
-       * Outlet user + outlet login => Investments লুকিয়ে ফেলুন
-       */
-      if (isOutletUser && isLoggedIntoOutlet && item.category === "Investments") return;
+      // ✅ Outlet user + outlet login => Investments hide (শুধু non-superadmin)
+      if (!isSuperAdmin && isOutletUser && isLoggedIntoOutlet && item.category === "Investments") return;
 
       const category = item.category || "General";
       categories[category] ||= [];
       categories[category].push(item);
     });
+
     return categories;
   };
 
@@ -399,19 +413,18 @@ export default function Sidebar({ status, setStatus }) {
   }, [status, setStatus]);
 
   /**
-   * ✅ menuToShow ডিসিশন:
-   * - outlet login থাকলে => outletLoggedInMenu
-   * - outlet login না থাকলে => overview menu
-   *   - কিন্তু user এর outlet_id না থাকলে (Owner/Admin) =>
-   *     overview তে Investments + Admin + Outlets দেখাবেন
+   * ✅ Super Admin: outlet logout থাকলেও Admin/Outlets/Investments সব দেখবে
+   * তাই superadmin হলে Overview mode এও full menu দেখাবো (same as outletLoggedInMenu)
    */
   const menuToShow = useMemo(() => {
+    if (isSuperAdmin) return outletLoggedInMenu;
+
     if (isLoggedIntoOutlet) return outletLoggedInMenu;
 
     // Overview mode
     const base = [...outletOverviewMenuBase];
 
-    // ✅ outlet_id না থাকলে overview এ Investments + Admin + Outlets দেখান
+    // owner/admin (outlet_id নেই) => extra menus
     if (!isOutletUser) {
       base.push(...investmentsOverviewMenu);
       base.push(...adminOverviewMenu);
@@ -419,12 +432,11 @@ export default function Sidebar({ status, setStatus }) {
     }
 
     return base;
-  }, [isLoggedIntoOutlet, isOutletUser]);
+  }, [isSuperAdmin, isLoggedIntoOutlet, isOutletUser]);
 
   const menuCategories = useMemo(() => {
     const grouped = groupMenuByCategory(menuToShow);
 
-    // search filter apply per category
     const out = {};
     Object.entries(grouped).forEach(([cat, items]) => {
       const filtered = filterMenuItems(items);
@@ -432,6 +444,21 @@ export default function Sidebar({ status, setStatus }) {
     });
     return out;
   }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet, isOutletUser]); // eslint-disable-line
+
+  const getFaviconUrl = () => {
+    if (headerSettings?.fav_icon) {
+      if (headerSettings.fav_icon.startsWith("http")) return headerSettings.fav_icon;
+      if (headerSettings.fav_icon.startsWith("storage/")) return `/${headerSettings.fav_icon}`;
+      return `/storage/${headerSettings.fav_icon}`;
+    }
+    return "https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png";
+  };
+
+  const getSidebarName = () => {
+    if (headerSettings?.sitebar_name) return headerSettings.sitebar_name;
+    if (auth?.user?.current_outlet?.name) return `${auth.user.current_outlet.name} Dashboard`;
+    return "Business Dashboard";
+  };
 
   return (
     <>
@@ -445,26 +472,33 @@ export default function Sidebar({ status, setStatus }) {
       <aside
         ref={sidebarRef}
         id="sidebar"
-        className={`w-72 fixed h-full z-50 transition-all duration-300 ${
-          status ? "translate-x-0 shadow-2xl" : "-translate-x-full"
-        } lg:translate-x-0 lg:shadow-xl`}
+        className={`w-72 fixed h-full z-50 transition-all duration-300 ${status ? "translate-x-0 shadow-2xl" : "-translate-x-full"
+          } lg:translate-x-0 lg:shadow-xl`}
         style={{ background: "linear-gradient(180deg, #0f2d1a 0%, #1e4d2b 100%)" }}
       >
         <div className="p-6 h-full flex flex-col">
           {/* Header */}
-          <div className="flex items-center justify-center mb-8">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col items-center justify-center mb-8">
+            <div className="flex items-center gap-3 mb-2">
               <div className="bg-white p-1 rounded-xl shadow-lg">
                 <img
-                  src="https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png"
+                  src={getFaviconUrl()}
                   className="h-[80px]"
-                  alt=""
+                  alt="Logo"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src =
+                      "https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png";
+                  }}
                 />
               </div>
             </div>
+
+            <p className="text-white font-bold text-sm text-center">{getSidebarName()}</p>
+
             <button
               onClick={() => setStatus(false)}
-              className="lg:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
+              className="lg:hidden text-white hover:bg-white/10 p-2 rounded-lg transition-colors absolute top-4 right-4"
             >
               <X size={20} />
             </button>
@@ -500,11 +534,11 @@ export default function Sidebar({ status, setStatus }) {
             </div>
           )}
 
-          {/* Search - শুধু outlet লগইন করা থাকলে দেখান */}
+          {/* Search (outlet login mode only) */}
           {isLoggedIntoOutlet && (
             <div className="mb-6 relative">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white w-4 h-4" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white w-4 h-4" />
                 <input
                   type="text"
                   placeholder={locale === "bn" ? "মেনু সার্চ করুন..." : "Search menu..."}
@@ -515,7 +549,7 @@ export default function Sidebar({ status, setStatus }) {
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery("")}
-                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-white"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-white"
                   >
                     <X size={16} />
                   </button>
@@ -543,27 +577,32 @@ export default function Sidebar({ status, setStatus }) {
                     return (
                       <div key={`${category}-${index}`} className="relative group">
                         <div
-                          className={`relative rounded-xl transition-all duration-200 ${
-                            isActive
+                          className={`relative rounded-xl transition-all duration-200 ${isActive
                               ? "bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm border border-white/10"
                               : "hover:bg-white/5"
-                          }`}
+                            }`}
                         >
                           <Link
                             href={item.route ? getRouteUrl(item) : "#"}
                             className="flex items-center gap-3 px-4 py-3 group"
                             onClick={() => setStatus(false)}
                           >
-                            <span className={`${isActive ? "text-white" : "text-white/70 group-hover:text-white"}`}>
+                            <span className={isActive ? "text-white" : "text-white/70 group-hover:text-white"}>
                               {getIconComponent(item.icon || "dashboard")}
                             </span>
+
                             <span
-                              className={`font-medium ${
-                                locale === "bn" ? "text-sm leading-relaxed" : ""
-                              } ${isActive ? "text-white" : "text-white/90 group-hover:text-white"}`}
+                              className={`font-medium ${locale === "bn" ? "text-sm leading-relaxed" : ""
+                                } ${isActive ? "text-white" : "text-white/90 group-hover:text-white"}`}
                             >
                               {translatedTitle}
                             </span>
+
+                            {item.route === "headers.index" && headerSettings && (
+                              <span className="ml-auto text-xs bg-green-500/20 text-green-300 px-2 py-0.5 rounded-full">
+                                ✓
+                              </span>
+                            )}
                           </Link>
                         </div>
                       </div>
@@ -573,6 +612,37 @@ export default function Sidebar({ status, setStatus }) {
               </div>
             ))}
 
+            {/* CTA */}
+            {isLoggedIntoOutlet && !headerSettings && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-blue-500/10 to-blue-600/10 backdrop-blur-sm border border-blue-500/20 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
+                    <Palette size={18} className="text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-bold text-sm">
+                      {locale === "bn" ? "কাস্টমাইজ হেডার" : "Customize Header"}
+                    </p>
+                    <p className="text-white/70 text-xs">
+                      {locale === "bn"
+                        ? "আপনার ব্র্যান্ডের জন্য হেডার সেটিংস কনফিগার করুন"
+                        : "Configure header settings for your brand"}
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <Link
+                    href={route("headers.create")}
+                    className="inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200"
+                  >
+                    <Palette size={16} className="mr-2" />
+                    {locale === "bn" ? "হেডার তৈরি করুন" : "Create Header"}
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {/* Overview message (non-super-admin only) */}
             {!isSuperAdmin && !isLoggedIntoOutlet && (
               <div className="text-center py-8">
                 <Store className="w-12 h-12 text-white/20 mx-auto mb-3" />
@@ -588,7 +658,7 @@ export default function Sidebar({ status, setStatus }) {
             )}
           </nav>
 
-          {/* Current Outlet Info (যখন লগইন করা থাকে) */}
+          {/* Current Outlet Info */}
           {isLoggedIntoOutlet && auth?.user?.current_outlet && (
             <div className="relative group">
               <div className="mt-3 mb-2 px-3 py-2 bg-gradient-to-r from-white/5 to-white/3 rounded-xl border border-white/10 hover:border-white/20 transition-all duration-200">
@@ -597,17 +667,12 @@ export default function Sidebar({ status, setStatus }) {
                     <Store size={12} className="text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium text-xs truncate">
-                      {auth.user.current_outlet.name}
-                    </p>
-                    <p className="text-white/50 text-[10px] truncate">
-                      {auth.user.current_outlet.code}
-                    </p>
+                    <p className="text-white font-medium text-xs truncate">{auth.user.current_outlet.name}</p>
+                    <p className="text-white/50 text-[10px] truncate">{auth.user.current_outlet.code}</p>
                   </div>
                 </div>
               </div>
 
-              {/* Floating action button */}
               <div className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                 <Link
                   href={route("outlets.logout")}
@@ -618,14 +683,6 @@ export default function Sidebar({ status, setStatus }) {
                 >
                   <LogOut size={10} className="text-white" />
                 </Link>
-              </div>
-
-              {/* Tooltip on hover */}
-              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                <div className="bg-[#1e4d2b] text-white text-xs px-3 py-1.5 rounded-lg shadow-lg border border-white/10 whitespace-nowrap">
-                  {locale === "bn" ? "বর্তমান আউটলেট" : "Current Outlet"}
-                  <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-[#1e4d2b]"></div>
-                </div>
               </div>
             </div>
           )}

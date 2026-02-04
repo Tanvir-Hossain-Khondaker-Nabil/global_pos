@@ -100,22 +100,41 @@ class WarehouseController extends Controller
 
         $warehouse = Warehouse::with(['stocks.product', 'stocks.variant'])->findOrFail($id);
 
-        // Get products with their variants and stocks for this warehouse
-        $products = Product::with([
-            'category',
-            'variants.stock' => function ($query) use ($id) {
-                $query->where('warehouse_id', $id);
-            }
-        ])
-            ->whereHas('variants.stock', function ($query) use ($id) {
-                $query->where('warehouse_id', $id)
-                    ->where('quantity', '>', 0);
+        $products = Product::query()
+            ->with([
+                'category',
+                'variants' => function ($q) {
+                    // ✅ remove variant_name (column doesn't exist)
+                    $q->select('id', 'product_id', 'sku', 'attribute_values');
+                },
+                'variants.stocks' => function ($q) use ($id) {
+                    $q->where('warehouse_id', $id)
+                        ->where('quantity', '>', 0)
+                        ->select(
+                            'id',
+                            'warehouse_id',
+                            'product_id',
+                            'variant_id',
+                            'quantity',
+                            'purchase_price',
+                            'sale_price',
+                            'shadow_purchase_price',
+                            'shadow_sale_price',
+                            'batch_no',
+                            'barcode',
+                            'created_at'
+                        )
+                        ->orderByDesc('id');
+                }
+            ])
+            ->whereHas('variants.stocks', function ($q) use ($id) {
+                $q->where('warehouse_id', $id)->where('quantity', '>', 0);
             })
-            ->get()
-            ->map(function ($product) use ($id, $isShadowUser) {
-                // Calculate total stock for this product in this warehouse
-                $totalStock = $product->variants->sum(function ($variant) use ($id) {
-                    return $variant->stock ? $variant->stock->quantity : 0;
+            ->get(['id', 'name', 'product_no', 'description', 'category_id'])
+            ->map(function ($product) use ($isShadowUser) {
+
+                $totalStock = $product->variants->sum(function ($variant) {
+                    return $variant->stocks->sum(fn($s) => (float) $s->quantity);
                 });
 
                 return [
@@ -125,41 +144,47 @@ class WarehouseController extends Controller
                     'description' => $product->description,
                     'category' => $product->category,
                     'total_stock' => $totalStock,
-                    'variants' => $product->variants->map(function ($variant) use ($id, $isShadowUser) {
-                        $stock = $variant->stock;
 
-                        // Use shadow prices for shadow users
-                        $purchasePrice = $isShadowUser ?
-                            ($stock ? $stock->shadow_purchase_price : 0) :
-                            ($stock ? $stock->purchase_price : 0);
+                    'variants' => $product->variants
+                        ->map(function ($variant) use ($isShadowUser) {
 
-                        $salePrice = $isShadowUser ?
-                            ($stock ? $stock->shadow_sale_price : 0) :
-                            ($stock ? $stock->sale_price : 0);
+                            $batches = $variant->stocks->map(function ($stock) use ($isShadowUser) {
+                                $qty = (float) ($stock->quantity ?? 0);
 
-                        $stockQuantity = $stock ? $stock->quantity : 0;
-                        $stockValue = $stockQuantity * $purchasePrice;
+                                $purchasePrice = $isShadowUser
+                                    ? (float) ($stock->shadow_purchase_price ?? 0)
+                                    : (float) ($stock->purchase_price ?? 0);
 
-                        return [
-                            'id' => $variant->id,
-                            'attribute_values' => $variant->attribute_values,
-                            'sku' => $variant->sku,
-                            'variant_name' => $variant->variant_name,
-                            'stock_quantity' => $stockQuantity,
-                            'purchase_price' => $purchasePrice,
-                            'sale_price' => $salePrice,
-                            'stock_value' => $stockValue,
-                        ];
-                    })->filter(function ($variant) {
-                        // Only show variants that have stock
-                        return $variant['stock_quantity'] > 0;
-                    })
+                                $salePrice = $isShadowUser
+                                    ? (float) ($stock->shadow_sale_price ?? 0)
+                                    : (float) ($stock->sale_price ?? 0);
+
+                                return [
+                                    'stock_id' => $stock->id,
+                                    'batch_no' => $stock->batch_no,
+                                    'barcode' => $stock->barcode,
+                                    'stock_quantity' => $qty,
+                                    'purchase_price' => $purchasePrice,
+                                    'sale_price' => $salePrice,
+                                    'stock_value' => $qty * $purchasePrice,
+                                    'created_at' => optional($stock->created_at)->toDateTimeString(),
+                                ];
+                            })->values();
+
+                            return [
+                                'id' => $variant->id,
+                                'attribute_values' => $variant->attribute_values,
+                                'sku' => $variant->sku,
+                                'total_stock_quantity' => $batches->sum('stock_quantity'),
+                                'batches' => $batches,
+                            ];
+                        })
+                        ->filter(fn($v) => ($v['batches'] ?? collect())->count() > 0)
+                        ->values(),
                 ];
             })
-            ->filter(function ($product) {
-                // Only show products that have stock
-                return $product['total_stock'] > 0;
-            });
+            ->filter(fn($p) => ($p['total_stock'] ?? 0) > 0)
+            ->values();
 
         return Inertia::render('Warehouse/WarehouseProducts', [
             'warehouse' => $warehouse,
@@ -168,7 +193,7 @@ class WarehouseController extends Controller
         ]);
     }
 
-    
+
     public function update(Request $request, $id)
     {
         $user = Auth::user();

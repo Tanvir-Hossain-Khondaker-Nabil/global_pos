@@ -13,6 +13,8 @@ use App\Http\Controllers\AwardController;
 use App\Http\Controllers\BrandController;
 use App\Http\Controllers\LeaveController;
 use App\Http\Controllers\SalesController;
+use App\Http\Controllers\DamageController;
+use App\Http\Controllers\HeaderController;
 use App\Http\Controllers\LadgerController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\ModuleController;
@@ -39,13 +41,12 @@ use App\Http\Controllers\WarehouseController;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\DealershipController;
 use App\Http\Controllers\InvestmentController;
+use App\Http\Controllers\InstallmentController;
 use App\Http\Controllers\SalesReturnController;
 use App\Http\Controllers\SmsTemplateController;
 use App\Http\Controllers\UserDepositController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\BonusSettingController;
-use App\Http\Controllers\DamageController;
-use App\Http\Controllers\InstallmentController;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
@@ -196,9 +197,10 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:sales_return.view')
         ->name('salesReturn.list');
 
-     Route::get('/return/pickup', [SalesReturnController::class, 'indexPickup'])
-        // ->middleware('permission:sales_return.pickup')
+    Route::get('/return/pickup', [SalesReturnController::class, 'indexPickup'])
+        ->middleware('permission:sales_return.pickup')
         ->name('salesReturn.pickup');
+
 
     Route::get('/return/create', [SalesReturnController::class, 'create'])
         ->middleware('permission:sales_return.create')
@@ -332,35 +334,40 @@ Route::middleware('auth')->group(function () {
 
     // installment
     Route::controller(InstallmentController::class)->group(function () {
+
         Route::get('/installments/{id}/{type?}', 'getInstallment')
-        // ->middleware('permission:installments.view')
-        ->name('installments.show');
+            ->middleware('permission:installments.view')
+            ->name('installments.show');
 
         Route::put('/installments/{id}', 'updateInstallment')
-            // ->middleware('permission:installments.edit')
+            ->middleware('permission:installments.edit')
             ->name('installments.update');
+
     });
+
 
 
     //damaged 
     Route::controller(DamageController::class)->group(function () {
+
         Route::get('/damages/{id}/{type?}', 'getData')
-        // ->middleware('permission:damages.create')
-        ->name('damages.create');
+            ->middleware('permission:damages.create')
+            ->name('damages.create');
 
         Route::post('/damages/store', 'storeDamage')
-        // ->middleware('permission:damages.store')
-        ->name('damages.store');
+            ->middleware('permission:damages.store')
+            ->name('damages.store');
 
         Route::get('/damages', 'index')
-        // ->middleware('permission:damages.index')
-        ->name('damages.index');
+            ->middleware('permission:damages.index')
+            ->name('damages.index');
 
         Route::get('/damage/show/{id}', 'show')
-        // ->middleware('permission:damages.show')
-        ->name('damages.show');
+            ->middleware('permission:damages.show')
+            ->name('damages.show');
 
     });
+
 
     // barcode
     Route::controller(BarcodePrintController::class)->group(function () {
@@ -658,10 +665,13 @@ Route::middleware('auth')->group(function () {
         ->name('sms-templates.toggle-status');
 
 
-    Route::get('/purchases_local_product', [PurchaseController::class, 'list_index'])->name('purchase.list_index');
+    Route::get('/purchases_local_product', [PurchaseController::class, 'list_index'])
+        ->middleware('permission:purchase.list_index')
+        ->name('purchase.list_index');
 
 
-     // Investors
+
+    // Investors
     Route::get('/investors', [InvestorController::class, 'index'])
         ->name('investors.index')->middleware('permission:investors.view');
     Route::get('/investors/create', [InvestorController::class, 'create'])
@@ -701,6 +711,11 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/investment-returns/{investmentReturn}/mark-paid', [InvestmentReturnController::class, 'markPaid'])
         ->name('investmentReturns.markPaid')->middleware('permission:investments.returns.mark_paid');
+
+    // Headers
+    Route::resource('headers', HeaderController::class)
+        ->middleware('permission:headers.index|headers.create|headers.edit|headers.delete|headers.show');
+
 });
 
 

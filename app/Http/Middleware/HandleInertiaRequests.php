@@ -1,4 +1,5 @@
 <?php
+// app/Http/Middleware/HandleInertiaRequests.php
 
 namespace App\Http\Middleware;
 
@@ -51,6 +52,9 @@ class HandleInertiaRequests extends Middleware
         $isLoggedIntoOutlet = false;
         $outletLoggedInAt = null;
 
+        // Header settings
+        $headerSettings = null;
+
         if ($user) {
             // Current outlet data
             if ($user->currentOutlet) {
@@ -69,6 +73,25 @@ class HandleInertiaRequests extends Middleware
                     'created_at' => $user->currentOutlet->created_at ? $this->formatDate($user->currentOutlet->created_at) : null,
                     'updated_at' => $user->currentOutlet->updated_at ? $this->formatDate($user->currentOutlet->updated_at) : null,
                 ];
+
+                // Get header settings for current outlet
+                if ($user->current_outlet_id) {
+                    try {
+                        $headerSettings = \App\Models\Header::where('outlet_id', $user->current_outlet_id)
+                            ->where(function($query) use ($user) {
+                                // Check if owner_id column exists
+                                if (\Schema::hasColumn('headers', 'owner_id')) {
+                                    $query->where('owner_id', $user->ownerId());
+                                } else if (\Schema::hasColumn('headers', 'created_by')) {
+                                    $query->where('created_by', $user->id);
+                                }
+                            })
+                            ->first();
+                    } catch (\Exception $e) {
+                        // Table might not exist yet
+                        $headerSettings = null;
+                    }
+                }
             }
 
             /**
@@ -93,7 +116,7 @@ class HandleInertiaRequests extends Middleware
                 }
             }
 
-            // Available outlets
+            // Available outlets - FIXED QUERY
             try {
                 if ($user->relationLoaded('availableOutlets')) {
                     $availableOutlets = $user->availableOutlets->map(function ($outlet) {
@@ -110,7 +133,7 @@ class HandleInertiaRequests extends Middleware
                         ];
                     })->toArray();
                 } else {
-                    // Manual fallback load
+                    // Manual fallback load - FIXED: Use user_id instead of owner_id
                     $availableOutlets = \App\Models\Outlet::where('user_id', $user->id)
                         ->get()
                         ->map(function ($outlet) {
@@ -175,6 +198,15 @@ class HandleInertiaRequests extends Middleware
                 'current' => $currentOutlet,
                 'is_active' => $isLoggedIntoOutlet,
             ],
+
+            // Header settings
+            'headerSettings' => $headerSettings ? [
+                'title' => $headerSettings->title,
+                'sitebar_name' => $headerSettings->sitebar_name,
+                'fav_icon' => $headerSettings->fav_icon,
+                'fav_icon_url' => $headerSettings->fav_icon_url,
+                'outlet_id' => $headerSettings->outlet_id,
+            ] : null,
         ]);
     }
 
