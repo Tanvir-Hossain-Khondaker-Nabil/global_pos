@@ -593,9 +593,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
           <Link
             href={route("purchase.create")}
-            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${
-              isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"
-            }`}
+            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"
+              }`}
           >
             <Plus size={15} /> {t("purchase.new_purchase", "New Entry")}
           </Link>
@@ -679,33 +678,47 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                         </div>
                         <div className="flex gap-1 items-center mt-1">
                           <span
-                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${
-                              isPaid ? "bg-green-100 text-green-700" : isPartial ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-600"
-                            }`}
+                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${isPaid ? "bg-green-100 text-green-700" : isPartial ? "bg-yellow-100 text-yellow-700" : "bg-red-100 text-red-600"
+                              }`}
                           >
                             {displayPaymentStatus}
                           </span>
                           <span
-                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${
-                              purchase.status === "completed"
+                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${purchase.status === "completed"
                                 ? "bg-blue-100 text-blue-700"
                                 : purchase.status === "pending"
-                                ? "bg-gray-100 text-gray-600"
-                                : "bg-red-100 text-red-400"
-                            }`}
+                                  ? "bg-gray-100 text-gray-600"
+                                  : "bg-red-100 text-red-400"
+                              }`}
                           >
                             {purchase.status}
                           </span>
                         </div>
 
-                        {hasDueAmount && purchase.status === "completed" && (
-                          <div className="mt-2">
-                            <button onClick={() => openPaymentModal(purchase)} className="btn btn-xs btn-primary w-full flex items-center justify-center gap-1">
-                              <CreditCard size={12} />
-                              Pay Now
-                            </button>
-                          </div>
+                        {hasDueAmount && (
+                          purchase?.payment_status === "installment" ? (
+                            <Link
+                              href={route("installments.show", { 
+                                id: purchase.id ,
+                                type : 'purchase'
+                              })}
+                              className="btn btn-xs btn-primary"
+                            >
+                              View Installments
+                            </Link>
+                          ) : (
+                            <div className="mt-2">
+                              <button
+                                onClick={() => openPaymentModal(purchase)}
+                                className="btn btn-xs btn-primary w-full flex items-center justify-center gap-1"
+                              >
+                                <CreditCard size={12} />
+                                Pay Now
+                              </button>
+                            </div>
+                          )
                         )}
+
                       </div>
                     </td>
 
