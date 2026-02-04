@@ -555,8 +555,8 @@ class SalesReturnController extends Controller
                 throw new \Exception('This return cannot be approved.');
             }
 
-            $customer = $salesReturn->customer;
-          
+            $customer = Customer::find($salesReturn->customer_id);
+
             $this->processFinancials($salesReturn, $customer);
 
             
