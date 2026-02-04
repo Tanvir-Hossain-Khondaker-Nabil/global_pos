@@ -64,7 +64,7 @@ const baseMenu = [
     {
         title: "All Orders (POS)",
         icon: <BadgeCent size={16} />,
-        route: route("salesPos.index", 'pos'),
+        route: route("salesPos.index"),
         active: "salesPos.index",
         role: "all",
     },

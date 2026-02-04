@@ -314,7 +314,7 @@ export default function SaleShow({ sale }) {
                 </div>
 
                 <div className="flex gap-2">
-                    <Link href={route("sales.index")} className="btn btn-sm btn-ghost border border-gray-300">
+                    <Link href={route("salesPos.index")} className="btn btn-sm btn-ghost border border-gray-300">
                         <ArrowLeft size={16} className="mr-1" />
                         Back
                     </Link>

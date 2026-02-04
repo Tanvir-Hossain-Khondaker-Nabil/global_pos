@@ -170,11 +170,11 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/create', 'create')->middleware('permission:sales.create')->name('sales.create');
         Route::get('/', 'index')->middleware('permission:sales.view')->name('sales.index');
-        Route::get('/list/{pos}', 'index')->middleware('permission:sales.view')->name('salesPos.index');
+        Route::get('/list/pos', 'indexPos')->middleware('permission:sales.view')->name('salesPos.index');
 
         // ✅ Restrict sale id (so scan-barcode never matches)
         Route::get('/{sale}', 'show')->whereNumber('sale')->middleware('permission:sales.view')->name('sales.show');
-        Route::get('/{sale}/{print}', 'show')->whereNumber('sale')->middleware('permission:sales.print')->name('salesPrint.show');
+        Route::get('/{sale}/pos', 'showPos')->whereNumber('sale')->middleware('permission:sales.print')->name('salesPrint.show');
 
         Route::get('/{sale}/print', 'print')->whereNumber('sale')->middleware('permission:sales.print')->name('sales.print');
         Route::get('/{sale}/download-pdf', 'downloadPdf')->whereNumber('sale')->middleware('permission:sales.download_pdf')->name('sales.download.pdf');
@@ -358,7 +358,7 @@ Route::middleware('auth')->group(function () {
     });
 
 
-    
+
     //notifications
 
     Route::get('/notifications', [NotificationController::class, 'index'])
