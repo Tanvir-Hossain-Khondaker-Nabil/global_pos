@@ -231,7 +231,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
     setProcessingPayment(true);
 
-    router.post(
+    router.patch(
       route("purchase.updatePayment", selectedPurchase.id),
       {
         payment_amount: parseFloat(paymentForm.payment_amount),
@@ -995,8 +995,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                           </span>
                         </div>
 
-                        {hasDueAmount && (
-                          purchase?.payment_status === "installment" ? (
+                        {displayDue > 0 && (
+                          purchase?.payment_status == "installment" ? (
                             <Link
                               href={route("installments.show", { 
                                 id: purchase.id ,

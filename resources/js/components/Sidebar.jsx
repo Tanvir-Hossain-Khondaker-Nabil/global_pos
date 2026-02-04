@@ -481,7 +481,7 @@ export default function Sidebar({ status, setStatus }) {
         <div className="p-6 h-full flex flex-col">
           {/* Header */}
           <div className="flex flex-col items-center justify-center mb-8">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3">
               <div className="bg-white p-1 rounded-xl shadow-lg">
                 <img
                   src={getFaviconUrl()}
@@ -495,8 +495,6 @@ export default function Sidebar({ status, setStatus }) {
                 />
               </div>
             </div>
-
-            <p className="text-white font-bold text-sm text-center">{getSidebarName()}</p>
 
             <button
               onClick={() => setStatus(false)}
