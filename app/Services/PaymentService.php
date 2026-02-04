@@ -67,7 +67,10 @@ class PaymentService
         $model->decrement('due_amount', $amount);
 
         if (1 >= $model->due_amount && $model->due_amount >= 0) {
-            $model->update(['status' => 'paid']);
+            $model->update([
+                'status' => 'paid',
+                'due_amount' => 0
+            ]);
         }
     }
 

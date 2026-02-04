@@ -292,9 +292,6 @@ Route::middleware('auth')->group(function () {
     ]);
 
 
-
-
-
     // sales list
     Route::controller(SalesListController::class)->group(function () {
         Route::get('/sales/list', 'index')->middleware('permission:sales_list.view')->name('sales.list.all');
