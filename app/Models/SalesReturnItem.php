@@ -46,6 +46,11 @@ class SalesReturnItem extends Model
 
     }
 
+    public function saleReturn()
+    {
+        return $this->belongsTo(SalesReturn::class, 'sales_return_id');
+    }
+
 
     //relation to product
     public function product()

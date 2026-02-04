@@ -41,6 +41,12 @@ class SalesReturn extends Model
         return $this->belongsTo(Sale::class, 'sale_id')->with('warehouse');
     }
 
+    
+    public function items()
+    {
+        return $this->hasMany(SalesReturnItem::class, 'sales_return_id')->with(['product', 'variant','saleItem']);
+    }
+
     //relation to customer
     public function customer()
     {
