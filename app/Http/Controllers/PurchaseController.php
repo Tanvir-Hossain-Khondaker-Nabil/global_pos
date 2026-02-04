@@ -237,8 +237,10 @@ class PurchaseController extends Controller
         DB::beginTransaction();
         try {
             $purchaseCount = Purchase::count();
-            $purchaseNo = 'PUR-' . date('Ymd') . '-' . str_pad($purchaseCount + 1, 4, '0', STR_PAD_LEFT);
-
+               do {
+                $purchaseNo = 'PUR-' . date('Ymd') . '-' . strtoupper(Str::random(6));
+            } while (Purchase::where('purchase_no', $purchaseNo)->exists());
+            
             $totalAmount = 0;
             foreach ($request->items as $item) {
                 $unitQuantity = (float) ($item['unit_quantity'] ?? $item['quantity'] ?? 0);

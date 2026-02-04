@@ -39,11 +39,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'damages.index',
             'damages.show',
 
-            'headers.index',
-            'headers.create',
-            'headers.edit',
-            'headers.delete',
-            'headers.show',
+            'headers.edit','headers.index','headers.create','headers.delete','headers.show',
 
             // Users
             'users.view',
