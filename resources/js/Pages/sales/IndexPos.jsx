@@ -5,6 +5,7 @@ import {
     Frown,
     Plus,
     Printer,
+    Edit,
     Trash2,
     Eye,
     Search,
@@ -70,7 +71,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
         if (filterForm.data.date_to)
             queryParams.date_to = filterForm.data.date_to;
 
-        router.get(route("salesPos.index", "pos"), queryParams, {
+        router.get(route("salesPos.index"), queryParams, {
             preserveScroll: true,
             preserveState: true,
             replace: true,
@@ -92,7 +93,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
         });
         setTimeout(() => {
             router.get(
-                route("salesPos.index", "pos"),
+                route("salesPos.index"),
                 {},
                 {
                     preserveScroll: true,
@@ -463,7 +464,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                         <td>
                                             <div className="flex items-center gap-1 flex-wrap">
                                                 <Link
-                                                    href={route("salesPrint.show", { sale: sale.id, print: 'print' })}
+                                                    href={route("salesPrint.show", { sale: sale.id })}
                                                     className="btn btn-xs btn-info"
                                                 >
                                                     <Eye size={13} />

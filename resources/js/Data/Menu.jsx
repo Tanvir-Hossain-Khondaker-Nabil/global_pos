@@ -28,7 +28,8 @@ import {
     Clock,
     Plane,
     BoxIcon,
-    TagIcon
+    TagIcon,
+    Settings
 } from "lucide-react";
 
 const baseMenu = [
@@ -63,7 +64,7 @@ const baseMenu = [
     {
         title: "All Orders (POS)",
         icon: <BadgeCent size={16} />,
-        route: route("salesPos.index", 'pos'),
+        route: route("salesPos.index"),
         active: "salesPos.index",
         role: "all",
     },
@@ -117,6 +118,13 @@ const baseMenu = [
         role: "all",
     },
     {
+        title: "Damaged List",
+        icon: <ShoppingBasket size={16} />,
+        route: route("damages.index"),
+        active: "damages.index",
+        role: "all",
+    },
+    {
         title: "Warehouse",
         icon: <Warehouse size={16} />,
         route: route("warehouse.list"),
@@ -151,13 +159,13 @@ const baseMenu = [
         active: "product.add",
         role: "all",
     },
-    // {
-    //     title: "Brands",
-    //     icon: <TagIcon size={16} />,
-    //     route: route("brands.index"),
-    //     active: "brands.index",
-    //     role: "all",
-    // },
+    {
+        title: "Brands",
+        icon: <TagIcon size={16} />,
+        route: route("brands.index"),
+        active: "brands.index",
+        role: "all",
+    },
     {
         title: "Categories",
         icon: <Box size={16} />,
@@ -205,6 +213,14 @@ const baseMenu = [
         icon: <DollarSign size={16} />,
         route: route("subscriptions.payments"),
         active: "subscriptions.payments",
+        role: "all",
+    },
+
+    {
+        title: "Notifications",
+        icon: <Notificatiion size={16} />,
+        route: route("notifications.index"),
+        active: "notifications.index",
         role: "all",
     },
     {

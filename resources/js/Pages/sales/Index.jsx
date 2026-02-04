@@ -455,7 +455,7 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     </button>
                                                 )}
 
-                                                {sale.due_amount > 0 && (
+                                                { sale.due_amount > 0 && (
                                                     sale.payment_type === 'installment' ? (
                                                         <Link
                                                             href={route("installments.show", { id: sale.id })}

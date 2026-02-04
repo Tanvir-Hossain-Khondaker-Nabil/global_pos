@@ -48,6 +48,11 @@ class User extends Authenticatable
         return $this->parent_id ? (int) $this->parent_id : (int) $this->id;
     }
 
+    //notification
+    public function notifications()
+    {
+        return $this->hasMany(Notification::class, 'owner_id', 'id');
+    }
 
     protected function casts(): array
     {

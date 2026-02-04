@@ -51,8 +51,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\InvestmentReturnController;
-
-
+use App\Http\Controllers\NotificationController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -172,11 +171,11 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/create', 'create')->middleware('permission:sales.create')->name('sales.create');
         Route::get('/', 'index')->middleware('permission:sales.view')->name('sales.index');
-        Route::get('/list/{pos}', 'index')->middleware('permission:sales.view')->name('salesPos.index');
+        Route::get('/list/pos', 'indexPos')->middleware('permission:sales.view')->name('salesPos.index');
 
         // ✅ Restrict sale id (so scan-barcode never matches)
         Route::get('/{sale}', 'show')->whereNumber('sale')->middleware('permission:sales.view')->name('sales.show');
-        Route::get('/{sale}/{print}', 'show')->whereNumber('sale')->middleware('permission:sales.print')->name('salesPrint.show');
+        Route::get('/{sale}/pos', 'showPos')->whereNumber('sale')->middleware('permission:sales.print')->name('salesPrint.show');
 
         Route::get('/{sale}/print', 'print')->whereNumber('sale')->middleware('permission:sales.print')->name('sales.print');
         Route::get('/{sale}/download-pdf', 'downloadPdf')->whereNumber('sale')->middleware('permission:sales.download_pdf')->name('sales.download.pdf');
@@ -292,9 +291,6 @@ Route::middleware('auth')->group(function () {
         'update' => 'modules.update',
         'destroy' => 'modules.destroy',
     ]);
-
-
-
 
 
     // sales list
@@ -670,7 +666,6 @@ Route::middleware('auth')->group(function () {
         ->name('purchase.list_index');
 
 
-
     // Investors
     Route::get('/investors', [InvestorController::class, 'index'])
         ->name('investors.index')->middleware('permission:investors.view');
@@ -734,5 +729,3 @@ Route::get('/storage-link', function () {
 });
 
 require __DIR__ . '/command.php';
-
-

@@ -111,22 +111,52 @@ class SalesController extends Controller
     /**
      * Display a listing of all sales
      */
-    public function index(Request $request, $pos = null)
+    public function index(Request $request)
+    {
+        return $this->renderIndex($request, 'inventory', 'sales/Index');
+    }
+
+    public function indexPos(Request $request)
+    {
+        return $this->renderIndex($request, 'pos', 'sales/IndexPos');
+    }
+
+
+    private function renderIndex(Request $request, string $type, string $view)
+    {
+        $data = $this->indexView($request, $type);
+
+        return Inertia::render($view, [
+            'sales' => $data['sales'],
+            'accounts' => Account::where('is_active', true)->get(),
+            'isShadowUser' => $data['isShadowUser'],
+            'filters' => $data['filters'],
+            'unitConversions' => $this->getUnitConversions(),
+        ]);
+    }
+
+
+    private function indexView(Request $request, string $type): array
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $search = $request->input('search');
-        $status = $request->input('status');
-        $dateFrom = $request->input('date_from');
-        $dateTo = $request->input('date_to');
+        $filters = [
+            'search' => $request->input('search'),
+            'status' => $request->input('status'),
+            'date_from' => $request->input('date_from'),
+            'date_to' => $request->input('date_to'),
+        ];
 
-        $pos === 'pos' ? $type = 'pos' : $type = 'inventory';
-
-        $sales = Sale::with(['customer', 'items.product', 'items.product.brand', 'items.variant', 'payments'])
+        $sales = Sale::with([
+            'customer',
+            'items.product.brand',
+            'items.variant',
+            'payments'
+        ])
             ->where('type', $type)
             ->where('status', '!=', 'cancelled')
-            ->when($search, function ($query, $search) {
+            ->when($filters['search'], function ($query, $search) {
                 $query->where(function ($q) use ($search) {
                     $q->where('invoice_no', 'like', "%{$search}%")
                         ->orWhereHas('customer', function ($q) use ($search) {
@@ -134,44 +164,39 @@ class SalesController extends Controller
                         });
                 });
             })
-            ->when($status, function ($query, $status) {
-                $query->where('status', $status);
-            })
-            ->when($dateFrom, function ($query, $dateFrom) {
-                $query->whereDate('created_at', '>=', $dateFrom);
-            })
-            ->when($dateTo, function ($query, $dateTo) {
-                $query->whereDate('created_at', '<=', $dateTo);
-            })
-            ->orderBy('created_at', 'desc')
+            ->when(
+                $filters['status'],
+                fn($q, $status) =>
+                $q->where('status', $status)
+            )
+            ->when(
+                $filters['date_from'],
+                fn($q, $dateFrom) =>
+                $q->whereDate('created_at', '>=', $dateFrom)
+            )
+            ->when(
+                $filters['date_to'],
+                fn($q, $dateTo) =>
+                $q->whereDate('created_at', '<=', $dateTo)
+            )
+            ->latest()
             ->paginate(15)
             ->withQueryString();
 
         if ($isShadowUser) {
-            $sales->getCollection()->transform(function ($sale) {
-                return $this->transformToShadowData($sale);
-            });
+            $sales->getCollection()->transform(
+                fn($sale) => $this->transformToShadowData($sale)
+            );
         }
 
-        if ($type == 'pos') {
-            $render = 'sales/IndexPos';
-        } else {
-            $render = 'sales/Index';
-        }
-
-        return Inertia::render($render, [
+        return [
             'sales' => $sales,
-            'accounts' => Account::where('is_active', true)->get(),
             'isShadowUser' => $isShadowUser,
-            'filters' => [
-                'search' => $search,
-                'status' => $status,
-                'date_from' => $dateFrom,
-                'date_to' => $dateTo,
-            ],
-            'unitConversions' => $this->getUnitConversions()
-        ]);
+            'filters' => $filters,
+        ];
     }
+
+
 
     /**
      * Show form for the sale(inventory) creation
@@ -439,6 +464,7 @@ class SalesController extends Controller
                 'type' => $type ?? 'pos',
                 'sale_type' => count($pickup_items) > 0 ? 'both' : 'real',
                 'created_by' => Auth::id(),
+                'outlet_id' => Auth::user()->current_outlet_id ?? null,
             ]);
 
 
@@ -516,7 +542,7 @@ class SalesController extends Controller
                                 Product::Day => 'addDays',
                                 Product::Month => 'addMonths',
                                 Product::Year => 'addYears',
-                            } }($product->warranty_duration),
+                            }}($product->warranty_duration),
                             'terms' => $product->warranty_terms,
                         ]);
                     }
@@ -659,7 +685,12 @@ class SalesController extends Controller
 
             DB::commit();
 
-            return to_route('sales.show', $sale->id)->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
+            if ($type == 'pos') {
+                return to_route('salesPrint.show', $sale->id)->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
+            } else {
+                return to_route('sales.show', $sale->id)->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
+            }
+            
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
@@ -860,15 +891,38 @@ class SalesController extends Controller
     /**
      * Display the specified sale
      */
-    public function show(Sale $sale, $print = null)
+    public function show(Sale $sale)
+    {
+        return $this->renderShow($sale, 'sales/Show');
+    }
+
+    public function showPos(Sale $sale)
+    {
+        return $this->renderShow($sale, 'sales/ShowPos');
+    }
+
+
+    private function renderShow(Sale $sale, string $view)
+    {
+        $data = $this->showView($sale);
+
+        return Inertia::render($view, [
+            'sale' => $data['sale'],
+            'isShadowUser' => $data['isShadowUser'],
+            'businessProfile' => $data['businessProfile'],
+        ]);
+    }
+
+
+    private function showView(Sale $sale): array
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
+        $businessProfile = BusinessProfile::where('created_by', $user->id)->first();
+
         $sale = Sale::with([
             'customer',
-            'items',
-            'items.product',
             'items.product.brand',
             'items.variant',
             'items.warehouse',
@@ -879,16 +933,13 @@ class SalesController extends Controller
             $sale = $this->transformToShadowData($sale);
         }
 
-        $businessProfile = BusinessProfile::where('created_by', $user->id)->first();
-
-        $render = $print ? 'sales/ShowPos' : 'sales/Show';
-
-        return Inertia::render($render, [
+        return [
             'sale' => $sale,
             'isShadowUser' => $isShadowUser,
             'businessProfile' => $businessProfile,
-        ]);
+        ];
     }
+
 
     /**
      * Remove the specified sale
@@ -1174,7 +1225,7 @@ class SalesController extends Controller
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'stock', 'warehouse','damage'])
+        $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'stock', 'warehouse', 'damage'])
             ->where('status', '!=', 'cancelled')
             ->orderBy('created_at', 'desc')
             ->filter(request()->all())

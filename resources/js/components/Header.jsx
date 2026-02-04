@@ -22,7 +22,7 @@ const menuData = [
   { title: "Add Sale (Inventory)", route: "sales.create", params: null, category: "Sales", icon: SaleIcon },
   { title: "Add Sale (POS)", route: "sales.add", params: null, category: "Sales", icon: SaleIcon },
   { title: "All Orders (Inventory)", route: "sales.index", params: null, category: "Sales", icon: OrdersIcon },
-  { title: "All Orders (POS)", route: "salesPos.index", params: { pos: "pos" }, category: "Sales", icon: OrdersIcon },
+  { title: "All Orders (POS)", route: "salesPos.index", category: "Sales", icon: OrdersIcon },
   { title: "Products", route: "product.list", params: null, category: "Inventory", icon: BoxIcon },
   { title: "Add Products", route: "product.add", params: null, category: "Inventory", icon: BoxIcon },
   { title: "Outlet", route: "outlets.index", params: null, category: "Outlets", icon: StoreIcon },
