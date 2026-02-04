@@ -17,11 +17,13 @@ return new class extends Migration
             $table->unsignedBigInteger('sale_id')->nullable();
             $table->unsignedBigInteger('purchase_id')->nullable();
             $table->string('title');
-            $table->text('message');
-            $table->date('notify_date');
+            $table->text('message')->nullable();
+            $table->date('notify_date')->default(now());
+            $table->enum('status', ['unread', 'read'])->default('unread');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('outlet_id')->nullable();
             $table->unsignedBigInteger('owner_id')->nullable();
+            $table->dateTime('read_at')->nullable();
             $table->timestamps();
         });
     }

@@ -50,8 +50,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\InvestmentReturnController;
-
-
+use App\Http\Controllers\NotificationController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -196,7 +195,7 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:sales_return.view')
         ->name('salesReturn.list');
 
-     Route::get('/return/pickup', [SalesReturnController::class, 'indexPickup'])
+    Route::get('/return/pickup', [SalesReturnController::class, 'indexPickup'])
         // ->middleware('permission:sales_return.pickup')
         ->name('salesReturn.pickup');
 
@@ -330,8 +329,8 @@ Route::middleware('auth')->group(function () {
     // installment
     Route::controller(InstallmentController::class)->group(function () {
         Route::get('/installments/{id}/{type?}', 'getInstallment')
-        // ->middleware('permission:installments.view')
-        ->name('installments.show');
+            // ->middleware('permission:installments.view')
+            ->name('installments.show');
 
         Route::put('/installments/{id}', 'updateInstallment')
             // ->middleware('permission:installments.edit')
@@ -342,22 +341,44 @@ Route::middleware('auth')->group(function () {
     //damaged 
     Route::controller(DamageController::class)->group(function () {
         Route::get('/damages/{id}/{type?}', 'getData')
-        // ->middleware('permission:damages.create')
-        ->name('damages.create');
+            // ->middleware('permission:damages.create')
+            ->name('damages.create');
 
         Route::post('/damages/store', 'storeDamage')
-        // ->middleware('permission:damages.store')
-        ->name('damages.store');
+            // ->middleware('permission:damages.store')
+            ->name('damages.store');
 
         Route::get('/damages', 'index')
-        // ->middleware('permission:damages.index')
-        ->name('damages.index');
+            // ->middleware('permission:damages.index')
+            ->name('damages.index');
 
         Route::get('/damage/show/{id}', 'show')
-        // ->middleware('permission:damages.show')
-        ->name('damages.show');
-
+            // ->middleware('permission:damages.show')
+            ->name('damages.show');
     });
+
+
+    
+    //notifications
+
+    Route::get('/notifications', [NotificationController::class, 'index'])
+    // ->middleware('permission:notifications.view')
+    ->name('notifications.index');
+
+    Route::put('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])
+    // ->middleware('permission:notifications.read')
+    ->name('notifications.markAsRead');
+    Route::put('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])
+    // ->middleware('permission:notifications.read_all')
+    ->name('notifications.markAllAsRead');
+    Route::delete('/notifications/delete-all-read', [NotificationController::class, 'deleteAllRead'])
+    // ->middleware('permission:notifications.delete_all')
+    ->name('notifications.deleteAllRead');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'delete'])
+    // ->middleware('permission:notifications.delete')
+    ->name('notifications.destroy');
+
+
 
     // barcode
     Route::controller(BarcodePrintController::class)->group(function () {
@@ -658,7 +679,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchases_local_product', [PurchaseController::class, 'list_index'])->name('purchase.list_index');
 
 
-     // Investors
+    // Investors
     Route::get('/investors', [InvestorController::class, 'index'])
         ->name('investors.index')->middleware('permission:investors.view');
     Route::get('/investors/create', [InvestorController::class, 'create'])
@@ -716,5 +737,3 @@ Route::get('/storage-link', function () {
 });
 
 require __DIR__ . '/command.php';
-
-

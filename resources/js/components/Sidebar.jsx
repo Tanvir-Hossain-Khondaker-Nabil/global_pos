@@ -120,6 +120,7 @@ const outletLoggedInMenu = [
   { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", active: "purchase-return.create", category: "Purchase", permission: "purchase.return" },
 
   // Inventory
+  { title: "Damages List", icon: "damages", route: "damages.index", active: "damages.index", category: "Inventory", permission: "damages.index" },
   { title: "Warehouse", icon: "warehouse", route: "warehouse.list", active: "warehouse.list", category: "Inventory", permission: "warehouse.view" },
   { title: "Supplier", icon: "shopping-basket", route: "supplier.view", active: "supplier.view", category: "Inventory", permission: "supplier.view" },
   { title: "Attribute", icon: "shopping-basket", route: "attributes.index", active: "attributes.index", category: "Inventory", permission: "attributes.view" },
@@ -149,6 +150,7 @@ const outletLoggedInMenu = [
   { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments" },
 
   // Partners
+  { title: "Notifications", icon: "box", route: "notifications.index", active: "notifications.index", category: "Partners", permission: "notifications.index" },
   { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
 
   // CRM
