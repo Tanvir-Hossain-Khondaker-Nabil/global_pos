@@ -115,7 +115,6 @@ return [
     // Menu Categories
     'main' => 'Main',
     'sales' => 'Sales',
-    'purchase' => 'Purchase',
     
     'finance' => 'Finance',
     'partners' => 'Partners',
@@ -165,5 +164,7 @@ return [
     'category_investments' => 'Investments',
     'category_subscriptions' => 'Subscriptions',
     'expense_category' => 'Expense Category',
-    'all_sales_return' => 'Sale Return'
+    'all_sales_return' => 'Sale Return',
+    'damages_list' => 'Damages List',
+    'product_ledger' => 'Product Ledger',
 ];

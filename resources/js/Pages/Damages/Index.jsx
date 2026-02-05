@@ -309,7 +309,7 @@ export default function DamageIndex({ damages, filters }) {
                                 : t('damage.get_started', 'Get started by adding your first damage record')
                             }
                         </p>
-                        {!(searchForm.data.search || searchForm.data.type || searchForm.data.reason || searchForm.data.start_date) && (
+                        {/* {!(searchForm.data.search || searchForm.data.type || searchForm.data.reason || searchForm.data.start_date) && (
                             <Link
                                 href={route("damages.create")}
                                 className="btn btn-sm bg-[#1e4d2b] text-white mt-2"
@@ -317,7 +317,7 @@ export default function DamageIndex({ damages, filters }) {
                                 <Plus size={15} /> 
                                 {t('damage.add_damage', 'Add Damage Record')}
                             </Link>
-                        )}
+                        )} */}
                     </div>
                 )}
             </div>

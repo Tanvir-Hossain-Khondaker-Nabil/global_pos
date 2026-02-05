@@ -555,6 +555,13 @@ export default function Header({ sidebarOpen, setSidebarOpen }) {
               </li>
 
               <li>
+                <Link href={route("notifications.index")}>
+                  <Shield size={14} />
+                  <span>Notification</span>
+                </Link>
+              </li>
+
+              <li>
                 <Link
                   href={route("logout")}
                   onClick={(e) => {
