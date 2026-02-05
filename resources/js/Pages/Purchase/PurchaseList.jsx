@@ -17,7 +17,7 @@ import {
   CheckCircle,
   AlertCircle,
   Receipt,
-  Barcode,
+  Barcode as BarcodeIcon,
   Printer,
   CheckSquare,
   Square,
@@ -27,7 +27,7 @@ import {
   Tag,
   Copy,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export default function PurchaseList({ purchases, filters, isShadowUser, accounts }) {
@@ -58,6 +58,18 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
   const [selectedPurchaseIds, setSelectedPurchaseIds] = useState(() => new Set());
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
 
+  // ✅ NEW: per-barcode copies map { [key]: copies }
+  const [barcodeCopiesMap, setBarcodeCopiesMap] = useState({});
+
+  // ✅ NEW: default copies input (shown near Print)
+  const [defaultBarcodeCopies, setDefaultBarcodeCopies] = useState(1);
+
+  const clampInt = (v, min = 1, max = 999) => {
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n)) return min;
+    return Math.max(min, Math.min(max, n));
+  };
+
   const [barcodeConfig, setBarcodeConfig] = useState({
     showProductName: true,
     showBatchNo: true,
@@ -69,7 +81,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     labelHeightMm: 30,
     gapMm: 2,
 
-    copiesMode: "one", // one | byQty | fixed
+    copiesMode: "one", // one | byQty | fixed | manual
     fixedCopies: 1,
 
     barcodeImgHeightPx: 40,
@@ -287,7 +299,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
   };
   const closeBarcodeModal = () => setShowBarcodeModal(false);
 
-  // ✅ FIX: parse number fields correctly
   const updateBarcodeConfig = (key, value) => {
     const numberKeys = ["labelWidthMm", "labelHeightMm", "gapMm", "fixedCopies", "barcodeImgHeightPx"];
     setBarcodeConfig((prev) => ({
@@ -303,73 +314,107 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     return `https://barcode.tec-it.com/barcode.ashx?data=${encodeURIComponent(code)}&code=Code128&dpi=120&quiet=0`;
   };
 
-  // ===================== Build Labels =====================
+  // ===================== ✅ Build Labels (with manual qty support) =====================
+  // return:
+  // { uniqueLabels: [..] } -> one per unique barcodeKey
+  // { expandedLabels: [..] } -> repeated by qty for print
   const buildBarcodeLabels = () => {
-    const labels = [];
+    const uniqueLabels = [];
+    const expandedLabels = [];
     const seen = new Set();
 
     const { copiesMode, fixedCopies } = barcodeConfig;
 
-    const resolveCopies = (qty) => {
-      if (copiesMode === "fixed") return Math.max(1, Number(fixedCopies || 1));
-      if (copiesMode === "byQty") return Math.max(1, Math.round(Number(qty || 1)));
+    const resolveDefaultCopies = (qty) => {
+      if (copiesMode === "fixed") return clampInt(fixedCopies || 1);
+      if (copiesMode === "byQty") return clampInt(Math.round(Number(qty || 1)));
+      // one বা manual → default 1 (manual copies map থেকে হবে)
       return 1;
     };
 
     selectedPurchases.forEach((purchase) => {
       const items = Array.isArray(purchase?.items) ? purchase.items : [];
 
-      if (items.length) {
-        items.forEach((item) => {
-          const product = item?.product || {};
-          const stock = item?.stock || {};
+      items.forEach((item) => {
+        const product = item?.product || {};
+        const stock = item?.stock || {};
 
-          const barcode = stock?.barcode || product?.barcode || item?.barcode || stock?.batch_no || product?.sku || "";
-          const code = String(barcode || "").trim();
-          if (!code) return;
+        const barcode = stock?.barcode || product?.barcode || item?.barcode || stock?.batch_no || product?.sku || "";
+        const code = String(barcode || "").trim();
+        if (!code) return;
 
-          const batchNo = String(stock?.batch_no || item?.batch_no || "").trim();
-          const key = `${code}__${batchNo || "-"}`;
-          if (seen.has(key)) return;
-          seen.add(key);
-
-          const copies = resolveCopies(item?.quantity);
-
-          for (let i = 0; i < copies; i++) {
-            labels.push({
-              codeValue: code,
-              imgSrc: getBarcodeImageUrl(code),
-              productName: product?.name || item?.product_name || "Product",
-              batchNo,
-              salePrice: item?.sale_price ?? product?.sale_price ?? "",
-            });
-          }
-        });
-      } else {
-        const purchaseCode = String(purchase?.purchase_no || purchase?.id || "").trim();
-        if (!purchaseCode) return;
-
-        const key = `${purchaseCode}__-`;
+        const batchNo = String(stock?.batch_no || item?.batch_no || "").trim();
+        const key = `${code}__${batchNo || "-"}`;
         if (seen.has(key)) return;
         seen.add(key);
 
-        labels.push({
-          codeValue: purchaseCode,
-          imgSrc: getBarcodeImageUrl(purchaseCode),
-          productName: purchase?.supplier?.name ? `Supplier: ${purchase.supplier.name}` : "Purchase",
-          batchNo: "",
-          salePrice: "",
-        });
-      }
+        const base = {
+          key,
+          codeValue: code,
+          imgSrc: getBarcodeImageUrl(code),
+          productName: product?.name || item?.product_name || "Product",
+          batchNo,
+          salePrice: item?.sale_price ?? product?.sale_price ?? "",
+          itemQty: Number(item?.quantity || 1),
+        };
+
+        uniqueLabels.push(base);
+
+        // copies determine:
+        // - manual mode: barcodeCopiesMap[key] (fallback defaultBarcodeCopies)
+        // - byQty: itemQty
+        // - fixed: fixedCopies
+        // - one: 1
+        let copies = 1;
+
+        if (copiesMode === "manual") {
+          copies = clampInt(barcodeCopiesMap[key] ?? defaultBarcodeCopies ?? 1);
+        } else {
+          copies = resolveDefaultCopies(base.itemQty);
+        }
+
+        for (let i = 0; i < copies; i++) {
+          expandedLabels.push(base);
+        }
+      });
     });
 
-    return labels;
+    return { uniqueLabels, expandedLabels };
   };
 
-  // ===================== PRINT FUNCTION (settings apply properly) =====================
+  // ===================== ✅ auto-seed copies map when modal opens or selection changes =====================
+  useEffect(() => {
+    if (!showBarcodeModal) return;
+
+    setBarcodeCopiesMap((prev) => {
+      const next = { ...prev };
+      const { uniqueLabels } = buildBarcodeLabels();
+
+      uniqueLabels.forEach((l) => {
+        if (next[l.key] == null) {
+          // default seed:
+          // byQty → item qty, fixed → fixed copies, otherwise defaultBarcodeCopies
+          if (barcodeConfig.copiesMode === "byQty") next[l.key] = clampInt(l.itemQty || 1);
+          else if (barcodeConfig.copiesMode === "fixed") next[l.key] = clampInt(barcodeConfig.fixedCopies || 1);
+          else next[l.key] = clampInt(defaultBarcodeCopies || 1);
+        }
+      });
+
+      // remove keys that are no longer present
+      const alive = new Set(uniqueLabels.map((l) => l.key));
+      Object.keys(next).forEach((k) => {
+        if (!alive.has(k)) delete next[k];
+      });
+
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBarcodeModal, selectedPurchaseIds]);
+
+  // ===================== PRINT FUNCTION =====================
   const handleBarcodePrint = () => {
-    const labels = buildBarcodeLabels();
-    if (!labels.length) return alert("No barcodes found to print.");
+    const { expandedLabels } = buildBarcodeLabels();
+    if (!expandedLabels.length) return alert("No barcodes found to print.");
 
     const {
       showProductName,
@@ -386,97 +431,96 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     if (!printWindow) return alert("Please allow popups to print barcodes.");
 
     const css = `
-    @page { margin: 6mm; }
-    @media print { .no-print { display:none !important; } body { padding:0; } }
+      @page { margin: 6mm; }
+      @media print { .no-print { display:none !important; } body { padding:0; } }
 
-    * { box-sizing:border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body {
-      margin:0;
-      padding:10px;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-      background:#fff;
-      color:#0f172a;
-    }
+      * { box-sizing:border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      body {
+        margin:0;
+        padding:10px;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        background:#fff;
+        color:#0f172a;
+      }
 
-    .sheet {
-      width:100%;
-      display:flex;
-      justify-content:${align === "right" ? "flex-end" : "flex-start"};
-    }
+      .sheet {
+        width:100%;
+        display:flex;
+        justify-content:${align === "right" ? "flex-end" : "flex-start"};
+      }
 
-    .grid {
-      display:grid;
-      grid-template-columns: repeat(auto-fill, ${Number(labelWidthMm)}mm);
-      gap:${Number(gapMm)}mm;
-      align-content:start;
-    }
+      .grid {
+        display:grid;
+        grid-template-columns: repeat(auto-fill, ${Number(labelWidthMm)}mm);
+        gap:${Number(gapMm)}mm;
+        align-content:start;
+      }
 
-    .label {
-      width:${Number(labelWidthMm)}mm;
-      height:${Number(labelHeightMm)}mm;
-      padding:7px 8px;
-      border-radius:12px;
-      background:#fff;
-      border: 1px solid #e5e7eb;
-      display:flex;
-      flex-direction:column;
-      overflow:hidden;
-      break-inside:avoid;
-      page-break-inside:avoid;
-    }
+      .label {
+        width:${Number(labelWidthMm)}mm;
+        height:${Number(labelHeightMm)}mm;
+        padding:7px 8px;
+        border-radius:12px;
+        background:#fff;
+        border: 1px solid #e5e7eb;
+        display:flex;
+        flex-direction:column;
+        overflow:hidden;
+        break-inside:avoid;
+        page-break-inside:avoid;
+      }
 
-    /* Your simple centered design */
-    .barcodeArea {
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      gap:4px;
-      height:100%;
-      width:100%;
-      text-align:center;
-    }
+      .barcodeArea {
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        justify-content:center;
+        gap:4px;
+        height:100%;
+        width:100%;
+        text-align:center;
+      }
 
-    .name {
-      width:100%;
-      font-weight:900;
-      font-size:11px;
-      line-height:1.15;
-      color:#0f172a;
-      display:-webkit-box;
-      -webkit-line-clamp:2;
-      -webkit-box-orient:vertical;
-      overflow:hidden;
-    }
+      .name {
+        width:100%;
+        font-weight:900;
+        font-size:11px;
+        line-height:1.15;
+        color:#0f172a;
+        display:-webkit-box;
+        -webkit-line-clamp:2;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+      }
 
-    .barcodeImg {
-      width:100%;
-      height:${Number(barcodeImgHeightPx)}px;
-      object-fit:contain;
-      display:block;
-    }
+      .barcodeImg {
+        width:100%;
+        height:${Number(barcodeImgHeightPx)}px;
+        object-fit:contain;
+        display:block;
+      }
 
-    .batch,
-    .price {
-      width:100%;
-      font-size:10px;
-      font-weight:900;
-      line-height:1.1;
-      color:#0f172a;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
-    }
+      .batch,
+      .price {
+        width:100%;
+        font-size:10px;
+        font-weight:900;
+        line-height:1.1;
+        color:#0f172a;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
+      }
 
-    .batch { color:#475569; font-weight:800; font-size:9px; }
-    .price { letter-spacing: .2px; }
+      .batch { color:#475569; font-weight:800; font-size:9px; }
+      .price { letter-spacing: .2px; }
 
-    .no-print { text-align:center; margin-top:14px; color:#64748b; font-weight:900; }
-    .btn { border:none; padding:8px 14px; border-radius:12px; font-weight:900; cursor:pointer; margin:0 6px; background:#111827; color:#fff; }
-    .btn.ghost { background:#f1f5f9; color:#111827; }
-  `;
+      .no-print { text-align:center; margin-top:14px; color:#64748b; font-weight:900; }
+      .btn { border:none; padding:8px 14px; border-radius:12px; font-weight:900; cursor:pointer; margin:0 6px; background:#111827; color:#fff; }
+      .btn.ghost { background:#f1f5f9; color:#111827; }
+    `;
 
-    const labelsHtml = labels
+    const labelsHtml = expandedLabels
       .map((l) => {
         const productName = escapeHtml(l.productName || "");
         const batchNo = escapeHtml(l.batchNo || "");
@@ -484,73 +528,67 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         const imgSrc = escapeHtml(l.imgSrc || "");
 
         const nameHtml = showProductName ? `<div class="name">${productName}</div>` : "";
-        const batchHtml =
-          showBatchNo
-            ? `<div class="batch">${batchNo ? `Batch: ${batchNo}` : "Batch: -"}</div>`
-            : "";
-
+        const batchHtml = showBatchNo ? `<div class="batch">${batchNo ? `Batch: ${batchNo}` : "Batch: -"}</div>` : "";
         const priceHtml =
-          showSalePrice
-            ? `<div class="price">${l.salePrice ? `৳${Number(l.salePrice).toFixed(2)}` : "-"}</div>`
-            : "";
+          showSalePrice ? `<div class="price">${l.salePrice ? `৳${Number(l.salePrice).toFixed(2)}` : "-"}</div>` : "";
 
         return `
-        <div class="label">
-          <div class="barcodeArea">
-            ${nameHtml}
-            <img class="barcodeImg" src="${imgSrc}" alt="Barcode ${codeValue}" />
-            ${batchHtml}
-            ${priceHtml}
+          <div class="label">
+            <div class="barcodeArea">
+              ${nameHtml}
+              <img class="barcodeImg" src="${imgSrc}" alt="Barcode ${codeValue}" />
+              ${batchHtml}
+              ${priceHtml}
+            </div>
           </div>
-        </div>
-      `;
+        `;
       })
       .join("");
 
     const html = `
-    <!doctype html>
-    <html>
-    <head>
-      <meta charset="utf-8" />
-      <title>Barcode Labels</title>
-      <style>${css}</style>
-    </head>
-    <body>
-      <div class="sheet">
-        <div class="grid">${labelsHtml}</div>
-      </div>
-
-      <div class="no-print">
-        Total: ${labels.length} labels
-        <div style="margin-top:10px;">
-          <button class="btn" onclick="window.print()">Print</button>
-          <button class="btn ghost" onclick="window.close()">Close</button>
+      <!doctype html>
+      <html>
+      <head>
+        <meta charset="utf-8" />
+        <title>Barcode Labels</title>
+        <style>${css}</style>
+      </head>
+      <body>
+        <div class="sheet">
+          <div class="grid">${labelsHtml}</div>
         </div>
-      </div>
 
-      <script>
-        (function(){
-          var imgs = Array.from(document.images || []);
-          if(!imgs.length){ setTimeout(function(){ window.print(); }, 250); return; }
+        <div class="no-print">
+          Total: ${expandedLabels.length} labels
+          <div style="margin-top:10px;">
+            <button class="btn" onclick="window.print()">Print</button>
+            <button class="btn ghost" onclick="window.close()">Close</button>
+          </div>
+        </div>
 
-          var done = 0;
-          function finish(){
-            done++;
-            if(done >= imgs.length) setTimeout(function(){ window.print(); }, 250);
-          }
+        <script>
+          (function(){
+            var imgs = Array.from(document.images || []);
+            if(!imgs.length){ setTimeout(function(){ window.print(); }, 250); return; }
 
-          imgs.forEach(function(img){
-            if(img.complete) return finish();
-            img.onload = finish;
-            img.onerror = finish;
-          });
+            var done = 0;
+            function finish(){
+              done++;
+              if(done >= imgs.length) setTimeout(function(){ window.print(); }, 250);
+            }
 
-          setTimeout(function(){ window.print(); }, 5000);
-        })();
-      </script>
-    </body>
-    </html>
-  `;
+            imgs.forEach(function(img){
+              if(img.complete) return finish();
+              img.onload = finish;
+              img.onerror = finish;
+            });
+
+            setTimeout(function(){ window.print(); }, 5000);
+          })();
+        </script>
+      </body>
+      </html>
+    `;
 
     printWindow.document.open();
     printWindow.document.write(html);
@@ -559,6 +597,23 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     closeBarcodeModal();
   };
 
+  // ===================== UI Helper counts =====================
+  const modalCounts = useMemo(() => {
+    if (!showBarcodeModal) return { unique: 0, total: 0, uniqueLabels: [] };
+
+    const { uniqueLabels } = buildBarcodeLabels();
+
+    let total = 0;
+    uniqueLabels.forEach((l) => {
+      if (barcodeConfig.copiesMode === "manual") total += clampInt(barcodeCopiesMap[l.key] ?? defaultBarcodeCopies ?? 1);
+      else if (barcodeConfig.copiesMode === "byQty") total += clampInt(l.itemQty || 1);
+      else if (barcodeConfig.copiesMode === "fixed") total += clampInt(barcodeConfig.fixedCopies || 1);
+      else total += 1;
+    });
+
+    return { unique: uniqueLabels.length, total, uniqueLabels };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBarcodeModal, selectedPurchaseIds, barcodeConfig, barcodeCopiesMap, defaultBarcodeCopies]);
 
   // ===================== UI =====================
   return (
@@ -637,10 +692,20 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                     </label>
 
                     <div className="flex gap-2 mb-2">
-                      <button type="button" onClick={setHalfPayment} className="btn btn-sm btn-outline flex-1" disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}>
+                      <button
+                        type="button"
+                        onClick={setHalfPayment}
+                        className="btn btn-sm btn-outline flex-1"
+                        disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
+                      >
                         50%
                       </button>
-                      <button type="button" onClick={setFullPayment} className="btn btn-sm btn-outline btn-primary flex-1" disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}>
+                      <button
+                        type="button"
+                        onClick={setFullPayment}
+                        className="btn btn-sm btn-outline btn-primary flex-1"
+                        disabled={processingPayment || getDisplayAmounts(selectedPurchase).due <= 0}
+                      >
                         Full
                       </button>
                     </div>
@@ -719,17 +784,43 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
               <div className="flex items-center justify-between gap-3 mb-4">
                 <div>
                   <h3 className="text-xl font-black text-gray-900 flex items-center gap-2">
-                    <Barcode size={20} className="text-primary" />
+                    <BarcodeIcon size={20} className="text-primary" />
                     Bulk Barcode Print
                   </h3>
                   <p className="text-xs text-gray-500 font-bold">
-                    Selected: <span className="text-gray-900">{selectedPurchaseIds.size}</span> purchase(s)
+                    Selected: <span className="text-gray-900">{selectedPurchaseIds.size}</span> purchase(s) •
+                    Unique Barcodes: <span className="text-gray-900">{modalCounts.unique}</span> •
+                    Total Labels: <span className="text-gray-900">{modalCounts.total}</span>
                   </p>
                 </div>
+
                 <button onClick={closeBarcodeModal} className="btn btn-ghost btn-circle btn-sm">
                   <X size={18} />
                 </button>
               </div>
+
+              {/* ✅ Top bar: Default copies input next to Print count feeling */}
+              {/* <div className="mb-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-black uppercase tracking-widest text-gray-500">
+                    Default Copies (for newly generated labels)
+                  </div>
+                  <input
+                    type="number"
+                    min="1"
+                    max="999"
+                    value={defaultBarcodeCopies}
+                    onChange={(e) => setDefaultBarcodeCopies(clampInt(e.target.value))}
+                    className="input input-sm input-bordered font-mono w-[110px] text-center"
+                    title="New labels will use this copies by default (manual mode)"
+                  />
+                </div>
+
+                <div className="mt-2 text-[11px] font-bold text-gray-500">
+                  Tip: Copies Mode = <span className="text-gray-900">{barcodeConfig.copiesMode}</span>. Use{" "}
+                  <span className="text-gray-900">Manual</span> mode to set per-barcode copies.
+                </div>
+              </div> */}
 
               <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                 <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
@@ -780,10 +871,18 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                     Print Alignment
                   </div>
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => updateBarcodeConfig("align", "left")} className={`btn btn-sm flex-1 ${barcodeConfig.align === "left" ? "btn-primary" : "btn-outline"}`}>
+                    <button
+                      type="button"
+                      onClick={() => updateBarcodeConfig("align", "left")}
+                      className={`btn btn-sm flex-1 ${barcodeConfig.align === "left" ? "btn-primary" : "btn-outline"}`}
+                    >
                       <AlignLeft size={16} /> Left
                     </button>
-                    <button type="button" onClick={() => updateBarcodeConfig("align", "right")} className={`btn btn-sm flex-1 ${barcodeConfig.align === "right" ? "btn-primary" : "btn-outline"}`}>
+                    <button
+                      type="button"
+                      onClick={() => updateBarcodeConfig("align", "right")}
+                      className={`btn btn-sm flex-1 ${barcodeConfig.align === "right" ? "btn-primary" : "btn-outline"}`}
+                    >
                       <AlignRight size={16} /> Right
                     </button>
                   </div>
@@ -795,23 +894,48 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                 <div className="rounded-xl border border-gray-100 p-4">
                   <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
                     <Copy size={14} />
-                    Copies
+                    Copies Mode
                   </div>
 
                   <div className="flex flex-col gap-2">
                     <label className="flex items-center gap-2 font-black text-sm cursor-pointer select-none">
-                      <input type="radio" name="copiesMode" checked={barcodeConfig.copiesMode === "one"} onChange={() => updateBarcodeConfig("copiesMode", "one")} />
-                      One label per item
+                      <input
+                        type="radio"
+                        name="copiesMode"
+                        checked={barcodeConfig.copiesMode === "one"}
+                        onChange={() => updateBarcodeConfig("copiesMode", "one")}
+                      />
+                      One label per barcode
                     </label>
 
                     <label className="flex items-center gap-2 font-black text-sm cursor-pointer select-none">
-                      <input type="radio" name="copiesMode" checked={barcodeConfig.copiesMode === "byQty"} onChange={() => updateBarcodeConfig("copiesMode", "byQty")} />
+                      <input
+                        type="radio"
+                        name="copiesMode"
+                        checked={barcodeConfig.copiesMode === "byQty"}
+                        onChange={() => updateBarcodeConfig("copiesMode", "byQty")}
+                      />
                       Print by item quantity
                     </label>
 
                     <label className="flex items-center gap-2 font-black text-sm cursor-pointer select-none">
-                      <input type="radio" name="copiesMode" checked={barcodeConfig.copiesMode === "fixed"} onChange={() => updateBarcodeConfig("copiesMode", "fixed")} />
-                      Fixed copies
+                      <input
+                        type="radio"
+                        name="copiesMode"
+                        checked={barcodeConfig.copiesMode === "fixed"}
+                        onChange={() => updateBarcodeConfig("copiesMode", "fixed")}
+                      />
+                      Fixed copies for all
+                    </label>
+
+                    <label className="flex items-center gap-2 font-black text-sm cursor-pointer select-none">
+                      <input
+                        type="radio"
+                        name="copiesMode"
+                        checked={barcodeConfig.copiesMode === "manual"}
+                        onChange={() => updateBarcodeConfig("copiesMode", "manual")}
+                      />
+                      Manual (per barcode)
                     </label>
 
                     <input
@@ -828,20 +952,116 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                 </div>
               </div>
 
+              {/* ✅ Manual per-barcode copies list */}
+              {barcodeConfig.copiesMode === "manual" && (
+                <div className="mt-4 rounded-xl border border-gray-100 p-4">
+                  <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-3">
+                    Per Barcode Copies
+                  </div>
+
+                  {modalCounts.uniqueLabels.length === 0 ? (
+                    <div className="text-sm font-bold text-gray-500">No labels found.</div>
+                  ) : (
+                    <div className="max-h-[240px] overflow-y-auto pr-1 space-y-2">
+                      {modalCounts.uniqueLabels.map((l) => (
+                        <div key={l.key} className="flex items-center justify-between gap-3 bg-gray-50 border border-gray-100 rounded-xl p-3">
+                          <div className="min-w-0">
+                            <div className="font-black text-sm text-gray-900 truncate">{l.productName}</div>
+                            <div className="text-[11px] font-bold text-gray-500 truncate">
+                              Code: <span className="text-gray-900">{l.codeValue}</span>
+                              {l.batchNo ? <> • Batch: <span className="text-gray-900">{l.batchNo}</span></> : null}
+                              {l.itemQty ? <> • Qty: <span className="text-gray-900">{l.itemQty}</span></> : null}
+                            </div>
+                          </div>
+
+                          <input
+                            type="number"
+                            min="1"
+                            max="999"
+                            value={barcodeCopiesMap[l.key] ?? defaultBarcodeCopies}
+                            onChange={(e) =>
+                              setBarcodeCopiesMap((prev) => ({
+                                ...prev,
+                                [l.key]: clampInt(e.target.value),
+                              }))
+                            }
+                            className="input input-sm input-bordered font-mono w-[90px] text-center"
+                            title="Copies"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline flex-1"
+                      onClick={() => {
+                        // set all to default
+                        setBarcodeCopiesMap((prev) => {
+                          const next = { ...prev };
+                          modalCounts.uniqueLabels.forEach((l) => (next[l.key] = clampInt(defaultBarcodeCopies)));
+                          return next;
+                        });
+                      }}
+                    >
+                      Apply Default to All
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline flex-1"
+                      onClick={() => {
+                        // set all to itemQty
+                        setBarcodeCopiesMap((prev) => {
+                          const next = { ...prev };
+                          modalCounts.uniqueLabels.forEach((l) => (next[l.key] = clampInt(l.itemQty || 1)));
+                          return next;
+                        });
+                      }}
+                    >
+                      Set = Item Qty
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl border border-gray-100 p-4">
                   <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2">Label W (mm)</div>
-                  <input type="number" min="20" step="1" value={barcodeConfig.labelWidthMm} onChange={(e) => updateBarcodeConfig("labelWidthMm", e.target.value)} className="input input-sm input-bordered font-mono w-full" />
+                  <input
+                    type="number"
+                    min="20"
+                    step="1"
+                    value={barcodeConfig.labelWidthMm}
+                    onChange={(e) => updateBarcodeConfig("labelWidthMm", e.target.value)}
+                    className="input input-sm input-bordered font-mono w-full"
+                  />
                 </div>
 
                 <div className="rounded-xl border border-gray-100 p-4">
                   <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2">Label H (mm)</div>
-                  <input type="number" min="15" step="1" value={barcodeConfig.labelHeightMm} onChange={(e) => updateBarcodeConfig("labelHeightMm", e.target.value)} className="input input-sm input-bordered font-mono w-full" />
+                  <input
+                    type="number"
+                    min="15"
+                    step="1"
+                    value={barcodeConfig.labelHeightMm}
+                    onChange={(e) => updateBarcodeConfig("labelHeightMm", e.target.value)}
+                    className="input input-sm input-bordered font-mono w-full"
+                  />
                 </div>
 
                 <div className="rounded-xl border border-gray-100 p-4">
                   <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2">Gap (mm)</div>
-                  <input type="number" min="0" step="1" value={barcodeConfig.gapMm} onChange={(e) => updateBarcodeConfig("gapMm", e.target.value)} className="input input-sm input-bordered font-mono w-full" />
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={barcodeConfig.gapMm}
+                    onChange={(e) => updateBarcodeConfig("gapMm", e.target.value)}
+                    className="input input-sm input-bordered font-mono w-full"
+                  />
                 </div>
               </div>
 
@@ -851,25 +1071,40 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                 </button>
                 <button type="button" onClick={handleBarcodePrint} className="btn btn-primary flex-1">
                   <Printer size={18} />
-                  Print Barcodes
+                  Print ({modalCounts.total})
                 </button>
               </div>
 
-              <div className="mt-3 text-xs text-gray-500 font-bold">Note: Uses tec-it.com barcode service (external). Ensure external images allowed.</div>
+              <div className="mt-3 text-xs text-gray-500 font-bold">
+                Note: Uses tec-it.com barcode service (external). Ensure external images allowed.
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ===================== Header ===================== */}
-      <PageHeader title={t("purchase.purchase_management", "Purchase Archive")} subtitle={t("purchase.manage_purchases", "Inbound inventory tracking index")}>
+      <PageHeader
+        title={t("purchase.purchase_management", "Purchase Archive")}
+        subtitle={t("purchase.manage_purchases", "Inbound inventory tracking index")}
+      >
         <div className="flex flex-wrap gap-2 items-center">
           <div className="relative">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="search" onChange={(e) => handleFilter("search", e.target.value)} value={localFilters.search} placeholder="ID or Number..." className="input input-sm input-bordered rounded-lg pl-8 font-bold" />
+            <input
+              type="search"
+              onChange={(e) => handleFilter("search", e.target.value)}
+              value={localFilters.search}
+              placeholder="ID or Number..."
+              className="input input-sm input-bordered rounded-lg pl-8 font-bold"
+            />
           </div>
 
-          <select onChange={(e) => handleFilter("status", e.target.value)} value={localFilters.status} className="select select-sm select-bordered rounded-lg font-bold">
+          <select
+            onChange={(e) => handleFilter("status", e.target.value)}
+            value={localFilters.status}
+            className="select select-sm select-bordered rounded-lg font-bold"
+          >
             <option value="">All Status</option>
             <option value="pending">Pending</option>
             <option value="completed">Completed</option>
@@ -880,14 +1115,17 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <X size={16} />
           </button>
 
+          {/* Print selected */}
           <button
             type="button"
             onClick={openBarcodeModal}
-            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${selectedPurchaseIds.size > 0 ? "bg-gray-900 text-white hover:bg-black" : "bg-gray-100 text-gray-400 cursor-not-allowed"}`}
+            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${
+              selectedPurchaseIds.size > 0 ? "bg-gray-900 text-white hover:bg-black" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+            }`}
             disabled={selectedPurchaseIds.size === 0}
             title="Print selected barcodes"
           >
-            <Barcode size={15} /> Print Barcodes
+            <BarcodeIcon size={15} /> Print Barcodes
           </button>
 
           {selectedPurchaseIds.size > 0 && (
@@ -896,7 +1134,12 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             </button>
           )}
 
-          <Link href={route("purchase.create")} className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"}`}>
+          <Link
+            href={route("purchase.create")}
+            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${
+              isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"
+            }`}
+          >
             <Plus size={15} /> {t("purchase.new_purchase", "New Entry")}
           </Link>
         </div>
@@ -909,7 +1152,12 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
             <thead className={`text-white uppercase text-[10px] tracking-widest ${isShadowUser ? "bg-amber-500" : "bg-primary"}`}>
               <tr>
                 <th className="py-4 w-[40px]">
-                  <button type="button" onClick={toggleSelectAll} className="btn btn-ghost btn-xs text-white hover:bg-white/10" title={isAllSelected ? "Unselect all" : "Select all"}>
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="btn btn-ghost btn-xs text-white hover:bg-white/10"
+                    title={isAllSelected ? "Unselect all" : "Select all"}
+                  >
                     {isAllSelected ? <CheckSquare size={16} /> : <Square size={16} />}
                   </button>
                 </th>
@@ -984,12 +1232,13 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                             {displayPaymentStatus}
                           </span>
                           <span
-                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${purchase.status === "completed"
+                            className={`badge border-none font-black text-[9px] uppercase py-1.5 px-2 ${
+                              purchase.status === "completed"
                                 ? "bg-blue-100 text-blue-700"
                                 : purchase.status === "pending"
-                                  ? "bg-gray-100 text-gray-600"
-                                  : "bg-red-100 text-red-400"
-                              }`}
+                                ? "bg-gray-100 text-gray-600"
+                                : "bg-red-100 text-red-400"
+                            }`}
                           >
                             {purchase.status}
                           </span>
@@ -998,9 +1247,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                         {displayDue > 0 && (
                           purchase?.payment_status == "installment" ? (
                             <Link
-                              href={route("installments.show", { 
-                                id: purchase.id ,
-                                type : 'purchase'
+                              href={route("installments.show", {
+                                id: purchase.id,
+                                type: "purchase",
                               })}
                               className="btn btn-xs btn-primary"
                             >
@@ -1018,7 +1267,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                             </div>
                           )
                         )}
-
                       </div>
                     </td>
 

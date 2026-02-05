@@ -53,6 +53,9 @@ import {
   Palette,
   Image as ImageIcon,
   FileImage,
+  BellRing,
+  ListChecks,
+  MessageCircle 
 } from "lucide-react";
 import { useTranslation } from "../hooks/useTranslation";
 
@@ -96,8 +99,6 @@ const adminOverviewMenu = [
   { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
 ];
 
-
-
 const outletsOverviewExtraMenu = [
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
 ];
@@ -126,7 +127,7 @@ const outletLoggedInMenu = [
   { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", active: "purchase-return.create", category: "Purchase", permission: "purchase_return.create" },
 
   // Inventory
-  { title: "Damages List", icon: "damages", route: "damages.index", active: "damages.index", category: "Inventory", permission: "damages.index" },
+  { title: "Damages List", icon: "alert-circle", route: "damages.index", active: "damages.index", category: "Inventory", permission: "damages.index" },
   { title: "Warehouse", icon: "warehouse", route: "warehouse.list", active: "warehouse.list", category: "Inventory", permission: "warehouse.view" },
   { title: "Supplier", icon: "shopping-basket", route: "supplier.view", active: "supplier.view", category: "Inventory", permission: "supplier.view" },
   { title: "Attribute", icon: "shopping-basket", route: "attributes.index", active: "attributes.index", category: "Inventory", permission: "attributes.view" },
@@ -134,13 +135,8 @@ const outletLoggedInMenu = [
   { title: "Add Products", icon: "shopping-bag", route: "product.add", active: "product.add", category: "Inventory", permission: "product.create" },
   { title: "Categories", icon: "box", route: "category.view", active: "category.view", category: "Inventory", permission: "category.view" },
   { title: "Brands", icon: "box", route: "brands.index", active: "brands.index", category: "Inventory", permission: "brands.view" },
+  { title: "Product Ledger", icon: "list-checks", route: "product-ledger.index", active: "product-ledger.index", category: "Inventory", permission: "product_ledger.view" },
 
-  // Investments
-  { title: "Investors", icon: "users", route: "investors.index", active: "investors.index", category: "Investments", permission: "investors.view" },
-  { title: "Add Investor", icon: "user-plus", route: "investors.create", active: "investors.create", category: "Investments", permission: "investors.create" },
-  { title: "Investments", icon: "wallet-minimal", route: "investments.index", active: "investments.index", category: "Investments", permission: "investments.view" },
-  { title: "Add Investment", icon: "wallet-minimal", route: "investments.create", active: "investments.create", category: "Investments", permission: "investments.create" },
-  { title: "Investment Returns", icon: "dollar-sign", route: "investmentReturns.index", active: "investmentReturns.index", category: "Investments", permission: "investments.returns.view" },
 
   // Finance
   { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expense.category_view" },
@@ -156,7 +152,7 @@ const outletLoggedInMenu = [
   { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments_view" },
 
   // Partners
-  { title: "Notifications", icon: "box", route: "notifications.index", active: "notifications.index", category: "Partners", permission: "notifications.index" },
+  { title: "Notifications", icon: "bell-ring", route: "notifications.index", active: "notifications.index", category: "Partners", permission: "notifications.view" },
   { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
 
   // CRM
@@ -170,7 +166,7 @@ const outletLoggedInMenu = [
   { title: "Allowances", icon: "trending-up", route: "allowances.index", active: "allowances.index", category: "HR", permission: "allowances.view" },
   { title: "Ranks", icon: "star", route: "ranks.index", active: "ranks.index", category: "HR", permission: "ranks.view" },
   { title: "Bonus", icon: "gift", route: "bonus.index", active: "bonus.index", category: "HR", permission: "bonus.view" },
-  { title: "SMS", icon: "gift", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms_templates.view" },
+  { title: "SMS", icon: "message-circle", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms_templates.view" },
 
   // Admin (super admin will see even inside outlet)
   { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
@@ -229,6 +225,9 @@ const iconComponents = {
   palette: Palette,
   image: ImageIcon,
   "file-image": FileImage,
+  "bell-ring": BellRing,
+  "list-checks": ListChecks,
+  "message-circle": MessageCircle,
 };
 
 export default function Sidebar({ status, setStatus }) {
@@ -285,6 +284,7 @@ export default function Sidebar({ status, setStatus }) {
       "Add Purchase Return": t("auth.add_purchase_return", "Add Purchase Return"),
 
       // Inventory
+      "Damages List": t("auth.damages_list", "Damages List"),
       Warehouse: t("auth.warehouse", "Warehouse"),
       Supplier: t("auth.supplier", "Supplier"),
       Attribute: t("auth.attribute", "Attribute"),
@@ -292,6 +292,7 @@ export default function Sidebar({ status, setStatus }) {
       "Add Products": t("auth.add_products", "Add Products"),
       Categories: t("auth.categories", "Categories"),
       Brands: t("auth.brands", "Brands"),
+      "Product Ledger": t("auth.product_ledger", "Product Ledger"),
 
       // Investments
       Investors: t("auth.investors", "Investors"),
@@ -314,6 +315,7 @@ export default function Sidebar({ status, setStatus }) {
       "Subscriptions Payments": t("auth.subscriptions_payments", "Subscriptions Payments"),
 
       // Partners
+      Notifications: t("auth.notifications", "Notifications"),
       Dealerships: t("auth.dealerships", "Dealerships"),
 
       // CRM
@@ -332,7 +334,6 @@ export default function Sidebar({ status, setStatus }) {
       Ranks: t("auth.ranks", "Ranks"),
       Bonus: t("auth.bonus", "Bonus"),
       SMS: t("auth.sms", "SMS"),
-
 
       // Outlets
       Outlet: t("auth.outlet", "Outlet"),

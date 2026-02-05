@@ -716,6 +716,26 @@ Route::middleware('auth')->group(function () {
     Route::resource('headers', HeaderController::class)
         ->middleware('permission:headers.index|headers.create|headers.edit|headers.delete|headers.show');
 
+
+    //notifications
+
+    Route::get('/notifications', [NotificationController::class, 'index'])
+        // ->middleware('permission:notifications.view')
+        ->name('notifications.index');
+
+    Route::put('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])
+        // ->middleware('permission:notifications.read')
+        ->name('notifications.markAsRead');
+    Route::put('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])
+        // ->middleware('permission:notifications.read_all')
+        ->name('notifications.markAllAsRead');
+    Route::delete('/notifications/delete-all-read', [NotificationController::class, 'deleteAllRead'])
+        // ->middleware('permission:notifications.delete_all')
+        ->name('notifications.deleteAllRead');
+    Route::delete('/notifications/{notification}', [NotificationController::class, 'delete'])
+        // ->middleware('permission:notifications.delete')
+        ->name('notifications.destroy');
+
 });
 
 

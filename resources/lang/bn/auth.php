@@ -147,4 +147,6 @@ return [
     // Categories
     'category_investments' => 'বিনিয়োগ',
     'category_subscriptions' => 'সাবস্ক্রিপশন',
+    'damages_list' => 'ক্ষতির তালিকা',
+    'product_ledger' => 'পণ্য খাতা',
 ];
