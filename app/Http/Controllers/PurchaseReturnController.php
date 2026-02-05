@@ -22,6 +22,8 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseReturnController extends Controller
 {
+
+
     private function getUnitConversions()
     {
         return [
@@ -47,6 +49,8 @@ class PurchaseReturnController extends Controller
             ]
         ];
     }
+
+
 
     public function index(Request $request)
     {
@@ -105,6 +109,8 @@ class PurchaseReturnController extends Controller
             'isShadowUser' => $isShadowUser
         ]);
     }
+
+
 
     public function create(Request $request)
     {
@@ -248,6 +254,7 @@ class PurchaseReturnController extends Controller
         ]);
     }
 
+
     private function getVariantDisplayName($variant)
     {
         if (!$variant)
@@ -272,10 +279,10 @@ class PurchaseReturnController extends Controller
         return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
     }
 
+
+
     public function store(Request $request)
     {
-        // dd($request->all());
-
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
@@ -459,6 +466,8 @@ class PurchaseReturnController extends Controller
         }
     }
 
+
+
     public function show($id)
     {
         $user = Auth::user();
@@ -495,6 +504,8 @@ class PurchaseReturnController extends Controller
         ]);
     }
 
+
+
     public function destroy($id)
     {
         $user = Auth::user();
@@ -521,6 +532,8 @@ class PurchaseReturnController extends Controller
         }
     }
 
+
+
     public function approve($id)
     {
         $user = Auth::user();
@@ -534,7 +547,6 @@ class PurchaseReturnController extends Controller
                 throw new \Exception('This return cannot be approved.');
             }
 
-            // ✅ Only decrease stock when return_type = product_replacement (physical return)
             if ($purchaseReturn->return_type === 'product_replacement') {
                 foreach ($purchaseReturn->items as $item) {
                     $stock = Stock::where('warehouse_id', $purchaseReturn->warehouse_id)
@@ -555,7 +567,6 @@ class PurchaseReturnController extends Controller
                     $item->update(['status' => 'approved']);
                 }
             } else {
-                // ✅ money_back: just approve items (no stock change)
                 $purchaseReturn->items()->update(['status' => 'approved']);
             }
 
@@ -573,6 +584,7 @@ class PurchaseReturnController extends Controller
             return redirect()->back()->with('error', 'Error approving purchase return: ' . $e->getMessage());
         }
     }
+
 
 
     public function complete($id)
@@ -702,6 +714,8 @@ class PurchaseReturnController extends Controller
         }
     }
 
+
+
     private function transformToShadowData($purchaseReturn)
     {
         $purchaseReturn->total_return_amount = $purchaseReturn->shadow_return_amount;
@@ -726,6 +740,8 @@ class PurchaseReturnController extends Controller
 
         return $purchaseReturn;
     }
+
+
 
     public function calculateTotals(Request $request)
     {
@@ -770,6 +786,8 @@ class PurchaseReturnController extends Controller
             'shadow_net_difference' => $shadowReplacementTotal - $shadowTotalReturn,
         ]);
     }
+
+
 
     public function getPurchaseData(Request $request)
     {
@@ -853,4 +871,6 @@ class PurchaseReturnController extends Controller
             'purchaseItems' => $purchaseItems
         ]);
     }
+
+
 }

@@ -711,7 +711,6 @@ export default function Product({ product, filters }) {
             <thead className="bg-[#1e4d2b] text-white">
               <tr>
                 <th></th>
-                <th>{t("product.product_code", "Product Code")}</th>
                 <th>{t("product.product_name", "Product Name")}</th>
                 <th>{t("product.category", "Category")}</th>
                 <th>{t("product.attributes", "Attributes")}</th>
@@ -747,19 +746,15 @@ export default function Product({ product, filters }) {
                         )}
                       </th>
 
-                      <td className="font-mono">{productItem.product_no}</td>
 
                       <td>
-                        <div>
                           <div className="font-medium">{productItem.name}</div>
-                          {productItem.description && (
                             <div className="text-xs text-gray-500 mt-1">
-                              {productItem.description.length > 50
-                                ? `${productItem.description.substring(0, 50)}...`
-                                : productItem.description}
+                                ({productItem.product_no})
                             </div>
-                          )}
-                        </div>
+                            <div className="text-xs badge rounded text-gray-500 bg-[#f1f1f1]">
+                               {productItem.type }
+                            </div>
                       </td>
 
                       <td>
@@ -940,7 +935,7 @@ export default function Product({ product, filters }) {
                       <td>
                         <div className="flex items-center gap-2">
                           <Link href={route("product.add", { id: productItem.id })} className="btn btn-xs btn-warning" title={t("product.edit", "Edit Product")}>
-                            <Pen size={10} /> {t("product.edit", "Edit")}
+                            <Pen size={10} /> 
                           </Link>
 
                           <Link
@@ -957,7 +952,7 @@ export default function Product({ product, filters }) {
                             className="btn btn-xs btn-error"
                             title={t("product.delete", "Delete Product")}
                           >
-                            <Trash2 size={10} /> {t("product.delete", "Delete")}
+                            <Trash2 size={10} />
                           </Link>
                         </div>
                       </td>
