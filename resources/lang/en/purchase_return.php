@@ -13,6 +13,7 @@ return [
     'select_purchase_help' => 'Select a purchase to view items available for return',
     'value_comparison' => 'Value Comparison',
     'total_return' => 'Total Return',
+    'account_id' => 'Account Id',
 
     // Navigation & Actions
     'back_to_list' => 'Back to List',

@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('return_no')->unique();
             $table->unsignedBigInteger('purchase_id');
+            $table->unsignedBigInteger('account_id')->nullable();
             $table->unsignedBigInteger('supplier_id');
             $table->unsignedBigInteger('warehouse_id');
             $table->date('return_date');

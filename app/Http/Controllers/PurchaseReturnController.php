@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PurchaseReturnStore;
+use App\Models\Account;
 use App\Models\Purchase;
 use App\Models\PurchaseReturn;
 use App\Models\PurchaseReturnItem;
@@ -22,6 +24,8 @@ use Illuminate\Support\Facades\Log;
 
 class PurchaseReturnController extends Controller
 {
+
+
     private function getUnitConversions()
     {
         return [
@@ -47,6 +51,8 @@ class PurchaseReturnController extends Controller
             ]
         ];
     }
+
+
 
     public function index(Request $request)
     {
@@ -105,6 +111,8 @@ class PurchaseReturnController extends Controller
             'isShadowUser' => $isShadowUser
         ]);
     }
+
+
 
     public function create(Request $request)
     {
@@ -197,9 +205,12 @@ class PurchaseReturnController extends Controller
                     }
                 }
 
+             
+
                 return [
                     'id' => $purchase->id,
                     'purchase_no' => $purchase->purchase_no,
+                    
                     'purchase_date' => $purchase->purchase_date,
                     'grand_total' => $purchase->grand_total,
                     'available_items' => $availableItems,
@@ -214,6 +225,9 @@ class PurchaseReturnController extends Controller
                     ] : null,
                 ];
             });
+
+        $accounts = Account::where('is_active', true)->get();
+
 
         return Inertia::render('PurchaseReturn/AddPurchaseReturn', [
             'purchase' => $purchase ? [
@@ -244,9 +258,11 @@ class PurchaseReturnController extends Controller
             'suppliers' => Supplier::all(),
             'warehouses' => Warehouse::where('is_active', true)->get(),
             'products' => Product::with('variants')->get(),
-            'isShadowUser' => $isShadowUser
+            'isShadowUser' => $isShadowUser,
+            'accounts' => $accounts,
         ]);
     }
+
 
     private function getVariantDisplayName($variant)
     {
@@ -272,36 +288,13 @@ class PurchaseReturnController extends Controller
         return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
     }
 
-    public function store(Request $request)
-    {
-        // dd($request->all());
 
+
+    public function store(PurchaseReturnStore $request)
+    {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
-
-        // Enhanced validation
-        $request->validate([
-            'purchase_id' => 'required|exists:purchases,id',
-            'return_type' => 'required|in:money_back,product_replacement',
-            'return_date' => 'required|date',
-            'reason' => 'required|string|min:3',
-            'notes' => 'nullable|string',
-            'payment_type' => 'nullable|in:cash,card,mobile_banking,adjust_to_advance',
-            'items' => 'required|array|min:1',
-            'items.*.purchase_item_id' => 'required|exists:purchase_items,id',
-            'items.*.return_quantity' => 'required|integer|min:1',
-            'items.*.reason' => 'nullable|string',
-            'replacement_products' => 'nullable|array',
-            'replacement_products.*.product_id' => 'nullable|exists:products,id',
-            'replacement_products.*.variant_id' => 'nullable|exists:variants,id',
-            'replacement_products.*.quantity' => 'nullable|integer|min:1',
-            'replacement_products.*.unit_price' => 'nullable|numeric|min:0.01',
-            'replacement_products.*.shadow_unit_price' => 'nullable|numeric|min:0.01',
-            'replacement_products.*.sale_price' => 'nullable|numeric|min:0.01',
-            'replacement_products.*.shadow_sale_price' => 'nullable|numeric|min:0.01',
-            'replacement_total' => 'nullable|numeric|min:0',
-            'shadow_replacement_total' => 'nullable|numeric|min:0',
-        ]);
+        $request->validate();
 
         DB::beginTransaction();
         try {
@@ -359,6 +352,7 @@ class PurchaseReturnController extends Controller
 
             // Create purchase return
             $purchaseReturn = PurchaseReturn::create([
+                'account_id' => $request->account_id,
                 'return_no' => $returnNo,
                 'purchase_id' => $request->purchase_id,
                 'supplier_id' => $purchase->supplier_id,
@@ -459,6 +453,8 @@ class PurchaseReturnController extends Controller
         }
     }
 
+
+
     public function show($id)
     {
         $user = Auth::user();
@@ -495,6 +491,8 @@ class PurchaseReturnController extends Controller
         ]);
     }
 
+
+
     public function destroy($id)
     {
         $user = Auth::user();
@@ -521,6 +519,8 @@ class PurchaseReturnController extends Controller
         }
     }
 
+
+
     public function approve($id)
     {
         $user = Auth::user();
@@ -534,7 +534,6 @@ class PurchaseReturnController extends Controller
                 throw new \Exception('This return cannot be approved.');
             }
 
-            // ✅ Only decrease stock when return_type = product_replacement (physical return)
             if ($purchaseReturn->return_type === 'product_replacement') {
                 foreach ($purchaseReturn->items as $item) {
                     $stock = Stock::where('warehouse_id', $purchaseReturn->warehouse_id)
@@ -555,7 +554,6 @@ class PurchaseReturnController extends Controller
                     $item->update(['status' => 'approved']);
                 }
             } else {
-                // ✅ money_back: just approve items (no stock change)
                 $purchaseReturn->items()->update(['status' => 'approved']);
             }
 
@@ -702,6 +700,8 @@ class PurchaseReturnController extends Controller
         }
     }
 
+
+
     private function transformToShadowData($purchaseReturn)
     {
         $purchaseReturn->total_return_amount = $purchaseReturn->shadow_return_amount;
@@ -726,6 +726,8 @@ class PurchaseReturnController extends Controller
 
         return $purchaseReturn;
     }
+
+
 
     public function calculateTotals(Request $request)
     {
@@ -770,6 +772,8 @@ class PurchaseReturnController extends Controller
             'shadow_net_difference' => $shadowReplacementTotal - $shadowTotalReturn,
         ]);
     }
+
+
 
     public function getPurchaseData(Request $request)
     {
@@ -853,4 +857,6 @@ class PurchaseReturnController extends Controller
             'purchaseItems' => $purchaseItems
         ]);
     }
+
+
 }

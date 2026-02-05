@@ -30,10 +30,11 @@ class PurchaseReturn extends Model
         'created_by',
         'user_type',
         'payment_type',
-        'replacement_total',  // Make sure this is here
+        'replacement_total',  
         'shadow_replacement_total',
         'outlet_id',
-        'owner_id'
+        'owner_id',
+        'account_id'
     ];
 
     protected $casts = [

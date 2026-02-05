@@ -19,6 +19,8 @@ return [
     'generate' => 'Generate',
     'code_tip' => 'Generate a unique product code',
     'barcodes' => 'Barcodes',
+    'warranty' => 'Warranty',
+    'months' => 'months',
 
     // Table headers
     'product_code' => 'Product Code',

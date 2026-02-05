@@ -55,7 +55,6 @@ class Product extends Model
 
     use BelongsToTenant;
 
-
     public function stocks()
     {
         return $this->hasMany(Stock::class);
