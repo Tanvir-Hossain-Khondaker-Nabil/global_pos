@@ -235,14 +235,14 @@ export default function PaymentIndex({ payments, filters, isShadowUser }) {
                                                 <div className="flex justify-end gap-1">
                                                     <Link
                                                         href={route("payments.show", { payment: payment.id })}
-                                                        className="btn btn-ghost btn-square btn-xs hover:bg-[#1e4d2b] text-white hover:text-white"
+                                                        className="btn  btn-square btn-xs  text-[#1E4D2B] hover:text-[#1E4D2B]"
                                                     >
                                                         <Eye size={14} />
                                                     </Link>
                                                     {payment.sale && (
                                                         <Link
                                                             href={route("sales.show", { sale: payment.sale.id })}
-                                                            className="btn btn-ghost btn-square btn-xs hover:bg-red-600 hover:text-white text-red-600"
+                                                            className="btn btn-ghost btn-square btn-xs hover:bg-red-600 hover:text-[white] text-red-600"
                                                         >
                                                             <Receipt size={14} />
                                                         </Link>

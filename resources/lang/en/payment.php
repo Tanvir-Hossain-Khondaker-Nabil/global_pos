@@ -22,7 +22,12 @@ return [
     'note' => 'Note',
     'date' => 'Date',
     'actions' => 'Actions',
-    
+    'other_payment' => 'Other Payment',
+    'no_related_purchase' => 'No related purchase', 
+    'receipt' => 'Receipt',
+    'no_supplier_info' => 'No supplier information available',
+    'receipt_no' => 'Receipt No',
+
     // Payment Methods
     'cash' => 'Cash',
     'card' => 'Card',
