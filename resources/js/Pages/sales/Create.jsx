@@ -1414,7 +1414,7 @@ export default function AddSale({
         }
 
         form.post(route("sales.store"), {
-            onSuccess: () => router.visit(route("sales.index")),
+            // onSuccess: () => router.visit(route("sales.index")),
             onError: (errors) => {
                 console.error(errors);
                 alert(errors.error || "Failed to create sale. Please check the form data.");

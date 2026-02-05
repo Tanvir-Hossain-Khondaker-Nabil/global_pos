@@ -1032,8 +1032,8 @@ export default function AddSale({
             }
         }
 
-        form.post(route("sales.store"), {
-            onSuccess: () => router.visit(route("sales.index")),
+        form.post(route("salesPos.store"), {
+            // onSuccess: () => router.visit(route("salesPos.index")),
             onError: (errors) => {
                 console.error(errors);
                 alert(errors?.error || "Sale create failed. Check fields.");
@@ -1045,7 +1045,7 @@ export default function AddSale({
     return (
         <div className="bg-white rounded-box p-5">
             <PageHeader title="POS Checkout" subtitle="Create sale with modern POS layout">
-                <button onClick={() => router.visit(route("sales.index"))} className="btn btn-sm btn-ghost">
+                <button onClick={() => router.visit(route("salesPos.index"))} className="btn btn-sm btn-ghost">
                     <ArrowLeft size={15} /> Back
                 </button>
             </PageHeader>
@@ -1870,7 +1870,7 @@ export default function AddSale({
                                     )}
                                 </button>
 
-                                <button type="button" className="btn btn-outline w-full" onClick={() => router.visit(route("sales.index"))}>
+                                <button type="button" className="btn btn-outline w-full" onClick={() => router.visit(route("salesPos.index"))}>
                                     Cancel
                                 </button>
                             </div>
