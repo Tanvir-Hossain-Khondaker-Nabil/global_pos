@@ -313,8 +313,6 @@ class SalesController extends Controller
         ]);
     }
 
-    
-
 
     /**
      * Store a new sale (Inventory)

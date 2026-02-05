@@ -116,8 +116,7 @@ class DamageController extends Controller
         ]);
 
 
-
-        return back()->with('success', 'Damage record created successfully.');
+        return to_route('damages.index')->with('success', 'Damage record created successfully.');
     }
 
 

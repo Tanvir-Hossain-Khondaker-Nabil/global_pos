@@ -13,7 +13,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::CL3cwK88xmT6nyza',
+            '_route' => 'generated::PW3rNFzYmGxJK2ro',
           ),
           1 => NULL,
           2 => 
@@ -2698,13 +2698,71 @@ app('router')->setCompiledRoutes(
           6 => NULL,
         ),
       ),
+      '/notifications' => 
+      array (
+        0 => 
+        array (
+          0 => 
+          array (
+            '_route' => 'notifications.index',
+          ),
+          1 => NULL,
+          2 => 
+          array (
+            'GET' => 0,
+            'HEAD' => 1,
+          ),
+          3 => NULL,
+          4 => false,
+          5 => false,
+          6 => NULL,
+        ),
+      ),
+      '/notifications/mark-all-as-read' => 
+      array (
+        0 => 
+        array (
+          0 => 
+          array (
+            '_route' => 'notifications.markAllAsRead',
+          ),
+          1 => NULL,
+          2 => 
+          array (
+            'PUT' => 0,
+          ),
+          3 => NULL,
+          4 => false,
+          5 => false,
+          6 => NULL,
+        ),
+      ),
+      '/notifications/delete-all-read' => 
+      array (
+        0 => 
+        array (
+          0 => 
+          array (
+            '_route' => 'notifications.deleteAllRead',
+          ),
+          1 => NULL,
+          2 => 
+          array (
+            'DELETE' => 0,
+          ),
+          3 => NULL,
+          4 => false,
+          5 => false,
+          6 => NULL,
+        ),
+      ),
       '/storage-link' => 
       array (
         0 => 
         array (
           0 => 
           array (
-            '_route' => 'generated::6c2FaOg13BBXohyn',
+            '_route' => 'generated::4gHasGJLAH1WOP8h',
           ),
           1 => NULL,
           2 => 
@@ -2724,7 +2782,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::FYSsXDJ5UcNHUs5t',
+            '_route' => 'generated::YV3xDikFkQ1JR1vL',
           ),
           1 => NULL,
           2 => 
@@ -2744,7 +2802,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::Pp7yL3COwvSJ3j8x',
+            '_route' => 'generated::4FtgCljgY7fSynIH',
           ),
           1 => NULL,
           2 => 
@@ -2764,7 +2822,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::VxLRkhv74w5RxA8I',
+            '_route' => 'generated::2VBlbA7dyuWkG72t',
           ),
           1 => NULL,
           2 => 
@@ -2784,7 +2842,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::TMhkr3VU95lzBSMz',
+            '_route' => 'generated::sKQHM5PabZX32nSF',
           ),
           1 => NULL,
           2 => 
@@ -2801,7 +2859,7 @@ app('router')->setCompiledRoutes(
     ),
     2 => 
     array (
-      0 => '{^(?|/d(?|ashboard(?:/([^/]++))?(*:34)|eposits/([^/]++)(?|(*:60)|/(?|edit(*:75)|approve(*:89)|reject(*:102))|(*:111)))|/outlets/(?|([^/]++)(*:141)|edit/([^/]++)(*:162)|([^/]++)(?|(*:181)|/login(*:195))|logout(*:210)|switch(*:224))|/users/(?|edit/([^/]++)(*:256)|update/([^/]++)(*:279)|delete/([^/]++)(*:302)|toggle\\-status/([^/]++)(*:333))|/a(?|p(?|i/sales/([^/]++)(*:367)|prove/([^/]++)/return(*:396))|ccounts/(?|([^/]++)(?|/(?|edit(*:435)|deposit(*:450)|withdraw(*:466))|(*:475))|transfer(*:492)))|/c(?|ustomer/(?|show/([^/]++)(*:531)|delete/([^/]++)(*:554)|edit/([^/]++)(*:575)|update/([^/]++)(*:598))|ategory/(?|edit/([^/]++)(*:631)|del/([^/]++)(*:651)))|/s(?|upplier/(?|update/([^/]++)(*:692)|edit/([^/]++)(*:713)|del/([^/]++)(*:733)|show/([^/]++)(*:754))|ales/(?|([0-9]+)(*:779)|([0-9]+)/pos(*:799)|([0-9]+)/print(*:821)|([0-9]+)/download\\-pdf(*:851)|([0-9]+)(*:867)|s(?|ales\\-items/([^/]++)(*:899)|can\\-barcode/([^/]++)(*:928))))|/p(?|roduct/del/([^/]++)(*:963)|os/print\\-request/([^/]++)(*:997))|/return/([^/]++)(?|(*:1025)|/edit(*:1039)|(*:1048))|/items/([^/]++)(*:1073)|/([^/]++)/(?|edit(*:1099)|update(*:1114)|rejected(*:1131))|/s(?|al(?|es/(?|([^/]++)/payments(*:1174)|list/del/([^/]++)(*:1200))|ary/(?|([^/]++)(?|/pay(?|(*:1235)|slip(*:1248))|(*:1258))|bulk\\-action(*:1280)|process\\-award\\-payments(*:1313)))|ubscriptions(?|/([^/]++)(?|(*:1351)|/(?|edit(*:1368)|renew(*:1382))|(*:1392))|_payments/view/([^/]++)(*:1425))|ms\\-templates/([^/]++)(?|(*:1460)|/(?|edit(*:1477)|toggle\\-status(*:1500))|(*:1510))|torage/(.*)(*:1531))|/modules/([^/]++)(?|(*:1561)|/edit(*:1575)|(*:1584))|/e(?|x(?|pense/([^/]++)(*:1617)|tra\\-cash/([^/]++)(*:1644))|mployees/([^/]++)(?|/(?|edit(*:1682)|password(*:1699)|salary(*:1714))|(*:1724)))|/b(?|usiness/profile(?:/([^/]++))?(*:1769)|onus/(?|([^/]++)(?|(*:1797)|/(?|edit(*:1814)|apply(?|(*:1831)))|(*:1842))|apply\\-(?|eid(*:1865)|festival(*:1882)))|rands/([^/]++)(?|(*:1910)|/edit(*:1924)|(*:1933)))|/in(?|stallments/([^/]++)(?|(?:/([^/]++))?(*:1986)|(*:1995))|vest(?|ors/([^/]++)(?|/edit(*:2032)|(*:2041))|ment(?|s/([^/]++)(?|(*:2071)|/(?|edit(*:2088)|withdraw(*:2105))|(*:2115))|\\-returns/([^/]++)/mark\\-paid(*:2154))))|/d(?|amage(?|s/(?|([^/]++)(?:/([^/]++))?(*:2206)|store(*:2220))|/show/([^/]++)(*:2244))|ealerships/([^/]++)(?|(*:2276)|/(?|edit(*:2293)|approve(*:2309))|(*:2319)))|/a(?|ttributes/([^/]++)(?|(*:2356)|/values(?|(*:2375)|/([^/]++)(*:2393)))|llowances/(?|([^/]++)(*:2425)|apply\\-settings(*:2449)|([^/]++)/update(*:2473))|wards/(?|([^/]++)(?|(*:2503)|/edit(*:2517)|(*:2526))|assign\\-(?|monthly(*:2554)|to\\-employee(*:2575))|employee\\-awards(*:2601)|([^/]++)/mark\\-(?|paid(*:2632)|unpaid(*:2647))|employee\\-awards/([^/]++)(*:2682)|statistics(*:2701)))|/p(?|ayments/([^/]++)(*:2733)|urchase(?|s_items/([^/]++)(*:2768)|/(?|([^/]++)(?|(*:2792)|/(?|payment(*:2812)|approve(*:2828)|edit(*:2841)|barcodes/(?|generate(*:2870)|print(*:2884))|items/([^/]++)/barcode/(?|generate(*:2928)|print(*:2942)))|(*:2953))|statistics(*:2973)|recent(*:2988)|([^/]++)/export\\-pdf(*:3017))|\\-returns/([^/]++)(?|(*:3048)|/(?|approve(*:3068)|complete(*:3085))|(*:3095)))|lans/([^/]++)(?|(*:3122)|/edit(*:3136)|(*:3145))|rovident\\-fund/([^/]++)/(?|statement(*:3191)|update\\-percentage(*:3218)))|/warehouses/([^/]++)(?|(*:3252)|/edit(*:3266)|(*:3275))|/l(?|ang/([^/]++)(*:3302)|e(?|dgers/(?|c(?|ustomer(?:/([^/]++))?(*:3349)|lear\\-due/([^/]++)(*:3376))|supplier(?:/([^/]++))?(*:3408)|advance\\-payment/([^/]++)(*:3442))|ave/(?|([^/]++)(?|(*:3470)|/(?|approve(*:3490)|reject(*:3505)|cancel(*:3520))|(*:3530))|balance/([^/]++)(*:3556)|dashboard(*:3574))))|/companies/([^/]++)(?|(*:3608)|/edit(*:3622)|(*:3631))|/r(?|anks/([^/]++)(?|(*:3662)|/(?|users(*:3680)|promote(*:3696)))|oles/([^/]++)(?|(*:3723)|/edit(*:3737)|(*:3746)))|/headers/([^/]++)(?|(*:3777)|/edit(*:3791)|(*:3800)))/?$}sDu',
+      0 => '{^(?|/d(?|ashboard(?:/([^/]++))?(*:34)|eposits/([^/]++)(?|(*:60)|/(?|edit(*:75)|approve(*:89)|reject(*:102))|(*:111)))|/outlets/(?|([^/]++)(*:141)|edit/([^/]++)(*:162)|([^/]++)(?|(*:181)|/login(*:195))|logout(*:210)|switch(*:224))|/users/(?|edit/([^/]++)(*:256)|update/([^/]++)(*:279)|delete/([^/]++)(*:302)|toggle\\-status/([^/]++)(*:333))|/a(?|p(?|i/sales/([^/]++)(*:367)|prove/([^/]++)/return(*:396))|ccounts/(?|([^/]++)(?|/(?|edit(*:435)|deposit(*:450)|withdraw(*:466))|(*:475))|transfer(*:492)))|/c(?|ustomer/(?|show/([^/]++)(*:531)|delete/([^/]++)(*:554)|edit/([^/]++)(*:575)|update/([^/]++)(*:598))|ategory/(?|edit/([^/]++)(*:631)|del/([^/]++)(*:651)))|/s(?|upplier/(?|update/([^/]++)(*:692)|edit/([^/]++)(*:713)|del/([^/]++)(*:733)|show/([^/]++)(*:754))|ales/(?|([0-9]+)(*:779)|([0-9]+)/pos(*:799)|([0-9]+)/print(*:821)|([0-9]+)/download\\-pdf(*:851)|([0-9]+)(*:867)|s(?|ales\\-items/([^/]++)(*:899)|can\\-barcode/([^/]++)(*:928))))|/p(?|roduct/del/([^/]++)(*:963)|os/print\\-request/([^/]++)(*:997))|/return/([^/]++)(?|(*:1025)|/edit(*:1039)|(*:1048))|/items/([^/]++)(*:1073)|/([^/]++)/(?|edit(*:1099)|update(*:1114)|rejected(*:1131))|/s(?|al(?|es/(?|([^/]++)/payments(*:1174)|list/del/([^/]++)(*:1200))|ary/(?|([^/]++)(?|/pay(?|(*:1235)|slip(*:1248))|(*:1258))|bulk\\-action(*:1280)|process\\-award\\-payments(*:1313)))|ubscriptions(?|/([^/]++)(?|(*:1351)|/(?|edit(*:1368)|renew(*:1382))|(*:1392))|_payments/view/([^/]++)(*:1425))|ms\\-templates/([^/]++)(?|(*:1460)|/(?|edit(*:1477)|toggle\\-status(*:1500))|(*:1510))|torage/(.*)(*:1531))|/modules/([^/]++)(?|(*:1561)|/edit(*:1575)|(*:1584))|/e(?|x(?|pense/([^/]++)(*:1617)|tra\\-cash/([^/]++)(*:1644))|mployees/([^/]++)(?|/(?|edit(*:1682)|password(*:1699)|salary(*:1714))|(*:1724)))|/b(?|usiness/profile(?:/([^/]++))?(*:1769)|onus/(?|([^/]++)(?|(*:1797)|/(?|edit(*:1814)|apply(?|(*:1831)))|(*:1842))|apply\\-(?|eid(*:1865)|festival(*:1882)))|rands/([^/]++)(?|(*:1910)|/edit(*:1924)|(*:1933)))|/in(?|stallments/([^/]++)(?|(?:/([^/]++))?(*:1986)|(*:1995))|vest(?|ors/([^/]++)(?|/edit(*:2032)|(*:2041))|ment(?|s/([^/]++)(?|(*:2071)|/(?|edit(*:2088)|withdraw(*:2105))|(*:2115))|\\-returns/([^/]++)/mark\\-paid(*:2154))))|/d(?|amage(?|s/(?|([^/]++)(?:/([^/]++))?(*:2206)|store(*:2220))|/show/([^/]++)(*:2244))|ealerships/([^/]++)(?|(*:2276)|/(?|edit(*:2293)|approve(*:2309))|(*:2319)))|/a(?|ttributes/([^/]++)(?|(*:2356)|/values(?|(*:2375)|/([^/]++)(*:2393)))|llowances/(?|([^/]++)(*:2425)|apply\\-settings(*:2449)|([^/]++)/update(*:2473))|wards/(?|([^/]++)(?|(*:2503)|/edit(*:2517)|(*:2526))|assign\\-(?|monthly(*:2554)|to\\-employee(*:2575))|employee\\-awards(*:2601)|([^/]++)/mark\\-(?|paid(*:2632)|unpaid(*:2647))|employee\\-awards/([^/]++)(*:2682)|statistics(*:2701)))|/p(?|ayments/([^/]++)(*:2733)|urchase(?|s_items/([^/]++)(*:2768)|/(?|([^/]++)(?|(*:2792)|/(?|payment(*:2812)|approve(*:2828)|edit(*:2841)|barcodes/(?|generate(*:2870)|print(*:2884))|items/([^/]++)/barcode/(?|generate(*:2928)|print(*:2942)))|(*:2953))|statistics(*:2973)|recent(*:2988)|([^/]++)/export\\-pdf(*:3017))|\\-returns/([^/]++)(?|(*:3048)|/(?|approve(*:3068)|complete(*:3085))|(*:3095)))|lans/([^/]++)(?|(*:3122)|/edit(*:3136)|(*:3145))|rovident\\-fund/([^/]++)/(?|statement(*:3191)|update\\-percentage(*:3218)))|/warehouses/([^/]++)(?|(*:3252)|/edit(*:3266)|(*:3275))|/l(?|ang/([^/]++)(*:3302)|e(?|dgers/(?|c(?|ustomer(?:/([^/]++))?(*:3349)|lear\\-due/([^/]++)(*:3376))|supplier(?:/([^/]++))?(*:3408)|advance\\-payment/([^/]++)(*:3442))|ave/(?|([^/]++)(?|(*:3470)|/(?|approve(*:3490)|reject(*:3505)|cancel(*:3520))|(*:3530))|balance/([^/]++)(*:3556)|dashboard(*:3574))))|/companies/([^/]++)(?|(*:3608)|/edit(*:3622)|(*:3631))|/r(?|anks/([^/]++)(?|(*:3662)|/(?|users(*:3680)|promote(*:3696)))|oles/([^/]++)(?|(*:3723)|/edit(*:3737)|(*:3746)))|/headers/([^/]++)(?|(*:3777)|/edit(*:3791)|(*:3800))|/notifications/([^/]++)(?|/mark\\-as\\-read(*:3851)|(*:3860)))/?$}sDu',
     ),
     3 => 
     array (
@@ -3208,7 +3266,7 @@ app('router')->setCompiledRoutes(
         array (
           0 => 
           array (
-            '_route' => 'generated::ceiH43Dr5D1iCLmw',
+            '_route' => 'generated::zHcklGcx1ZjRnkze',
           ),
           1 => 
           array (
@@ -7025,7 +7083,51 @@ app('router')->setCompiledRoutes(
           5 => true,
           6 => NULL,
         ),
-        2 => 
+      ),
+      3851 => 
+      array (
+        0 => 
+        array (
+          0 => 
+          array (
+            '_route' => 'notifications.markAsRead',
+          ),
+          1 => 
+          array (
+            0 => 'notification',
+          ),
+          2 => 
+          array (
+            'PUT' => 0,
+          ),
+          3 => NULL,
+          4 => false,
+          5 => false,
+          6 => NULL,
+        ),
+      ),
+      3860 => 
+      array (
+        0 => 
+        array (
+          0 => 
+          array (
+            '_route' => 'notifications.destroy',
+          ),
+          1 => 
+          array (
+            0 => 'notification',
+          ),
+          2 => 
+          array (
+            'DELETE' => 0,
+          ),
+          3 => NULL,
+          4 => false,
+          5 => true,
+          6 => NULL,
+        ),
+        1 => 
         array (
           0 => NULL,
           1 => NULL,
@@ -7041,7 +7143,7 @@ app('router')->setCompiledRoutes(
   ),
   'attributes' => 
   array (
-    'generated::CL3cwK88xmT6nyza' => 
+    'generated::PW3rNFzYmGxJK2ro' => 
     array (
       'methods' => 
       array (
@@ -7070,7 +7172,7 @@ app('router')->setCompiledRoutes(
                         \'exception\' => $exception,
                     ]), status: $exception ? 500 : 200);
                 }";s:5:"scope";s:54:"Illuminate\\Foundation\\Configuration\\ApplicationBuilder";s:4:"this";N;s:4:"self";s:32:"00000000000005920000000000000000";}}',
-        'as' => 'generated::CL3cwK88xmT6nyza',
+        'as' => 'generated::PW3rNFzYmGxJK2ro',
       ),
       'fallback' => false,
       'defaults' => 
@@ -8199,7 +8301,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::ceiH43Dr5D1iCLmw' => 
+    'generated::zHcklGcx1ZjRnkze' => 
     array (
       'methods' => 
       array (
@@ -8221,7 +8323,7 @@ app('router')->setCompiledRoutes(
         'where' => 
         array (
         ),
-        'as' => 'generated::ceiH43Dr5D1iCLmw',
+        'as' => 'generated::zHcklGcx1ZjRnkze',
       ),
       'fallback' => false,
       'defaults' => 
@@ -19823,7 +19925,193 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::6c2FaOg13BBXohyn' => 
+    'notifications.index' => 
+    array (
+      'methods' => 
+      array (
+        0 => 'GET',
+        1 => 'HEAD',
+      ),
+      'uri' => 'notifications',
+      'action' => 
+      array (
+        'middleware' => 
+        array (
+          0 => 'web',
+          1 => 'auth',
+        ),
+        'uses' => 'App\\Http\\Controllers\\NotificationController@index',
+        'controller' => 'App\\Http\\Controllers\\NotificationController@index',
+        'namespace' => NULL,
+        'prefix' => '',
+        'where' => 
+        array (
+        ),
+        'as' => 'notifications.index',
+      ),
+      'fallback' => false,
+      'defaults' => 
+      array (
+      ),
+      'wheres' => 
+      array (
+      ),
+      'bindingFields' => 
+      array (
+      ),
+      'lockSeconds' => NULL,
+      'waitSeconds' => NULL,
+      'withTrashed' => false,
+    ),
+    'notifications.markAsRead' => 
+    array (
+      'methods' => 
+      array (
+        0 => 'PUT',
+      ),
+      'uri' => 'notifications/{notification}/mark-as-read',
+      'action' => 
+      array (
+        'middleware' => 
+        array (
+          0 => 'web',
+          1 => 'auth',
+        ),
+        'uses' => 'App\\Http\\Controllers\\NotificationController@markAsRead',
+        'controller' => 'App\\Http\\Controllers\\NotificationController@markAsRead',
+        'namespace' => NULL,
+        'prefix' => '',
+        'where' => 
+        array (
+        ),
+        'as' => 'notifications.markAsRead',
+      ),
+      'fallback' => false,
+      'defaults' => 
+      array (
+      ),
+      'wheres' => 
+      array (
+      ),
+      'bindingFields' => 
+      array (
+      ),
+      'lockSeconds' => NULL,
+      'waitSeconds' => NULL,
+      'withTrashed' => false,
+    ),
+    'notifications.markAllAsRead' => 
+    array (
+      'methods' => 
+      array (
+        0 => 'PUT',
+      ),
+      'uri' => 'notifications/mark-all-as-read',
+      'action' => 
+      array (
+        'middleware' => 
+        array (
+          0 => 'web',
+          1 => 'auth',
+        ),
+        'uses' => 'App\\Http\\Controllers\\NotificationController@markAllAsRead',
+        'controller' => 'App\\Http\\Controllers\\NotificationController@markAllAsRead',
+        'namespace' => NULL,
+        'prefix' => '',
+        'where' => 
+        array (
+        ),
+        'as' => 'notifications.markAllAsRead',
+      ),
+      'fallback' => false,
+      'defaults' => 
+      array (
+      ),
+      'wheres' => 
+      array (
+      ),
+      'bindingFields' => 
+      array (
+      ),
+      'lockSeconds' => NULL,
+      'waitSeconds' => NULL,
+      'withTrashed' => false,
+    ),
+    'notifications.deleteAllRead' => 
+    array (
+      'methods' => 
+      array (
+        0 => 'DELETE',
+      ),
+      'uri' => 'notifications/delete-all-read',
+      'action' => 
+      array (
+        'middleware' => 
+        array (
+          0 => 'web',
+          1 => 'auth',
+        ),
+        'uses' => 'App\\Http\\Controllers\\NotificationController@deleteAllRead',
+        'controller' => 'App\\Http\\Controllers\\NotificationController@deleteAllRead',
+        'namespace' => NULL,
+        'prefix' => '',
+        'where' => 
+        array (
+        ),
+        'as' => 'notifications.deleteAllRead',
+      ),
+      'fallback' => false,
+      'defaults' => 
+      array (
+      ),
+      'wheres' => 
+      array (
+      ),
+      'bindingFields' => 
+      array (
+      ),
+      'lockSeconds' => NULL,
+      'waitSeconds' => NULL,
+      'withTrashed' => false,
+    ),
+    'notifications.destroy' => 
+    array (
+      'methods' => 
+      array (
+        0 => 'DELETE',
+      ),
+      'uri' => 'notifications/{notification}',
+      'action' => 
+      array (
+        'middleware' => 
+        array (
+          0 => 'web',
+          1 => 'auth',
+        ),
+        'uses' => 'App\\Http\\Controllers\\NotificationController@delete',
+        'controller' => 'App\\Http\\Controllers\\NotificationController@delete',
+        'namespace' => NULL,
+        'prefix' => '',
+        'where' => 
+        array (
+        ),
+        'as' => 'notifications.destroy',
+      ),
+      'fallback' => false,
+      'defaults' => 
+      array (
+      ),
+      'wheres' => 
+      array (
+      ),
+      'bindingFields' => 
+      array (
+      ),
+      'lockSeconds' => NULL,
+      'waitSeconds' => NULL,
+      'withTrashed' => false,
+    ),
+    'generated::4gHasGJLAH1WOP8h' => 
     array (
       'methods' => 
       array (
@@ -19840,13 +20128,13 @@ app('router')->setCompiledRoutes(
         'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:0:{}s:8:"function";s:126:"function () {
     \\Illuminate\\Support\\Facades\\Artisan::call(\'storage:link\');
     return \'Storage link created successfully\';
-}";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009860000000000000000";}}',
+}";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009930000000000000000";}}',
         'namespace' => NULL,
         'prefix' => '',
         'where' => 
         array (
         ),
-        'as' => 'generated::6c2FaOg13BBXohyn',
+        'as' => 'generated::4gHasGJLAH1WOP8h',
       ),
       'fallback' => false,
       'defaults' => 
@@ -19862,7 +20150,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::FYSsXDJ5UcNHUs5t' => 
+    'generated::YV3xDikFkQ1JR1vL' => 
     array (
       'methods' => 
       array (
@@ -19882,13 +20170,13 @@ app('router')->setCompiledRoutes(
         \\Illuminate\\Support\\Facades\\Artisan::call(\'config:cache\');
         \\Illuminate\\Support\\Facades\\Artisan::call(\'view:clear\');
         return "Cache is cleared";
-    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009900000000000000000";}}',
+    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009950000000000000000";}}',
         'namespace' => NULL,
         'prefix' => '',
         'where' => 
         array (
         ),
-        'as' => 'generated::FYSsXDJ5UcNHUs5t',
+        'as' => 'generated::YV3xDikFkQ1JR1vL',
       ),
       'fallback' => false,
       'defaults' => 
@@ -19904,7 +20192,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::Pp7yL3COwvSJ3j8x' => 
+    'generated::4FtgCljgY7fSynIH' => 
     array (
       'methods' => 
       array (
@@ -19921,13 +20209,13 @@ app('router')->setCompiledRoutes(
         'uses' => 'O:55:"Laravel\\SerializableClosure\\UnsignedSerializableClosure":1:{s:12:"serializable";O:46:"Laravel\\SerializableClosure\\Serializers\\Native":5:{s:3:"use";a:0:{}s:8:"function";s:149:"function () {
         \\Illuminate\\Support\\Facades\\Artisan::call(\'migrate:fresh --seed\');
         return "Database migrated fresh with seeders";
-    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009920000000000000000";}}',
+    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009970000000000000000";}}',
         'namespace' => NULL,
         'prefix' => '',
         'where' => 
         array (
         ),
-        'as' => 'generated::Pp7yL3COwvSJ3j8x',
+        'as' => 'generated::4FtgCljgY7fSynIH',
       ),
       'fallback' => false,
       'defaults' => 
@@ -19943,7 +20231,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::VxLRkhv74w5RxA8I' => 
+    'generated::2VBlbA7dyuWkG72t' => 
     array (
       'methods' => 
       array (
@@ -19967,13 +20255,13 @@ app('router')->setCompiledRoutes(
             ->toArray();
 
         return $modules;
-    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009940000000000000000";}}',
+    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009990000000000000000";}}',
         'namespace' => NULL,
         'prefix' => '',
         'where' => 
         array (
         ),
-        'as' => 'generated::VxLRkhv74w5RxA8I',
+        'as' => 'generated::2VBlbA7dyuWkG72t',
       ),
       'fallback' => false,
       'defaults' => 
@@ -19989,7 +20277,7 @@ app('router')->setCompiledRoutes(
       'waitSeconds' => NULL,
       'withTrashed' => false,
     ),
-    'generated::TMhkr3VU95lzBSMz' => 
+    'generated::sKQHM5PabZX32nSF' => 
     array (
       'methods' => 
       array (
@@ -20038,13 +20326,13 @@ app('router')->setCompiledRoutes(
 
         return $allActions;
 
-    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"00000000000009960000000000000000";}}',
+    }";s:5:"scope";s:37:"Illuminate\\Routing\\RouteFileRegistrar";s:4:"this";N;s:4:"self";s:32:"000000000000099b0000000000000000";}}',
         'namespace' => NULL,
         'prefix' => '',
         'where' => 
         array (
         ),
-        'as' => 'generated::TMhkr3VU95lzBSMz',
+        'as' => 'generated::sKQHM5PabZX32nSF',
       ),
       'fallback' => false,
       'defaults' => 
@@ -20076,7 +20364,7 @@ app('router')->setCompiledRoutes(
                         $config,
                         $isProduction
                     ))($request, $path);
-                }";s:5:"scope";s:47:"Illuminate\\Filesystem\\FilesystemServiceProvider";s:4:"this";N;s:4:"self";s:32:"00000000000009980000000000000000";}}',
+                }";s:5:"scope";s:47:"Illuminate\\Filesystem\\FilesystemServiceProvider";s:4:"this";N;s:4:"self";s:32:"000000000000099d0000000000000000";}}',
         'as' => 'storage.local',
       ),
       'fallback' => false,
