@@ -184,7 +184,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                             <tr>
                                 <th className="w-8"></th>
                                 <th>Product</th>
-                                <th>Purchase</th>
+                                <th>Type</th>
                                 <th>Price</th>
                                 <th>Qty</th>
                                 <th>Discount</th>
@@ -228,14 +228,11 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                         </td>
                                         <td>
                                             <div className="max-w-[150px]">
-                                                <div className="text-sm">
-                                                    Purchase #{item.purchase_id}
-                                                </div>
-                                                {item.purchase?.reference_no && (
-                                                    <div className="text-xs text-gray-500">
-                                                        Ref: {item.purchase.reference_no}
-                                                    </div>
-                                                )}
+                                                    {item?.item_type && (
+                                                        <div className="badge badge-info badge-sm p-4 rounded">
+                                                            <strong>{item?.item_type == 'real' ? 'Stock Item' : 'Pickup Item'}</strong>
+                                                        </div>
+                                                    )}
                                             </div>
                                         </td>
                                         <td>
@@ -460,7 +457,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
             {purchaseItems.data.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                     <div className="stat bg-[#1e4d2b] text-white rounded-box">
-                        <div className="stat-title">Total Items</div>
+                        <div className="stat-title text-[#fff]">Total Items</div>
                         <div className="stat-value text-primary text-lg">
                             {stats.totalItems}
                         </div>

@@ -748,13 +748,17 @@ export default function Product({ product, filters }) {
 
 
                       <td>
-                          <div className="font-medium">{productItem.name}</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                                ({productItem.product_no})
-                            </div>
-                            <div className="text-xs badge rounded text-gray-500 bg-[#f1f1f1]">
+                          <div className="font-medium">{productItem.name}
+                            <span className="text-xs text-gray-500 "> <i> ({productItem.product_no})</i> </span>  
+                          </div>
+                            <div className="text-xs badge rounded text-[#333] bg-[#33A14F]">
                                {productItem.type }
                             </div>
+                            {productItem.has_warranty && (
+                              <div className="text-xs badge rounded text-[#333] mt-1 bg-[#f1f1f1] p-4">
+                                 {productItem.warranty_duration} {productItem.warranty_duration_type} {t("product.warranty", "Warranty")} 
+                              </div>
+                            )}
                       </td>
 
                       <td>
@@ -842,7 +846,7 @@ export default function Product({ product, filters }) {
                         </div>
                       </td>
 
-                      {/* ✅ Barcodes column with checkboxes (VIEW button removed) */}
+                      {/*  Barcodes column with checkboxes (VIEW button removed) */}
                       <td>
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center gap-2">

@@ -261,8 +261,12 @@ export default function AllSalesItems({ salesItems }) {
                                         </td>
 
                                         <td>
-                                            <div className="badge badge-info badge-sm">
+                                            <div className="badge badge-info badge-sm rounded">
                                                 <strong>{item?.sale?.type || 'N/A'}</strong>
+                                            </div>
+
+                                            <div className="badge bg-[#E5FBF4] badge-sm mt-1 rounded p-4">
+                                                <strong>{item?.warehouse_id ? 'Stock Item' : 'Pickup Item'}</strong>
                                             </div>
                                         </td>
                                         <td>
@@ -457,7 +461,7 @@ export default function AllSalesItems({ salesItems }) {
             {safeSalesItems.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
                     <div className="stat bg-[#1e4d2b] text-white rounded-box">
-                        <div className="stat-title">Total Items</div>
+                        <div className="stat-title text-[#fff]">Total Items</div>
                         <div className="stat-value text-primary text-lg">
                             {salesItems.total || 0}
                         </div>
