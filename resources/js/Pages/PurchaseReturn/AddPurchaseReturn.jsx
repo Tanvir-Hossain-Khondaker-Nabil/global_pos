@@ -48,6 +48,7 @@ export default function AddPurchaseReturn({
     purchaseItems,
     purchases,
     suppliers,
+    accounts,
     warehouses,
     products,
     isShadowUser,
@@ -69,6 +70,7 @@ export default function AddPurchaseReturn({
     const searchWrapRef = useRef(null);
     const dropdownRef = useRef(null);
 
+
     const form = useForm({
         purchase_id: purchase?.id || "",
         return_type: "money_back",
@@ -82,16 +84,18 @@ export default function AddPurchaseReturn({
         replacement_products: [],
         replacement_total: 0,
         shadow_replacement_total: 0,
+        account_id: "",
     });
 
-    // ✅ Ensure purchase_id set (fix first time "id not found")
+    //  Ensure purchase_id set (fix first time "id not found")
     useEffect(() => {
         if (purchase?.id) {
             form.setData("purchase_id", purchase.id);
             setSelectedPurchaseId(purchase.id);
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [purchase?.id]);
+
+
 
     const formatCurrency = useCallback((value) => {
         const numValue = Number(value) || 0;
@@ -100,6 +104,7 @@ export default function AddPurchaseReturn({
             maximumFractionDigits: 2,
         }).format(numValue);
     }, []);
+
 
     const getVariantDisplayName = useCallback((variant) => {
         if (variant?.attribute_values && Object.keys(variant.attribute_values).length > 0) {
@@ -118,7 +123,8 @@ export default function AddPurchaseReturn({
         return parts.join(", ") || "Default Variant";
     }, []);
 
-    // ✅ init items from purchaseItems
+
+
     useEffect(() => {
         if (purchaseItems && purchaseItems.length > 0) {
             const initialItems = purchaseItems.map((item) => ({
@@ -144,7 +150,7 @@ export default function AddPurchaseReturn({
         }
     }, [purchaseItems]);
 
-    // ✅ totals
+    //  totals
     const totalReturn = useMemo(
         () =>
             selectedItems.reduce((sum, i) => {
@@ -467,6 +473,7 @@ export default function AddPurchaseReturn({
 
         const submitData = {
             purchase_id: purchase?.id || form.data.purchase_id,
+            account_id: form.data.account_id,
             return_type: returnType,
             return_date: form.data.return_date,
             reason: form.data.reason,
@@ -617,10 +624,10 @@ export default function AddPurchaseReturn({
                                     <div className="font-medium">Status:</div>
                                     <div
                                         className={`badge badge-sm ${purchase.payment_status === "paid"
-                                                ? "badge-success"
-                                                : purchase.payment_status === "partial"
-                                                    ? "badge-warning"
-                                                    : "badge-error"
+                                            ? "badge-success"
+                                            : purchase.payment_status === "partial"
+                                                ? "badge-warning"
+                                                : "badge-error"
                                             }`}
                                     >
                                         {purchase.payment_status}
@@ -642,8 +649,8 @@ export default function AddPurchaseReturn({
                                 <div className="grid grid-cols-2 gap-2">
                                     <label
                                         className={`card card-compact cursor-pointer ${returnType === "money_back"
-                                                ? "bg-primary text-primary-content border-2 border-primary"
-                                                : "bg-base-100 border border-base-300"
+                                            ? "bg-primary text-primary-content border-2 border-primary"
+                                            : "bg-base-100 border border-base-300"
                                             }`}
                                     >
                                         <div className="card-body p-3">
@@ -666,8 +673,8 @@ export default function AddPurchaseReturn({
 
                                     <label
                                         className={`card card-compact cursor-pointer ${returnType === "product_replacement"
-                                                ? "bg-warning text-warning-content border-2 border-warning"
-                                                : "bg-base-100 border border-base-300"
+                                            ? "bg-warning text-warning-content border-2 border-warning"
+                                            : "bg-base-100 border border-base-300"
                                             }`}
                                     >
                                         <div className="card-body p-3">
@@ -704,21 +711,25 @@ export default function AddPurchaseReturn({
                                 />
                             </div>
 
-                            {/* payment type (only money back) */}
+                            {/* account id (only money back) */}
                             {returnType === "money_back" && (
                                 <div className="form-control">
                                     <label className="label">
-                                        <span className="label-text">{t("purchase_return.payment_type", "Payment Type")} *</span>
+                                        <span className="label-text">{t("purchase_return.account_id", "Account ID")} *</span>
                                     </label>
                                     <select
                                         className="select select-bordered w-full"
-                                        value={paymentType}
-                                        onChange={(e) => setPaymentType(e.target.value)}
+                                        value={form.data.account_id}
+                                        onChange={(e) => form.setData("account_id", e.target.value)}
+                                        required
                                     >
-                                        <option value="cash">Cash</option>
-                                        <option value="card">Card</option>
-                                        <option value="mobile_banking">Mobile Banking</option>
-                                        <option value="adjust_to_advance">Adjust to Supplier Advance</option>
+                                        <option value="">Select Account</option>
+                                        {Array.isArray(accounts) && accounts.map((account) => (
+                                            <option key={account.id} value={account.id}>
+                                                {account.name} ({account.current_balance} tk only)
+                                            </option>
+                                        ))}
+
                                     </select>
                                 </div>
                             )}
@@ -1007,10 +1018,10 @@ export default function AddPurchaseReturn({
                                                 <div className="divider my-1">Net Difference</div>
                                                 <div
                                                     className={`text-center p-3 rounded-lg ${netDifference > 0
-                                                            ? "bg-error/10 border border-error/20"
-                                                            : netDifference < 0
-                                                                ? "bg-success/10 border border-success/20"
-                                                                : "bg-base-200"
+                                                        ? "bg-error/10 border border-error/20"
+                                                        : netDifference < 0
+                                                            ? "bg-success/10 border border-success/20"
+                                                            : "bg-base-200"
                                                         }`}
                                                 >
                                                     <div className="text-lg font-bold">
@@ -1018,10 +1029,10 @@ export default function AddPurchaseReturn({
                                                     </div>
                                                     <div
                                                         className={`text-sm font-medium ${netDifference > 0
-                                                                ? "text-error"
-                                                                : netDifference < 0
-                                                                    ? "text-success"
-                                                                    : "text-gray-500"
+                                                            ? "text-error"
+                                                            : netDifference < 0
+                                                                ? "text-success"
+                                                                : "text-gray-500"
                                                             }`}
                                                     >
                                                         {netDifference > 0

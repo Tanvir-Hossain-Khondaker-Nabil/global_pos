@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\PurchaseReturnStore;
+use App\Models\Account;
 use App\Models\Purchase;
 use App\Models\PurchaseReturn;
 use App\Models\PurchaseReturnItem;
@@ -203,9 +205,12 @@ class PurchaseReturnController extends Controller
                     }
                 }
 
+             
+
                 return [
                     'id' => $purchase->id,
                     'purchase_no' => $purchase->purchase_no,
+                    
                     'purchase_date' => $purchase->purchase_date,
                     'grand_total' => $purchase->grand_total,
                     'available_items' => $availableItems,
@@ -220,6 +225,9 @@ class PurchaseReturnController extends Controller
                     ] : null,
                 ];
             });
+
+        $accounts = Account::where('is_active', true)->get();
+
 
         return Inertia::render('PurchaseReturn/AddPurchaseReturn', [
             'purchase' => $purchase ? [
@@ -250,7 +258,8 @@ class PurchaseReturnController extends Controller
             'suppliers' => Supplier::all(),
             'warehouses' => Warehouse::where('is_active', true)->get(),
             'products' => Product::with('variants')->get(),
-            'isShadowUser' => $isShadowUser
+            'isShadowUser' => $isShadowUser,
+            'accounts' => $accounts,
         ]);
     }
 
@@ -281,34 +290,11 @@ class PurchaseReturnController extends Controller
 
 
 
-    public function store(Request $request)
+    public function store(PurchaseReturnStore $request)
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
-
-        // Enhanced validation
-        $request->validate([
-            'purchase_id' => 'required|exists:purchases,id',
-            'return_type' => 'required|in:money_back,product_replacement',
-            'return_date' => 'required|date',
-            'reason' => 'required|string|min:3',
-            'notes' => 'nullable|string',
-            'payment_type' => 'nullable|in:cash,card,mobile_banking,adjust_to_advance',
-            'items' => 'required|array|min:1',
-            'items.*.purchase_item_id' => 'required|exists:purchase_items,id',
-            'items.*.return_quantity' => 'required|integer|min:1',
-            'items.*.reason' => 'nullable|string',
-            'replacement_products' => 'nullable|array',
-            'replacement_products.*.product_id' => 'nullable|exists:products,id',
-            'replacement_products.*.variant_id' => 'nullable|exists:variants,id',
-            'replacement_products.*.quantity' => 'nullable|integer|min:1',
-            'replacement_products.*.unit_price' => 'nullable|numeric|min:0.01',
-            'replacement_products.*.shadow_unit_price' => 'nullable|numeric|min:0.01',
-            'replacement_products.*.sale_price' => 'nullable|numeric|min:0.01',
-            'replacement_products.*.shadow_sale_price' => 'nullable|numeric|min:0.01',
-            'replacement_total' => 'nullable|numeric|min:0',
-            'shadow_replacement_total' => 'nullable|numeric|min:0',
-        ]);
+        $request->validate();
 
         DB::beginTransaction();
         try {
@@ -366,6 +352,7 @@ class PurchaseReturnController extends Controller
 
             // Create purchase return
             $purchaseReturn = PurchaseReturn::create([
+                'account_id' => $request->account_id,
                 'return_no' => $returnNo,
                 'purchase_id' => $request->purchase_id,
                 'supplier_id' => $purchase->supplier_id,
@@ -584,7 +571,6 @@ class PurchaseReturnController extends Controller
             return redirect()->back()->with('error', 'Error approving purchase return: ' . $e->getMessage());
         }
     }
-
 
 
     public function complete($id)

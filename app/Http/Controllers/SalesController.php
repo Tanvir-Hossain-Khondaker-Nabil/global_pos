@@ -298,7 +298,6 @@ class SalesController extends Controller
 
     public function store(Request $request)
     {
-
         $type = $request->input('type', 'pos');
 
         if ($request->filled('discount_type')) {
@@ -690,7 +689,6 @@ class SalesController extends Controller
             } else {
                 return to_route('sales.show', $sale->id)->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
             }
-            
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors($e->getMessage());
@@ -983,21 +981,19 @@ class SalesController extends Controller
 
     private function generateInvoiceNo(): string
     {
-        return DB::transaction(function () {
-            $prefix = 'INV-' . now()->format('Y-m') . '-';
+        $prefix = 'INV-' . now()->format('Y-m') . '-';
 
-            $lastInvoice = Sale::where('invoice_no', 'like', $prefix . '%')
-                ->lockForUpdate()
-                ->orderByDesc('invoice_no')
-                ->value('invoice_no');
+        $lastInvoice = Sale::where('invoice_no', 'like', $prefix . '%')
+            ->orderByDesc('invoice_no')
+            ->value('invoice_no');
 
-            $num = $lastInvoice
-                ? (int) substr($lastInvoice, -4) + 1
-                : 1;
+        $num = $lastInvoice
+            ? (int) substr($lastInvoice, -4) + 1
+            : 1;
 
-            return $prefix . str_pad($num, 4, '0', STR_PAD_LEFT);
-        }, 5);
+        return $prefix . str_pad($num, 4, '0', STR_PAD_LEFT).Str::random(3);
     }
+
 
 
 
