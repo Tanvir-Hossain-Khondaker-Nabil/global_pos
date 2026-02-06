@@ -15,6 +15,7 @@ class PurchaseReturn extends Model
 
     protected $fillable = [
         'return_no',
+        'account_id',
         'purchase_id',
         'supplier_id',
         'warehouse_id',
@@ -34,7 +35,6 @@ class PurchaseReturn extends Model
         'shadow_replacement_total',
         'outlet_id',
         'owner_id',
-        'account_id'
     ];
 
     protected $casts = [
@@ -46,6 +46,30 @@ class PurchaseReturn extends Model
     ];
 
     use BelongsToTenant;
+
+    // ✅ Add approver relationship
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    // ✅ Add completer relationship
+    public function completer()
+    {
+        return $this->belongsTo(User::class, 'completed_by');
+    }
+
+    // ✅ Add canceller relationship
+    public function canceller()
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    // ✅ Add account relationship
+    public function account()
+    {
+        return $this->belongsTo(Account::class, 'account_id');
+    }
 
     public function purchase()
     {

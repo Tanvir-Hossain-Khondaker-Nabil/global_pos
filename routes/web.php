@@ -440,13 +440,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->middleware('permission:purchase.recent_view')->name('purchase.recent');
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->middleware('permission:purchase.export_pdf')->name('purchase.exportPdf');
 
-    Route::get('/purchase-returns', [PurchaseReturnController::class, 'index'])->middleware('permission:purchase_return.view')->name('purchase-return.list');
-    Route::get('/purchase-returns/create', [PurchaseReturnController::class, 'create'])->middleware('permission:purchase_return.create')->name('purchase-return.create');
-    Route::post('/purchase-returns', [PurchaseReturnController::class, 'store'])->middleware('permission:purchase_return.create')->name('purchase-return.store');
-    Route::get('/purchase-returns/{id}', [PurchaseReturnController::class, 'show'])->middleware('permission:purchase_return.show')->name('purchase-return.show');
-    Route::post('/purchase-returns/{id}/approve', [PurchaseReturnController::class, 'approve'])->middleware('permission:purchase_return.approve')->name('purchase-return.approve');
-    Route::post('/purchase-returns/{id}/complete', [PurchaseReturnController::class, 'complete'])->middleware('permission:purchase_return.complete')->name('purchase-return.complete');
-    Route::delete('/purchase-returns/{id}', [PurchaseReturnController::class, 'destroy'])->middleware('permission:purchase_return.delete')->name('purchase-return.destroy');
+    Route::get('/purchase-returns', [PurchaseReturnController::class, 'index'])->name('purchase-returns.list');
+    Route::get('/purchase-returns/create', [PurchaseReturnController::class, 'create'])->name('purchase-returns.create');
+    Route::post('/purchase-returns', [PurchaseReturnController::class, 'store'])->name('purchase-returns.store');
+    Route::get('/purchase-returns/{id}', [PurchaseReturnController::class, 'show'])->name('purchase-returns.show');
+    Route::post('/purchase-returns/{id}/approve', [PurchaseReturnController::class, 'approve'])->name('purchase-returns.approve');
+    Route::post('/purchase-returns/{id}/complete', [PurchaseReturnController::class, 'complete'])->name('purchase-returns.complete');
+    Route::delete('/purchase-returns/{id}', [PurchaseReturnController::class, 'destroy'])->name('purchase-returns.destroy');
 
     Route::post('/switch-locale', [Controller::class, 'switchLocale'])->middleware('permission:locale.switch')->name('locale.switch');
 

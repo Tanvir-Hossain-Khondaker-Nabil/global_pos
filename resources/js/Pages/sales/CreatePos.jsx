@@ -558,7 +558,7 @@ export default function AddSale({
     // ---------------- Barcode Scanner ----------------
     const barcodeRef = useRef(null);
     const [scanError, setScanError] = useState("");
-    const [autoFocusScanner, setAutoFocusScanner] = useState(true);
+    const [autoFocusScanner, setAutoFocusScanner] = useState(false);
 
     useEffect(() => {
         if (!autoFocusScanner) return;
@@ -620,57 +620,53 @@ export default function AddSale({
         [scanIndex, addToCart]
     );
 
+    // FIXED: Barcode scanner - do NOT block typing in inputs
     const SCAN_TIMEOUT = 100;
     const barcodeRefNew = useRef("");
     const lastScanTimeRef = useRef(0);
 
     useEffect(() => {
         const handleKeydown = (e) => {
-            const isInputElement =
-                e.target.tagName === 'INPUT' ||
-                e.target.tagName === 'TEXTAREA' ||
-                e.target.tagName === 'SELECT';
+            const target = e.target;
+            const tag = target?.tagName;
 
-            if (isInputElement) {
-                return;
-            }
+            const isTypingField =
+                tag === "INPUT" ||
+                tag === "TEXTAREA" ||
+                tag === "SELECT" ||
+                target?.isContentEditable;
+
+            if (isTypingField) return;
+
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
 
             const now = Date.now();
 
-            if (
-                e.key === "Shift" ||
-                e.key === "Alt" ||
-                e.key === "Control" ||
-                e.key === "Tab" ||
-                e.key === "Escape" ||
-                e.key === "ArrowUp" ||
-                e.key === "ArrowDown" ||
-                e.key === "ArrowLeft" ||
-                e.key === "ArrowRight"
-            ) {
-                return;
-            }
-
             if (e.key === "Enter") {
                 if (barcodeRefNew.current.length > 0) {
+                    e.preventDefault();
                     handleBarcodeScan(barcodeRefNew.current);
                     barcodeRefNew.current = "";
                 }
                 return;
             }
 
-            if (now - lastScanTimeRef.current > SCAN_TIMEOUT) {
-                barcodeRefNew.current = e.key;
-            } else {
-                barcodeRefNew.current += e.key;
-            }
+            if (e.key.length === 1) {
+                if (now - lastScanTimeRef.current > SCAN_TIMEOUT) {
+                    barcodeRefNew.current = e.key;
+                } else {
+                    barcodeRefNew.current += e.key;
+                }
 
-            lastScanTimeRef.current = now;
+                lastScanTimeRef.current = now;
+            }
         };
 
-        window.addEventListener("keydown", handleKeydown);
+        window.addEventListener("keydown", handleKeydown, { passive: false });
         return () => window.removeEventListener("keydown", handleKeydown);
     }, [handleBarcodeScan]);
+
+
 
     // ---------------- Totals ----------------
     const subTotal = useMemo(() => cart.reduce((sum, i) => sum + n(i.total_price), 0), [cart]);
@@ -1777,50 +1773,50 @@ export default function AddSale({
                                             </div>
                                         </div>
 
-                                          {/* Installment Fields - Only show when status is installment */}
-                                {paymentStatus === 'installment' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                        {/* Total Installments */}
-                                        <div className="md:col-span-1">
-                                            <div className="form-control">
-                                                <label className="label py-0">
-                                                    <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
-                                                        Total Installments *
-                                                    </span>
-                                                </label>
+                                        {/* Installment Fields - Only show when status is installment */}
+                                        {paymentStatus === 'installment' && (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+                                                {/* Total Installments */}
+                                                <div className="md:col-span-1">
+                                                    <div className="form-control">
+                                                        <label className="label py-0">
+                                                            <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                                Total Installments *
+                                                            </span>
+                                                        </label>
 
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
-                                                    value={totalInstallments}
-                                                    onChange={handleTotalInstallmentsInput}
-                                                    onFocus={(e) => e.target.select()}
-                                                />
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                            value={totalInstallments}
+                                                            onChange={handleTotalInstallmentsInput}
+                                                            onFocus={(e) => e.target.select()}
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                {/* Installment Duration */}
+                                                <div className="md:col-span-1">
+                                                    <div className="form-control">
+                                                        <label className="label py-0">
+                                                            <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
+                                                                Duration (Months) *
+                                                            </span>
+                                                        </label>
+
+                                                        <input
+                                                            type="number"
+                                                            min="1"
+                                                            className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
+                                                            value={installmentDuration}
+                                                            onChange={handleInstallmentDurationInput}
+                                                            onFocus={(e) => e.target.select()}
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-
-                                        {/* Installment Duration */}
-                                        <div className="md:col-span-1">
-                                            <div className="form-control">
-                                                <label className="label py-0">
-                                                    <span className="label-text text-[10px] text-gray-500 uppercase font-bold tracking-widest">
-                                                        Duration (Months) *
-                                                    </span>
-                                                </label>
-
-                                                <input
-                                                    type="number"
-                                                    min="1"
-                                                    className="input input-bordered input-sm w-full bg-white border-gray-300 font-mono"
-                                                    value={installmentDuration}
-                                                    onChange={handleInstallmentDurationInput}
-                                                    onFocus={(e) => e.target.select()}
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                        )}
 
 
                                         {/* Summary */}

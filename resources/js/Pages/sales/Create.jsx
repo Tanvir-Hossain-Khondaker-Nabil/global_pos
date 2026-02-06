@@ -104,7 +104,7 @@ export default function AddSale({
     // BARCODE SCANNER
     const barcodeRef = useRef(null);
     const [scanError, setScanError] = useState("");
-    const [autoFocusScanner, setAutoFocusScanner] = useState(true);
+    const [autoFocusScanner, setAutoFocusScanner] = useState(false);
 
     const form = useForm({
         customer_id: "",
@@ -1094,53 +1094,61 @@ export default function AddSale({
         [scanIndex, handleProductSelect, buildVariantWithStocksFromStockRow]
     );
 
-    // FIXED: Barcode scanner - only intercept when not focused on input/textarea/select
+    // FIXED: Barcode scanner - do NOT block typing in inputs
     const SCAN_TIMEOUT = 100;
     const barcodeRefNew = useRef("");
     const lastScanTimeRef = useRef(0);
 
     useEffect(() => {
         const handleKeydown = (e) => {
-            // Check if user is typing in an input field
-            const isInputElement =
-                e.target.tagName === 'INPUT' ||
-                e.target.tagName === 'TEXTAREA' ||
-                e.target.tagName === 'SELECT';
+            // ✅ If user is typing in an input/textarea/select or contenteditable, NEVER interfere
+            const target = e.target;
+            const tag = target?.tagName;
 
-            // If user is typing in an input field, don't interfere
-            if (isInputElement) {
-                return;
-            }
+            const isTypingField =
+                tag === "INPUT" ||
+                tag === "TEXTAREA" ||
+                tag === "SELECT" ||
+                target?.isContentEditable;
+
+            if (isTypingField) return;
+
+            // ✅ ignore modifier shortcuts (Ctrl/Alt/Meta)
+            if (e.ctrlKey || e.altKey || e.metaKey) return;
 
             const now = Date.now();
 
-            // Handle Enter key (barcode end)
-            if (e.key === 'Enter') {
+            // ✅ Enter means "barcode finished"
+            if (e.key === "Enter") {
                 if (barcodeRefNew.current.length > 0) {
-                    console.log('Scanned code:', barcodeRefNew.current);
+                    e.preventDefault(); // only prevent default when we actually handle a scan
                     handleBarcodeScan(barcodeRefNew.current);
                     barcodeRefNew.current = "";
                 }
                 return;
             }
 
-            // Handle character keys only (skip special characters)
+            // ✅ only collect normal printable characters
             if (e.key.length === 1) {
+                // reset scan if too slow (normal typing)
                 if (now - lastScanTimeRef.current > SCAN_TIMEOUT) {
-                    // New scan starting
                     barcodeRefNew.current = e.key;
                 } else {
-                    // Continuing scan
                     barcodeRefNew.current += e.key;
                 }
 
                 lastScanTimeRef.current = now;
+
+                // ✅ IMPORTANT:
+                // Do NOT preventDefault here; otherwise page won't scroll / normal keys break.
+                // Most barcode scanners act like keyboard input; we only need preventDefault on Enter.
             }
         };
 
-        window.addEventListener('keydown', handleKeydown);
-        return () => window.removeEventListener('keydown', handleKeydown);
+        window.addEventListener("keydown", handleKeydown, { passive: false });
+        return () => window.removeEventListener("keydown", handleKeydown);
     }, [handleBarcodeScan]);
+
 
     // ✅ Auto-focus scanner input
     useEffect(() => {

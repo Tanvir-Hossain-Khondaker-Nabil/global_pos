@@ -123,7 +123,7 @@ const outletLoggedInMenu = [
   { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.items_view" },
 
   // Purchase Return
-  { title: "Purchase Return", icon: "receipt", route: "purchase-return.list", active: "purchase-return.list", category: "Purchase", permission: "purchase_return.view" },
+  { title: "Purchase Return", icon: "receipt", route: "purchase-returns.list", active: "purchase-returns.list", category: "Purchase", permission: "purchase_return.view" },
   { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", active: "purchase-return.create", category: "Purchase", permission: "purchase_return.create" },
 
   // Inventory
@@ -152,7 +152,6 @@ const outletLoggedInMenu = [
   { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments_view" },
 
   // Partners
-  { title: "Notifications", icon: "bell-ring", route: "notifications.index", active: "notifications.index", category: "Partners", permission: "notifications.view" },
   { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
 
   // CRM
@@ -315,7 +314,6 @@ export default function Sidebar({ status, setStatus }) {
       "Subscriptions Payments": t("auth.subscriptions_payments", "Subscriptions Payments"),
 
       // Partners
-      Notifications: t("auth.notifications", "Notifications"),
       Dealerships: t("auth.dealerships", "Dealerships"),
 
       // CRM
@@ -613,35 +611,6 @@ export default function Sidebar({ status, setStatus }) {
               </div>
             ))}
 
-            {/* CTA */}
-            {isLoggedIntoOutlet && !headerSettings && (
-              <div className="mt-4 p-3 bg-gradient-to-r from-blue-500/10 to-blue-600/10 backdrop-blur-sm border border-blue-500/20 rounded-xl">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0 backdrop-blur-sm">
-                    <Palette size={18} className="text-white" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-bold text-sm">
-                      {locale === "bn" ? "কাস্টমাইজ হেডার" : "Customize Header"}
-                    </p>
-                    <p className="text-white/70 text-xs">
-                      {locale === "bn"
-                        ? "আপনার ব্র্যান্ডের জন্য হেডার সেটিংস কনফিগার করুন"
-                        : "Configure header settings for your brand"}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-3">
-                  <Link
-                    href={route("headers.create")}
-                    className="inline-flex items-center justify-center w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg transition-all duration-200"
-                  >
-                    <Palette size={16} className="mr-2" />
-                    {locale === "bn" ? "হেডার তৈরি করুন" : "Create Header"}
-                  </Link>
-                </div>
-              </div>
-            )}
 
             {/* Overview message (non-super-admin only) */}
             {!isSuperAdmin && !isLoggedIntoOutlet && (

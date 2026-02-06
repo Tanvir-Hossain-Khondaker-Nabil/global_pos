@@ -106,8 +106,8 @@ const baseMenu = [
     {
         title: "Purchase Return",
         icon: <Receipt size={16} />,
-        route: route("purchase-return.list"),
-        active: "purchase-return.list",
+        route: route("purchase-returns.list"),
+        active: "purchase-returns.list",
         role: "all",
     },
     {
