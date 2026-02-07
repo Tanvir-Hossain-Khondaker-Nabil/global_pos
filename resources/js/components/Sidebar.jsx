@@ -124,7 +124,7 @@ const outletLoggedInMenu = [
 
   // Purchase Return
   { title: "Purchase Return", icon: "receipt", route: "purchase-returns.list", active: "purchase-returns.list", category: "Purchase", permission: "purchase_return.view" },
-  { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-return.create", active: "purchase-return.create", category: "Purchase", permission: "purchase_return.create" },
+  { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-returns.create", active: "purchase-returns.create", category: "Purchase", permission: "purchase_return.create" },
 
   // Inventory
   { title: "Damages List", icon: "alert-circle", route: "damages.index", active: "damages.index", category: "Inventory", permission: "damages.index" },

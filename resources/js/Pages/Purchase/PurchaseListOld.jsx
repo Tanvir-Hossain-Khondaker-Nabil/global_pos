@@ -79,7 +79,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser }) {
 
     // Add this function to handle Return button click
     const handleCreateReturn = (purchaseId) => {
-        router.visit(route('purchase-return.create', { purchase_id: purchaseId }));
+        router.visit(route('purchase-returns.create', { purchase_id: purchaseId }));
     };
 
     // ... rest of your existing Payment and Approve modal functions ...
