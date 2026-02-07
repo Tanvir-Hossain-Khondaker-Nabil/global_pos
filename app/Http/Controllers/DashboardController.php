@@ -23,6 +23,7 @@ class DashboardController extends Controller
 
         $payload = $this->buildDashboardPayload($range, $date);
 
+
         return inertia('Dashboard', $payload);
     }
 
@@ -31,6 +32,8 @@ class DashboardController extends Controller
         $date = $request->get('date');
 
         $payload = $this->buildDashboardPayload($range, $date);
+
+        
 
         return response()->json([
             'success' => true,

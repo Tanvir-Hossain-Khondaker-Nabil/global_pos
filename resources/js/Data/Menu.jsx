@@ -113,8 +113,8 @@ const baseMenu = [
     {
         title: "Add Purchase Return",
         icon: <ArrowRightLeft size={16} />,
-        route: route("purchase-return.create"),
-        active: "purchase-return.create",
+        route: route("purchase-returns.create"),
+        active: "purchase-returns.create",
         role: "all",
     },
     {
