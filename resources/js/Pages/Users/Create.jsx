@@ -1,44 +1,19 @@
-import React from "react";
-import { Head, Link, useForm } from "@inertiajs/react";
+import React, { useEffect } from "react";
+import PageHeader from "../../components/PageHeader";
+import { Link, useForm, usePage } from "@inertiajs/react";
+import { ArrowLeft as ArrowLeftIcon, Save as SaveIcon, Wallet } from "lucide-react";
+import { toast } from "react-toastify";
+import { useTranslation } from "../../hooks/useTranslation";
 
-// Icons
-const ArrowLeft = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="m12 19-7-7 7-7" />
-    <path d="M19 12H5" />
-  </svg>
-);
-const Save = (props) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    width="24"
-    height="24"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    {...props}
-  >
-    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-    <polyline points="17 21 17 13 7 13 7 21" />
-    <polyline points="7 3 7 8 15 8" />
-  </svg>
-);
+export default function Create({ user, roles, isEdit = false, outlets = [], outlet_exist }) {
+  const { flash } = usePage().props;
+  const { locale } = useTranslation();
 
-export default function Create({ user, roles, isEdit = false }) {
+  useEffect(() => {
+    if (flash?.error) toast.error(flash.error);
+    if (flash?.success) toast.success(flash.success);
+  }, [flash]);
+
   const { data, setData, errors, post, processing } = useForm({
     name: user?.name || "",
     email: user?.email || "",
@@ -47,6 +22,7 @@ export default function Create({ user, roles, isEdit = false }) {
     password: "",
     password_confirmation: "",
     roles: user?.roles || [],
+    outlet_id: user?.current_outlet_id || "", // Add outlet_id to form data
   });
 
   const handleRoleChange = (roleName, isChecked) => {
@@ -87,17 +63,13 @@ export default function Create({ user, roles, isEdit = false }) {
       ? "Saving..."
       : "Creating..."
     : isEdit
-    ? "Save Changes"
-    : "Create User";
+      ? "Save Changes"
+      : "Create User";
 
   const gradient = "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)";
 
   return (
     <>
-      <Head>
-        <title>{title}</title>
-      </Head>
-
       <div className="min-h-screen bg-slate-50 py-8 px-4">
         <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
           {/* Header */}
@@ -105,10 +77,14 @@ export default function Create({ user, roles, isEdit = false }) {
             className="mb-8 rounded-2xl p-6 sm:p-8 text-white shadow-sm border border-emerald-900/10"
             style={{ background: gradient }}
           >
-
             <div>
               <h1 className="text-3xl font-bold">{title}</h1>
               <p className="mt-2 text-white/80">{description}</p>
+              {outlet_exist && !isEdit && (
+                <p className="mt-2 text-sm text-white/60">
+                  Note: Since you have an active subscription, you must select an outlet for the new user.
+                </p>
+              )}
             </div>
           </div>
 
@@ -193,6 +169,67 @@ export default function Create({ user, roles, isEdit = false }) {
                         </p>
                       )}
                     </div>
+
+                    {/* Outlet Field - Conditionally rendered based on subscription status */}
+                    {outlet_exist && !isEdit ? (
+                      <div>
+                        <label
+                          htmlFor="outlet_id"
+                          className="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          Outlet <span className="text-red-600">*</span>
+                        </label>
+                        <select
+                          id="outlet_id"
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-4 focus:ring-emerald-200/60 focus:border-emerald-600 transition-all"
+                          value={data.outlet_id}
+                          onChange={(e) => setData("outlet_id", e.target.value)}
+                          required={outlet_exist && !isEdit}
+                        >
+                          <option value="">{locale === "bn" ? "সিলেক্ট করুন" : "Select an outlet"}</option>
+                          {outlets.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}{o.code ? ` (${o.code})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.outlet_id && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.outlet_id}
+                          </p>
+                        )}
+                        <p className="mt-1 text-sm text-gray-500">
+                          {locale === "bn" ? "সাবস্ক্রিপশন ইউজারের জন্য আবশ্যক" : "Required for subscription users"}
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <label
+                          htmlFor="outlet_id"
+                          className="block text-sm font-medium text-gray-700 mb-1"
+                        >
+                          {locale === "bn" ? "আউটলেট (ঐচ্ছিক)" : "Outlet (optional)"}
+                        </label>
+                        <select
+                          id="outlet_id"
+                          className="w-full border border-gray-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-4 focus:ring-emerald-200/60 focus:border-emerald-600 transition-all"
+                          value={data.outlet_id}
+                          onChange={(e) => setData("outlet_id", e.target.value)}
+                        >
+                          <option value="">{locale === "bn" ? "সব/খালি" : "None"}</option>
+                          {outlets.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}{o.code ? ` (${o.code})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {errors.outlet_id && (
+                          <p className="mt-1 text-sm text-red-600">
+                            {errors.outlet_id}
+                          </p>
+                        )}
+                      </div>
+                    )}
 
                     <div className="md:col-span-2">
                       <label
@@ -346,7 +383,7 @@ export default function Create({ user, roles, isEdit = false }) {
                     className="flex items-center gap-2 px-6 py-2.5 text-white font-medium rounded-xl hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow-md"
                     style={{ background: gradient }}
                   >
-                    <Save className="h-5 w-5" />
+                    <SaveIcon className="h-5 w-5" />
                     {submitText}
                   </button>
                 </div>
@@ -361,3 +398,5 @@ export default function Create({ user, roles, isEdit = false }) {
     </>
   );
 }
+
+// You can remove the SelectField component since we're using direct select elements now

@@ -4,12 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use Inertia\Inertia;
+use App\Models\Outlet;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -20,7 +21,8 @@ class UserController extends Controller
     private function ownerUser(): ?User
     {
         $auth = Auth::user();
-        if (!$auth) return null;
+        if (!$auth)
+            return null;
 
         return $auth->parent_id ? User::find($auth->parent_id) : $auth;
     }
@@ -50,7 +52,7 @@ class UserController extends Controller
             ->latest();
 
         // Always exclude Super Admin from list (safe)
-        $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'));
+        $query->whereDoesntHave('roles', fn($q) => $q->where('name', 'Super Admin'));
 
         // Condition: subscription
         if (!$hasSubscription) {
@@ -70,28 +72,28 @@ class UserController extends Controller
         // Role filter
         if ($request->filled('role')) {
             $role = $request->role;
-            $query->whereHas('roles', fn ($q) => $q->where('name', $role));
+            $query->whereHas('roles', fn($q) => $q->where('name', $role));
         }
 
         // Roles for dropdown
         $allRoles = Role::where('name', '!=', 'Super Admin')->pluck('name');
 
         // Statistics (same condition applied)
-        $statsQuery = User::query()->whereDoesntHave('roles', fn ($q) => $q->where('name', 'Super Admin'));
+        $statsQuery = User::query()->whereDoesntHave('roles', fn($q) => $q->where('name', 'Super Admin'));
         if (!$hasSubscription) {
             $statsQuery->where('created_by', $auth->id);
         }
 
         $totalUsers = (clone $statsQuery)->count();
-        $adminsCount = (clone $statsQuery)->whereHas('roles', fn ($q) => $q->where('name', 'admin'))->count();
+        $adminsCount = (clone $statsQuery)->whereHas('roles', fn($q) => $q->where('name', 'admin'))->count();
         $sellersCount = Role::where('name', 'seller')->exists()
-            ? (clone $statsQuery)->whereHas('roles', fn ($q) => $q->where('name', 'seller'))->count()
+            ? (clone $statsQuery)->whereHas('roles', fn($q) => $q->where('name', 'seller'))->count()
             : 0;
 
         return Inertia::render('Users/Index', [
             'filters' => $request->only(['search', 'role']),
             'users' => $query->paginate(10)->withQueryString()
-                ->through(fn ($user) => [
+                ->through(fn($user) => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
@@ -119,10 +121,22 @@ class UserController extends Controller
      */
     public function create()
     {
+        $user = Auth::user();
+        $activeSubsQuery = $user->subscriptions()
+            ->where('status', 1)
+            ->where('start_date', '<=', now())
+            ->where('end_date', '>=', now());
+
+        //  Option A: শুধু latest active subscription ধরবেন
+        $activeSub = (clone $activeSubsQuery)->latest('end_date')->first();
+        $outlet_exist = $activeSub->exists();
+
         return Inertia::render('Users/Create', [
+            'outlets' => Outlet::where('created_by', Auth::id())->select('id', 'name', 'code')->latest()->get(),
             'user' => null,
             'roles' => Role::where('name', '!=', 'Super Admin')->pluck('name'),
             'isEdit' => false,
+            'outlet_exist' => $outlet_exist,
         ]);
     }
 
@@ -149,15 +163,37 @@ class UserController extends Controller
         DB::beginTransaction();
         try {
             if ($hasSubscription) {
-                // ownerId() method থাকলে সেটা, না থাকলে fallback
+                // For subscription users, outlet is required when creating new staff
+                $request->validate([
+                    'outlet_id' => 'required|exists:outlets,id'
+                ]);
+
+                $requestedOutlet = $request->outlet_id;
+
+                // Check if user has permission to this outlet
+                $outlet = Outlet::where('user_id', $auth->id)
+                    ->where('id', $requestedOutlet)
+                    ->first();
+
+                if (!$outlet) {
+                    DB::rollBack();
+                    return back()->with('error', 'Outlet not found or you do not have permission to use this outlet.')->withInput();
+                }
+
+                // If creator is not logged into this outlet, log them in
+                if ($auth->current_outlet_id != $requestedOutlet) {
+                    $auth->update([
+                        'current_outlet_id' => $outlet->id,
+                        'outlet_logged_in_at' => now(),
+                    ]);
+
+                    // Refresh auth user
+                    Auth::setUser($auth->fresh());
+                }
+
                 $ownerId = method_exists($auth, 'ownerId')
                     ? $auth->ownerId()
                     : ($auth->parent_id ?? $auth->id);
-
-                if (!$auth->current_outlet_id) {
-                    DB::rollBack();
-                    return back()->with('error', 'Please login to an outlet first.')->withInput();
-                }
 
                 $user = User::create([
                     'name' => $request->name,
@@ -169,10 +205,11 @@ class UserController extends Controller
 
                     // ✅ staff binds to owner + outlet
                     'parent_id' => $ownerId,
-                    'current_outlet_id' => $auth->current_outlet_id,
+                    'current_outlet_id' => $requestedOutlet,
                     'type' => 'general',
                 ]);
             } else {
+                // No subscription - simple user creation (outlet is optional)
                 $user = User::create([
                     'name' => $request->name,
                     'email' => $request->email,
@@ -180,6 +217,7 @@ class UserController extends Controller
                     'address' => $request->address,
                     'created_by' => $auth->id,
                     'password' => Hash::make($request->password),
+                    'current_outlet_id' => $request->outlet_id, // Optional for non-subscription
                 ]);
             }
 
@@ -189,6 +227,7 @@ class UserController extends Controller
             return redirect()->route('userlist.view')->with('success', 'User created successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('User creation failed: ' . $e->getMessage());
             return back()->with('error', 'Failed to create user: ' . $e->getMessage())->withInput();
         }
     }

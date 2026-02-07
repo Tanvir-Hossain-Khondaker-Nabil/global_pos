@@ -133,9 +133,9 @@ class ProductController extends Controller
     public function index(Request $request)
     {
         $products = Product::latest()
-    ->with(['category', 'brand', 'variants', 'variants.stocks']) // ✅ stocks (many)
-    ->filter($request->only('search'))
-    ->paginate(10);
+            ->with(['category', 'brand', 'variants', 'variants.stocks']) // ✅ stocks (many)
+            ->filter($request->only('search'))
+            ->paginate(10);
 
         // Calculate stock for each product
         $products->getCollection()->transform(function ($product) {
@@ -165,8 +165,8 @@ class ProductController extends Controller
 
 
     /*
-    * add_index/ create method
-    */
+     * add_index/ create method
+     */
     public function add_index(Request $request)
     {
         $querystring = $request->only('id');
@@ -220,11 +220,11 @@ class ProductController extends Controller
         ]);
     }
 
-    
-    
+
+
     /*
-    * store/ update method
-    */ 
+     * store/ update method
+     */
     public function update(Request $request)
     {
         $isUpdate = !empty($request->id);
@@ -595,10 +595,10 @@ class ProductController extends Controller
     }
 
 
-    
+
     /*
-    * delete / destroy method
-    */
+     * delete / destroy method
+     */
     public function del($id)
     {
         DB::beginTransaction();
@@ -637,8 +637,8 @@ class ProductController extends Controller
 
 
     /*
-    * Get available units for a product
-    */
+     * Get available units for a product
+     */
     public function getAvailableUnits($productId)
     {
         try {

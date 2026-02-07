@@ -244,6 +244,9 @@ class DashboardController extends Controller
         // =========================
         // ✅ payload
         // =========================
+
+        
+
         $dashboardData = [
             'range' => $range,
             'customDate' => $date,
@@ -297,6 +300,8 @@ class DashboardController extends Controller
             'prevRangeTo' => $prevTo->toDateTimeString(),
             'labelMode' => $labelMode,
         ];
+
+        // dd($dashboardData);
 
         return [
             'dashboardData' => $dashboardData,
