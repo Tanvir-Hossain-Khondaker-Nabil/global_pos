@@ -452,7 +452,7 @@ export default function Sidebar({ status, setStatus }) {
       if (headerSettings.fav_icon.startsWith("storage/")) return `/${headerSettings.fav_icon}`;
       return `/storage/${headerSettings.fav_icon}`;
     }
-    return "https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png";
+    return "https://i.ibb.co.com/QFP2f7SW/output-onlinepngtools-14.png";
   };
 
   const getSidebarName = () => {
@@ -481,15 +481,15 @@ export default function Sidebar({ status, setStatus }) {
           {/* Header */}
           <div className="flex flex-col items-center justify-center mb-8">
             <div className="flex items-center gap-3">
-              <div className="bg-white p-1 rounded-xl shadow-lg">
+              <div className="p-1 rounded-xl">
                 <img
                   src={getFaviconUrl()}
-                  className="h-[80px]"
+                  className="h-[70px]"
                   alt="Logo"
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.src =
-                      "https://i.ibb.co.com/6RF2dH2H/Chat-GPT-Image-Jan-14-2026-11-51-18-AM-1.png";
+                      "https://i.ibb.co.com/QFP2f7SW/output-onlinepngtools-14.png";
                   }}
                 />
               </div>

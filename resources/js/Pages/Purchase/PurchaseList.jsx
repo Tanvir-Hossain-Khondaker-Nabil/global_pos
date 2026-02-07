@@ -453,13 +453,12 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         display:grid;
         grid-template-columns: repeat(auto-fill, ${Number(labelWidthMm)}mm);
         gap:${Number(gapMm)}mm;
-        align-content:start;
       }
 
       .label {
         width:${Number(labelWidthMm)}mm;
         height:${Number(labelHeightMm)}mm;
-        padding:7px 8px;
+        padding:7px 0px;
         border-radius:12px;
         background:#fff;
         border: 1px solid #e5e7eb;
