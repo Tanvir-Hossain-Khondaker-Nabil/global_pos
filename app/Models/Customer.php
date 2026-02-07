@@ -26,6 +26,8 @@ class Customer extends Model
 
     use BelongsToTenant;
 
+    const IS_ACTIVE = 1;
+
 
     public function scopeFilter($query, array $filters)
     {

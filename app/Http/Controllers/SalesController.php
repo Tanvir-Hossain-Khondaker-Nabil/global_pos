@@ -461,12 +461,36 @@ class SalesController extends Controller
             // -------------------------
             $customerId = null;
 
+
             if (
                 !$request->filled('customer_id') &&
                 !$request->filled('customer_name') &&
                 !$request->filled('phone')
             ) {
-                $customerId = Customer::where('phone', '100100100')->first()->id ?? 1;
+                $customer = Customer::where('phone', '100100100')
+                ->where('is_active', Customer::IS_ACTIVE)
+                ->where('created_by', Auth::id())
+                ->where('outlet_id', Auth::user()->current_outlet_id)
+                ->first() ;
+
+                if($customer)
+                {
+                   $customerId =   $customer->id;
+                } else
+                {
+                    $customer = Customer::create([
+                        'customer_name' => 'Walk-In-Customer',
+                        'phone' => '100100100',
+                        'advance_amount' => 0,
+                        'due_amount' => 0,
+                        'is_active' => 1,
+                        'created_by' => Auth::id(),
+                        'outlet_id' => Auth::user()->current_outlet_id
+                    ]);
+
+                    $customerId = $customer->id;
+                }
+
             } elseif (!empty($request->customer_id)) {
                 $customerId = (int) $request->customer_id;
             } else {
