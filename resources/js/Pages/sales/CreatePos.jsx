@@ -1363,8 +1363,8 @@ export default function AddSale({
                                                                             type="number"
                                                                             value={unitQuantity}
                                                                             onChange={(e) => changeQty(i.key, Number(e.target.value))}
-                                                                            step={i.is_fraction_allowed ? "0.001" : "1"}
-                                                                            min="0.001"
+                                                                            // step={i.is_fraction_allowed ? "0.001" : "1"}
+                                                                            // min="0.001"
                                                                         />
 
                                                                         <button
