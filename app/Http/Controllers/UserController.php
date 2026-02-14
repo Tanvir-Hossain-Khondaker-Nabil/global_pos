@@ -121,24 +121,30 @@ class UserController extends Controller
      */
     public function create()
     {
-        $user = Auth::user();
+        $user = User::findOrFail(Auth::id());
+
         $activeSubsQuery = $user->subscriptions()
             ->where('status', 1)
             ->where('start_date', '<=', now())
             ->where('end_date', '>=', now());
 
-        //  Option A: শুধু latest active subscription ধরবেন
         $activeSub = (clone $activeSubsQuery)->latest('end_date')->first();
-        $outlet_exist = $activeSub->exists();
+        $outlet_exist = !is_null($activeSub);
+
+        // dd($activeSub, $outlet_exist);
 
         return Inertia::render('Users/Create', [
-            'outlets' => Outlet::where('created_by', Auth::id())->select('id', 'name', 'code')->latest()->get(),
+            'outlets' => Outlet::where('created_by', Auth::id())
+                ->select('id', 'name', 'code')
+                ->latest()
+                ->get(),
             'user' => null,
             'roles' => Role::where('name', '!=', 'Super Admin')->pluck('name'),
             'isEdit' => false,
             'outlet_exist' => $outlet_exist,
         ]);
     }
+
 
     /**
      * Store a newly created resource in storage.

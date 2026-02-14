@@ -307,9 +307,9 @@ class ProductController extends Controller
         if ($request->product_type === 'in_house') {
             $rules = array_merge($rules, [
                 'in_house_cost' => 'required|numeric|min:0',
-                'in_house_shadow_cost' => 'required|numeric|min:0',
+                'in_house_shadow_cost' => 'nullable|numeric|min:0',
                 'in_house_sale_price' => 'required|numeric|min:0',
-                'in_house_shadow_sale_price' => 'required|numeric|min:0',
+                'in_house_shadow_sale_price' => 'nullable|numeric|min:0',
                 'in_house_initial_stock' => 'required|integer|min:0',
             ]);
         }
@@ -391,10 +391,10 @@ class ProductController extends Controller
             // In-house settings
             if ($request->product_type === 'in_house') {
                 $product->in_house_cost = $request->in_house_cost;
-                $product->in_house_shadow_cost = $request->in_house_shadow_cost;
-                $product->in_house_sale_price = $request->in_house_sale_price;
-                $product->in_house_shadow_sale_price = $request->in_house_shadow_sale_price;
-                $product->in_house_initial_stock = $request->in_house_initial_stock;
+                $product->in_house_shadow_cost = $request->in_house_shadow_cost ?? 0;
+                $product->in_house_sale_price = $request->in_house_sale_price ?? 0;
+                $product->in_house_shadow_sale_price = $request->in_house_shadow_sale_price ?? 0;
+                $product->in_house_initial_stock = $request->in_house_initial_stock ?? 0;
             } else {
                 $product->in_house_cost = null;
                 $product->in_house_shadow_cost = null;

@@ -120,7 +120,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
 
         // Submit using Inertia's post method
         router.post(
-            update ? route("product.update.post") : route("product.add.post"),
+            update ? route("product.add.post") : route("product.add.post"),
             formData,
             {
                 preserveScroll: true,
@@ -338,8 +338,8 @@ export default function AddProduct({ category, update, brand, attributes, errors
                             </div>
                             <div className="p-5 grid grid-cols-2 gap-4">
                                 {[
-                                    { k: 'in_house_cost', l: 'Cost' }, { k: 'in_house_shadow_cost', l: 'Shadow Cost' },
-                                    { k: 'in_house_sale_price', l: 'Price' }, { k: 'in_house_shadow_sale_price', l: 'Shadow Price' }
+                                    { k: 'in_house_cost', l: 'Cost' },
+                                    { k: 'in_house_sale_price', l: 'Price' }
                                 ].map(field => (
                                     <div key={field.k} className="form-control">
                                         <label className="label py-0"><span className="label-text text-[10px] font-black text-slate-400 uppercase">{t(field.l)}</span></label>

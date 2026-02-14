@@ -80,9 +80,9 @@ export default function AddSale({
 
     // Tax/Discount/Shipping
     const [taxRate, setTaxRate] = useState(0);
-    const [discountValue, setDiscountValue] = useState(0);
-    const [shippingValue, setShippingValue] = useState(0);
+    const [discountValue, setDiscountValue] = useState(null);
 
+    console.log(discountValue);
     // Pickup state
     const [pickupItems, setPickupItems] = useState([]);
     const [showPickupModal, setShowPickupModal] = useState(false);
@@ -677,8 +677,8 @@ export default function AddSale({
     const totalSubTotal = useMemo(() => subTotal + pickupSubTotal, [subTotal, pickupSubTotal]);
     const taxAmount = useMemo(() => (totalSubTotal * n(taxRate)) / 100, [totalSubTotal, taxRate]);
     const grandTotal = useMemo(
-        () => totalSubTotal + taxAmount - n(discountValue) + n(shippingValue),
-        [totalSubTotal, taxAmount, discountValue, shippingValue]
+        () => totalSubTotal + taxAmount - n(discountValue),
+        [totalSubTotal, taxAmount, discountValue]
     );
 
     useEffect(() => {
@@ -750,6 +750,7 @@ export default function AddSale({
         adjust_from_advance: false,
         advance_adjustment: 0,
         payment_status: "unpaid",
+        discount_type: 'flat_discount',
     });
 
     useEffect(() => {
@@ -1515,7 +1516,7 @@ export default function AddSale({
                                             </div>
                                         </div>
 
-                                        <div className="form-control">
+                                        {/* <div className="form-control">
                                             <label className="label py-1">
                                                 <span className="label-text text-xs flex items-center gap-1">
                                                     <Truck size={10} /> Shipping
@@ -1530,7 +1531,7 @@ export default function AddSale({
                                                 min="0"
                                                 step="0.01"
                                             />
-                                        </div>
+                                        </div> */}
 
                                         <div className="mt-3 pt-3 border-t">
                                             <div className="flex justify-between items-center text-lg font-bold">

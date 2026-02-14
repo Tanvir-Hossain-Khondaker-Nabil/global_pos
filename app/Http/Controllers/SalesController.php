@@ -352,6 +352,7 @@ class SalesController extends Controller
      */
     private function storeManage(Request $request, string $type): Sale
     {
+
         // -------------------------
         //  Rules (fixed order)
         // -------------------------
@@ -423,10 +424,12 @@ class SalesController extends Controller
         $discountType = $request->input('discount_type');
         $discount = 0;
 
-        if ($discountType == 'percentage') {
-            $discount = (float) ($request->discount_rate ?? 0);
-        } elseif ($discountType == 'flat') {
+
+        if ($discountType == 'flat_discount') {
             $discount = (float) ($request->flat_discount ?? 0);
+        } else
+        {
+            $discount = (float) ($request->discount_rate ?? 0);
         }
 
         DB::beginTransaction();
@@ -439,7 +442,7 @@ class SalesController extends Controller
             $regular_items = $request->items ?? [];
 
             // -------------------------
-            // ✅ Validate account if paid
+            //  Validate account if paid
             // -------------------------
             $account = null;
             $account_id = null;
@@ -457,7 +460,7 @@ class SalesController extends Controller
             }
 
             // -------------------------
-            // ✅ Determine customerId (same logic)
+            //  Determine customerId (same logic)
             // -------------------------
             $customerId = null;
 
@@ -774,11 +777,15 @@ class SalesController extends Controller
             $totalSubTotal = $regularSubTotal;
 
             // if percentage discount => amount = subtotal * discount/100
-            $totalDiscountAmount = $totalSubTotal * ($discount ?? 0) / 100;
+            // if ($discountType == 'percentage') {
+            //     $totalDiscountAmount = $totalSubTotal * ($discount ?? 0) / 100;
+            // } else{
+            //     $totalDiscountAmount = $discount ?? 0;
+            // }
 
             $totalVatAmount = $totalSubTotal * ((float) ($request->vat_rate ?? 0)) / 100;
 
-            $grandTotal = $totalSubTotal - $totalDiscountAmount + $totalVatAmount;
+            // $grandTotal = $totalSubTotal - $totalDiscountAmount + $totalVatAmount;
 
             $shadowGrandTotal = $shadowSubTotal + $pickupSaleTotal;
             if ($shadowGrandTotal > 0) {
@@ -789,7 +796,7 @@ class SalesController extends Controller
             // Update sale with calculated totals
             $sale->update([
                 'sub_total' => $totalSubTotal,
-                'grand_total' => $grandTotal,
+                // 'grand_total' => $grandTotal,
 
                 'shadow_sub_total' => $shadowSubTotal + $pickupSaleTotal,
                 'shadow_grand_total' => $shadowGrandTotal,
