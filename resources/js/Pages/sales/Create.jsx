@@ -26,6 +26,7 @@ import {
     Ruler,
     AlertCircle,
     Calculator,
+    RotateCcw,
 } from "lucide-react";
 
 export default function AddSale({
@@ -82,6 +83,8 @@ export default function AddSale({
     const [productDetails, setProductDetails] = useState({});
     const [stockDetails, setStockDetails] = useState({});
     const [basePrices, setBasePrices] = useState({});
+    // Track if price was manually edited
+    const [priceManuallyEdited, setPriceManuallyEdited] = useState({});
 
     // Installment payment state
     const [installmentDuration, setInstallmentDuration] = useState(0);
@@ -157,7 +160,6 @@ export default function AddSale({
 
         if (!conversions) return [product.default_unit || "piece"];
 
-        // Purchase unit থেকে smaller বা equal unit গুলো খুঁজে বের করি
         const purchaseUnit = stock?.unit || product.default_unit || "piece";
         const purchaseFactor = conversions[purchaseUnit] || 1;
 
@@ -187,7 +189,7 @@ export default function AddSale({
         };
     };
 
-    // ✅ UPDATED: Base unit এ convert করা
+    // Base unit এ convert করা
     const convertToBase = (quantity, fromUnit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[fromUnit]) return quantity;
@@ -195,7 +197,7 @@ export default function AddSale({
         return quantity * conversions[fromUnit];
     };
 
-    // ✅ UPDATED: Base unit থেকে নির্দিষ্ট unit এ convert করা
+    // Base unit থেকে নির্দিষ্ট unit এ convert করা
     const convertFromBase = (quantity, toUnit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[toUnit]) return quantity;
@@ -204,7 +206,7 @@ export default function AddSale({
         return conversion !== 0 ? quantity / conversion : quantity;
     };
 
-    // ✅ UPDATED: Unit থেকে unit এ convert করা
+    // Unit থেকে unit এ convert করা
     const convertUnitQuantity = (quantity, fromUnit, toUnit, unitType) => {
         if (fromUnit === toUnit) return quantity;
 
@@ -216,7 +218,7 @@ export default function AddSale({
         return baseQuantity / conversions[toUnit];
     };
 
-    // ✅ UPDATED: Auto Price Calculator - Unit change হলে price auto calculate হবে
+    // Auto Price Calculator - Unit change হলে price auto calculate হবে
     const calculatePriceForUnit = (basePricePerBaseUnit, targetUnit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
@@ -225,7 +227,7 @@ export default function AddSale({
         return basePricePerBaseUnit * conversions[targetUnit];
     };
 
-    // ✅ NEW: Calculate base price per base unit (সবচেয়ে ছোট unit)
+    // Calculate base price per base unit (সবচেয়ে ছোট unit)
     const calculateBasePricePerBaseUnit = (price, unit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[unit]) return price;
@@ -310,7 +312,7 @@ export default function AddSale({
     }, [productstocks]);
 
     // ============================
-    // ✅ BARCODE INDEX (Batch -> Stock, SKU -> Stock, Code -> Product)
+    // BARCODE INDEX (Batch -> Stock, SKU -> Stock, Code -> Product)
     // ============================
     const scanIndex = useMemo(() => {
         const batchMap = new Map();
@@ -468,10 +470,6 @@ export default function AddSale({
         const value = parseFloat(e.target.value) || 0;
         const grandTotal = calculateGrandTotal();
         setPaidAmount(value);
-
-        // if (value === 0) setPaymentStatus("unpaid");
-        // else if (value >= grandTotal) setPaymentStatus("paid");
-        // else setPaymentStatus("partial");
     };
 
     const handleTotalInstallmentsInput = (e) => {
@@ -661,7 +659,7 @@ export default function AddSale({
     };
 
     // ============================================
-    // ✅ Helper: stockRow -> variantWithStocks (for barcode)
+    // Helper: stockRow -> variantWithStocks (for barcode)
     // ============================================
     function buildVariantWithStocksFromStockRow(stockRow) {
         if (!stockRow?.product || !stockRow?.variant) return null;
@@ -697,7 +695,7 @@ export default function AddSale({
     }
 
     // ============================================
-    // ✅ IMPORTANT: handleVariantSelect MUST be defined BEFORE barcode handlers
+    // UPDATED: handleVariantSelect with editable price support
     // ============================================
     function handleVariantSelect(variantWithStocks) {
         const {
@@ -820,7 +818,7 @@ export default function AddSale({
             );
             setUnitQuantities((prev) => ({ ...prev, [itemKey]: newQuantity }));
         } else {
-            // Add new item
+            // Add new item with editable price support
             const newItem = {
                 uniqueKey: itemKey,
                 product_id: product.id,
@@ -867,6 +865,8 @@ export default function AddSale({
                 ...prev,
                 [itemKey]: basePricePerBaseUnit,
             }));
+            // Initialize price manually edited flag as false
+            setPriceManuallyEdited((prev) => ({ ...prev, [itemKey]: false }));
         }
 
         resetSelectionFlow();
@@ -884,7 +884,9 @@ export default function AddSale({
         setSelectedVariantForBatch(null);
     };
 
-    // ✅ UPDATED: Handle unit change with auto price calculation
+    // ============================================
+    // UPDATED: Handle unit change with price preservation
+    // ============================================
     const handleUnitChange = (itemKey, newUnit) => {
         const itemIndex = selectedItems.findIndex(
             (item) => item.uniqueKey === itemKey
@@ -937,17 +939,21 @@ export default function AddSale({
             }
         }
 
-        // ✅ AUTO CALCULATE NEW PRICE BASED ON BASE PRICE
+        // Calculate new price based on whether it was manually edited
         let newPrice = item.unit_price;
-
-        if (item.product_unit_type && item.product_unit_type !== "piece") {
-            // Calculate price in new unit based on base price per base unit
-            newPrice = calculatePriceForUnit(
-                item.base_price_per_base_unit, // Base unit price
-                newUnit, // New sale unit
-                item.product_unit_type
-            );
+        
+        // Only auto-calculate if price wasn't manually edited
+        if (!priceManuallyEdited[itemKey]) {
+            if (item.product_unit_type && item.product_unit_type !== "piece") {
+                // Auto-calculate based on base price
+                newPrice = calculatePriceForUnit(
+                    item.base_price_per_base_unit,
+                    newUnit,
+                    item.product_unit_type
+                );
+            }
         }
+        // Otherwise keep the manually set price
 
         // Update item
         const updatedItems = [...selectedItems];
@@ -956,7 +962,7 @@ export default function AddSale({
             unit: newUnit,
             unit_quantity: newQuantity,
             quantity: newQuantity,
-            unit_price: newPrice, // Auto-calculated price
+            unit_price: newPrice,
             sell_price: newPrice,
             total_price: newQuantity * newPrice,
         };
@@ -966,34 +972,9 @@ export default function AddSale({
         setUnitQuantities((prev) => ({ ...prev, [itemKey]: newQuantity }));
     };
 
-    const removeItem = (index) => {
-        const updated = [...selectedItems];
-        const itemKey = updated[index].uniqueKey;
-
-        // Clean up unit states
-        const newSelectedUnits = { ...selectedUnits };
-        const newUnitQuantities = { ...unitQuantities };
-        const newAvailableUnits = { ...availableUnits };
-        const newStockDetails = { ...stockDetails };
-        const newBasePrices = { ...basePrices };
-
-        delete newSelectedUnits[itemKey];
-        delete newUnitQuantities[itemKey];
-        delete newAvailableUnits[itemKey];
-        delete newStockDetails[itemKey];
-        delete newBasePrices[itemKey];
-
-        setSelectedUnits(newSelectedUnits);
-        setUnitQuantities(newUnitQuantities);
-        setAvailableUnits(newAvailableUnits);
-        setStockDetails(newStockDetails);
-        setBasePrices(newBasePrices);
-
-        updated.splice(index, 1);
-        setSelectedItems(updated);
-    };
-
-    // ✅ UPDATED: Make unit_price read-only, only quantity can be changed
+    // ============================================
+    // UPDATED: Update item with editable price support
+    // ============================================
     const updateItem = (index, field, value) => {
         const updated = [...selectedItems];
         const item = updated[index];
@@ -1038,20 +1019,103 @@ export default function AddSale({
             updated[index].quantity = numValue;
             setUnitQuantities((prev) => ({ ...prev, [itemKey]: numValue }));
 
-            // Recalculate total price with auto-calculated unit price
+            // Recalculate total price with the current unit price
             updated[index].total_price = numValue * updated[index].unit_price;
-        } else if (field === "unit_price" || field === "sell_price") {
-            alert(
-                "Unit price is auto-calculated based on unit selection. Change the unit to change the price."
-            );
-            return;
+        } 
+        // ✅ ALLOW EDITING UNIT PRICE
+        else if (field === "unit_price" || field === "sell_price") {
+            const numValue = parseFloat(value) || 0;
+            
+            if (numValue < 0) {
+                alert("Unit price cannot be negative");
+                return;
+            }
+            
+            updated[index].unit_price = numValue;
+            updated[index].sell_price = numValue;
+            
+            // Recalculate total price with new unit price
+            updated[index].total_price = updated[index].quantity * numValue;
+            
+            // Mark as manually edited
+            setPriceManuallyEdited((prev) => ({ ...prev, [itemKey]: true }));
+            
+            // Update base price per base unit for future unit changes
+            if (item.product_unit_type && item.product_unit_type !== "piece") {
+                const newBasePricePerBaseUnit = calculateBasePricePerBaseUnit(
+                    numValue,
+                    item.unit,
+                    item.product_unit_type
+                );
+                updated[index].base_price_per_base_unit = newBasePricePerBaseUnit;
+                setBasePrices((prev) => ({ ...prev, [itemKey]: newBasePricePerBaseUnit }));
+            }
         }
 
         setSelectedItems(updated);
     };
 
     // ============================================
-    // ✅ BARCODE SCAN HANDLERS (Batch No first)
+    // NEW: Reset price to auto-calculated value
+    // ============================================
+    const resetToAutoPrice = (itemKey) => {
+        const itemIndex = selectedItems.findIndex(
+            (item) => item.uniqueKey === itemKey
+        );
+        if (itemIndex === -1) return;
+
+        const item = selectedItems[itemIndex];
+        
+        if (!item.product_unit_type || item.product_unit_type === "piece") {
+            // For piece items, reset to original sale price
+            const newPrice = item.original_sale_price;
+            updateItem(itemIndex, "unit_price", newPrice);
+        } else {
+            // For unit items, calculate based on base price
+            const autoPrice = calculatePriceForUnit(
+                item.base_price_per_base_unit,
+                item.unit,
+                item.product_unit_type
+            );
+            updateItem(itemIndex, "unit_price", autoPrice);
+        }
+        
+        // Mark as not manually edited
+        setPriceManuallyEdited((prev) => ({ ...prev, [itemKey]: false }));
+    };
+
+    const removeItem = (index) => {
+        const updated = [...selectedItems];
+        const itemKey = updated[index].uniqueKey;
+
+        // Clean up unit states
+        const newSelectedUnits = { ...selectedUnits };
+        const newUnitQuantities = { ...unitQuantities };
+        const newAvailableUnits = { ...availableUnits };
+        const newStockDetails = { ...stockDetails };
+        const newBasePrices = { ...basePrices };
+        const newPriceManuallyEdited = { ...priceManuallyEdited };
+
+        delete newSelectedUnits[itemKey];
+        delete newUnitQuantities[itemKey];
+        delete newAvailableUnits[itemKey];
+        delete newStockDetails[itemKey];
+        delete newBasePrices[itemKey];
+        delete newPriceManuallyEdited[itemKey];
+
+        setSelectedUnits(newSelectedUnits);
+        setUnitQuantities(newUnitQuantities);
+        setAvailableUnits(newAvailableUnits);
+        setStockDetails(newStockDetails);
+        setBasePrices(newBasePrices);
+        setPriceManuallyEdited(newPriceManuallyEdited);
+
+        updated.splice(index, 1);
+        setSelectedItems(updated);
+    };
+
+    // ============================================
+    // BARCODE SCAN HANDLERS (Batch No first)
     // ============================================
     const handleBarcodeScan = useCallback(
         (raw) => {
@@ -1060,7 +1124,7 @@ export default function AddSale({
 
             setScanError("");
 
-            // 1) ✅ Batch No
+            // 1) Batch No
             const batchStock = scanIndex.batchMap.get(code);
             if (batchStock) {
                 const vws = buildVariantWithStocksFromStockRow(batchStock);
@@ -1070,7 +1134,7 @@ export default function AddSale({
                 }
             }
 
-            // 2) ✅ SKU
+            // 2) SKU
             const skuStock = scanIndex.skuMap.get(code);
             if (skuStock) {
                 const vws = buildVariantWithStocksFromStockRow(skuStock);
@@ -1080,7 +1144,7 @@ export default function AddSale({
                 }
             }
 
-            // 3) ✅ Product Code -> open selection flow
+            // 3) Product Code -> open selection flow
             const product = scanIndex.productCodeMap.get(code);
             if (product) {
                 setProductSearch(product.name);
@@ -1101,7 +1165,7 @@ export default function AddSale({
 
     useEffect(() => {
         const handleKeydown = (e) => {
-            // ✅ If user is typing in an input/textarea/select or contenteditable, NEVER interfere
+            // If user is typing in an input/textarea/select or contenteditable, NEVER interfere
             const target = e.target;
             const tag = target?.tagName;
 
@@ -1113,12 +1177,12 @@ export default function AddSale({
 
             if (isTypingField) return;
 
-            // ✅ ignore modifier shortcuts (Ctrl/Alt/Meta)
+            // ignore modifier shortcuts (Ctrl/Alt/Meta)
             if (e.ctrlKey || e.altKey || e.metaKey) return;
 
             const now = Date.now();
 
-            // ✅ Enter means "barcode finished"
+            // Enter means "barcode finished"
             if (e.key === "Enter") {
                 if (barcodeRefNew.current.length > 0) {
                     e.preventDefault(); // only prevent default when we actually handle a scan
@@ -1128,7 +1192,7 @@ export default function AddSale({
                 return;
             }
 
-            // ✅ only collect normal printable characters
+            // only collect normal printable characters
             if (e.key.length === 1) {
                 // reset scan if too slow (normal typing)
                 if (now - lastScanTimeRef.current > SCAN_TIMEOUT) {
@@ -1138,10 +1202,6 @@ export default function AddSale({
                 }
 
                 lastScanTimeRef.current = now;
-
-                // ✅ IMPORTANT:
-                // Do NOT preventDefault here; otherwise page won't scroll / normal keys break.
-                // Most barcode scanners act like keyboard input; we only need preventDefault on Enter.
             }
         };
 
@@ -1149,8 +1209,7 @@ export default function AddSale({
         return () => window.removeEventListener("keydown", handleKeydown);
     }, [handleBarcodeScan]);
 
-
-    // ✅ Auto-focus scanner input
+    // Auto-focus scanner input
     useEffect(() => {
         if (!autoFocusScanner) return;
         const t = setTimeout(() => barcodeRef.current?.focus(), 200);
@@ -1182,11 +1241,8 @@ export default function AddSale({
             product_no: pickupProductNo,
             pickup_product_id: pickupProductId,
             pickup_supplier_id: pickupSupplierId,
-
-            // ✅ These are the important fields
             variant_id: pickupVariantId,
             variant_name: variantObj?.sku || `Variant#${pickupVariantId}`,
-
             brand: pickupBrand,
             variant: pickupVariant,
             quantity: Number(pickupQuantity),
@@ -1202,7 +1258,6 @@ export default function AddSale({
         setPickupProductId("");
         setPickupVariants([]);
         setPickupVariantId("");
-
         setPickupBrand("");
         setPickupVariant("");
         setPickupQuantity(1);
@@ -1422,7 +1477,6 @@ export default function AddSale({
         }
 
         form.post(route("sales.store"), {
-            // onSuccess: () => router.visit(route("sales.index")),
             onError: (errors) => {
                 console.error(errors);
                 alert(errors.error || "Failed to create sale. Please check the form data.");
@@ -2018,6 +2072,7 @@ export default function AddSale({
                                         const availableUnitsList = availableUnits[item.uniqueKey] || [item.unit || "piece"];
                                         const selectedUnit = selectedUnits[item.uniqueKey] || item.unit || "piece";
                                         const unitQuantity = unitQuantities[item.uniqueKey] || item.unit_quantity || 1;
+                                        const isManuallyEdited = priceManuallyEdited[item.uniqueKey] || false;
 
                                         return (
                                             <div key={itemKey} className="border border-gray-300 rounded-box p-4">
@@ -2068,7 +2123,7 @@ export default function AddSale({
                                                         <span className="text-sm font-bold text-gray-700">Sale Unit Settings</span>
                                                         <div className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                                             <Calculator size={10} className="inline mr-1" />
-                                                            Auto Price Calculation
+                                                            {isManuallyEdited ? "Manual Price" : "Auto Price"}
                                                         </div>
                                                     </div>
 
@@ -2082,26 +2137,19 @@ export default function AddSale({
                                                             </label>
                                                             <select
                                                                 className="select select-bordered select-sm"
-                                                                value={
-                                                                    selectedUnit
-                                                                }
+                                                                value={selectedUnit}
                                                                 onChange={(e) =>
                                                                     handleUnitChange(
                                                                         item.uniqueKey,
-                                                                        e.target
-                                                                            .value
+                                                                        e.target.value
                                                                     )
                                                                 }
                                                             >
                                                                 {availableUnitsList.map(
                                                                     (unit) => (
                                                                         <option
-                                                                            key={
-                                                                                unit
-                                                                            }
-                                                                            value={
-                                                                                unit
-                                                                            }
+                                                                            key={unit}
+                                                                            value={unit}
                                                                         >
                                                                             {unit.toUpperCase()}
                                                                         </option>
@@ -2124,69 +2172,69 @@ export default function AddSale({
                                                             <input
                                                                 type="number"
                                                                 className="input input-bordered input-sm"
-                                                                value={
-                                                                    unitQuantity
-                                                                }
+                                                                value={unitQuantity}
                                                                 onChange={(e) =>
                                                                     updateItem(
                                                                         index,
                                                                         "unit_quantity",
-                                                                        e.target
-                                                                            .value
+                                                                        e.target.value
                                                                     )
                                                                 }
                                                                 required
                                                                 onFocus={(e) => e.target.select()}
                                                             />
                                                             <div className="text-xs text-gray-500 mt-1">
-                                                                In{" "}
-                                                                {selectedUnit.toUpperCase()}
+                                                                In {selectedUnit.toUpperCase()}
                                                             </div>
                                                         </div>
 
-                                                        {/* Unit Price - READ ONLY & AUTO-CALCULATED */}
+                                                        {/* Unit Price - NOW EDITABLE */}
                                                         <div className="form-control">
                                                             <label className="label">
                                                                 <span className="label-text">
-                                                                    Unit Price
-                                                                    (৳) *
+                                                                    Unit Price(৳) *
                                                                 </span>
                                                             </label>
                                                             <div className="relative">
                                                                 <input
                                                                     type="number"
-                                                                    step="0.01"
-                                                                    className="input input-bordered input-sm bg-gray-100 w-full pr-10"
-                                                                    value={formatCurrency(
-                                                                        item.unit_price
-                                                                    )}
-                                                                    readOnly
+                                                                    // step="0.01"
+                                                                    className="input input-bordered input-sm w-full pr-10"
+                                                                    value={item.unit_price}
+                                                                    onChange={(e) => updateItem(index, "unit_price", e.target.value)}
                                                                     onFocus={(e) => e.target.select()}
                                                                 />
                                                                 <div className="absolute right-3 top-2.5 text-gray-500">
-                                                                    <Calculator
-                                                                        size={
-                                                                            14
-                                                                        }
-                                                                    />
+                                                                    <Calculator size={14} />
                                                                 </div>
                                                             </div>
                                                             <div className="text-xs text-gray-500 mt-1">
-                                                                Per{" "}
-                                                                {selectedUnit.toUpperCase()}{" "}
-                                                                (auto)
+                                                                Per {selectedUnit.toUpperCase()}
+                                                                <span className="text-blue-600 ml-1">
+                                                                    {isManuallyEdited ? "(manual)" : "(auto)"}
+                                                                </span>
                                                             </div>
+                                                            
+                                                            {/* Reset to auto price button - only show if manually edited */}
+                                                            {isManuallyEdited && item.product_unit_type && item.product_unit_type !== "piece" && (
+                                                                <button
+                                                                    type="button"
+                                                                    className="btn btn-xs btn-ghost text-blue-600 mt-1 flex items-center gap-1"
+                                                                    onClick={() => resetToAutoPrice(item.uniqueKey)}
+                                                                >
+                                                                    <RotateCcw size={10} />
+                                                                    Reset to Auto Price
+                                                                </button>
+                                                            )}
+                                                            
                                                             {item.product_unit_type &&
-                                                                item.product_unit_type !==
-                                                                "piece" && (
+                                                                item.product_unit_type !== "piece" && (
                                                                     <div className="text-xs text-blue-600 mt-1">
                                                                         Base: ৳
                                                                         {formatCurrency(
                                                                             item.base_price_per_base_unit ||
                                                                             item.unit_price
-                                                                        )}{" "}
-                                                                        per base
-                                                                        unit
+                                                                        )} per base unit
                                                                     </div>
                                                                 )}
                                                         </div>
@@ -2213,41 +2261,29 @@ export default function AddSale({
 
                                                     {/* ইউনিট কনভার্সন ইনফো */}
                                                     {item.product_unit_type &&
-                                                        item.product_unit_type !==
-                                                        "piece" && (
+                                                        item.product_unit_type !== "piece" && (
                                                             <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded">
                                                                 <div className="text-xs text-blue-800">
                                                                     <div className="font-bold mb-1 flex items-center gap-1">
-                                                                        <Calculator
-                                                                            size={
-                                                                                10
-                                                                            }
-                                                                        />
-                                                                        Unit
-                                                                        Conversion
-                                                                        & Price
-                                                                        Calculation:
+                                                                        <Calculator size={10} />
+                                                                        Unit Conversion & Price Calculation:
                                                                     </div>
                                                                     <div className="grid grid-cols-2 gap-2">
                                                                         <div>
                                                                             <span className="font-medium">
-                                                                                Purchase
-                                                                                Unit:
+                                                                                Purchase Unit:
                                                                             </span>{" "}
                                                                             {item.original_purchase_unit?.toUpperCase()}
                                                                         </div>
                                                                         <div>
                                                                             <span className="font-medium">
-                                                                                Sale
-                                                                                Unit:
+                                                                                Sale Unit:
                                                                             </span>{" "}
                                                                             {selectedUnit.toUpperCase()}
                                                                         </div>
                                                                         <div>
                                                                             <span className="font-medium">
-                                                                                Base
-                                                                                Unit
-                                                                                Price:
+                                                                                Base Unit Price:
                                                                             </span>{" "}
                                                                             ৳
                                                                             {formatCurrency(
@@ -2257,8 +2293,7 @@ export default function AddSale({
                                                                         </div>
                                                                         <div>
                                                                             <span className="font-medium">
-                                                                                Calculated
-                                                                                Price:
+                                                                                Current Price:
                                                                             </span>{" "}
                                                                             ৳
                                                                             {formatCurrency(
@@ -2266,43 +2301,35 @@ export default function AddSale({
                                                                             )}
                                                                             /
                                                                             {selectedUnit.toUpperCase()}
+                                                                            {isManuallyEdited && (
+                                                                                <span className="ml-1 text-orange-600">(manual)</span>
+                                                                            )}
                                                                         </div>
                                                                         <div>
                                                                             <span className="font-medium">
                                                                                 Quantity:
                                                                             </span>{" "}
-                                                                            {
-                                                                                unitQuantity
-                                                                            }{" "}
-                                                                            {selectedUnit.toUpperCase()}
+                                                                            {unitQuantity} {selectedUnit.toUpperCase()}
                                                                         </div>
                                                                         <div>
                                                                             <span className="font-medium">
-                                                                                In
-                                                                                Base
-                                                                                Units:
+                                                                                In Base Units:
                                                                             </span>{" "}
                                                                             {convertToBase(
                                                                                 unitQuantity,
                                                                                 selectedUnit,
                                                                                 item.product_unit_type
-                                                                            ).toFixed(
-                                                                                3
-                                                                            )}
+                                                                            ).toFixed(3)}
                                                                         </div>
                                                                         <div className="col-span-2">
                                                                             <span className="font-medium">
-                                                                                Available
-                                                                                Stock:
+                                                                                Available Stock:
                                                                             </span>{" "}
                                                                             {convertFromBase(
                                                                                 item.stockBaseQuantity,
                                                                                 selectedUnit,
                                                                                 item.product_unit_type
-                                                                            ).toFixed(
-                                                                                3
-                                                                            )}{" "}
-                                                                            {selectedUnit.toUpperCase()}
+                                                                            ).toFixed(3)} {selectedUnit.toUpperCase()}
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -2347,9 +2374,6 @@ export default function AddSale({
                                                         <div className="text-sm text-gray-600 mt-1">
                                                             <div className="text-xs mb-2">
                                                                 <strong>Variant:</strong> {item.variant_name}
-                                                                {item.variant_attributes && Object.keys(item.variant_attributes).length > 0 && (
-                                                                    <span> ({Object.values(item.variant_attributes).join(", ")})</span>
-                                                                )}
                                                             </div>
                                                             <div className="grid grid-cols-4 gap-2 mt-2">
                                                                 <div>

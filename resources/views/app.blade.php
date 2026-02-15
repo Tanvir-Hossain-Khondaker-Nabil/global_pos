@@ -14,9 +14,9 @@
             width: 0px;
         }
     </style>
-
-    {{-- <link rel="stylesheet" href="{{ asset('build/assets/app-61Moyrw-.css') }}">
-    <script src="{{ asset('build/assets/app-B9q0shfs.js') }}" type="module"></script> --}}
+{{-- 
+    <link rel="stylesheet" href="{{ asset('build/assets/app-X9q9Kcks.css') }}">
+    <script src="{{ asset('build/assets/app-DWefKkBN.js') }}" type="module"></script> --}}
 </head>
 
 

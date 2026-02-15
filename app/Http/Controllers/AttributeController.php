@@ -20,9 +20,16 @@ class AttributeController extends Controller
                 'values' => function ($query) {
                     $query->where('is_active', true);
                 }
-            ])->get()
+            ])->when(request('search'), function ($query) {
+                $query->where(function ($query) {
+                    $query->where('name', 'like', '%' . request('search') . '%')
+                        ->orWhere('code', 'like', '%' . request('search') . '%');
+                });
+            })->paginate(10)
+            ->withQueryString()
         ]);
     }
+
 
     // Store new attribute with values
     public function store(Request $request)

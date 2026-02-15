@@ -53,9 +53,9 @@ class SupplierController extends Controller
         $validated = $request->validated();
 
         if ($request->type) {
-            $request->merge(['type' => 'local']);
-        } else {
             $request->merge(['type' => 'global']);
+        } else {
+            $request->merge(['type' => 'local']);
         }
 
 
@@ -174,25 +174,22 @@ class SupplierController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'contact_person' => 'required|string|max:255',
             'email' => 'required|email',
             'phone' => 'required|string|max:20',
             'company' => 'nullable|string|max:255',
             'address' => 'nullable|string',
-            'website' => 'nullable|url',
             'advance_amount' => 'nullable|numeric|min:0',
             'due_amount' => 'nullable|numeric|min:0',
-            'is_active' => 'boolean',
-            'dealership_id' => 'nullable|exists:diller_ships,id'
+            'is_active' => 'boolean'
         ]);
 
-
-        $dealership = DillerShip::find($request->input('dealership_id'));
-
-        if ($dealership) {
-            $validated['dealership_id'] = $dealership->id;
+        if ($request->type) {
+            $request->merge(['type' => 'global']);
+        } else {
+            $request->merge(['type' => 'local']);
         }
 
+        $validated['type'] = $request->type;
         $supplier->update($validated);
 
         return redirect()->back()->with('success', 'Supplier contact updated successfully!');

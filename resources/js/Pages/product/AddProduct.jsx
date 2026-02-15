@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { useForm, router } from "@inertiajs/react";
-import { Trash, X, Plus, Factory, Package, Image as ImageIcon, Ruler, Hash, LayoutGrid, Settings2, Info, ShieldCheck } from "lucide-react";
+import { Trash, X, Plus, Factory, Package, Image as ImageIcon, Ruler, Hash, LayoutGrid, Settings2, Info, ShieldCheck, Search } from "lucide-react";
 import { toast } from "react-toastify";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -15,6 +15,13 @@ export default function AddProduct({ category, update, brand, attributes, errors
     const [productType, setProductType] = useState("regular");
     const [variantAttributeSelector, setVariantAttributeSelector] = useState(null);
     const [photoPreview, setPhotoPreview] = useState(null);
+
+    // Search state for attributes in the main variants card
+    const [attributeSearchTerm, setAttributeSearchTerm] = useState("");
+
+    // Separate search states for modal
+    const [attributeKeySearchTerm, setAttributeKeySearchTerm] = useState("");
+    const [attributeValueSearchTerm, setAttributeValueSearchTerm] = useState("");
 
     const [unitsByType] = useState({
         piece: ['piece', 'dozen', 'box'],
@@ -133,6 +140,32 @@ export default function AddProduct({ category, update, brand, attributes, errors
             }
         );
 
+    };
+
+    // Filter attributes based on key search term
+    const getFilteredAttributesByKey = () => {
+        if (!attributeKeySearchTerm.trim()) {
+            return availableAttributes;
+        }
+
+        const searchLower = attributeKeySearchTerm.toLowerCase();
+
+        return availableAttributes.filter(attr =>
+            attr.name.toLowerCase().includes(searchLower) ||
+            attr.code.toLowerCase().includes(searchLower)
+        );
+    };
+
+    // Filter values based on value search term
+    const getFilteredValues = (values) => {
+        if (!attributeValueSearchTerm.trim()) {
+            return values;
+        }
+
+        const searchLower = attributeValueSearchTerm.toLowerCase();
+        return values.filter(val =>
+            val.value.toLowerCase().includes(searchLower)
+        );
     };
 
     return (
@@ -492,6 +525,8 @@ export default function AddProduct({ category, update, brand, attributes, errors
                             </div>
                             <button type="button" onClick={() => setVariants([...variants, { attribute_values: {} }])} className="btn btn-xs btn-primary btn-circle"><Plus size={16} /></button>
                         </div>
+
+
                         <div className="p-4 space-y-3 flex-1 overflow-y-auto max-h-[500px]">
                             {variants.map((variant, idx) => (
                                 <div key={idx} className="p-3 bg-slate-50 border border-slate-200 rounded-xl group transition-all hover:bg-white hover:shadow-md">
@@ -500,11 +535,17 @@ export default function AddProduct({ category, update, brand, attributes, errors
                                         <button type="button" onClick={() => setVariants(variants.filter((_, i) => i !== idx))} className="text-slate-300 hover:text-error transition-colors"><Trash size={12} /></button>
                                     </div>
                                     <div className="flex flex-wrap gap-1 mb-3">
-                                        {Object.entries(variant.attribute_values).map(([attr, val]) => (
-                                            <div key={attr} className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold">
-                                                <span className="text-primary/50">{attr}:</span> {val}
-                                            </div>
-                                        ))}
+                                        {Object.entries(variant.attribute_values)
+                                            .filter(([attr, val]) =>
+                                                !attributeSearchTerm ||
+                                                attr.toLowerCase().includes(attributeSearchTerm.toLowerCase()) ||
+                                                val.toLowerCase().includes(attributeSearchTerm.toLowerCase())
+                                            )
+                                            .map(([attr, val]) => (
+                                                <div key={attr} className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[9px] font-bold">
+                                                    <span className="text-primary/50">{attr}:</span> {val}
+                                                </div>
+                                            ))}
                                     </div>
                                     <button type="button" onClick={() => setVariantAttributeSelector(idx)} className="btn btn-xs btn-block btn-outline border-slate-300 rounded-lg text-[10px] uppercase font-black">{t("Configure Logic")}</button>
                                 </div>
@@ -517,31 +558,126 @@ export default function AddProduct({ category, update, brand, attributes, errors
                 {/* ATTRIBUTE SELECTOR (Centered Modal) */}
                 {variantAttributeSelector !== null && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 overflow-y-auto">
-                        <div className="bg-white rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden flex flex-col">
+                        <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col">
                             <div className="p-6 bg-slate-50 border-b flex justify-between items-center">
                                 <h4 className="font-bold text-slate-700">{t("Set Attributes")}</h4>
-                                <button type="button" onClick={() => setVariantAttributeSelector(null)} className="btn btn-sm btn-circle btn-ghost"><X size={20} /></button>
+                                <button type="button" onClick={() => {
+                                    setVariantAttributeSelector(null);
+                                    setAttributeKeySearchTerm("");
+                                    setAttributeValueSearchTerm("");
+                                }} className="btn btn-sm btn-circle btn-ghost"><X size={20} /></button>
                             </div>
+
+                            {/* Two separate search bars */}
+                            <div className="px-6 py-3 border-b bg-white space-y-3">
+                                {/* Search for Attribute Keys */}
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder={t("Search attribute names...")}
+                                        className="input input-bordered input-sm w-full pl-9 rounded"
+                                        value={attributeKeySearchTerm}
+                                        onChange={(e) => setAttributeKeySearchTerm(e.target.value)}
+                                    />
+                                </div>
+
+
+                            </div>
+
                             <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
-                                {availableAttributes.map(attr => (
-                                    <div key={attr.code} className="space-y-3">
-                                        <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{attr.name}</h5>
-                                        <div className="flex flex-wrap gap-2">
-                                            {attr.active_values?.map(val => (
-                                                <button key={val.id} type="button"
-                                                    onClick={() => {
-                                                        const newV = [...variants];
-                                                        newV[variantAttributeSelector].attribute_values[attr.code] = val.value;
-                                                        setVariants(newV);
-                                                    }}
-                                                    className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${variants[variantAttributeSelector].attribute_values[attr.code] === val.value ? 'bg-primary text-white shadow-md shadow-primary/20' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>{val.value}</button>
-                                            ))}
+                                {getFilteredAttributesByKey().map(attr => {
+                                    const filteredValues = getFilteredValues(attr.active_values || []);
+
+                                    // Skip if no values match and we're searching by value
+                                    if (attributeValueSearchTerm && filteredValues.length === 0) {
+                                        return null;
+                                    }
+
+                                    return (
+                                        <div key={attr.code} className="space-y-3">
+                                            <h5 className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+                                                {attr.name}
+                                                {attributeKeySearchTerm && attr.name.toLowerCase().includes(attributeKeySearchTerm.toLowerCase()) && (
+                                                    <span className="text-[8px] bg-primary/10 text-primary px-1 py-0.5 rounded">
+                                                        {t("match")}
+                                                    </span>
+                                                )}
+                                            </h5>
+
+                                            <div className="w-full space-y-3">
+
+                                                {/* 🔍 Row 1: Search bar */}
+                                                <div className="relative w-full">
+                                                    <Search
+                                                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                                                        size={16}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder={t("Search attribute values...")}
+                                                        className="input input-bordered input-sm w-full pl-9 rounded-lg"
+                                                        value={attributeValueSearchTerm}
+                                                        onChange={(e) => setAttributeValueSearchTerm(e.target.value)}
+                                                    />
+                                                </div>
+
+                                                {/* 🧩 Row 2: Attribute values */}
+                                                <div className="flex flex-wrap gap-2">
+                                                    {filteredValues.map((val) => (
+                                                        <button
+                                                            key={val.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const newV = [...variants];
+                                                                newV[variantAttributeSelector].attribute_values[attr.code] = val.value;
+                                                                setVariants(newV);
+                                                            }}
+                                                            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all
+                                                            ${variants[variantAttributeSelector].attribute_values[attr.code] === val.value
+                                                                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                                    : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                                                                }
+                                                            `}
+                                                        >
+                                                            {val.value}
+
+                                                        {attributeValueSearchTerm &&
+                                                            val.value
+                                                                .toLowerCase()
+                                                                .includes(attributeValueSearchTerm.toLowerCase()) && (
+                                                                <span className="ml-1 text-[8px] bg-primary/10 text-primary px-1 py-0.5 rounded">
+                                                                    ✓
+                                                                </span>
+                                                        )}
+                                                        </button>
+                                                    ))}
+                                                </div>
+
+                                            </div>
+
                                         </div>
+                                    );
+                                })}
+
+                                {getFilteredAttributesByKey().length === 0 && (
+                                    <div className="text-center py-8 text-slate-400">
+                                        {t("No matching attributes found")}
                                     </div>
-                                ))}
+                                )}
                             </div>
                             <div className="p-6 border-t bg-slate-50 text-right">
-                                <button type="button" onClick={() => setVariantAttributeSelector(null)} className="btn btn-primary px-10 rounded-xl font-bold">{t("Done")}</button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setVariantAttributeSelector(null);
+                                        setAttributeKeySearchTerm("");
+                                        setAttributeValueSearchTerm("");
+                                    }}
+                                    className="btn btn-primary px-10 rounded-xl font-bold"
+                                >
+                                    {t("Done")}
+                                </button>
                             </div>
                         </div>
                     </div>

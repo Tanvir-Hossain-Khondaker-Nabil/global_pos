@@ -353,6 +353,8 @@ class SalesController extends Controller
     private function storeManage(Request $request, string $type): Sale
     {
 
+        dd($request->all());
+
         // -------------------------
         //  Rules (fixed order)
         // -------------------------

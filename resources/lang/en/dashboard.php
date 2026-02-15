@@ -17,6 +17,8 @@ return [
     'invoice_due' => 'Invoice Due',
     'suppliers' => 'Suppliers',
     'total_profit' => 'Total Profit',
+    'sales' => 'Sales',
+    'profit_calculation' => 'Profit Calculation',
 
     // Charts & Analytics
     'sales_performance' => 'Sales Performance',
