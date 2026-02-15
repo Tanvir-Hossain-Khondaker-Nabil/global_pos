@@ -184,7 +184,7 @@ class ProductController extends Controller
             return [
                 'id' => $attribute->id,
                 'name' => $attribute->name,
-                'code' => $attribute->code,
+                'code' => $attribute->name,
                 'active_values' => $attribute->activeValues->map(function ($value) {
                     return [
                         'id' => $value->id,
@@ -233,9 +233,6 @@ class ProductController extends Controller
             $request->has_warranty,
             FILTER_VALIDATE_BOOLEAN
         );
-
-
-        dd($request->all());
 
         // -----------------------------
         // 1) Active subscription + product_range limit
