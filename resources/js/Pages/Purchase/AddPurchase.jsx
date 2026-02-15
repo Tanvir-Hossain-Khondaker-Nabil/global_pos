@@ -1222,7 +1222,7 @@ export default function AddPurchase({
                       key={product.id}
                       className="border-b border-gray-100 last:border-0"
                     >
-                      <div className="bg-gray-100 px-3 py-1 text-xs font-black text-gray-500 uppercase tracking-widest truncate">
+                      <div className="bg-gray-100 px-3 py-1 text-xs font-black text-black-500 uppercase tracking-widest truncate">
                         {product.name} ({product.product_no})
                         {product.brand?.name && (
                           <span className="ml-2 text-[#329D4D]">
@@ -1272,28 +1272,21 @@ export default function AddPurchase({
                                 )
                               }
                             >
-                              <div className="flex flex-col max-w-[70%]">
+                              <div style={{borderRadius: '0.375rem'}} className="flex flex-col max-w-[70%] bg-[#FEF2F2] py-1 px-2">
                                 <span className="font-bold text-xs text-gray-800 truncate">
-                                  {
-                                    variantName
-                                  }
+                                  { variantName }
                                 </span>
                                 {variant.sku && (
                                   <span className="text-xs text-gray-500 mt-0.5">
-                                    SKU:{" "}
-                                    {
-                                      variant.sku
-                                    }
+                                    SKU: {variant.sku}
                                   </span>
                                 )}
                               </div>
-                              <div className="text-right">
-                                <div className="font-mono text-xs font-black text-gray-900">
-                                  ৳
-                                  {formatCurrency(
-                                    variant.unit_cost
-                                  )}
-                                </div>
+                              <div className="font-mono text-xs font-black text-gray-500">
+                                ৳
+                                {formatCurrency(
+                                  variant.unit_cost
+                                )}
                               </div>
                             </div>
                           );

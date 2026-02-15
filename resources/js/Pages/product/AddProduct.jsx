@@ -90,8 +90,6 @@ export default function AddProduct({ category, update, brand, attributes, errors
     const formSubmit = (e) => {
         e.preventDefault();
 
-        console.log("Current variants:", variants); // Check if variants exist
-
         // If variants is empty, add one default variant
         let variantsToSend = variants;
         if (!variants || variants.length === 0) {
@@ -104,8 +102,6 @@ export default function AddProduct({ category, update, brand, attributes, errors
             id: variant.id || null,
             attribute_values: variant.attribute_values || {}
         }));
-
-        console.log("Formatted variants to send:", formattedVariants);
 
         // Create a new FormData object to ensure variants are included
         const formData = new FormData();
@@ -196,7 +192,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                 <div className="col-span-12 lg:col-span-4 space-y-6">
 
                     {/* Supply Type Card */}
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                    {/* <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
                         <span className="text-[10px] font-black uppercase text-slate-400 block mb-3">{t("Supply Strategy")}</span>
                         <div className="flex p-1 bg-slate-100 rounded-xl gap-1">
                             {["regular", "in_house"].map(type => (
@@ -208,7 +204,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                             ))}
                         </div>
                         {formErrors.product_type && <span className="text-error text-xs mt-2 block">{formErrors.product_type}</span>}
-                    </div>
+                    </div> */}
 
 
                     {/* General Info Card */}

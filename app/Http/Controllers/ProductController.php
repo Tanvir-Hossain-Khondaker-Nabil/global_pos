@@ -235,6 +235,8 @@ class ProductController extends Controller
         );
 
 
+        dd($request->all());
+
         // -----------------------------
         // 1) Active subscription + product_range limit
         // -----------------------------
