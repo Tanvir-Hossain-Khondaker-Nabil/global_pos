@@ -510,9 +510,10 @@ class SalesController extends Controller
                             'customer_name' => $name,
                             'phone' => $phone,
                             'advance_amount' => 0,
-                            'due_amount' => $request->customer_due_amount,
+                            'due_amount' => $request->customer_due_amount ?? 0,
                             'is_active' => 1,
                             'created_by' => Auth::id(),
+                            'outlet_id' => Auth::user()->current_outlet_id
                         ])->id;
                     }
                 }
