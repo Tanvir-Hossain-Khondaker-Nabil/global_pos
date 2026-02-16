@@ -792,7 +792,11 @@ class PurchaseController extends Controller
         ]);
     }
 
-    // Update purchase (batch-wise delete old item stock)
+    
+
+    /**
+     * Update purchase (batch-wise delete old item stock)
+     */
     public function update(PurchaseRequestStore $request, $id)
     {
         $user = Auth::user();

@@ -71,7 +71,7 @@ export default function AddWarehouse({ warehouse }) {
                         )}
                     </div>
 
-                    <div className="form-control">
+                    {/* <div className="form-control">
                         <label className="label">
                             <span className="label-text">
                                 {t('warehouse.warehouse_code', 'Warehouse Code')} 
@@ -90,18 +90,26 @@ export default function AddWarehouse({ warehouse }) {
                         {form.errors.code && (
                             <div className="text-error text-sm mt-1">{form.errors.code}</div>
                         )}
-                    </div>
+                    </div> */}
 
                     <div className="form-control md:col-span-2">
                         <label className="label">
-                            <span className="label-text">{t('warehouse.address', 'Address')}</span>
+                            <span className="label-text">{t('warehouse.address', 'Address')}
+                                   <span className="text-red-500 ml-1">
+                                    {t('warehouse.required_field', '*')}
+                                </span>
+                            </span>
                         </label>
                         <textarea
                             className="textarea textarea-bordered"
                             rows="3"
+                             required
                             value={form.data.address}
                             onChange={(e) => form.setData("address", e.target.value)}
                         />
+                        {form.errors.address && (
+                            <div className="text-error text-sm mt-1">{form.errors.address}</div>
+                        )}
                     </div>
 
                     <div className="form-control">

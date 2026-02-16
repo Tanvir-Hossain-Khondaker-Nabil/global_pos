@@ -4,7 +4,7 @@ import { ArrowLeft, TrendingUp, TrendingDown, Calendar, CreditCard, User, FileTe
 import PageHeader from '../../components/PageHeader';
 import { useTranslation } from '../../hooks/useTranslation';
 
-export default function AccountShow({ account }) {
+export default function AccountShow({ account, paymentStats, balanceTrend }) {
     const { t, locale } = useTranslation();
 
     const formatCurrency = (amount) => {
@@ -25,6 +25,10 @@ export default function AccountShow({ account }) {
             case 'mobile_banking': return t('account.type.mobile_banking', 'Mobile Banking');
             default: return type;
         }
+    };
+
+    const getPaymentType = (paymentMethod) => {
+        return ['deposit', 'transfer'].includes(paymentMethod) ? 'income' : 'expense';
     };
 
     const handleDeposit = () => {
@@ -167,18 +171,28 @@ export default function AccountShow({ account }) {
                     <h3 className="font-bold text-lg mb-4">
                         {t('account.transaction_summary', 'Transaction Summary')}
                     </h3>
-                    {account.payments && account.payments.length > 0 ? (
+                    {paymentStats.total_transactions > 0 ? (
                         <div className="space-y-4">
                             <div className="flex justify-between">
                                 <span className="text-gray-500">{t('account.total_transactions', 'Total Transactions')}</span>
-                                <span className="font-bold">{account.payments.length}</span>
+                                <span className="font-bold">{paymentStats.total_transactions}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-500">{t('account.last_transaction', 'Last Transaction')}</span>
-                                <span className="font-bold">
-                                    {formatDate(account.payments[0]?.created_at)}
-                                </span>
+                                <span className="text-gray-500">{t('account.total_deposits', 'Total Deposits')}</span>
+                                <span className="font-bold text-green-600">৳{formatCurrency(paymentStats.total_deposits)}</span>
                             </div>
+                            <div className="flex justify-between">
+                                <span className="text-gray-500">{t('account.total_withdrawals', 'Total Withdrawals')}</span>
+                                <span className="font-bold text-red-600">৳{formatCurrency(paymentStats.total_withdrawals)}</span>
+                            </div>
+                            {paymentStats.last_transaction_date && (
+                                <div className="flex justify-between">
+                                    <span className="text-gray-500">{t('account.last_transaction', 'Last Transaction')}</span>
+                                    <span className="font-bold">
+                                        {formatDate(paymentStats.last_transaction_date)}
+                                    </span>
+                                </div>
+                            )}
                             <div className="pt-4">
                                 <Link
                                     href={route('payments.index', { account: account.id })}
@@ -195,6 +209,40 @@ export default function AccountShow({ account }) {
                     )}
                 </div>
             </div>
+
+            {/* Balance Trend Chart */}
+            {/* {balanceTrend && balanceTrend.length > 0 && (
+                <div className="border rounded-xl p-6 mb-8">
+                    <h3 className="font-bold text-lg mb-4">
+                        {t('account.balance_trend', 'Balance Trend (Last 6 Months)')}
+                    </h3>
+                    <div className="space-y-3">
+                        {balanceTrend.map((item, index) => (
+                            <div key={index} className="flex items-center gap-4">
+                                <div className="w-24 text-sm font-medium">{item.month}</div>
+                                <div className="flex-1">
+                                    <div className="h-8 bg-gray-100 rounded-full overflow-hidden">
+                                        <div 
+                                            className={`h-full ${item.change >= 0 ? 'bg-green-500' : 'bg-red-500'}`}
+                                            style={{ 
+                                                width: `${Math.min(Math.abs((item.balance / account.opening_balance) * 100), 100)}%` 
+                                            }}
+                                        ></div>
+                                    </div>
+                                </div>
+                                <div className="w-32 text-right">
+                                    <span className="font-mono text-sm">
+                                        ৳{formatCurrency(item.balance)}
+                                    </span>
+                                    <span className={`ml-2 text-xs ${item.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                        ({item.change >= 0 ? '+' : ''}{formatCurrency(item.change)})
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )} */}
 
             {/* Recent Transactions */}
             {account.payments && account.payments.length > 0 && (
@@ -215,34 +263,37 @@ export default function AccountShow({ account }) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {account.payments.slice(0, 10).map((payment) => (
-                                    <tr key={payment.id} className="hover:bg-gray-50">
-                                        <td>
-                                            <div className="flex items-center gap-2">
-                                                <Calendar size={14} className="text-gray-400" />
-                                                {formatDate(payment.created_at)}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            {payment.note || payment.txn_ref || 'N/A'}
-                                        </td>
-                                        <td>
-                                            <span className="badge badge-outline">
-                                                {payment.payment_method}
-                                            </span>
-                                        </td>
-                                        <td className="text-right font-mono">
-                                            <span className={
-                                                payment.payment_type === 'income' 
-                                                    ? 'text-green-600' 
-                                                    : 'text-red-600'
-                                            }>
-                                                {payment.payment_type === 'income' ? '+' : '-'}
-                                                ৳{formatCurrency(payment.amount)}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {account.payments.slice(0, 10).map((payment) => {
+                                    const paymentType = getPaymentType(payment.payment_method);
+                                    return (
+                                        <tr key={payment.id} className="hover:bg-gray-50">
+                                            <td>
+                                                <div className="flex items-center gap-2">
+                                                    <Calendar size={14} className="text-gray-400" />
+                                                    {formatDate(payment.created_at)}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {payment.note || payment.txn_ref || 'N/A'}
+                                            </td>
+                                            <td>
+                                                <span className="badge badge-outline">
+                                                    {payment.payment_method}
+                                                </span>
+                                            </td>
+                                            <td className="text-right font-mono">
+                                                <span className={
+                                                    paymentType === 'income' 
+                                                        ? 'text-green-600' 
+                                                        : 'text-red-600'
+                                                }>
+                                                    {paymentType === 'income' ? '+' : '-'}
+                                                    ৳{formatCurrency(payment.amount)}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

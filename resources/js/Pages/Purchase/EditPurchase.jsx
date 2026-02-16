@@ -29,6 +29,7 @@ import {
 import { useTranslation } from "../../hooks/useTranslation";
 
 export default function AddPurchase({
+  purchase, // This will be passed when editing
   suppliers,
   warehouses,
   products,
@@ -42,6 +43,8 @@ export default function AddPurchase({
   },
 }) {
   const { t, locale } = useTranslation();
+  const isEditMode = !!purchase; // Check if we're in edit mode
+
   const [selectedItems, setSelectedItems] = useState([]);
   const [productSearch, setProductSearch] = useState("");
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -64,11 +67,114 @@ export default function AddPurchase({
   const searchRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // ইউনিট স্টেটস
+  // Unit states
   const [productUnits, setProductUnits] = useState({});
   const [selectedUnits, setSelectedUnits] = useState({});
   const [unitQuantities, setUnitQuantities] = useState({});
   const [availableSaleUnits, setAvailableSaleUnits] = useState({});
+
+  // Initialize form with purchase data if in edit mode
+  const form = useForm({
+    supplier_id: purchase?.supplier_id || "",
+    adjust_from_advance: purchase?.adjust_from_advance || false,
+    warehouse_id: purchase?.warehouse_id || "",
+    purchase_date: purchase?.purchase_date || new Date().toISOString().split("T")[0],
+    notes: purchase?.notes || "",
+    paid_amount: purchase?.paid_amount || 0,
+    payment_status: purchase?.payment_status || "unpaid",
+    items: [],
+    use_partial_payment: purchase?.use_partial_payment || false,
+    manual_payment_override: purchase?.manual_payment_override || false,
+    account_id: purchase?.account_id || "",
+    payment_method: purchase?.payment_method || "cash",
+    txn_ref: purchase?.txn_ref || "",
+    installment_duration: purchase?.installment_duration || 0,
+    total_installments: purchase?.total_installments || 0,
+    transportation_cost: purchase?.transportation_cost || 0,
+  });
+
+  // Initialize state from purchase data when in edit mode
+  useEffect(() => {
+    if (isEditMode && purchase) {
+      // Set payment related states
+      setPaymentStatus(purchase.payment_status || "unpaid");
+      setPaidAmount(parseFloat(purchase.paid_amount) || 0);
+      setTransportationCost(parseFloat(purchase.transportation_cost) || 0);
+      setUsePartialPayment(purchase.use_partial_payment || false);
+      setAdjustFromAdvance(purchase.adjust_from_advance || false);
+      setManualPaymentOverride(purchase.manual_payment_override || false);
+      setInstallmentDuration(purchase.installment_duration || 0);
+      setTotalInstallments(purchase.total_installments || 0);
+
+      // Set selected supplier
+      if (purchase.supplier) {
+        setSelectedSupplier(purchase.supplier);
+        let advance = 0;
+        if (purchase.supplier.advance_amount !== undefined) {
+          advance = parseFloat(purchase.supplier.advance_amount) || 0;
+        } else {
+          const supplierAdvance = parseFloat(purchase.supplier.advance || 0);
+          const supplierDue = parseFloat(purchase.supplier.due || 0);
+          advance = Math.max(0, supplierAdvance - supplierDue);
+        }
+        setAvailableAdvance(advance);
+      }
+
+      // Load items
+      if (purchase.items && purchase.items.length > 0) {
+        const items = purchase.items.map((item, index) => {
+          const product = products.find(p => p.id === item.product_id);
+          const variant = item.variant;
+          
+          // Create a unique identifier that includes all attributes
+          let variantIdentifier = "default";
+          if (variant && variant.attribute_values && Object.keys(variant.attribute_values).length > 0) {
+            const sortedAttributes = Object.entries(variant.attribute_values || {})
+              .sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
+            variantIdentifier = sortedAttributes
+              .map(([key, value]) => `${key}:${value}`)
+              .join("|");
+          }
+
+          const uniqueKey = `${item.product_id}-${item.variant_id}-${variantIdentifier}`;
+
+          // Set unit states for this item
+          if (product) {
+            const units = getAvailableUnitsForProduct(product);
+            setProductUnits(prev => ({ ...prev, [uniqueKey]: units }));
+            setSelectedUnits(prev => ({ ...prev, [uniqueKey]: item.unit || units[0] }));
+            setUnitQuantities(prev => ({ ...prev, [uniqueKey]: parseFloat(item.unit_quantity) || 1 }));
+            
+            const saleUnits = getAvailableSaleUnits(product, item.unit || units[0]);
+            setAvailableSaleUnits(prev => ({ ...prev, [uniqueKey]: saleUnits }));
+          }
+
+          return {
+            uniqueKey,
+            product_id: item.product_id,
+            variant_id: item.variant_id,
+            product_name: product?.name || item.product?.name || "Unknown",
+            product_no: product?.product_no || item.product?.product_no || "",
+            has_warranty: product?.has_warranty || item.product?.has_warranty,
+            warranty_duration: product?.warranty_duration || item.product?.warranty_duration,
+            warranty_duration_type: product?.warranty_duration_type || item.product?.warranty_duration_type,
+            brand_name: product?.brand?.name || item.product?.brand?.name || "Unknown",
+            variant_name: item.variant ? formatVariantName(item.variant) : "Default",
+            variant_identifier: variantIdentifier,
+            quantity: parseFloat(item.quantity) || 1,
+            unit_quantity: parseFloat(item.unit_quantity) || parseFloat(item.quantity) || 1,
+            unit: item.unit || "piece",
+            unit_price: parseFloat(item.unit_price) || 0,
+            sale_price: parseFloat(item.sale_price) || 0,
+            transportation_cost: parseFloat(item.transportation_cost) || 0,
+            total_price: parseFloat(item.total_price) || 0,
+            attributes: variant?.attribute_values || item.attributes || {},
+          };
+        });
+        setSelectedItems(items);
+      }
+    }
+  }, [isEditMode, purchase, products]);
 
   // Extract unique brands from products
   useEffect(() => {
@@ -162,25 +268,6 @@ export default function AddPurchase({
       maximumFractionDigits: 2,
     }).format(numValue);
   };
-
-  const form = useForm({
-    supplier_id: "",
-    adjust_from_advance: false,
-    warehouse_id: "",
-    purchase_date: new Date().toISOString().split("T")[0],
-    notes: "",
-    paid_amount: 0,
-    payment_status: "unpaid",
-    items: [],
-    use_partial_payment: false,
-    manual_payment_override: false,
-    account_id: "",
-    payment_method: "cash",
-    txn_ref: "",
-    installment_duration: 0,
-    total_installments: 0,
-    transportation_cost: 0,
-  });
 
   useEffect(() => {
     const itemsWithUnits = selectedItems.map((item) => ({
@@ -710,7 +797,7 @@ export default function AddPurchase({
           return fail(`Item "${item.product_name}" has invalid quantity`);
       }
 
-      if (paidAmount > 0 && !selectedAccount)
+      if (paidAmount > 0 && !form.data.account_id)
         return fail("Please select a payment account for the payment");
 
       if (form.data.account_id && paidAmount > 0) {
@@ -742,8 +829,15 @@ export default function AddPurchase({
       attributes: item.attributes || {},
     }));
 
+    // Determine route and method based on edit mode
+    const submitRoute = isEditMode 
+      ? route("purchase.update", purchase.id) 
+      : route("purchase.store");
+    
+    const method = isEditMode ? "put" : "post";
+
     // Submit
-    form.post(route("purchase.store"), {
+    form[method](submitRoute, {
       data: {
         ...form.data,
         items,
@@ -787,21 +881,22 @@ export default function AddPurchase({
       <PageHeader
         title={
           isShadowUser
-            ? t(
-              "purchase.create_shadow_purchase",
-              "Create Purchase (Shadow Mode)"
-            )
-            : t("purchase.create_purchase", "Create New Purchase")
+            ? isEditMode
+              ? t("purchase.edit_shadow_purchase", "Edit Purchase (Shadow Mode)")
+              : t("purchase.create_shadow_purchase", "Create Purchase (Shadow Mode)")
+            : isEditMode
+              ? t("purchase.edit_purchase", "Edit Purchase")
+              : t("purchase.create_purchase", "Create New Purchase")
         }
         subtitle={
           isShadowUser
             ? t(
-              "purchase.create_shadow_subtitle",
-              "Add products with shadow pricing"
+              "purchase.edit_shadow_subtitle",
+              "Update shadow purchase details"
             )
             : t(
-              "purchase.create_subtitle",
-              "Add products with real and shadow pricing"
+              "purchase.edit_subtitle",
+              "Update purchase details"
             )
         }
       >
@@ -1276,11 +1371,6 @@ export default function AddPurchase({
                                 <span className="font-bold text-xs text-gray-800 truncate">
                                   { variantName }
                                 </span>
-                                {/* {variant.sku && (
-                                  <span className="text-xs text-gray-500 mt-0.5">
-                                    SKU: {variant.sku}
-                                  </span>
-                                )} */}
                               </div>
                               <div className="font-mono text-xs font-black text-gray-500">
                                 ৳
@@ -1369,7 +1459,7 @@ export default function AddPurchase({
                             </button>
                           </div>
 
-                          {/* ইউনিট সেটিংস */}
+                          {/* Unit Settings */}
                           <div className=" p-2 bg-gray-50 rounded border border-gray-200">
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
                               {/* Purchase Unit */}
@@ -1505,24 +1595,6 @@ export default function AddPurchase({
 
                               {/* Total Price Display */}
                               <div className="col-span-4 flex items-center justify-end pt-2 border-t border-gray-200">
-                                {/* <div className="form-control flex-1 mr-4">
-                                  <label className="label py-0">
-                                    <span className="label-text text-xs uppercase font-black text-gray-400">
-                                      Transportation Cost
-                                    </span>
-                                  </label>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    className="input input-bordered input-sm w-full font-mono text-xs rounded"
-                                    value={item.transportation_cost || 0}
-                                    onChange={(e) =>
-                                      updateItem(index, "transportation_cost", e.target.value)
-                                    }
-                                  />
-                                </div> */}
-
                                 <div className="flex flex-col items-end">
                                   <span className="text-xs uppercase font-black text-gray-400 mb-1">
                                     Item Total
@@ -1562,49 +1634,6 @@ export default function AddPurchase({
         {/* Summary Section */}
         <div className="mt-4 pt-4 border-t border-gray-200">
           <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-            {/* <div className="mb-4 pb-3 border-b border-gray-200">
-              <h4 className="font-bold text-gray-700 text-sm mb-2 flex items-center gap-2">
-                <Info size={14} />
-                Purchase Breakdown
-              </h4>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white p-3 rounded-lg border border-gray-200">
-                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
-                    Items Cost
-                  </div>
-                  <div className="text-lg font-black text-gray-900">
-                    ৳{formatCurrency(selectedItems.reduce((total, item) => total + (item.total_price || 0), 0))}
-                  </div>
-                </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-200">
-                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
-                    <Truck size={12} />
-                    Item Transportation
-                  </div>
-                  <div className="text-lg font-black text-gray-900">
-                    ৳{formatCurrency(itemTransportationCostTotal)}
-                  </div>
-                </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-200">
-                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1 flex items-center gap-1">
-                    <Truck size={12} />
-                    Overall Transportation
-                  </div>
-                  <div className="text-lg font-black text-gray-900">
-                    ৳{formatCurrency(transportationCost)}
-                  </div>
-                </div>
-                <div className="bg-white p-3 rounded-lg border border-gray-200">
-                  <div className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1">
-                    Total Transportation
-                  </div>
-                  <div className="text-lg font-black text-gray-900">
-                    ৳{formatCurrency(itemTransportationCostTotal + parseFloat(transportationCost || 0))}
-                  </div>
-                </div>
-              </div>
-            </div> */}
-
             {/* Total Summary */}
             <div className="col-span-full flex items-center justify-between gap-4 bg-white border border-gray-200 rounded-lg px-4 py-2 text-xs">
 
@@ -1673,7 +1702,6 @@ export default function AddPurchase({
 
             </div>
 
-
             {/* Account Info Summary */}
             {selectedAccount && (
               <div className="mt-3 p-3 bg-white rounded-lg border border-gray-300">
@@ -1712,8 +1740,8 @@ export default function AddPurchase({
               <div>
                 <h4 className="font-bold text-gray-900 uppercase text-sm">
                   {isShadowUser
-                    ? "Shadow Purchase"
-                    : "Purchase Summary"}
+                    ? isEditMode ? "Edit Shadow Purchase" : "Shadow Purchase"
+                    : isEditMode ? "Edit Purchase" : "Purchase Summary"}
                 </h4>
                 <p className="text-xs text-gray-500">
                   {selectedItems.length} items • Transportation: ৳
@@ -1752,9 +1780,9 @@ export default function AddPurchase({
               {form.processing ? (
                 <div className="loading loading-spinner loading-sm"></div>
               ) : isShadowUser ? (
-                "Execute Shadow Purchase"
+                isEditMode ? "Update Shadow Purchase" : "Execute Shadow Purchase"
               ) : (
-                "Finalize Purchase"
+                isEditMode ? "Update Purchase" : "Finalize Purchase"
               )}
             </button>
           </div>
