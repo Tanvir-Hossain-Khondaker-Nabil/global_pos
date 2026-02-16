@@ -792,8 +792,6 @@ class PurchaseController extends Controller
         ]);
     }
 
-    
-
     /**
      * Update purchase (batch-wise delete old item stock)
      */

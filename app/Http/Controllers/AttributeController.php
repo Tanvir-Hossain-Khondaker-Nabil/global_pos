@@ -45,7 +45,6 @@ class AttributeController extends Controller
 
             $lastId = Attribute::max('id') + 1;
 
-            // Create attribute
             $attribute = Attribute::create([
                 'name' => $request->name,
                 'code' => Str::slug($request->name) . '-' . Str::upper(Str::random(6)) . $lastId,
@@ -70,21 +69,21 @@ class AttributeController extends Controller
         }
     }
 
+
     // Update attribute and its values
     public function update(Request $request, Attribute $attribute)
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:attributes,name,' . $attribute->id,
-            'values' => 'required|array|min:1',
-            'values.*.value' => 'required|string|max:255',
-        ]);
+        // $request->validate([
+        //     'name' => 'required|string|max:255',
+        //     'values' => 'required|array|min:1',
+        //     'values.*.value' => 'required|string|max:255',
+        // ]);
 
         DB::beginTransaction();
         try {
 
-            $lastId = $attribute->id; // store() এর মতো consistency
+            $lastId = $attribute->id; 
 
-            // Update attribute
             $attribute->update([
                 'name' => $request->name,
                 'code' => Str::slug($request->name) . '-' . Str::upper(Str::random(6)) . $lastId,
