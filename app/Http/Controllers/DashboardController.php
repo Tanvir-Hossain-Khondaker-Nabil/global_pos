@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Expense;
 use App\Models\Sale;
 use App\Models\Customer;
+use App\Models\Damage;
 use App\Models\SaleItem;
 use App\Models\Stock;
 use App\Models\Purchase;
@@ -17,23 +18,22 @@ class DashboardController extends Controller
 {
     public function index(Request $request)
     {
-        // UI sends timeRange + optional date
+        // Handle date range parameters
         $range = $request->get('timeRange', 'year');
-        $date  = $request->get('date');
-
-        $payload = $this->buildDashboardPayload($range, $date);
-
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        
+        $payload = $this->buildDashboardPayload($range, $dateFrom, $dateTo);
 
         return inertia('Dashboard', $payload);
     }
 
     public function data(Request $request, string $range)
     {
-        $date = $request->get('date');
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
 
-        $payload = $this->buildDashboardPayload($range, $date);
-
-        
+        $payload = $this->buildDashboardPayload($range, $dateFrom, $dateTo);
 
         return response()->json([
             'success' => true,
@@ -47,26 +47,39 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function buildDashboardPayload(string $range, ?string $date = null): array
+    private function buildDashboardPayload(string $range, ?string $dateFrom = null, ?string $dateTo = null): array
     {
         $user = Auth::user();
         $isShadowUser = ($user->type ?? null) === 'shadow';
 
-        // ✅ columns (sale)
+        // columns (sale)
         $salesTotalCol = $isShadowUser ? 'shadow_grand_total' : 'grand_total';
         $paidCol       = $isShadowUser ? 'shadow_paid_amount' : 'paid_amount';
         $dueCol        = $isShadowUser ? 'shadow_due_amount' : 'due_amount';
 
-        // ✅ columns (purchase)
+        // columns (purchase)
         $purchaseTotalCol = $isShadowUser ? 'shadow_grand_total' : 'grand_total';
 
         // stock purchase col
         $stockPurchaseCol = $isShadowUser ? 'shadow_purchase_price' : 'purchase_price';
 
         // ---------------- Resolve Date Range ----------------
-        if ($date) {
-            $from = Carbon::parse($date)->startOfDay();
-            $to   = Carbon::parse($date)->endOfDay();
+        if ($dateFrom && $dateTo) {
+            // Custom date range
+            $from = Carbon::parse($dateFrom)->startOfDay();
+            $to   = Carbon::parse($dateTo)->endOfDay();
+
+            // For previous period comparison (same length as selected range)
+            $daysDiff = $from->diffInDays($to);
+            $prevFrom = $from->copy()->subDays($daysDiff + 1);
+            $prevTo   = $from->copy()->subDay();
+
+            $labelMode = 'day';
+            $range = 'custom';
+        } elseif ($dateFrom) {
+            // Single date (backward compatibility)
+            $from = Carbon::parse($dateFrom)->startOfDay();
+            $to   = Carbon::parse($dateFrom)->endOfDay();
 
             $prevFrom = $from->copy()->subDay();
             $prevTo   = $to->copy()->subDay();
@@ -74,11 +87,13 @@ class DashboardController extends Controller
             $labelMode = 'hour';
             $range = 'today';
         } else {
+            // Predefined range
             [$from, $to, $prevFrom, $prevTo, $labelMode] = $this->resolveRange($range);
         }
 
+        // Rest of your existing code remains exactly the same...
         // =========================
-        // ✅ SALES BASE
+        // SALES BASE
         // =========================
         $salesBase = Sale::query()->whereBetween('created_at', [$from, $to]);
         $salesPrev = Sale::query()->whereBetween('created_at', [$prevFrom, $prevTo]);
@@ -100,7 +115,7 @@ class DashboardController extends Controller
 
         $salesGrowth = $prevSales > 0 ? (($periodSales - $prevSales) / $prevSales) * 100 : 0;
 
-        // ✅ FIXED: Period Paid + Due (Sale report) - Correct calculation
+        // FIXED: Period Paid + Due (Sale report)
         $periodPaid = (float) $salesBase->clone()
             ->selectRaw("COALESCE(SUM($paidCol),0) as total")
             ->value('total');
@@ -112,9 +127,14 @@ class DashboardController extends Controller
         // Sales series
         $salesSeries = $this->buildSalesSeries($labelMode, $from, $to, $salesTotalCol);
 
+        // Total expense for period
+        $totalExpense = (float) Expense::query()
+            ->whereBetween('created_at', [$from, $to])
+            ->selectRaw("COALESCE(SUM(amount),0) as total")
+            ->value('total');
+
         // =========================
-        // ✅ FIXED: PURCHASE COST (COGS) - Profit এর জন্য
-        // Stock টেবিল থেকে purchase_price নিতে হবে
+        // PURCHASE COST (COGS)
         // =========================
         $purchaseCost = (float) SaleItem::query()
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
@@ -123,15 +143,12 @@ class DashboardController extends Controller
             ->selectRaw('COALESCE(SUM(sale_items.quantity * stocks.' . $stockPurchaseCol . '),0) as total')
             ->value('total');
 
-        // ✅ FIXED: Profit Calculation
+        // Profit Calculation
         $netProfit = $periodSales - $purchaseCost;
-
-        $profitMargin = $periodSales > 0
-            ? (($netProfit) / $periodSales) * 100
-            : 0;
+        $profitMargin = $periodSales > 0 ? (($netProfit) / $periodSales) * 100 : 0;
 
         // =========================
-        // ✅ PURCHASE ANALYTICS (existing)
+        // PURCHASE ANALYTICS
         // =========================
         $purchaseBase = Purchase::query()->whereBetween(
             'purchase_date',
@@ -151,9 +168,7 @@ class DashboardController extends Controller
         $purchaseReturned  = (int) ($purchaseStatusCounts['returned'] ?? 0);
         $purchaseCancelled = (int) ($purchaseStatusCounts['cancelled'] ?? 0);
 
-        // UI label: processing = pending
         $purchaseProcessing = $purchasePending;
-
         $purchaseDonut = $this->percentTriplet($purchaseCompleted, $purchaseProcessing, $purchaseReturned);
 
         $purchasePeriodTotal = (float) $purchaseBase->clone()
@@ -163,7 +178,7 @@ class DashboardController extends Controller
         $avgPurchaseValue = $purchasePeriodCount > 0 ? ($purchasePeriodTotal / $purchasePeriodCount) : 0;
 
         // =========================
-        // ✅ CUSTOMERS
+        // CUSTOMERS
         // =========================
         $totalCustomers  = (int) Customer::count();
         $activeCustomers = (int) Customer::where('is_active', true)->count();
@@ -176,7 +191,7 @@ class DashboardController extends Controller
         $conversionRate = $activeCustomers > 0 ? ($buyersThisPeriod / $activeCustomers) * 100 : 0;
 
         // =========================
-        // ✅ INVENTORY
+        // INVENTORY
         // =========================
         $inventoryValue = (float) Stock::selectRaw("COALESCE(SUM(quantity * $stockPurchaseCol),0) as value")
             ->value('value');
@@ -185,12 +200,12 @@ class DashboardController extends Controller
         $outOfStockItems = (int) Stock::where('quantity', '<=', 0)->count();
 
         // =========================
-        // ✅ EXPENSES (all time only)
+        // EXPENSES (all time only)
         // =========================
         $totalExpensesAllTime = (float) Expense::sum('amount');
 
         // =========================
-        // ✅ TOP PRODUCTS (Sales period)
+        // TOP PRODUCTS
         // =========================
         $topProducts = SaleItem::query()
             ->join('sales', 'sale_items.sale_id', '=', 'sales.id')
@@ -225,7 +240,7 @@ class DashboardController extends Controller
             });
 
         // =========================
-        // ✅ Recent Activities
+        // Recent Activities
         // =========================
         $recentActivities = $salesBase->clone()
             ->latest()
@@ -245,26 +260,23 @@ class DashboardController extends Controller
             ->toArray();
 
         // =========================
-        // ✅ payload
+        // payload
         // =========================
-
-        
-
         $dashboardData = [
             'range' => $range,
-            'customDate' => $date,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
 
             // sales
             'periodSales' => $periodSales,
             'prevPeriodSales' => $prevSales,
             'salesGrowth' => round($salesGrowth, 1),
 
-            // ✅ FIXED: period sale report
             'periodPaid' => round($periodPaid, 2),
             'periodDue'  => round($periodDue, 2),
 
-            // ✅ FIXED: purchase cost for profit calculation
             'purchaseCost' => round($purchaseCost, 2),
+            'totalExpense' => round($totalExpense, 2),
 
             // customers
             'totalCustomers' => $totalCustomers,
@@ -277,7 +289,6 @@ class DashboardController extends Controller
             'lowStockItems' => $lowStockItems,
             'outOfStockItems' => $outOfStockItems,
 
-            // ✅ FIXED: profit based on purchase cost
             'profitMargin' => round($profitMargin, 1),
             'averageOrderValue' => round($avgPurchaseValue, 2),
 
@@ -304,20 +315,13 @@ class DashboardController extends Controller
             'labelMode' => $labelMode,
         ];
 
-        // dd($dashboardData);
-
         return [
             'dashboardData' => $dashboardData,
-
-            // all-time sales
             'totalSales' => $totalSales,
             'totalPaid' => $totalPaid,
             'totalDue' => $totalDue,
             'totalselas' => $totalOrders,
-
-            // all-time expense (kept)
             'totalexpense' => $totalExpensesAllTime,
-
             'isShadowUser' => $isShadowUser,
         ];
     }

@@ -74,6 +74,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     showProductName: true,
     showBatchNo: true,
     showSalePrice: true,
+    showSiNo: true, // Added Si No option
 
     align: "left", // left | right
 
@@ -420,6 +421,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
       showProductName,
       showBatchNo,
       showSalePrice,
+      showSiNo,
       align,
       labelWidthMm,
       labelHeightMm,
@@ -449,17 +451,18 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         justify-content:${align === "right" ? "flex-end" : "flex-start"};
       }
 
-      .grid {
-        display:grid;
-        grid-template-columns: repeat(auto-fill, ${Number(labelWidthMm)}mm);
-        gap:${Number(gapMm)}mm;
+      .flex-wrap-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: ${Number(gapMm)}mm;
+        justify-content: flex-start;
       }
 
       .label {
         width:${Number(labelWidthMm)}mm;
         height:${Number(labelHeightMm)}mm;
-        padding:7px 0px;
-        border-radius:12px;
+        padding:4px 2px;
+        border-radius:8px;
         background:#fff;
         border: 1px solid #e5e7eb;
         display:flex;
@@ -467,6 +470,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         overflow:hidden;
         break-inside:avoid;
         page-break-inside:avoid;
+        flex-shrink: 0;
+        position: relative;
       }
 
       .barcodeArea {
@@ -474,22 +479,36 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         flex-direction:column;
         align-items:center;
         justify-content:center;
-        gap:4px;
+        gap:2px;
         height:100%;
         width:100%;
         text-align:center;
       }
 
+      .si-no {
+        position: absolute;
+        top: 2px;
+        left: 4px;
+        font-size: 8px;
+        font-weight: 900;
+        color: #ef4444;
+        background: #fee2e2;
+        padding: 1px 4px;
+        border-radius: 4px;
+        line-height: 1.2;
+      }
+
       .name {
         width:100%;
         font-weight:900;
-        font-size:11px;
+        font-size:10px;
         line-height:1.15;
         color:#0f172a;
         display:-webkit-box;
         -webkit-line-clamp:2;
         -webkit-box-orient:vertical;
         overflow:hidden;
+        margin-top: ${showSiNo ? '8px' : '0'};
       }
 
       .barcodeImg {
@@ -502,7 +521,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
       .batch,
       .price {
         width:100%;
-        font-size:10px;
+        font-size:9px;
         font-weight:900;
         line-height:1.1;
         color:#0f172a;
@@ -511,7 +530,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         text-overflow:ellipsis;
       }
 
-      .batch { color:#475569; font-weight:800; font-size:9px; }
+      .batch { color:#475569; font-weight:800; font-size:8px; }
       .price { letter-spacing: .2px; }
 
       .no-print { text-align:center; margin-top:14px; color:#64748b; font-weight:900; }
@@ -520,12 +539,14 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     `;
 
     const labelsHtml = expandedLabels
-      .map((l) => {
+      .map((l, index) => {
         const productName = escapeHtml(l.productName || "");
         const batchNo = escapeHtml(l.batchNo || "");
         const codeValue = escapeHtml(l.codeValue || "");
         const imgSrc = escapeHtml(l.imgSrc || "");
+        const siNo = index + 1; // Incremental Si No starting from 1
 
+        const siNoHtml = showSiNo ? `<div class="si-no">#${siNo}</div>` : "";
         const nameHtml = showProductName ? `<div class="name">${productName}</div>` : "";
         const batchHtml = showBatchNo ? `<div class="batch">${batchNo ? `Batch: ${batchNo}` : "Batch: -"}</div>` : "";
         const priceHtml =
@@ -533,6 +554,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
         return `
           <div class="label">
+            ${siNoHtml}
             <div class="barcodeArea">
               ${nameHtml}
               <img class="barcodeImg" src="${imgSrc}" alt="Barcode ${codeValue}" />
@@ -554,7 +576,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
       </head>
       <body>
         <div class="sheet">
-          <div class="grid">${labelsHtml}</div>
+          <div class="flex-wrap-container">${labelsHtml}</div>
         </div>
 
         <div class="no-print">
@@ -798,29 +820,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                 </button>
               </div>
 
-              {/* ✅ Top bar: Default copies input next to Print count feeling */}
-              {/* <div className="mb-4 rounded-xl border border-gray-100 bg-gray-50 p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-[11px] font-black uppercase tracking-widest text-gray-500">
-                    Default Copies (for newly generated labels)
-                  </div>
-                  <input
-                    type="number"
-                    min="1"
-                    max="999"
-                    value={defaultBarcodeCopies}
-                    onChange={(e) => setDefaultBarcodeCopies(clampInt(e.target.value))}
-                    className="input input-sm input-bordered font-mono w-[110px] text-center"
-                    title="New labels will use this copies by default (manual mode)"
-                  />
-                </div>
-
-                <div className="mt-2 text-[11px] font-bold text-gray-500">
-                  Tip: Copies Mode = <span className="text-gray-900">{barcodeConfig.copiesMode}</span>. Use{" "}
-                  <span className="text-gray-900">Manual</span> mode to set per-barcode copies.
-                </div>
-              </div> */}
-
               <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
                 <div className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
                   <Layers size={14} />
@@ -859,6 +858,20 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                       className="checkbox checkbox-sm"
                     />
                     <span className="font-black text-sm">Sale Price</span>
+                  </label>
+
+                  {/* Added Si No checkbox */}
+                  <label className="flex items-center gap-2 p-2 bg-white rounded-lg border border-gray-100 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!barcodeConfig.showSiNo}
+                      onChange={(e) => updateBarcodeConfig("showSiNo", e.target.checked)}
+                      className="checkbox checkbox-sm"
+                    />
+                    <span className="font-black text-sm flex items-center gap-2">
+                      <Tag size={14} className="text-gray-500" />
+                      Si No (Serial)
+                    </span>
                   </label>
                 </div>
               </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\Damage;
+use App\Models\Expense;
 use App\Models\Payment;
 use App\Models\PurchaseItem;
 use App\Models\SaleItem;
@@ -89,7 +90,7 @@ class DamageController extends Controller
                 $account->updateBalance($cost, $request->type == 'sale' ? 'withdraw' : 'credit');
             }
 
-            Payment::create([
+            $payment = Payment::create([
                 'account_id' => $account->id,
                 'amount' => $cost * ($request->type == 'sale' ? -1 : 1),
                 'payment_method' => $account->type,
@@ -101,6 +102,20 @@ class DamageController extends Controller
                 'outlet_id' => $saleItemId->outlet_id ?? $purchaseItemId->outlet_id ?? null,
                 'owner_id' => $saleItemId->owner_id ?? $purchaseItemId->owner_id ?? null,
             ]);
+
+            if($request->type == 'sale'){
+                Expense::create([
+                    'amount' => $cost,
+                    'details' => 'Damage recorded for sale item',
+                    'created_by' => Auth::id(),
+                    'sh_amount' => 0,
+                    'outlet_id' => $saleItemId->outlet_id ?? null,
+                    'owner_id' => $saleItemId->owner_id ?? null,
+                    'date' => Carbon::now(),
+                    'payment_id' => $payment->id,
+                ]);
+            }
+
         }
 
         Damage::create([
