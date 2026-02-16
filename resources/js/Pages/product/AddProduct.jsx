@@ -604,7 +604,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                                             <div className="w-full space-y-3">
 
                                                 {/* 🔍 Row 1: Search bar */}
-                                                <div className="relative w-full">
+                                                {/* <div className="relative w-full">
                                                     <Search
                                                         className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
                                                         size={16}
@@ -616,7 +616,7 @@ export default function AddProduct({ category, update, brand, attributes, errors
                                                         value={attributeValueSearchTerm}
                                                         onChange={(e) => setAttributeValueSearchTerm(e.target.value)}
                                                     />
-                                                </div>
+                                                </div> */}
 
                                                 {/* 🧩 Row 2: Attribute values */}
                                                 <div className="flex flex-wrap gap-2">
