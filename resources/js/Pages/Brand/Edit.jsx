@@ -17,7 +17,9 @@ import { useState, useRef, useEffect } from "react";
 
 export default function Edit({ brand }) {
     const { t, locale } = useTranslation();
-    const { data, setData, post, processing, errors, reset } = useForm({
+    
+    // Initialize form with brand data
+    const { data, setData, post, processing, errors } = useForm({
         name: brand.name || "",
         slug: brand.slug || "",
         logo: null,
@@ -25,68 +27,166 @@ export default function Edit({ brand }) {
         _method: 'PUT'
     });
 
-    const [logoPreview, setLogoPreview] = useState(brand.logo_url || null);
-    const [existingLogo, setExistingLogo] = useState(brand.logo_url || null);
+    // State for logo handling
+    const [logoPreview, setLogoPreview] = useState(null);
+    const [existingLogo, setExistingLogo] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [imageLoadError, setImageLoadError] = useState(false);
+    const [debugInfo, setDebugInfo] = useState({});
     const fileInputRef = useRef(null);
 
-    // Initialize form data when brand changes
+    // Fallback image path - adjust this based on your project structure
+    const FALLBACK_IMAGE = '/images/no-image.png'; // Create this placeholder image
+    const PLACEHOLDER_IMAGE = 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f0f0f0\'/%3E%3Ctext x=\'50\' y=\'50\' font-size=\'14\' text-anchor=\'middle\' dy=\'.3em\' fill=\'%23999\'%3ENo Image%3C/text%3E%3C/svg%3E';
+
+    // Function to construct image URL from various possible formats
+    const constructImageUrl = (logo) => {
+        if (!logo) return null;
+        
+        // If it's already a full URL, return as is
+        if (logo.startsWith('http://') || logo.startsWith('https://') || logo.startsWith('data:')) {
+            return logo;
+        }
+        
+        // Try different possible paths
+        const possiblePaths = [
+            `/storage/${logo}`,           // Laravel storage
+            `/uploads/${logo}`,            // Uploads folder
+            `/images/${logo}`,              // Images folder
+            `/images/brands/${logo}`,       // Brands images folder
+            `/${logo}`,                      // Root path
+            `/storage/brands/${logo}`,       // Storage brands folder
+        ];
+        
+        // Return the first path that might work (we'll let the browser try)
+        return possiblePaths[0];
+    };
+
+    // Initialize logo states when component mounts or brand changes
     useEffect(() => {
-        setData({
-            name: brand.name || "",
-            slug: brand.slug || "",
-            logo: null,
-            description: brand.description || "",
-            _method: 'PUT'
+        console.log('Brand data received:', brand);
+        console.log('Logo URL:', brand.logo_url);
+        console.log('Brand logo field:', brand.logo);
+        
+        // Debug info
+        setDebugInfo({
+            brandId: brand.id,
+            brandName: brand.name,
+            logo_url: brand.logo_url,
+            logo_field: brand.logo,
+            timestamp: new Date().toISOString()
         });
-        setLogoPreview(brand.logo_url || null);
-        setExistingLogo(brand.logo_url || null);
+        
+        // Determine the correct logo URL
+        let logoUrl = null;
+        
+        if (brand.logo_url) {
+            logoUrl = brand.logo_url;
+        } else if (brand.logo) {
+            // Try to construct URL from logo field
+            logoUrl = constructImageUrl(brand.logo);
+        }
+        
+        // Set existing logo from brand data
+        if (logoUrl) {
+            console.log('Setting logo URL:', logoUrl);
+            setExistingLogo(logoUrl);
+            setLogoPreview(logoUrl);
+        } else {
+            console.log('No logo URL found');
+            setExistingLogo(null);
+            setLogoPreview(null);
+        }
+        
+        // Reset image error state
+        setImageLoadError(false);
     }, [brand]);
 
+    // Handle form submission
     const handleSubmit = (e) => {
         e.preventDefault();
 
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('_method', 'PUT');
+        formData.append('name', data.name);
+        formData.append('slug', data.slug);
+        formData.append('description', data.description);
+        
+        // Only append logo if a new file is selected
+        if (data.logo instanceof File) {
+            formData.append('logo', data.logo);
+        }
+
+        // Use post with FormData
         post(route("brands.update", brand.id), {
-            data: data,
+            data: formData,
             preserveScroll: true,
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
             onSuccess: () => {
-                if (data.logo) {
+                // Reset states on success
+                if (data.logo instanceof File) {
                     setExistingLogo(logoPreview);
                 }
             }
         });
     };
 
+    // Handle logo file selection
     const handleLogoChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert(t('brand.invalid_image', 'Please select a valid image file'));
+                return;
+            }
+            
+            // Validate file size (max 2MB)
+            if (file.size > 2 * 1024 * 1024) {
+                alert(t('brand.image_too_large', 'Image size should be less than 2MB'));
+                return;
+            }
+
             setData("logo", file);
 
             // Create preview
             const reader = new FileReader();
             reader.onloadend = () => {
                 setLogoPreview(reader.result);
+                setImageLoadError(false);
+            };
+            reader.onerror = () => {
+                console.error('Error reading file');
+                setLogoPreview(null);
             };
             reader.readAsDataURL(file);
         }
     };
 
+    // Remove selected new logo
     const removeLogo = () => {
-        setData("logo", "");
-        setLogoPreview(null);
+        setData("logo", null);
+        setLogoPreview(existingLogo); // Revert to existing logo
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
+        setImageLoadError(false);
     };
 
+    // Restore original logo
     const restoreOriginalLogo = () => {
         setData("logo", null);
         setLogoPreview(existingLogo);
         if (fileInputRef.current) {
             fileInputRef.current.value = "";
         }
+        setImageLoadError(false);
     };
 
+    // Generate slug from name
     const generateSlug = (name) => {
         return name
             .toLowerCase()
@@ -96,6 +196,7 @@ export default function Edit({ brand }) {
             .trim();
     };
 
+    // Handle name change with auto slug generation
     const handleNameChange = (e) => {
         const name = e.target.value;
         setData("name", name);
@@ -106,6 +207,7 @@ export default function Edit({ brand }) {
         }
     };
 
+    // Handle brand deletion
     const handleDelete = () => {
         if (window.confirm(t('brand.delete_confirm', 'Are you sure you want to delete this brand? This action cannot be undone.'))) {
             router.delete(route('brands.destroy', brand.id), {
@@ -116,9 +218,45 @@ export default function Edit({ brand }) {
         }
     };
 
+    // Handle image load error with multiple fallback attempts
+    const handleImageError = (e) => {
+        console.error('Failed to load image:', e.target.src);
+        
+        // Try alternative paths if this is not already a fallback attempt
+        if (!e.target.src.includes('no-image') && !e.target.src.startsWith('data:')) {
+            const currentSrc = e.target.src;
+            
+            // Try different path variations
+            if (currentSrc.includes('/storage/')) {
+                // Try without /storage prefix
+                const filename = currentSrc.split('/storage/')[1];
+                e.target.src = `/uploads/${filename}`;
+            } else if (currentSrc.includes('/uploads/')) {
+                // Try with /storage prefix
+                const filename = currentSrc.split('/uploads/')[1];
+                e.target.src = `/storage/${filename}`;
+            } else {
+                // Last resort - use placeholder
+                e.target.src = PLACEHOLDER_IMAGE;
+                setImageLoadError(true);
+            }
+        } else {
+            setImageLoadError(true);
+        }
+    };
+
+    // Test image load function
+    const testImageLoad = (url) => {
+        const img = new Image();
+        img.onload = () => console.log('Image loaded successfully:', url);
+        img.onerror = () => console.log('Image failed to load:', url);
+        img.src = url;
+    };
+
     return (
         <div className={`min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 ${locale === 'bn' ? 'bangla-font' : ''}`}>
             <div className="max-w-4xl mx-auto">
+             
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -155,10 +293,10 @@ export default function Edit({ brand }) {
                     </div>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-6">
+                <form onSubmit={handleSubmit} className="space-y-6" encType="multipart/form-data">
                     {/* Basic Information Card */}
                     <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
-                        <div className=" px-6 py-4"
+                        <div className="px-6 py-4"
                             style={{
                                 background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
                             }}
@@ -188,6 +326,7 @@ export default function Edit({ brand }) {
                                     onChange={handleNameChange}
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                     placeholder={t('brand.enter_name', 'Enter brand name')}
+                                    required
                                 />
                                 {errors.name && (
                                     <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
@@ -211,6 +350,7 @@ export default function Edit({ brand }) {
                                         onChange={(e) => setData("slug", e.target.value)}
                                         className="w-full pl-20 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
                                         placeholder="brand-slug"
+                                        required
                                     />
                                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                                         <a
@@ -242,8 +382,8 @@ export default function Edit({ brand }) {
                                 </label>
 
                                 <div className="flex flex-col md:flex-row gap-6">
-                                    {/* Current Logo */}
-                                    {existingLogo && (
+                                    {/* Current/Existing Logo - With multiple fallback attempts */}
+                                    {(existingLogo || brand.logo || brand.logo_url) && (
                                         <div className="flex-shrink-0">
                                             <p className="text-sm font-medium text-gray-700 mb-3">
                                                 {t('brand.current_logo', 'Current Logo')}:
@@ -251,29 +391,51 @@ export default function Edit({ brand }) {
                                             <div className="relative">
                                                 <div className="w-48 h-48 border-2 border-blue-200 rounded-xl overflow-hidden bg-gray-50">
                                                     <img
-                                                        src={existingLogo}
+                                                        src={imageLoadError ? PLACEHOLDER_IMAGE : (logoPreview || existingLogo)}
                                                         alt="Current logo"
                                                         className="w-full h-full object-contain p-4"
+                                                        onError={handleImageError}
+                                                        key={existingLogo} // Force re-render when logo changes
                                                     />
                                                 </div>
+                                                {imageLoadError && (
+                                                    <div className="absolute inset-0 flex items-center justify-center bg-white/80">
+                                                        <p className="text-xs text-red-500 text-center p-2">
+                                                            Image not found<br/>
+                                                            <button 
+                                                                onClick={() => {
+                                                                    setImageLoadError(false);
+                                                                    // Force reload with cache busting
+                                                                    const timestamp = new Date().getTime();
+                                                                    setLogoPreview(`${existingLogo}?t=${timestamp}`);
+                                                                }}
+                                                                className="text-blue-500 underline mt-1"
+                                                            >
+                                                                Retry
+                                                            </button>
+                                                        </p>
+                                                    </div>
+                                                )}
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={restoreOriginalLogo}
-                                                className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                                            >
-                                                <span>{t('brand.use_current', 'Use Current Logo')}</span>
-                                            </button>
+                                            {data.logo && (
+                                                <button
+                                                    type="button"
+                                                    onClick={restoreOriginalLogo}
+                                                    className="mt-3 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                                                >
+                                                    <span>{t('brand.use_current', 'Use Current Logo')}</span>
+                                                </button>
+                                            )}
                                         </div>
                                     )}
 
                                     {/* Logo Upload/Preview */}
                                     <div className="flex-1">
                                         <p className="text-sm font-medium text-gray-700 mb-3">
-                                            {t('brand.new_logo', 'New Logo')}:
+                                            {data.logo ? t('brand.new_logo', 'New Logo') : t('brand.upload_logo', 'Upload Logo')}:
                                         </p>
 
-                                        {logoPreview ? (
+                                        {logoPreview && data.logo ? (
                                             <div className="relative inline-block">
                                                 <div className="w-48 h-48 border-2 border-dashed border-green-200 rounded-xl overflow-hidden bg-gray-50">
                                                     <img
@@ -285,7 +447,7 @@ export default function Edit({ brand }) {
                                                 <button
                                                     type="button"
                                                     onClick={removeLogo}
-                                                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                                    className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg"
                                                     title={t('brand.remove_new_logo', 'Remove new logo')}
                                                 >
                                                     <X size={16} />
@@ -300,7 +462,7 @@ export default function Edit({ brand }) {
                                                     ref={fileInputRef}
                                                     type="file"
                                                     onChange={handleLogoChange}
-                                                    accept="image/*"
+                                                    accept="image/jpeg,image/png,image/gif,image/webp,image/svg+xml"
                                                     className="hidden"
                                                     id="logo-upload"
                                                 />
@@ -315,6 +477,9 @@ export default function Edit({ brand }) {
                                                         </span>
                                                         <span className="text-xs text-gray-500 mt-1 text-center">
                                                             {t('brand.recommended_size', 'Recommended: 500×500px')}
+                                                        </span>
+                                                        <span className="text-xs text-gray-500 mt-1 text-center">
+                                                            Max: 2MB
                                                         </span>
                                                     </div>
                                                 </label>
@@ -345,6 +510,7 @@ export default function Edit({ brand }) {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white resize-none"
                                     rows={4}
                                     placeholder={t('brand.enter_description', 'Describe the brand, its history, values, and unique selling points...')}
+                                    maxLength={2000}
                                 />
                                 <div className="flex justify-between mt-2">
                                     <p className="text-xs text-gray-500">
@@ -373,7 +539,7 @@ export default function Edit({ brand }) {
                                 flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all duration-200
                                 ${isDeleting
                                     ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                    : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
+                                    : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 hover:shadow-md'
                                 }
                             `}
                         >
@@ -385,7 +551,7 @@ export default function Edit({ brand }) {
                             <button
                                 type="button"
                                 onClick={() => router.visit(route('brands.index'))}
-                                className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+                                className="px-6 py-3 border border-gray-300 rounded-xl font-medium text-gray-700 hover:bg-gray-50 hover:shadow-md transition-all duration-200"
                             >
                                 {t('brand.cancel', 'Cancel')}
                             </button>
@@ -396,15 +562,15 @@ export default function Edit({ brand }) {
                                     group flex items-center gap-3 px-8 py-3 rounded-xl font-semibold text-white
                                     transition-all duration-200 transform hover:scale-105 active:scale-95
                                     ${processing
-                                        ? 'cursor-not-allowed'
-                                        : ' shadow-lg hover:shadow-xl'
+                                        ? 'opacity-75 cursor-not-allowed'
+                                        : 'hover:shadow-xl'
                                     }
                                 `}
                                 style={{
                                     background: "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)",
                                 }}
                             >
-                                <Save size={20} className={processing ? 'animate-pulse' : 'group-hover:animate-bounce'} />
+                                <Save size={20} className={processing ? 'animate-spin' : 'group-hover:animate-bounce'} />
                                 {processing ? t('brand.updating', 'Updating...') : t('brand.update', 'Update Brand')}
                             </button>
                         </div>

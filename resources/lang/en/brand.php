@@ -14,7 +14,8 @@ return [
     'create_title' => 'Create Brand',
     'create_subtitle' => 'Add a new brand to the system.',
     'basic_information' => 'Basic Information',
-    
+    'no_description' => 'No description available.',
+
     // Table headers
     'name' => 'Name',
     'products' => 'Products',
@@ -25,7 +26,11 @@ return [
     'description' => 'Description',
     'updated_at' => 'Updated At',
     'created_at' => 'Created At',
+    'current_logo' => 'Current Logo',
+    'use_current' => 'Use Current Logo',
     'back' => 'Back',
+    'creating' => 'Creating...',
+    'updating' => 'Updating...',
     'save' => 'Save',
     'create' => 'Create',
     'cancel' => 'Cancel',

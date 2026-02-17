@@ -24,6 +24,8 @@ return [
     'subscriptions' => 'Subscriptions',
     'subscriptions_payments' => 'Subscriptions Payments',
     'transactions' => 'Transactions',
+    'saving' => 'Saving...',
+    'email_placeholder' => 'Enter your email address',
     'ledgers' => 'Ledgers',
     'dealerships' => 'Dealerships',
     'customer' => 'Customer',

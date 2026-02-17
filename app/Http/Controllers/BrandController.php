@@ -113,8 +113,6 @@ class BrandController extends Controller
         $brand = Brand::findOrFail($id);
         
         $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name,' . $id,
-            'slug' => 'nullable|string|max:255|unique:brands,slug,' . $id,
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'description' => 'nullable|string',
         ]);
@@ -125,7 +123,6 @@ class BrandController extends Controller
         // Handle logo upload
         $logoData = [];
         if ($request->hasFile('logo')) {
-            // Delete old logo if exists
             if ($brand->logo) {
                 Storage::disk('public')->delete($brand->logo);
             }
