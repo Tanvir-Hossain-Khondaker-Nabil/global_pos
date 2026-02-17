@@ -6,6 +6,7 @@ return [
 
     // Stats Cards
     'daily_sales' => 'Daily Sales',
+    'total_expense' => 'Total Expense',
     'active_customers' => 'Active Customers',
     'inventory_value' => 'Inventory Value',
     'net_profit' => 'Net Profit',

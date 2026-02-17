@@ -18,6 +18,8 @@ return [
     'add_products' => 'Add Products',
     'categories' => 'Categories',
     'extra_cash' => 'Extra Cash',
+    'expenses_category' => 'Expenses Categories',
+    'all_sales_return' => 'All Sales Return',
     'expense' => 'Expense',
     'plan' => 'Plan',
     'plan_modules' => 'Plan Modules',

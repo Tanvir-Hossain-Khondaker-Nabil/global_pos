@@ -271,7 +271,7 @@ export default function Edit({ brand }) {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <a
+                        {/* <a
                             href={route("brands.show", brand.id)}
                             className="group flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-green-300"
                             title={t('brand.view_brand', 'View Brand')}
@@ -280,7 +280,7 @@ export default function Edit({ brand }) {
                             <span className="font-medium text-gray-700 group-hover:text-green-600 transition-colors">
                                 {t('brand.view', 'View')}
                             </span>
-                        </a>
+                        </a> */}
                         <a
                             href={route("brands.index")}
                             className="group flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200 hover:border-blue-300"

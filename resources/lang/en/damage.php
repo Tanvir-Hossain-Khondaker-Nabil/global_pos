@@ -20,7 +20,8 @@ return [
     'reason'=> 'Reason',
     'action_taken'=> 'Action Taken',
     'actions'=> 'Actions',
-    'searche'=> 'Searches',
+    'searches'=> 'Searches',
+    'search'=> 'Search',
 
     // Damage types
     'type_sale'=> 'Sale Return',
