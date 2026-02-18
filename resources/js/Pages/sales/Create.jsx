@@ -324,11 +324,11 @@ export default function AddSale({
         return Array.from(productMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     }, [productstocks]);
 
-    // ========== SEARCH FUNCTION ==========
+    // ========== SEARCH FUNCTION - UPDATED ==========
     useEffect(() => {
         if (!productSearch.trim()) {
-            setFilteredProducts([]);
-            setShowProductDropdown(false);
+            // When search is empty, show all products
+            setFilteredProducts(allProducts);
             return;
         }
 
@@ -342,11 +342,19 @@ export default function AddSale({
         setShowProductDropdown(true);
     }, [productSearch, allProducts]);
 
+    // Add this effect to control dropdown visibility based on focus
+    useEffect(() => {
+        // This effect ensures dropdown shows when there are products
+        if (allProducts.length > 0 && showProductDropdown) {
+            setFilteredProducts(allProducts);
+        }
+    }, [showProductDropdown, allProducts]);
+
     // ========== PRODUCT SELECTION - SHOW ALL VARIANTS ==========
     const handleProductSelect = (product) => {
         setSelectedProduct(product);
         setProductSearch(product.name);
-        setShowProductDropdown(false);
+        setShowProductDropdown(false); // Close dropdown after selection
 
         // Process variants
         const variantsList = [];
@@ -1393,7 +1401,7 @@ export default function AddSale({
 
                     {/* RIGHT COLUMN - Products */}
                     <div className="lg:col-span-2">
-                        {/* Product Search */}
+                        {/* Product Search - UPDATED */}
                         <div className="mb-4">
                             <div className="form-control relative">
                                 <div className="relative">
@@ -1405,7 +1413,17 @@ export default function AddSale({
                                         onChange={(e) => {
                                             setProductSearch(e.target.value);
                                         }}
-                                        onFocus={() => setShowProductDropdown(true)}
+                                        onFocus={() => {
+                                            // When focusing, show dropdown with all products
+                                            setShowProductDropdown(true);
+                                            setFilteredProducts(allProducts);
+                                        }}
+                                        onBlur={() => {
+                                            // Small delay to allow click events on dropdown items
+                                            setTimeout(() => {
+                                                setShowProductDropdown(false);
+                                            }, 200);
+                                        }}
                                         placeholder="Search products by name or code..."
                                         autoComplete="off"
                                     />
@@ -1415,7 +1433,8 @@ export default function AddSale({
                                             type="button"
                                             onClick={() => {
                                                 setProductSearch("");
-                                                setShowProductDropdown(false);
+                                                setFilteredProducts(allProducts); // Reset to all products when clearing
+                                                setShowProductDropdown(true); // Keep dropdown open
                                             }}
                                             className="absolute right-10 top-3 text-gray-400 hover:text-error"
                                         >
@@ -1672,16 +1691,6 @@ export default function AddSale({
                                                     </span>
                                                 ))}
                                             </div>
-
-                                            {/* SKU and Stock */}
-                                            {/* <div className="flex items-center gap-4 text-sm">
-                                                <span className="text-gray-600">
-                                                    <span className="font-semibold">SKU:</span> {variant.sku || 'N/A'}
-                                                </span>
-                                                <span className="text-gray-600">
-                                                    <span className="font-semibold">Total Stock:</span> {variant.totalStock} {variant.unit.toUpperCase()}
-                                                </span>
-                                            </div> */}
 
                                             {/* Batches Preview */}
                                             {variant.batches.length > 0 && (

@@ -229,7 +229,7 @@ class SupplierController extends Controller
         $totalPurchases = $supplier->purchases->count();
         $totalAmount = $supplier->purchases->sum('grand_total');
         $totalPaid = $supplier->purchases->sum('paid_amount');
-        $totalDue = $supplier->purchases->sum('due_amount');
+        $totalDue = $totalAmount - $totalPaid;
 
         return Inertia::render('Supplier/Show', [
             'supplier' => $supplier,

@@ -960,9 +960,7 @@ export default function SupplierLedger({
                                 </h4>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                                     {selectedPurchases.map((purchase) => {
-                                        const purchaseDue =
-                                            purchase.grand_total -
-                                            (purchase.paid_amount || 0);
+                                        const purchaseDue = purchase.grand_total - (purchase.paid_amount || 0);
                                         return (
                                             <div
                                                 key={purchase.id}

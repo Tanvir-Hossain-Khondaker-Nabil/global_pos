@@ -17,6 +17,7 @@ return [
     'invoice_due' => 'বাকি চালান',
     'suppliers' => 'সরবরাহকারী',
     'total_profit' => 'মোট লাভ',
+    'total_expense' => 'মোট ব্যয়',
 
     // Charts & Analytics
     'sales_performance' => 'বিক্রয় কার্যকারিতা',

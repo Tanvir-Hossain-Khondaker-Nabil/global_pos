@@ -16,7 +16,8 @@ return [
     'total_expense' => 'Total Expense',
     'total_sales' => 'Total Sales',
     'all_payment_methods' => 'All payment methods combined',
-    
+    'clear' => 'Clear Filters',
+
     // Cash Flow Analysis
     'cash_flow' => 'Cash Flow Analysis',
     'net_cash_position' => 'Net cash position after expenses',
