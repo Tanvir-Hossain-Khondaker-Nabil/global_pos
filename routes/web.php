@@ -169,8 +169,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/store', 'store')->middleware('permission:sales.create')->name('sales.store');
 
         Route::post('/store/pos', 'storePos')
-        ->middleware('permission:sales.create')
-        ->name('salesPos.store');
+            ->middleware('permission:sales.create')
+            ->name('salesPos.store');
 
         Route::post('/store/shadow', 'shadowStore')->middleware('permission:sales.create')->name('salesShadow.store');
 
@@ -192,7 +192,9 @@ Route::middleware('auth')->group(function () {
 
 
     Route::get('/sales/scan-barcode/{barcode}', [SalesController::class, 'scanBarcode'])
+        ->middleware('permission:sales.create')
         ->name('sales.scan.barcode');
+
     Route::post('/pos/print-request/{id}', [SalesController::class, 'printRequest'])->name('print.request');
 
 
@@ -215,7 +217,7 @@ Route::middleware('auth')->group(function () {
         ->name('return.store');
 
     Route::post('/approve/{id}/return', [SalesReturnController::class, 'approve'])
-        // ->middleware('permission:sales_return.approve')
+        ->middleware('permission:sales_return.approve')
         ->name('return.approve');
 
     Route::get('/return/{id}', [SalesReturnController::class, 'show'])
@@ -324,10 +326,21 @@ Route::middleware('auth')->group(function () {
 
     // profile
     Route::controller(AuthController::class)->group(function () {
-        Route::get('/profile', 'profileView')->name('profile.view');
-        Route::get('/business/profile', 'businessProfileView')->name('businessProfile.view');
-        Route::post('/business/profile/{id?}', 'businessProfileUpdate')->name('businessProfile.update');
-        Route::post('/profile', 'profileUpdate')->name('profile.update');
+        Route::get('/profile', 'profileView')
+            ->middleware('permission:profile.view')
+            ->name('profile.view');
+
+        Route::get('/business/profile', 'businessProfileView')
+            ->middleware('permission:business_profile.view')
+            ->name('businessProfile.view');
+
+        Route::post('/business/profile/{id?}', 'businessProfileUpdate')
+            ->middleware('permission:business_profile.edit')
+            ->name('businessProfile.update');
+
+        Route::post('/profile', 'profileUpdate')
+            ->middleware('permission:profile.edit')
+            ->name('profile.update');
         Route::get('/security', 'securityView')->name('security.view');
         Route::post('/security', 'securityUpdate')->name('security.post');
         Route::get('/logout', 'logout')->name('logout');
@@ -440,13 +453,34 @@ Route::middleware('auth')->group(function () {
     Route::get('/purchase/recent', [PurchaseController::class, 'getRecentPurchases'])->middleware('permission:purchase.recent_view')->name('purchase.recent');
     Route::get('/purchase/{id}/export-pdf', [PurchaseController::class, 'exportPdf'])->middleware('permission:purchase.export_pdf')->name('purchase.exportPdf');
 
-    Route::get('/purchase-returns', [PurchaseReturnController::class, 'index'])->name('purchase-returns.list');
-    Route::get('/purchase-returns/create', [PurchaseReturnController::class, 'create'])->name('purchase-returns.create');
-    Route::post('/purchase-returns', [PurchaseReturnController::class, 'store'])->name('purchase-returns.store');
-    Route::get('/purchase-returns/{id}', [PurchaseReturnController::class, 'show'])->name('purchase-returns.show');
-    Route::post('/purchase-returns/{id}/approve', [PurchaseReturnController::class, 'approve'])->name('purchase-returns.approve');
-    Route::post('/purchase-returns/{id}/complete', [PurchaseReturnController::class, 'complete'])->name('purchase-returns.complete');
-    Route::delete('/purchase-returns/{id}', [PurchaseReturnController::class, 'destroy'])->name('purchase-returns.destroy');
+    Route::get('/purchase-returns', [PurchaseReturnController::class, 'index'])
+        ->middleware('permission:purchase_return.view')
+        ->name('purchase-returns.list');
+
+    Route::get('/purchase-returns/create', [PurchaseReturnController::class, 'create'])
+        ->middleware('permission:purchase_return.create')
+        ->name('purchase-returns.create');
+
+    Route::post('/purchase-returns', [PurchaseReturnController::class, 'store'])
+        ->middleware('permission:purchase_return.create')
+        ->name('purchase-returns.store');
+
+    Route::get('/purchase-returns/{id}', [PurchaseReturnController::class, 'show'])
+        ->middleware('permission:purchase_return.show')
+        ->name('purchase-returns.show');
+
+    Route::post('/purchase-returns/{id}/approve', [PurchaseReturnController::class, 'approve'])
+        ->middleware('permission:purchase_return.approve')
+        ->name('purchase-returns.approve');
+
+    Route::post('/purchase-returns/{id}/complete', [PurchaseReturnController::class, 'complete'])
+        ->middleware('permission:purchase_return.complete')
+        ->name('purchase-returns.complete');
+
+    Route::delete('/purchase-returns/{id}', [PurchaseReturnController::class, 'destroy'])
+        ->middleware('permission:purchase_return.delete')
+        ->name('purchase-returns.destroy');
+
 
     Route::post('/switch-locale', [Controller::class, 'switchLocale'])->middleware('permission:locale.switch')->name('locale.switch');
 
@@ -502,7 +536,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/ledgers/supplier/{id?}', [LedgerController::class, 'supplierLedger'])->middleware('permission:ledger.supplier_view')->name('ledgers.supplier');
     Route::post('/ledgers/clear-due/{id}', [LedgerController::class, 'clearDueStore'])->middleware('permission:ledger.clear_due')->name('clearDue.store');
     Route::post('/ledgers/advance-payment/{id}', [LedgerController::class, 'advancePaymentStore'])->middleware('permission:ledger.advance_payment')->name('advancePayment.store');
-    Route::get('/product-ledger', [LedgerController::class, 'ProductLedger'])->name('product-ledger.index');
+    Route::get('/product-ledger', [LedgerController::class, 'ProductLedger'])
+        ->middleware('permission:ledger.product_view')
+        ->name('product-ledger.index');
+
 
     Route::post('/subscriptions/{subscription}/renew', [SubscriptionController::class, 'renew'])->middleware('permission:subscriptions.renew')->name('subscriptions.renew');
     Route::get('/subscriptions_payments', [SubscriptionController::class, 'payment'])->middleware('permission:subscriptions.payments_view')->name('subscriptions.payments');
@@ -720,21 +757,25 @@ Route::middleware('auth')->group(function () {
     //notifications
 
     Route::get('/notifications', [NotificationController::class, 'index'])
-        // ->middleware('permission:notifications.view')
+        ->middleware('permission:notifications.view')
         ->name('notifications.index');
 
     Route::put('/notifications/{notification}/mark-as-read', [NotificationController::class, 'markAsRead'])
-        // ->middleware('permission:notifications.read')
+        ->middleware('permission:notifications.read')
         ->name('notifications.markAsRead');
+
     Route::put('/notifications/mark-all-as-read', [NotificationController::class, 'markAllAsRead'])
-        // ->middleware('permission:notifications.read_all')
+        ->middleware('permission:notifications.read_all')
         ->name('notifications.markAllAsRead');
+
     Route::delete('/notifications/delete-all-read', [NotificationController::class, 'deleteAllRead'])
-        // ->middleware('permission:notifications.delete_all')
+        ->middleware('permission:notifications.delete_all')
         ->name('notifications.deleteAllRead');
+
     Route::delete('/notifications/{notification}', [NotificationController::class, 'delete'])
-        // ->middleware('permission:notifications.delete')
+        ->middleware('permission:notifications.delete')
         ->name('notifications.destroy');
+
 
 });
 

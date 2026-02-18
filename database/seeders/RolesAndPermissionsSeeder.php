@@ -39,7 +39,11 @@ class RolesAndPermissionsSeeder extends Seeder
             'damages.index',
             'damages.show',
 
-            'headers.edit','headers.index','headers.create','headers.delete','headers.show',
+            'headers.edit',
+            'headers.index',
+            'headers.create',
+            'headers.delete',
+            'headers.show',
 
             // Users
             'users.view',
@@ -402,6 +406,22 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales.print.request',
             'product_ledger.view',
             'sales.items.destroy',
+
+            'business_profile.view',
+            'business_profile.edit',
+
+            'profile.edit',
+
+            'sales_return.delete',
+            'return.delete',
+
+            'ledger.product_view',
+
+            'notifications.view',
+            'notifications.read',
+            'notifications.read_all',
+            'notifications.delete_all',
+            'notifications.delete',
         ];
 
         foreach ($permissions as $permission) {
