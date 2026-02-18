@@ -217,7 +217,7 @@ Route::middleware('auth')->group(function () {
         ->name('return.store');
 
     Route::post('/approve/{id}/return', [SalesReturnController::class, 'approve'])
-        ->middleware('permission:sales_return.approve')
+        // ->middleware('permission:sales_return.approve')
         ->name('return.approve');
 
     Route::get('/return/{id}', [SalesReturnController::class, 'show'])

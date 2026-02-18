@@ -726,7 +726,7 @@ class SalesReturnController extends Controller
                 Payment::create([
                     'sale_id' => $salesReturn->sale_id,
                     'customer_id' => $customer->id,
-                    'amount' => $salesReturn->refunded_amount,
+                    'amount' => -$salesReturn->refunded_amount,
                     'shadow_amount' => $salesReturn->shadow_refunded_amount,
                     'payment_method' => $salesReturn->payment_type ?? 'cash',
                     'txn_ref' => 'RFND-' . Str::random(10),

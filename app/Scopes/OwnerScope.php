@@ -17,15 +17,28 @@ class OwnerScope implements Scope
 
         $user = Auth::user();
 
-        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) return;
+        if (method_exists($user, 'isSuperAdmin') && $user->isSuperAdmin()) {
+            return;
+        }
 
-        if (empty($user->current_outlet_id)) return;
+        $table = $model->getTable();
 
-        if (!Schema::hasColumn($model->getTable(), 'owner_id')) return;
+        // যদি owner_id থাকে
+        if (Schema::hasColumn($table, 'owner_id')) {
+            $builder->where(
+                $model->qualifyColumn('owner_id'),
+                $user->ownerId()
+            );
+            return;
+        }
 
-        $builder->where(
-            $model->qualifyColumn('owner_id'),
-            $user->ownerId()
-        );
+        // fallback → created_by
+        if (Schema::hasColumn($table, 'created_by')) {
+            $builder->where(
+                $model->qualifyColumn('created_by'),
+                $user->id
+            );
+        }
     }
 }
+
