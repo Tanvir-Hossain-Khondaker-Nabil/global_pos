@@ -213,7 +213,7 @@ class CustomerController extends Controller
         $totalSales = $customer->sales->count();
         $totalAmount = $customer->sales->sum('grand_total');
         $totalPaid = $customer->sales->sum('paid_amount');
-        $totalDue = $customer->sales->sum('due_amount');
+        $totalDue = $totalAmount - $totalPaid;
 
         return Inertia::render('Customer/Show', [
             'customer' => $customer,

@@ -225,7 +225,6 @@ export default function Index({ brands, filters }) {
                                                         className="btn btn-xs btn-outline btn-warning gap-1"
                                                     >
                                                         <Pen size={12} />
-                                                        <span className="hidden sm:inline">{t('brand.edit', 'Edit')}</span>
                                                     </a>
                                                     <button
                                                         disabled={deleteLoading === brand.id}
@@ -237,7 +236,6 @@ export default function Index({ brands, filters }) {
                                                         ) : (
                                                             <Trash2 size={12} />
                                                         )}
-                                                        <span className="hidden sm:inline">{t('brand.delete', 'Delete')}</span>
                                                     </button>
                                                 </div>
                                         </td>

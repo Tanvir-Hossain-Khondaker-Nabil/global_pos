@@ -69,7 +69,7 @@ class AccountController extends Controller
             $account = Account::create([
                 ...$validated,
                 'current_balance' => $validated['opening_balance'],
-                'user_id' => User::where('role_id', User::ADMIN_ROLE)->first()?->id, 
+                'user_id' => User::where('role_id', User::ADMIN_ROLE)->first()?->id,
                 'created_by' => Auth::id(),
             ]);
 
@@ -96,20 +96,15 @@ class AccountController extends Controller
         return to_route('accounts.index')->with('success', 'Account created successfully.');
     }
 
-
-
+   
     // Show account details
     public function show(Account $account)
     {
-        // Check if the account belongs to the authenticated user
-        if ($account->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized action.');
-        }
 
-        // Get payment statistics WITHOUT relationships
+        $account = Account::with('payments')->find($account->id);
+
         $paymentStats = [
-            'total_deposits' => Payment::where('account_id', $account->id)
-                ->whereIn('payment_method', ['deposit', 'transfer'])
+            'total_deposits' => $account->payments()->whereIn('payment_method', ['deposit', 'transfer'])
                 ->where('status', 'completed')
                 ->sum('amount'),
             'total_withdrawals' => Payment::where('account_id', $account->id)
@@ -195,7 +190,7 @@ class AccountController extends Controller
             Account::where('user_id', Auth::id())
                 ->where('is_active', true)
                 ->first()
-                    ?->update(['is_default' => true]);
+                ?->update(['is_default' => true]);
         }
 
         return redirect()->route('accounts.index')
@@ -236,6 +231,7 @@ class AccountController extends Controller
     //withdraw method will be here
     public function withdraw(Request $request, Account $account)
     {
+
         $validated = $request->validate([
             'amount' => [
                 'required',
@@ -252,9 +248,9 @@ class AccountController extends Controller
 
         DB::transaction(function () use ($account, $validated) {
             // Create payment record
-            $payment = Payment::create([
+            Payment::create([
                 'account_id' => $account->id,
-                'amount' => $validated['amount'],
+                'amount' => $validated['amount'] * -1,
                 'payment_method' => 'withdrawal',
                 'txn_ref' => 'WD-' . strtoupper(Str::random(8)),
                 'note' => 'withdraw',

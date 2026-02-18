@@ -788,8 +788,7 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
               <div className="flex justify-between">
                 <span className="font-semibold">Discount</span>
                 <span className="font-mono">
-                  {sale.discount || 0}% (
-                  {formatCurrency((Number(sale.sub_total || 0) * Number(sale.discount || 0)) / 100)})
+                  {sale.discount || 0} {sale?.discount_type == 'flat_discount' ? 'Tk' : '%'}
                 </span>
               </div>
               <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">

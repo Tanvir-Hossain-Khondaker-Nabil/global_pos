@@ -30,10 +30,6 @@ import {
     Package,
     Layers,
     Info,
-    Grid,
-    List,
-    Box,
-    Tag,
 } from "lucide-react";
 
 export default function AddSale({
@@ -79,27 +75,26 @@ export default function AddSale({
     const [newSupplierPhone, setNewSupplierPhone] = useState("");
     const [showProductDropdown, setShowProductDropdown] = useState(false);
 
-    // State for product selection flow
-    const [selectedProduct, setSelectedProduct] = useState(null);
+    // New state for simplified flow
+    const [selectedProductForVariants, setSelectedProductForVariants] = useState(null);
     const [productVariants, setProductVariants] = useState([]);
-    const [showVariantModal, setShowVariantModal] = useState(false);
-    const [showBatchModal, setShowBatchModal] = useState(false);
-    const [selectedVariant, setSelectedVariant] = useState(null);
-    const [availableBatches, setAvailableBatches] = useState([]);
-    const [selectedBatch, setSelectedBatch] = useState(null);
+    const [selectedVariantIndex, setSelectedVariantIndex] = useState(0);
+    const [showVariantPanel, setShowVariantPanel] = useState(false);
+
     const [selectedUnits, setSelectedUnits] = useState({});
     const [unitQuantities, setUnitQuantities] = useState({});
     const [availableUnits, setAvailableUnits] = useState({});
     const [productDetails, setProductDetails] = useState({});
     const [stockDetails, setStockDetails] = useState({});
     const [basePrices, setBasePrices] = useState({});
+    // Track if price was manually edited
     const [priceManuallyEdited, setPriceManuallyEdited] = useState({});
 
     // Installment payment state
     const [installmentDuration, setInstallmentDuration] = useState(0);
     const [totalInstallments, setTotalInstallments] = useState(0);
 
-    // Pickup state
+    // picup state
     const [pickupProductId, setPickupProductId] = useState("");
     const [pickupVariantId, setPickupVariantId] = useState("");
     const [pickupSupplierId, setPickupSupplierId] = useState("");
@@ -107,6 +102,11 @@ export default function AddSale({
     const [pickupQuantity, setPickupQuantity] = useState(1);
     const [pickupUnitPrice, setPickupUnitPrice] = useState(0);
     const [pickupSalePrice, setPickupSalePrice] = useState(0);
+
+    // Batch selection modal state
+    const [showBatchModal, setShowBatchModal] = useState(false);
+    const [availableBatches, setAvailableBatches] = useState([]);
+    const [selectedVariantForBatch, setSelectedVariantForBatch] = useState(null);
 
     // BARCODE SCANNER
     const barcodeRef = useRef(null);
@@ -155,7 +155,7 @@ export default function AddSale({
         }
     };
 
-    // Unit conversion helper functions
+    // ইউনিট কনভার্সন হেল্পার ফাংশন
     const getAvailableUnitsForProduct = (product, stock) => {
         if (!product) return ["piece"];
 
@@ -175,6 +175,7 @@ export default function AddSale({
             }
         }
 
+        // ছোট থেকে বড় সাজাই (gram < kg < ton)
         return available.sort(
             (a, b) => (conversions[a] || 1) - (conversions[b] || 1)
         );
@@ -192,37 +193,50 @@ export default function AddSale({
         };
     };
 
+    // Base unit এ convert করা
     const convertToBase = (quantity, fromUnit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[fromUnit]) return quantity;
+
         return quantity * conversions[fromUnit];
     };
 
+    // Base unit থেকে নির্দিষ্ট unit এ convert করা
     const convertFromBase = (quantity, toUnit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[toUnit]) return quantity;
+
         const conversion = conversions[toUnit];
         return conversion !== 0 ? quantity / conversion : quantity;
     };
 
+    // Unit থেকে unit এ convert করা
     const convertUnitQuantity = (quantity, fromUnit, toUnit, unitType) => {
         if (fromUnit === toUnit) return quantity;
+
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[fromUnit] || !conversions[toUnit])
             return quantity;
+
         const baseQuantity = quantity * conversions[fromUnit];
         return baseQuantity / conversions[toUnit];
     };
 
+    // Auto Price Calculator - Unit change হলে price auto calculate হবে
     const calculatePriceForUnit = (basePricePerBaseUnit, targetUnit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
+
+        // Base unit price * target unit conversion factor
         return basePricePerBaseUnit * conversions[targetUnit];
     };
 
+    // Calculate base price per base unit (সবচেয়ে ছোট unit)
     const calculateBasePricePerBaseUnit = (price, unit, unitType) => {
         const conversions = unitConversions[unitType];
         if (!conversions || !conversions[unit]) return price;
+
+        // Price কে base unit price এ convert করি
         return price / conversions[unit];
     };
 
@@ -272,6 +286,7 @@ export default function AddSale({
     const allProducts = useMemo(() => {
         if (!productstocks || productstocks.length === 0) return [];
 
+        // Group products by ID
         const productMap = new Map();
 
         productstocks.forEach((stock) => {
@@ -289,6 +304,7 @@ export default function AddSale({
             const product = productMap.get(productId);
             product.stocks.push(stock);
 
+            // Group by variant
             if (stock.variant) {
                 const variantId = stock.variant.id;
                 if (!product.variants.has(variantId)) {
@@ -304,14 +320,13 @@ export default function AddSale({
                 variant.stocks.push(stock);
                 variant.totalQuantity += Number(stock.quantity) || 0;
 
+                // Group by batch
                 const batchKey = stock.batch_no || 'default';
                 if (!variant.batches.has(batchKey)) {
                     variant.batches.set(batchKey, {
                         batch_no: stock.batch_no,
                         stocks: [],
                         totalQuantity: 0,
-                        sale_price: stock.sale_price || 0,
-                        purchase_price: stock.purchase_price || 0,
                     });
                 }
 
@@ -324,107 +339,102 @@ export default function AddSale({
         return Array.from(productMap.values()).sort((a, b) => a.name.localeCompare(b.name));
     }, [productstocks]);
 
-    // ========== SEARCH FUNCTION - UPDATED ==========
+    // ========== SIMPLIFIED SEARCH ==========
     useEffect(() => {
         if (!productSearch.trim()) {
-            // When search is empty, show all products
             setFilteredProducts(allProducts);
             return;
         }
 
         const searchTerm = productSearch.toLowerCase();
         const filtered = allProducts.filter((product) => {
+            // Search only in product name and product_no
             return product.name.toLowerCase().includes(searchTerm) ||
                 (product.product_no && product.product_no.toLowerCase().includes(searchTerm));
         });
 
         setFilteredProducts(filtered);
-        setShowProductDropdown(true);
     }, [productSearch, allProducts]);
 
-    // Add this effect to control dropdown visibility based on focus
-    useEffect(() => {
-        // This effect ensures dropdown shows when there are products
-        if (allProducts.length > 0 && showProductDropdown) {
-            setFilteredProducts(allProducts);
-        }
-    }, [showProductDropdown, allProducts]);
+    // ========== HANDLE PRODUCT CLICK - SHOW ALL VARIANTS ==========
+    const handleProductClick = (product) => {
+        setSelectedProductForVariants(product);
 
-    // ========== PRODUCT SELECTION - SHOW ALL VARIANTS ==========
-    const handleProductSelect = (product) => {
-        setSelectedProduct(product);
-        setProductSearch(product.name);
-        setShowProductDropdown(false); // Close dropdown after selection
-
-        // Process variants
+        // Process variants to show attributes nicely
         const variantsList = [];
         product.variants.forEach((variantData, variantId) => {
             const variant = variantData.variant;
             const attributes = variant.attribute_values || {};
 
+            // Format attributes as key-value pairs
             const attributePairs = Object.entries(attributes).map(([key, value]) => ({
                 key,
                 value
             }));
 
-            // Group batches for this variant
-            const batches = [];
-            variantData.batches.forEach((batchData, batchNo) => {
-                batches.push({
-                    batch_no: batchData.batch_no,
-                    totalQuantity: batchData.totalQuantity,
-                    sale_price: batchData.sale_price,
-                    purchase_price: batchData.purchase_price,
-                    stocks: batchData.stocks,
-                    unit: batchData.stocks[0]?.unit || product.default_unit || 'piece',
-                });
-            });
+            // Calculate total stock
+            const totalStock = variantData.stocks.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
+
+            // Get unique batches
+            const batches = Array.from(variantData.batches.values());
 
             variantsList.push({
                 id: variantId,
                 sku: variant.sku,
                 attributes: attributePairs,
-                totalStock: variantData.totalQuantity,
-                batches: batches,
+                totalStock,
+                batches,
+                stocks: variantData.stocks,
                 unit: variantData.stocks[0]?.unit || product.default_unit || 'piece',
+                sale_price: variantData.stocks[0]?.sale_price || 0,
             });
         });
 
         setProductVariants(variantsList);
-        setShowVariantModal(true);
+        setSelectedVariantIndex(0); // Select first variant by default
+        setShowVariantPanel(true);
+        setShowProductDropdown(false);
+        setProductSearch(product.name); // Show product name in search box
     };
 
-    // ========== VARIANT SELECTION - SHOW BATCHES ==========
-    const handleVariantSelect = (variant) => {
-        setSelectedVariant(variant);
-        setAvailableBatches(variant.batches);
-        setShowVariantModal(false);
-        setShowBatchModal(true);
+    // ========== HANDLE VARIANT CLICK - SHOW IN BOTTOM ==========
+    const handleVariantClick = (index) => {
+        setSelectedVariantIndex(index);
     };
 
-    // ========== BATCH SELECTION - ADD TO CART ==========
-    const handleBatchSelect = (batch) => {
-        setSelectedBatch(batch);
-        
-        // Get the first stock from this batch
-        const stock = batch.stocks[0];
-        if (!stock) {
-            alert("No stock available for this batch");
+    // ========== ADD SELECTED VARIANT TO CART ==========
+    const addVariantToCart = (variantData) => {
+        // Find the stock to use (prefer one with positive quantity)
+        const availableStock = variantData.stocks.find(s => s.quantity > 0) || variantData.stocks[0];
+
+        if (!availableStock) {
+            alert("No stock available for this variant");
             return;
         }
 
-        const product = selectedProduct;
-        const variant = selectedVariant;
+        const product = selectedProductForVariants;
+        const variant = product.variants.get(variantData.id)?.variant;
 
-        // Add to cart with this specific batch
-        addToCart(product, variant, batch, stock);
-        
-        setShowBatchModal(false);
+        proceedWithStockSelection(availableStock, {
+            variant,
+            stocks: [availableStock],
+            totalQuantity: variantData.totalStock,
+            sale_price: variantData.sale_price,
+            unit: variantData.unit,
+            product,
+        });
     };
 
-    // ========== ADD TO CART ==========
-    const addToCart = (product, variant, batch, stock) => {
-        const selectedSalePrice = Number(batch.sale_price) || Number(stock.sale_price) || 0;
+    // ========== PROCEED WITH STOCK SELECTION ==========
+    const proceedWithStockSelection = (selectedStock, variantWithStocks) => {
+        const {
+            variant,
+            sale_price,
+            unit,
+            product,
+        } = variantWithStocks;
+
+        const selectedSalePrice = Number(selectedStock.sale_price) || Number(sale_price) || 0;
 
         // Get product details
         const pDetails = getProductDetails(product.id);
@@ -433,8 +443,11 @@ export default function AddSale({
             [product.id]: pDetails,
         }));
 
-        // Get available units
-        const availableUnitsForStock = getAvailableUnitsForProduct(product, stock);
+        // Get available units for this specific stock
+        const availableUnitsForStock = getAvailableUnitsForProduct(
+            product,
+            selectedStock
+        );
 
         // Determine default sale unit
         let defaultUnit = pDetails?.min_sale_unit || product.default_unit || "piece";
@@ -442,19 +455,19 @@ export default function AddSale({
             defaultUnit = availableUnitsForStock[0] || "piece";
         }
 
-        // Calculate base price
+        // Calculate base price per base unit
         let basePricePerBaseUnit = selectedSalePrice;
         if (pDetails?.unit_type && pDetails.unit_type !== "piece") {
             basePricePerBaseUnit = calculateBasePricePerBaseUnit(
                 selectedSalePrice,
-                stock.unit || 'piece',
+                unit,
                 pDetails.unit_type
             );
         }
 
-        // Calculate price in sale unit
+        // Calculate price in sale unit using base price
         let unitPriceInSaleUnit = selectedSalePrice;
-        if (stock.unit !== defaultUnit && pDetails?.unit_type) {
+        if (unit !== defaultUnit && pDetails?.unit_type) {
             unitPriceInSaleUnit = calculatePriceForUnit(
                 basePricePerBaseUnit,
                 defaultUnit,
@@ -462,13 +475,8 @@ export default function AddSale({
             );
         }
 
-        // Create attribute display
-        const attributeDisplay = variant.attributes
-            .map(attr => `${attr.key}: ${attr.value}`)
-            .join(' | ');
-
         // Create unique key with batch number
-        const itemKey = `${product.id}-${variant.id}-${batch.batch_no || "default"}`;
+        const itemKey = `${product.id}-${variant.id}-${selectedStock.batch_no || "default"}`;
         const existingItem = selectedItems.find((item) => item.uniqueKey === itemKey);
 
         if (existingItem) {
@@ -491,11 +499,17 @@ export default function AddSale({
             setUnitQuantities((prev) => ({ ...prev, [itemKey]: newQuantity }));
         } else {
             // Add new item
+            const attributeDisplay = variant.attribute_values
+                ? Object.entries(variant.attribute_values)
+                    .map(([key, value]) => `${key}: ${value}`)
+                    .join(' | ')
+                : 'Default';
+
             const newItem = {
                 uniqueKey: itemKey,
                 product_id: product.id,
                 variant_id: variant.id,
-                batch_no: batch.batch_no,
+                batch_no: selectedStock.batch_no,
                 product_name: product.name,
                 product_no: product.product_no,
                 variant_attribute: attributeDisplay,
@@ -504,17 +518,17 @@ export default function AddSale({
                 unit_quantity: 1,
                 unit: defaultUnit,
                 sku: variant.sku || "Default SKU",
-                stockQuantity: Number(batch.totalQuantity) || 0,
-                stockBaseQuantity: Number(stock.base_quantity) || Number(batch.totalQuantity) || 0,
-                stockId: stock.id,
-                original_purchase_unit: stock.unit || 'piece',
+                stockQuantity: Number(selectedStock.quantity) || 0,
+                stockBaseQuantity: Number(selectedStock.base_quantity) || Number(selectedStock.quantity) || 0,
+                stockId: selectedStock.id,
+                original_purchase_unit: unit,
                 original_sale_price: selectedSalePrice,
                 unit_price: unitPriceInSaleUnit,
                 sell_price: unitPriceInSaleUnit,
                 total_price: unitPriceInSaleUnit,
                 product_unit_type: pDetails?.unit_type || "piece",
                 is_fraction_allowed: pDetails?.is_fraction_allowed || false,
-                stockDetails: stock,
+                stockDetails: selectedStock,
                 base_price_per_base_unit: basePricePerBaseUnit,
             };
 
@@ -525,7 +539,7 @@ export default function AddSale({
                 ...prev,
                 [itemKey]: availableUnitsForStock,
             }));
-            setStockDetails((prev) => ({ ...prev, [itemKey]: stock }));
+            setStockDetails((prev) => ({ ...prev, [itemKey]: selectedStock }));
             setBasePrices((prev) => ({
                 ...prev,
                 [itemKey]: basePricePerBaseUnit,
@@ -533,11 +547,8 @@ export default function AddSale({
             setPriceManuallyEdited((prev) => ({ ...prev, [itemKey]: false }));
         }
 
-        // Reset selection
-        setSelectedProduct(null);
-        setSelectedVariant(null);
-        setSelectedBatch(null);
-        setProductSearch("");
+        // Optional: Close variant panel after adding
+        // setShowVariantPanel(false);
     };
 
     // ========== BARCODE SCAN HANDLERS ==========
@@ -548,9 +559,10 @@ export default function AddSale({
 
             setScanError("");
 
+            // Find product by code
             const product = allProducts.find(p => p.product_no === code || p.code === code);
             if (product) {
-                handleProductSelect(product);
+                handleProductClick(product);
                 return;
             }
 
@@ -559,6 +571,7 @@ export default function AddSale({
         [allProducts]
     );
 
+    // Barcode scanner
     const SCAN_TIMEOUT = 100;
     const barcodeRefNew = useRef("");
     const lastScanTimeRef = useRef(0);
@@ -575,6 +588,7 @@ export default function AddSale({
                 target?.isContentEditable;
 
             if (isTypingField) return;
+
             if (e.ctrlKey || e.altKey || e.metaKey) return;
 
             const now = Date.now();
@@ -594,6 +608,7 @@ export default function AddSale({
                 } else {
                     barcodeRefNew.current += e.key;
                 }
+
                 lastScanTimeRef.current = now;
             }
         };
@@ -620,6 +635,7 @@ export default function AddSale({
             return;
         }
 
+        // Convert quantity to new unit
         let newQuantity = item.unit_quantity;
 
         if (item.product_unit_type && item.product_unit_type !== "piece") {
@@ -630,6 +646,7 @@ export default function AddSale({
                 item.product_unit_type
             );
 
+            // Validate stock in new unit
             const requestedBaseQty = convertToBase(
                 newQuantity,
                 newUnit,
@@ -653,6 +670,7 @@ export default function AddSale({
             }
         }
 
+        // Calculate new price based on whether it was manually edited
         let newPrice = item.unit_price;
 
         if (!priceManuallyEdited[itemKey]) {
@@ -665,6 +683,7 @@ export default function AddSale({
             }
         }
 
+        // Update item
         const updatedItems = [...selectedItems];
         updatedItems[itemIndex] = {
             ...item,
@@ -968,6 +987,7 @@ export default function AddSale({
 
         setPickupItems([...pickupItems, newItem]);
 
+        // Reset form
         setPickupSupplierId("");
         setPickupProductId("");
         setPickupVariants([]);
@@ -1253,6 +1273,7 @@ export default function AddSale({
                                     <CreditCard size={14} /> Payment
                                 </h3>
 
+                                {/* Account Selection */}
                                 <div className="form-control mb-3">
                                     <label className="label py-0">
                                         <span className="label-text text-[10px] text-gray-500 uppercase font-bold">
@@ -1326,6 +1347,7 @@ export default function AddSale({
                                     </div>
                                 </div>
 
+                                {/* Installment Fields */}
                                 {paymentStatus === 'installment' && (
                                     <div className="grid grid-cols-2 gap-3 mb-3">
                                         <div className="form-control">
@@ -1359,6 +1381,7 @@ export default function AddSale({
                                     </div>
                                 )}
 
+                                {/* Totals */}
                                 <div className="space-y-1 text-xs pt-2 border-t border-gray-200 font-bold">
                                     <div className="flex justify-between">
                                         <span>Gross</span>
@@ -1401,7 +1424,7 @@ export default function AddSale({
 
                     {/* RIGHT COLUMN - Products */}
                     <div className="lg:col-span-2">
-                        {/* Product Search - UPDATED */}
+                        {/* Product Search */}
                         <div className="mb-4">
                             <div className="form-control relative">
                                 <div className="relative">
@@ -1412,20 +1435,14 @@ export default function AddSale({
                                         value={productSearch}
                                         onChange={(e) => {
                                             setProductSearch(e.target.value);
-                                        }}
-                                        onFocus={() => {
-                                            // When focusing, show dropdown with all products
                                             setShowProductDropdown(true);
-                                            setFilteredProducts(allProducts);
+                                            if (!e.target.value) {
+                                                setShowVariantPanel(false);
+                                                setSelectedProductForVariants(null);
+                                            }
                                         }}
-                                        onBlur={() => {
-                                            // Small delay to allow click events on dropdown items
-                                            setTimeout(() => {
-                                                setShowProductDropdown(false);
-                                            }, 200);
-                                        }}
+                                        onClick={() => setShowProductDropdown(true)}
                                         placeholder="Search products by name or code..."
-                                        autoComplete="off"
                                     />
                                     <Search size={18} className="absolute right-3 top-3.5 text-gray-400" />
                                     {productSearch && (
@@ -1433,8 +1450,9 @@ export default function AddSale({
                                             type="button"
                                             onClick={() => {
                                                 setProductSearch("");
-                                                setFilteredProducts(allProducts); // Reset to all products when clearing
-                                                setShowProductDropdown(true); // Keep dropdown open
+                                                setShowProductDropdown(false);
+                                                setShowVariantPanel(false);
+                                                setSelectedProductForVariants(null);
                                             }}
                                             className="absolute right-10 top-3 text-gray-400 hover:text-error"
                                         >
@@ -1443,45 +1461,41 @@ export default function AddSale({
                                     )}
                                 </div>
 
-                                {/* Product Dropdown */}
+                                {/* Product Dropdown - Shows only product names */}
                                 {showProductDropdown && filteredProducts.length > 0 && (
-                                    <div className="absolute z-10 w-full mt-12 bg-white border border-gray-300 rounded-box shadow-lg max-h-96 overflow-y-auto">
-                                        <div className="bg-gray-100 p-2 sticky top-0 flex justify-between items-center">
-                                            <h3 className="text-sm font-semibold text-gray-700">
-                                                Products ({filteredProducts.length})
-                                            </h3>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShowProductDropdown(false)}
-                                                className="btn btn-ghost btn-xs"
-                                            >
-                                                <X size={12} />
-                                            </button>
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-box shadow-lg max-h-60 overflow-y-auto">
+                                        <div className="bg-gray-100 p-2 sticky top-0">
+                                            <div className="flex justify-between items-center">
+                                                <h3 className="text-sm font-semibold text-gray-700">
+                                                    Products ({filteredProducts.length})
+                                                </h3>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowProductDropdown(false)}
+                                                    className="btn btn-ghost btn-xs"
+                                                >
+                                                    <X size={12} />
+                                                </button>
+                                            </div>
                                         </div>
 
                                         {filteredProducts.map((product) => (
                                             <div
                                                 key={product.id}
                                                 className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
-                                                onClick={() => handleProductSelect(product)}
+                                                onClick={() => {
+                                                    handleProductClick(product);
+                                                    setShowProductDropdown(false);
+                                                }}
                                             >
                                                 <div className="flex justify-between items-center">
                                                     <div>
-                                                        <div className="font-medium flex items-center gap-2">
-                                                            <Package size={14} className="text-primary" />
-                                                            {product.name}
-                                                        </div>
-                                                        <div className="text-xs text-gray-500 mt-1">
-                                                            <span className="mr-3">Code: {product.product_no || "N/A"}</span>
-                                                            <span>Unit: {product.unit_type?.toUpperCase() || 'PIECE'}</span>
+                                                        <div className="font-medium">{product.name}</div>
+                                                        <div className="text-xs text-gray-500">
+                                                            Code: {product.product_no || "N/A"} | Unit: {product.unit_type?.toUpperCase() || 'PIECE'}
                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-xs bg-gray-200 px-2 py-1 rounded-full">
-                                                            {product.variants?.size || 0} variants
-                                                        </span>
-                                                        <ChevronRight size={16} className="text-gray-400" />
-                                                    </div>
+                                                    <ChevronRight size={16} className="text-gray-400" />
                                                 </div>
                                             </div>
                                         ))}
@@ -1490,13 +1504,67 @@ export default function AddSale({
                             </div>
                         </div>
 
+                        {/* Variant Tabs - Shows when product is selected */}
+                        {showVariantPanel && selectedProductForVariants && (
+                            <div className="mb-4 border border-gray-200 rounded-box overflow-hidden">
+                                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                                    <h3 className="font-semibold flex items-center gap-2">
+                                        <Package size={16} className="text-primary" />
+                                        {selectedProductForVariants.name} - Select Variant
+                                    </h3>
+                                </div>
+
+                                {/* Variant Tabs */}
+                                {/* <div className="flex flex-wrap gap-1 p-3 bg-white border-b border-gray-200">
+                                    {productVariants.map((variant, index) => {
+                                        // Create a display name from attributes
+                                        const displayName = variant.attributes.length > 0
+                                            ? variant.attributes.map(attr => `${attr.key}: ${attr.value}`).join(' | ')
+                                            : `Variant ${index + 1}`;
+
+                                        return (
+                                            <button
+                                                key={variant.id}
+                                                type="button"
+                                                onClick={() => handleVariantClick(index)}
+                                                className={`px-4 py-2 text-sm rounded-t-lg transition-colors flex items-center gap-2 ${selectedVariantIndex === index
+                                                        ? 'bg-primary text-white font-medium'
+                                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                            >
+                                                <Layers size={14} />
+                                                <span className="truncate max-w-[150px]">{displayName}</span>
+                                                {variant.totalStock > 0 && (
+                                                    <span className={`ml-1 px-1.5 py-0.5 rounded-full text-xs ${selectedVariantIndex === index
+                                                            ? 'bg-white text-primary'
+                                                            : 'bg-gray-300 text-gray-700'
+                                                        }`}>
+                                                        {variant.totalStock}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        );
+                                    })}
+                                </div> */}
+
+                                {/* Selected Variant Info - Shows at bottom */}
+                                {productVariants[selectedVariantIndex] && (
+                                    <div className="p-4 bg-white">
+                                        <VariantInfo
+                                            variant={productVariants[selectedVariantIndex]}
+                                            product={selectedProductForVariants}
+                                            onAddToCart={() => addVariantToCart(productVariants[selectedVariantIndex])}
+                                            formatCurrency={formatCurrency}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Selected Items List */}
                         {selectedItems.length > 0 && (
                             <div className="mb-4">
-                                <h3 className="font-semibold mb-2 flex items-center gap-2">
-                                    <ShoppingBag size={16} className="text-primary" />
-                                    Selected Items ({selectedItems.length})
-                                </h3>
+                                <h3 className="font-semibold mb-2">Selected Items ({selectedItems.length})</h3>
                                 <div className="space-y-3">
                                     {selectedItems.map((item, index) => (
                                         <SelectedItemCard
@@ -1651,136 +1719,6 @@ export default function AddSale({
                 </div>
             </form>
 
-            {/* Variant Selection Modal */}
-            {showVariantModal && selectedProduct && (
-                <div className="modal modal-open">
-                    <div className="modal-box max-w-3xl">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold flex items-center gap-2">
-                                <Layers size={18} className="text-primary" />
-                                Select Variant - {selectedProduct.name}
-                            </h3>
-                            <button 
-                                onClick={() => {
-                                    setShowVariantModal(false);
-                                    setSelectedProduct(null);
-                                }} 
-                                className="btn btn-sm btn-circle btn-ghost"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 max-h-96 overflow-y-auto">
-                            {productVariants.map((variant, index) => (
-                                <div
-                                    key={variant.id}
-                                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                                    onClick={() => handleVariantSelect(variant)}
-                                >
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex-1">
-                                            {/* Attributes */}
-                                            <div className="flex flex-wrap gap-2 mb-2">
-                                                {variant.attributes.map((attr, idx) => (
-                                                    <span
-                                                        key={idx}
-                                                        className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs border border-blue-200"
-                                                    >
-                                                        <span className="font-semibold">{attr.key}:</span> {attr.value}
-                                                    </span>
-                                                ))}
-                                            </div>
-
-                                            {/* Batches Preview */}
-                                            {variant.batches.length > 0 && (
-                                                <div className="mt-2">
-                                                    <div className="text-xs font-semibold text-gray-600 mb-1">Available Batches:</div>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {variant.batches.slice(0, 3).map((batch, idx) => (
-                                                            <span
-                                                                key={idx}
-                                                                className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs"
-                                                            >
-                                                                Batch: {batch.batch_no || 'N/A'} | Qty: {batch.totalQuantity} | Price: ৳{batch.sale_price}
-                                                            </span>
-                                                        ))}
-                                                        {variant.batches.length > 3 && (
-                                                            <span className="text-xs text-gray-500">
-                                                                +{variant.batches.length - 3} more
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <ChevronRight size={20} className="text-gray-400" />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Batch Selection Modal */}
-            {showBatchModal && selectedVariant && (
-                <div className="modal modal-open">
-                    <div className="modal-box max-w-2xl">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-lg font-bold flex items-center gap-2">
-                                <Box size={18} className="text-primary" />
-                                Select Batch - {selectedProduct?.name}
-                            </h3>
-                            <button 
-                                onClick={() => {
-                                    setShowBatchModal(false);
-                                    setSelectedVariant(null);
-                                }} 
-                                className="btn btn-sm btn-circle btn-ghost"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div className="space-y-3 max-h-96 overflow-y-auto">
-                            {availableBatches.map((batch, index) => (
-                                <div
-                                    key={index}
-                                    className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-                                    onClick={() => handleBatchSelect(batch)}
-                                >
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <div className="text-sm">
-                                                <span className="font-semibold">Batch No:</span> {batch.batch_no || 'N/A'}
-                                            </div>
-                                            <div className="text-sm mt-1">
-                                                <span className="font-semibold">Available Stock:</span> {batch.totalQuantity} {selectedVariant.unit.toUpperCase()}
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="text-sm">
-                                                <span className="font-semibold">Sale Price:</span> ৳{batch.sale_price || 0}
-                                            </div>
-                                            <div className="text-sm mt-1">
-                                                <span className="font-semibold">Purchase Price:</span> ৳{batch.purchase_price || 0}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2 text-right">
-                                        <button className="btn btn-sm btn-primary">
-                                            Select This Batch
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {/* Pickup Modal */}
             {showPickupModal && (
                 <div className="modal modal-open">
@@ -1884,6 +1822,96 @@ export default function AddSale({
     );
 }
 
+// ========== VARIANT INFO COMPONENT ==========
+const VariantInfo = ({ variant, product, onAddToCart, formatCurrency }) => {
+    return (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
+                <h4 className="font-semibold flex items-center gap-2">
+                    <Info size={16} className="text-blue-600" />
+                    Variant Details
+                </h4>
+                <button
+                    type="button"
+                    onClick={onAddToCart}
+                    className="btn btn-sm bg-primary text-white"
+                    disabled={variant.totalStock <= 0}
+                >
+                    <Plus size={14} className="mr-1" />
+                    Add to Sale
+                </button>
+            </div>
+
+            <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm space-y-4">
+
+                {/* Attributes as inline badges */}
+                <div className="flex flex-wrap gap-2 text-sm">
+                    {variant.attributes.map((attr, idx) => (
+                        <span
+                            key={idx}
+                            className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-md border text-xs"
+                        >
+                            <span className="font-semibold">{attr.key}:</span> {attr.value}
+                        </span>
+                    ))}
+                </div>
+
+
+                {/* Batch + SKU */}
+                <div className="text-xs text-gray-600 space-y-1">
+
+                    <div className="flex flex-wrap gap-x-2">
+                        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+
+                            {/* Sale Price */}
+                            <span>
+                                <span className="font-semibold">Sale Price:</span>{" "}
+                                {variant.sale_price || 0}
+                            </span>
+
+                            {/* Total Stock */}
+                            <span>
+                                <span className="font-semibold">Total Stock:</span>{" "}
+                                {variant.totalStock}{" "}
+                                <span className="text-xs font-medium text-gray-600">
+                                    {variant.unit.toUpperCase()}
+                                </span>
+                            </span>
+
+                            {/* Batches */}
+                            {variant.batches.map((batch, batchIdx) => (
+                                <React.Fragment key={batchIdx}>
+                                    <span>
+                                        <span className="font-semibold">Batch:</span>{" "}
+                                        {batch.batch_no || "N/A"}
+                                    </span>
+
+                                    <span>
+                                        <span className="font-semibold">Qty:</span>{" "}
+                                        {batch.totalQuantity} {variant.unit.toUpperCase()}
+                                    </span>
+                                </React.Fragment>
+                            ))}
+
+                        </div>
+
+
+                    </div>
+                 
+                </div>
+
+                {/* Out of stock */}
+                {variant.totalStock <= 0 && (
+                    <div className="text-center text-sm text-red-600 bg-red-50 rounded-md py-2">
+                        Out of Stock
+                    </div>
+                )}
+            </div>
+
+        </div>
+    );
+};
+
 // ========== SELECTED ITEM CARD COMPONENT ==========
 const SelectedItemCard = ({
     item,
@@ -1914,8 +1942,7 @@ const SelectedItemCard = ({
                         <strong>Variant:</strong> {item.variant_attribute}
                     </p>
                     <p className="text-sm text-gray-600">
-                        <strong>Batch:</strong> {item.batch_no || 'N/A'} 
-                        <span className="text-gray-600"> | <strong>Total Stock:</strong> {item?.stockQuantity || 0}</span>
+                        <strong>Batch:</strong> {item.batch_no || 'N/A'} | <strong>SKU:</strong> {item.sku}
                     </p>
                 </div>
                 <button
@@ -1928,6 +1955,7 @@ const SelectedItemCard = ({
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                {/* Unit Select */}
                 <div className="form-control">
                     <label className="label">
                         <span className="label-text">Unit</span>
@@ -1945,6 +1973,7 @@ const SelectedItemCard = ({
                     </select>
                 </div>
 
+                {/* Quantity */}
                 <div className="form-control">
                     <label className="label">
                         <span className="label-text">Quantity</span>
@@ -1957,6 +1986,7 @@ const SelectedItemCard = ({
                     />
                 </div>
 
+                {/* Unit Price */}
                 <div className="form-control">
                     <label className="label">
                         <span className="label-text">
@@ -1972,6 +2002,7 @@ const SelectedItemCard = ({
                     />
                 </div>
 
+                {/* Total */}
                 <div className="form-control">
                     <label className="label">
                         <span className="label-text">Total</span>
@@ -1985,6 +2016,7 @@ const SelectedItemCard = ({
                 </div>
             </div>
 
+            {/* Unit Conversion Info */}
             {item.product_unit_type && item.product_unit_type !== "piece" && (
                 <div className="mt-2 text-xs text-gray-600 bg-blue-50 p-2 rounded">
                     <span className="font-medium">Stock:</span> {

@@ -31,6 +31,8 @@ return [
     'users' => 'ব্যবহারকারী',
     'logging_in' => 'লগইন হচ্ছে...',
     'thumbnail_hint' => 'থাম্বনেইল',
+    'all_sales_return' => 'সমস্ত বিক্রয় ফেরত',
+    'expenses_category' => 'ব্যয় বিভাগ',
 
     // HR/Employee Management
     'employees' => 'কর্মচারী',

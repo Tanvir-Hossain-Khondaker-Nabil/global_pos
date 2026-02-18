@@ -24,41 +24,123 @@ export default function ProductLedger({
     const [selectedProductId, setSelectedProductId] = useState(
         filters?.product_id || null,
     );
-    const [currentPage, setCurrentPage] = useState(
-        transactions?.pagination?.current_page || 1,
-    );
+    
+    // URL থেকে পৃষ্ঠা নম্বর নেওয়া
+    const [currentPage, setCurrentPage] = useState(() => {
+        // প্রথমে URL থেকে page প্যারামিটার চেক করুন
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageFromUrl = urlParams.get('page');
+        
+        // যদি URL-এ page থাকে, সেটা ব্যবহার করুন
+        if (pageFromUrl) {
+            return parseInt(pageFromUrl);
+        }
+        
+        // না থাকলে transactions থেকে নিন
+        return transactions?.pagination?.current_page || 1;
+    });
+
+    // লোকাল স্টোরেজ থেকে পৃষ্ঠা নম্বর লোড করা (প্রতিটি প্রোডাক্টের জন্য)
+    useEffect(() => {
+        if (selectedProductId) {
+            const savedPage = localStorage.getItem(`product_page_${selectedProductId}`);
+            
+            // URL-এ page প্যারামিটার চেক করুন
+            const urlParams = new URLSearchParams(window.location.search);
+            const pageFromUrl = urlParams.get('page');
+            
+            // যদি URL-এ page থাকে, সেটা ব্যবহার করুন
+            if (pageFromUrl) {
+                setCurrentPage(parseInt(pageFromUrl));
+            }
+            // না থাকলে এবং সংরক্ষিত পৃষ্ঠা থাকে, সেটা ব্যবহার করুন
+            else if (savedPage) {
+                setCurrentPage(parseInt(savedPage));
+            }
+            // না থাকলে 1 ব্যবহার করুন
+            else {
+                setCurrentPage(1);
+            }
+        }
+    }, [selectedProductId]);
+
+    // transactions থেকে পৃষ্ঠা তথ্য আপডেট করা
+    useEffect(() => {
+        if (selectedProductId && transactions?.pagination?.current_page) {
+            const newPage = transactions.pagination.current_page;
+            setCurrentPage(newPage);
+            
+            // লোকাল স্টোরেজে সংরক্ষণ করুন
+            localStorage.setItem(`product_page_${selectedProductId}`, newPage.toString());
+            
+            // URL আপডেট করুন (ইউজারকে দেখানোর জন্য)
+            const url = new URL(window.location.href);
+            url.searchParams.set('page', newPage.toString());
+            window.history.replaceState({}, '', url);
+        }
+    }, [transactions?.pagination?.current_page, selectedProductId]);
+
+    // কম্পোনেন্ট লোড হওয়ার সময় URL চেক করুন
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const pageFromUrl = urlParams.get('page');
+        const productIdFromUrl = urlParams.get('product_id');
+        
+        // যদি URL-এ product_id এবং page থাকে
+        if (productIdFromUrl && pageFromUrl) {
+            setSelectedProductId(parseInt(productIdFromUrl));
+            setCurrentPage(parseInt(pageFromUrl));
+            
+            // লোকাল স্টোরেজে সংরক্ষণ করুন
+            localStorage.setItem(`product_page_${productIdFromUrl}`, pageFromUrl);
+        }
+    }, []);
 
     const summary = transactions?.summary || {
         sold_qty: 0,
         purchased_qty: 0,
         stock_est: 0,
     };
-    const saleTotal = transactions.rows
-        .filter((t) => t.type === "sale")
-        .reduce((sum, t) => sum + (parseFloat(t.total) || 0), 0);
+    
+    const saleTotal = transactions?.rows
+        ?.filter((t) => t.type === "sale")
+        .reduce((sum, t) => sum + (parseFloat(t.total) || 0), 0) || 0;
 
-    const purchaseTotal = transactions.rows
-        .filter((t) => t.type === "purchase")
-        .reduce((sum, t) => sum + (parseFloat(t.total) || 0), 0);
+    const purchaseTotal = transactions?.rows
+        ?.filter((t) => t.type === "purchase")
+        .reduce((sum, t) => sum + (parseFloat(t.total) || 0), 0) || 0;
 
     const rows = transactions?.rows || [];
     const pagination = transactions?.pagination || null;
 
-    // Debounced search effect
+    // ডিবাউন্সড সার্চ ইফেক্ট
     useEffect(() => {
         const timeoutId = setTimeout(() => {
+            const params = {
+                search: search || null,
+                product_id: selectedProductId,
+                tx_type: txType !== 'all' ? txType : null,
+                page: currentPage,
+            };
+
+            // undefined/null ভ্যালুগুলো সরান
+            Object.keys(params).forEach(key => 
+                params[key] === null || params[key] === undefined || params[key] === '' ? delete params[key] : {}
+            );
+
             router.get(
                 route("product-ledger.index"),
-                {
-                    search,
-                    product_id: selectedProductId,
-                    tx_type: txType,
-                    page: currentPage,
-                },
+                params,
                 {
                     preserveState: true,
                     replace: true,
                     preserveScroll: true,
+                    onSuccess: () => {
+                        // সফলভাবে ডাটা লোড হলে URL আপডেট করুন
+                        if (selectedProductId) {
+                            localStorage.setItem(`product_page_${selectedProductId}`, currentPage.toString());
+                        }
+                    },
                 },
             );
         }, 350);
@@ -66,28 +148,55 @@ export default function ProductLedger({
         return () => clearTimeout(timeoutId);
     }, [search, txType, selectedProductId, currentPage]);
 
-    // Handlers
+    // হ্যান্ডলার
     const handleProductSelect = (id) => {
+        // আগের প্রোডাক্টের পৃষ্ঠা সংরক্ষণ করুন
+        if (selectedProductId) {
+            localStorage.setItem(`product_page_${selectedProductId}`, currentPage.toString());
+        }
+        
+        // নতুন প্রোডাক্ট সিলেক্ট করুন
         setSelectedProductId(id === selectedProductId ? null : id);
-        setCurrentPage(1); // Reset to first page when product changes
+        
+        // নতুন প্রোডাক্টের জন্য পৃষ্ঠা নম্বর সেট করুন
+        const savedPage = localStorage.getItem(`product_page_${id}`);
+        if (savedPage) {
+            setCurrentPage(parseInt(savedPage));
+        } else {
+            setCurrentPage(1);
+        }
     };
 
     const handleRefresh = () => {
+        const params = {
+            search: search || null,
+            product_id: selectedProductId,
+            tx_type: txType !== 'all' ? txType : null,
+            page: currentPage,
+        };
+
+        Object.keys(params).forEach(key => 
+            params[key] === null || params[key] === undefined || params[key] === '' ? delete params[key] : {}
+        );
+
         router.get(
             route("product-ledger.index"),
-            {
-                search,
-                product_id: selectedProductId,
-                tx_type: txType,
-                page: currentPage,
+            params,
+            { 
+                preserveState: true, 
+                preserveScroll: true,
+                onSuccess: () => {
+                    if (selectedProductId) {
+                        localStorage.setItem(`product_page_${selectedProductId}`, currentPage.toString());
+                    }
+                },
             },
-            { preserveState: true, preserveScroll: true },
         );
     };
 
     const handleTxTypeChange = (type) => {
         setTxType(type);
-        setCurrentPage(1); // Reset to first page when filter changes
+        setCurrentPage(1); // ফিল্টার পরিবর্তন হলে প্রথম পৃষ্ঠায় যান
     };
 
     const resetFilters = () => {
@@ -95,36 +204,63 @@ export default function ProductLedger({
         setTxType("all");
         setSelectedProductId(null);
         setCurrentPage(1);
+        
+        // সব সংরক্ষিত পৃষ্ঠা মুছুন
+        const keys = Object.keys(localStorage);
+        keys.forEach(key => {
+            if (key.startsWith('product_page_')) {
+                localStorage.removeItem(key);
+            }
+        });
+        
+        // URL থেকে page প্যারামিটার সরান
+        const url = new URL(window.location.href);
+        url.searchParams.delete('page');
+        url.searchParams.delete('product_id');
+        window.history.replaceState({}, '', url);
     };
 
-    // Pagination handlers
+    // পৃষ্ঠা পরিবর্তন হ্যান্ডলার
     const handlePageChange = (page) => {
         setCurrentPage(page);
+        
+        // নির্বাচিত প্রোডাক্টের জন্য পৃষ্ঠা সংরক্ষণ করুন
+        if (selectedProductId) {
+            localStorage.setItem(`product_page_${selectedProductId}`, page.toString());
+        }
+        
+        // URL আপডেট করুন
+        const url = new URL(window.location.href);
+        url.searchParams.set('page', page.toString());
+        if (selectedProductId) {
+            url.searchParams.set('product_id', selectedProductId.toString());
+        }
+        window.history.replaceState({}, '', url);
     };
 
     const handleFirstPage = () => {
-        setCurrentPage(1);
+        handlePageChange(1);
     };
 
     const handleLastPage = () => {
         if (pagination) {
-            setCurrentPage(pagination.last_page);
+            handlePageChange(pagination.last_page);
         }
     };
 
     const handlePreviousPage = () => {
         if (currentPage > 1) {
-            setCurrentPage(currentPage - 1);
+            handlePageChange(currentPage - 1);
         }
     };
 
     const handleNextPage = () => {
         if (pagination && currentPage < pagination.last_page) {
-            setCurrentPage(currentPage + 1);
+            handlePageChange(currentPage + 1);
         }
     };
 
-    // Generate page numbers for pagination
+    // পৃষ্ঠা নম্বর জেনারেট করুন
     const getPageNumbers = () => {
         if (!pagination) return [];
 
@@ -148,7 +284,7 @@ export default function ProductLedger({
         return pageNumbers;
     };
 
-    // Formatting helpers
+    // ফরম্যাটিং হেল্পার
     const formatCurrency = (value) => {
         return Number(value || 0).toLocaleString("en-US", {
             minimumFractionDigits: 2,
@@ -160,7 +296,7 @@ export default function ProductLedger({
         return Number(value || 0).toLocaleString();
     };
 
-    // Filter pills for transaction type
+    // ফিল্টার পিলস
     const txTypeFilters = [
         { value: "all", label: "All", color: "bg-gray-100 text-gray-800" },
         {
@@ -178,9 +314,9 @@ export default function ProductLedger({
     ];
 
     return (
-        <div className="min-h-screen  ">
-            {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 ">
+        <div className="min-h-screen">
+            {/* হেডার */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">
                         Product Ledger
@@ -210,10 +346,10 @@ export default function ProductLedger({
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                {/* Product List Panel */}
+                {/* প্রোডাক্ট লিস্ট প্যানেল */}
                 <div className="lg:col-span-4">
                     <div className="bg-white rounded-xl border shadow-sm">
-                        {/* Panel Header */}
+                        {/* প্যানেল হেডার */}
                         <div className="p-4 border-b">
                             <div className="flex items-center justify-between mb-3">
                                 <h2 className="font-semibold text-gray-900">
@@ -224,7 +360,7 @@ export default function ProductLedger({
                                 </span>
                             </div>
 
-                            {/* Search Bar */}
+                            {/* সার্চ বার */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                                 <input
@@ -236,7 +372,7 @@ export default function ProductLedger({
                                 />
                             </div>
 
-                            {/* Transaction Type Filters */}
+                            {/* ট্রানজেকশন টাইপ ফিল্টার */}
                             <div className="flex flex-wrap gap-2 mt-4">
                                 {txTypeFilters.map((filter) => (
                                     <button
@@ -253,46 +389,48 @@ export default function ProductLedger({
                             </div>
                         </div>
 
-                        {/* Product List */}
+                        {/* প্রোডাক্ট লিস্ট */}
                         <div className="overflow-y-auto max-h-[calc(100vh-300px)]">
                             <div className="p-2">
-                                {products?.data?.map((product) => (
-                                    <div
-                                        key={product.id}
-                                        onClick={() =>
-                                            handleProductSelect(product.id)
-                                        }
-                                        className={`p-3 rounded-lg mb-2 cursor-pointer transition-all hover:bg-gray-50 ${selectedProductId === product.id ? "bg-blue-50 border border-blue-200" : "border border-transparent"}`}
-                                    >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <Package className="w-4 h-4 text-gray-400" />
-                                                    <h3 className="font-medium text-gray-900 truncate">
-                                                        {product.name}
-                                                    </h3>
+                                {products?.data?.map((product) => {
+                                    // এই প্রোডাক্টের জন্য সংরক্ষিত পৃষ্ঠা নম্বর
+                                    const savedPage = localStorage.getItem(`product_page_${product.id}`);
+                                    
+                                    return (
+                                        <div
+                                            key={product.id}
+                                            onClick={() =>
+                                                handleProductSelect(product.id)
+                                            }
+                                            className={`p-3 rounded-lg mb-2 cursor-pointer transition-all hover:bg-gray-50 ${selectedProductId === product.id ? "bg-blue-50 border border-blue-200" : "border border-transparent"}`}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <Package className="w-4 h-4 text-gray-400" />
+                                                        <h3 className="font-medium text-gray-900 truncate">
+                                                            {product.name}
+                                                        </h3>
+                                                    </div>
+                                                    <p className="text-sm text-gray-500 mt-1">
+                                                        {product.product_no}
+                                                    </p>
+                                                    {savedPage && savedPage !== '1' && selectedProductId !== product.id && (
+                                                        <p className="text-xs text-blue-600 mt-1">
+                                                            Page {savedPage}
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                <p className="text-sm text-gray-500 mt-1">
-                                                    {product.product_no}
-                                                </p>
-                                            </div>
 
-                                            <div className="flex items-center gap-4">
-                                                {/* <div className="text-right">
-                          <div className="text-xs text-gray-500">Sold</div>
-                          <div className="font-medium text-red-600">{formatNumber(product.sold_qty || 0)}</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-xs text-gray-500">Buy</div>
-                          <div className="font-medium text-green-600">{formatNumber(product.purchased_qty || 0)}</div>
-                        </div> */}
-                                                <ChevronRight
-                                                    className={`w-4 h-4 text-gray-400 transition-transform ${selectedProductId === product.id ? "rotate-90" : ""}`}
-                                                />
+                                                <div className="flex items-center gap-4">
+                                                    <ChevronRight
+                                                        className={`w-4 h-4 text-gray-400 transition-transform ${selectedProductId === product.id ? "rotate-90" : ""}`}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
 
                                 {!products?.data?.length && (
                                     <div className="text-center py-8 text-gray-500">
@@ -302,8 +440,8 @@ export default function ProductLedger({
                             </div>
                         </div>
 
-                        {/* Pagination */}
-                        {products?.links?.length > 1 && (
+                        {/* প্রোডাক্ট প্যাজিনেশন */}
+                        {products?.links?.length > 3 && (
                             <div className="p-4 border-t">
                                 <div className="flex flex-wrap gap-1 justify-center">
                                     {products.links.map((link, index) => (
@@ -329,10 +467,10 @@ export default function ProductLedger({
                     </div>
                 </div>
 
-                {/* Transaction Details Panel */}
+                {/* ট্রানজেকশন ডিটেইলস প্যানেল */}
                 <div className="lg:col-span-8">
                     <div className="bg-white rounded-xl border shadow-sm h-full">
-                        {/* Panel Header */}
+                        {/* প্যানেল হেডার */}
                         <div className="p-4 border-b">
                             {selectedProduct ? (
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -346,6 +484,11 @@ export default function ProductLedger({
                                         <p className="text-gray-600 mt-1">
                                             Code: {selectedProduct.product_no}
                                         </p>
+                                        {currentPage > 1 && (
+                                            <p className="text-sm text-blue-600 mt-1">
+                                                Page {currentPage} of {pagination?.last_page || '?'}
+                                            </p>
+                                        )}
                                     </div>
 
                                     <div className="flex items-center gap-4">
@@ -382,15 +525,15 @@ export default function ProductLedger({
                                                 Sale Total
                                             </div>
                                             <div className="font-bold text-lg text-green-600">
-                                                {saleTotal}
+                                                {formatCurrency(saleTotal)}
                                             </div>
                                         </div>
                                         <div className="text-center">
                                             <div className="text-xs text-gray-500">
-                                                Sale Purchase
+                                                Purchase Total
                                             </div>
                                             <div className="font-bold text-lg text-green-600">
-                                                {purchaseTotal}
+                                                {formatCurrency(purchaseTotal)}
                                             </div>
                                         </div>
                                     </div>
@@ -409,7 +552,7 @@ export default function ProductLedger({
                             )}
                         </div>
 
-                        {/* Transaction Table */}
+                        {/* ট্রানজেকশন টেবিল */}
                         {selectedProduct && (
                             <div>
                                 <div className="overflow-x-auto">
@@ -457,7 +600,7 @@ export default function ProductLedger({
                                                             className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${transaction.type === "sale" ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}`}
                                                         >
                                                             {transaction.type ===
-                                                            "sale"
+                                                                "sale"
                                                                 ? "SALE"
                                                                 : "PURCHASE"}
                                                         </span>
@@ -515,11 +658,11 @@ export default function ProductLedger({
                                     </table>
                                 </div>
 
-                                {/* Pagination for Transactions */}
+                                {/* ট্রানজেকশন প্যাজিনেশন */}
                                 {pagination && pagination.total > 0 && (
                                     <div className="p-4 border-t bg-gray-50">
                                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                                            {/* Results info */}
+                                            {/* রেজাল্ট তথ্য */}
                                             <div className="text-sm text-gray-600">
                                                 Showing{" "}
                                                 <span className="font-medium">
@@ -538,9 +681,9 @@ export default function ProductLedger({
                                                 transactions
                                             </div>
 
-                                            {/* Pagination controls */}
+                                            {/* প্যাজিনেশন কন্ট্রোল */}
                                             <div className="flex items-center gap-1">
-                                                {/* First page button */}
+                                                {/* প্রথম পৃষ্ঠা বাটন */}
                                                 <button
                                                     onClick={handleFirstPage}
                                                     disabled={currentPage === 1}
@@ -550,7 +693,7 @@ export default function ProductLedger({
                                                     <ChevronsLeft className="w-4 h-4" />
                                                 </button>
 
-                                                {/* Previous page button */}
+                                                {/* আগের পৃষ্ঠা বাটন */}
                                                 <button
                                                     onClick={handlePreviousPage}
                                                     disabled={currentPage === 1}
@@ -560,7 +703,7 @@ export default function ProductLedger({
                                                     <ChevronLeft className="w-4 h-4" />
                                                 </button>
 
-                                                {/* Page numbers */}
+                                                {/* পৃষ্ঠা নম্বর */}
                                                 {getPageNumbers().map(
                                                     (pageNum) => (
                                                         <button
@@ -570,19 +713,18 @@ export default function ProductLedger({
                                                                     pageNum,
                                                                 )
                                                             }
-                                                            className={`min-w-[40px] px-3 py-2 rounded text-sm font-medium transition-colors ${
-                                                                currentPage ===
-                                                                pageNum
+                                                            className={`min-w-[40px] px-3 py-2 rounded text-sm font-medium transition-colors ${currentPage ===
+                                                                    pageNum
                                                                     ? "bg-blue-600 text-white border-blue-600"
                                                                     : "bg-white border text-gray-700 hover:bg-gray-50"
-                                                            }`}
+                                                                }`}
                                                         >
                                                             {pageNum}
                                                         </button>
                                                     ),
                                                 )}
 
-                                                {/* Next page button */}
+                                                {/* পরবর্তী পৃষ্ঠা বাটন */}
                                                 <button
                                                     onClick={handleNextPage}
                                                     disabled={
@@ -595,7 +737,7 @@ export default function ProductLedger({
                                                     <ChevronRight className="w-4 h-4" />
                                                 </button>
 
-                                                {/* Last page button */}
+                                                {/* শেষ পৃষ্ঠা বাটন */}
                                                 <button
                                                     onClick={handleLastPage}
                                                     disabled={
@@ -609,7 +751,7 @@ export default function ProductLedger({
                                                 </button>
                                             </div>
 
-                                            {/* Page size selector (optional) */}
+                                            {/* পৃষ্ঠা তথ্য */}
                                             <div className="text-sm text-gray-600">
                                                 Page {currentPage} of{" "}
                                                 {pagination.last_page}
@@ -618,7 +760,7 @@ export default function ProductLedger({
                                     </div>
                                 )}
 
-                                {/* Info message if no pagination */}
+                                {/* প্যাজিনেশন না থাকলে তথ্য */}
                                 {rows.length > 0 && !pagination && (
                                     <div className="px-4 py-3 border-t bg-gray-50 text-xs text-gray-500">
                                         Showing {rows.length} recent
@@ -631,7 +773,7 @@ export default function ProductLedger({
                 </div>
             </div>
 
-            {/* Summary Cards */}
+            {/* সামারি কার্ড */}
             {selectedProduct && (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
                     <div className="bg-white rounded-xl border p-4">

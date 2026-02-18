@@ -70,15 +70,16 @@ class WarehouseController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:warehouses',
-            'address' => 'nullable|string',
+            'address' => 'required|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email',
             'is_active' => 'boolean'
         ]);
 
+
         try {
             $warehouseData = $request->all();
+            $warehouseData['code'] =  'IN' . '-' . uniqid();
             $warehouseData['created_by'] = $user->id;
             $warehouseData['user_type'] = $user->type;
 
@@ -104,7 +105,7 @@ class WarehouseController extends Controller
             ->with([
                 'category',
                 'variants' => function ($q) {
-                    // ✅ remove variant_name (column doesn't exist)
+                    //  remove variant_name (column doesn't exist)
                     $q->select('id', 'product_id', 'sku', 'attribute_values');
                 },
                 'variants.stocks' => function ($q) use ($id) {
@@ -201,8 +202,7 @@ class WarehouseController extends Controller
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'required|string|max:50|unique:warehouses,code,' . $id,
-            'address' => 'nullable|string',
+            'address' => 'required|string',
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email',
             'is_active' => 'boolean'
@@ -210,7 +210,9 @@ class WarehouseController extends Controller
 
         try {
             $warehouse = Warehouse::findOrFail($id);
-            $warehouse->update($request->all());
+            $warehouseData = $request->all();
+            $warehouseData['code'] =  'IN' . '-' . uniqid();
+            $warehouse->update($warehouseData);
 
             return redirect()->route('warehouse.list')->with(
                 'success',

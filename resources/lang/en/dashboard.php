@@ -6,6 +6,7 @@ return [
 
     // Stats Cards
     'daily_sales' => 'Daily Sales',
+    'total_expense' => 'Total Expense',
     'active_customers' => 'Active Customers',
     'inventory_value' => 'Inventory Value',
     'net_profit' => 'Net Profit',
@@ -17,6 +18,19 @@ return [
     'invoice_due' => 'Invoice Due',
     'suppliers' => 'Suppliers',
     'total_profit' => 'Total Profit',
+    'total_expense' => 'Total Expense',
+    'sales' => 'Sales',
+    'profit_calculation' => 'Profit Calculation',
+    'apply' => 'Apply',
+    'date_range' => 'Date Range',
+    'to' => 'To',
+    'daily_data_for_range' => 'Daily Data for Range',
+    'profit_for_range' => 'Profit for Range',
+    'orders_for_range' => 'Orders for Range',
+    'sales_trend_range' => 'Sales Trend for Range',
+    'summary_for_range' => 'Summary For Range',
+    'sales_for_range' => 'Sales for Range',
+    'profit_for_range' => 'Profit for Range',
 
     // Charts & Analytics
     'sales_performance' => 'Sales Performance',

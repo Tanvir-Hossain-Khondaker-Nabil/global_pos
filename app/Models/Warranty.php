@@ -16,6 +16,9 @@ class Warranty extends Model
 
 
     //relations model
+    const Day = 'day';
+    const Month = 'month';
+    const Year = 'year';
 
     public function purchaseItem()
     {

@@ -20,9 +20,16 @@ class AttributeController extends Controller
                 'values' => function ($query) {
                     $query->where('is_active', true);
                 }
-            ])->get()
+            ])->when(request('search'), function ($query) {
+                $query->where(function ($query) {
+                    $query->where('name', 'like', '%' . request('search') . '%')
+                        ->orWhere('code', 'like', '%' . request('search') . '%');
+                });
+            })->paginate(10)
+                ->withQueryString()
         ]);
     }
+
 
     // Store new attribute with values
     public function store(Request $request)
@@ -38,7 +45,6 @@ class AttributeController extends Controller
 
             $lastId = Attribute::max('id') + 1;
 
-            // Create attribute
             $attribute = Attribute::create([
                 'name' => $request->name,
                 'code' => Str::slug($request->name) . '-' . Str::upper(Str::random(6)) . $lastId,
@@ -63,27 +69,32 @@ class AttributeController extends Controller
         }
     }
 
+
     // Update attribute and its values
     public function update(Request $request, Attribute $attribute)
     {
-        $request->validate([
-            'name' => 'required|string|max:255|unique:attributes,name,' . $attribute->id,
-            'values' => 'required|array|min:1',
-            'values.*.value' => 'required|string|max:255',
-        ]);
+        // $request->validate([
+        //     'name' => 'required|string|max:255',
+        //     'values' => 'required|array|min:1',
+        //     'values.*.value' => 'required|string|max:255',
+        // ]);
 
         DB::beginTransaction();
         try {
-            // Update attribute
+
+            $lastId = $attribute->id; 
+
             $attribute->update([
                 'name' => $request->name,
-                'code' => Str::slug($request->name . '-' . Str::random(5))
+                'code' => Str::slug($request->name) . '-' . Str::upper(Str::random(6)) . $lastId,
             ]);
 
-            // Update or create values
             $existingValueIds = [];
+
             foreach ($request->values as $valueData) {
-                if (isset($valueData['id'])) {
+
+                // Update existing value
+                if (!empty($valueData['id'])) {
                     $value = AttributeValue::where('id', $valueData['id'])
                         ->where('attribute_id', $attribute->id)
                         ->first();
@@ -91,16 +102,22 @@ class AttributeController extends Controller
                     if ($value) {
                         $value->update([
                             'value' => $valueData['value'],
-                            'code' => Str::slug($valueData['value'] . '-' . Str::random(5)),
+                            'code' => Str::slug($valueData['value']) . '-' . Str::upper(Str::random(6)) . $lastId,
+                            'is_active' => true, // reactivate if previously disabled
                         ]);
+
                         $existingValueIds[] = $value->id;
                     }
-                } else {
+                }
+                // Create new value
+                else {
                     $value = AttributeValue::create([
                         'attribute_id' => $attribute->id,
                         'value' => $valueData['value'],
-                        'code' => Str::slug($valueData['value'] . '-' . Str::random(5)),
+                        'code' => Str::slug($valueData['value']) . '-' . Str::upper(Str::random(6)) . $lastId,
+                        'is_active' => true,
                     ]);
+
                     $existingValueIds[] = $value->id;
                 }
             }
@@ -118,6 +135,7 @@ class AttributeController extends Controller
             return redirect()->back()->with('error', 'Failed to update attribute: ' . $e->getMessage());
         }
     }
+
 
     // Store new value for existing attribute
     public function storeValue(Request $request, Attribute $attribute)

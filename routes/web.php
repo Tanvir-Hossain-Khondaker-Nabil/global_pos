@@ -265,7 +265,7 @@ Route::middleware('auth')->group(function () {
         ->name('accounts.destroy');
 
     Route::get('/accounts/{account}', [AccountController::class, 'show'])
-        ->middleware('permission:accounts.show')
+        // ->middleware('permission:accounts.show')
         ->name('accounts.show');
 
     Route::post('/accounts/{account}/deposit', [AccountController::class, 'deposit'])

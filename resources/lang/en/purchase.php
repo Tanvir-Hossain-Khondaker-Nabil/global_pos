@@ -24,6 +24,8 @@ return [
     'notes_placeholder' => 'Enter additional notes here...',
     'gross_total' => 'Gross Total',
     'transportation_cost' => 'Transportation Cost',
+    'edit_subtitle' => 'Edit products in the purchase order with real and shadow pricing',
+    'edit_purchase' => 'Edit Purchase',
 
     // Payment Information
     'payment_information' => 'Payment Information',

@@ -2101,7 +2101,7 @@ export default function Suppliers({ suppliers, filters, accounts }) {
                                                                 <Edit size={12} />
                                                             </button>
 
-                                                            <Link
+                                                            {/* <Link
                                                                 href={route("supplier.del", { id: supplier.id })}
                                                                 onClick={(e) => {
                                                                     if (!confirm(t("supplier.delete_confirmation", "Are you sure you want to delete this supplier?"))) {
@@ -2112,7 +2112,7 @@ export default function Suppliers({ suppliers, filters, accounts }) {
                                                                 title={t("supplier.delete", "Delete")}
                                                             >
                                                                 <Trash2 size={12} />
-                                                            </Link>
+                                                            </Link> */}
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -2686,7 +2686,7 @@ export default function Suppliers({ suppliers, filters, accounts }) {
                                                                 className="text-green-600"
                                                             />
                                                         ) : (
-                                                            <X
+                                                            <CheckCircle
                                                                 size={14}
                                                                 className="text-red-600"
                                                             />
@@ -2694,8 +2694,8 @@ export default function Suppliers({ suppliers, filters, accounts }) {
                                                     </div>
                                                     <span className="font-bold">
                                                         {supplierForm.data.type
-                                                            ? t("supplier.local_supplier", "Local Supplier")
-                                                            : t("supplier.global_supplier", "Global Supplier")}
+                                                             ? t("supplier.global_supplier", "Global Supplier")
+                                                             : t("supplier.local_supplier", "Local Supplier")}
                                                     </span>
                                                 </div>
                                                 <input

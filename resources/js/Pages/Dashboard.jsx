@@ -11,6 +11,8 @@ import {
   MoreHorizontal,
   Calendar,
   ShoppingBag,
+  CalendarRange,
+  X,
 } from "lucide-react";
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useTranslation } from "../hooks/useTranslation";
@@ -21,31 +23,37 @@ export default function Dashboard({
   totalDue = 0,
   totalselas = 0,
   totalexpense = 0,
+  totalExpense = 0,
   dashboardData = {},
   isShadowUser = false,
 }) {
   const { t, locale } = useTranslation();
   const [loading, setLoading] = useState(false);
 
-  // ✅ Extract customDate + range from backend response
-  const { customDate: initialCustomDate = "", range = "year" } = dashboardData;
-  const [customDate, setCustomDate] = useState(initialCustomDate);
+  // ✅ Extract date range from backend response
+  const { 
+    dateFrom: initialDateFrom = "", 
+    dateTo: initialDateTo = "", 
+    range = "year" 
+  } = dashboardData;
+  
+  const [dateFrom, setDateFrom] = useState(initialDateFrom);
+  const [dateTo, setDateTo] = useState(initialDateTo);
 
-  // ✅ Sync customDate with backend response
+  // ✅ Sync with backend response
   useEffect(() => {
-    setCustomDate(initialCustomDate);
-  }, [initialCustomDate]);
+    setDateFrom(initialDateFrom);
+    setDateTo(initialDateTo);
+  }, [initialDateFrom, initialDateTo]);
 
   const {
     periodSales = 0,
     prevPeriodSales = 0,
     salesGrowth = 0,
 
-    // ✅ FIXED: period paid and due (from controller)
     periodPaid = 0,
     periodDue = 0,
 
-    // ✅ FIXED: purchase cost for profit calculation
     purchaseCost = 0,
 
     totalCustomers = 0,
@@ -57,7 +65,6 @@ export default function Dashboard({
     lowStockItems = 0,
     outOfStockItems = 0,
 
-    // ✅ FIXED: profit margin based on sales - purchase cost
     profitMargin = 0,
     averageOrderValue = 0,
 
@@ -87,10 +94,11 @@ export default function Dashboard({
     { id: "year", label: t("dashboard.this_year", "Year") },
   ];
 
-  // ✅ Range change - Clear custom date when changing range
+  // ✅ Range change - Clear date range when changing range
   const handleTimeRangeChange = useCallback((r) => {
     setLoading(true);
-    setCustomDate("");
+    setDateFrom("");
+    setDateTo("");
 
     router.reload({
       only: [
@@ -104,7 +112,8 @@ export default function Dashboard({
       ],
       data: {
         timeRange: r,
-        date: null,
+        date_from: null,
+        date_to: null,
       },
       preserveScroll: true,
       onFinish: () => setLoading(false),
@@ -126,49 +135,54 @@ export default function Dashboard({
       ],
       data: {
         timeRange: range,
-        date: customDate || null,
+        date_from: dateFrom || null,
+        date_to: dateTo || null,
       },
       preserveScroll: true,
       onFinish: () => setLoading(false),
     });
-  }, [range, customDate]);
+  }, [range, dateFrom, dateTo]);
 
-  // ✅ Date filter handler
-  const handleDateFilter = useCallback(
-    (date) => {
-      setCustomDate(date);
-      setLoading(true);
+  // ✅ Date range filter handler
+  const handleDateRangeFilter = useCallback(() => {
+    if (!dateFrom || !dateTo) {
+      alert(t("dashboard.select_date_range", "Please select both from and to dates"));
+      return;
+    }
 
-      const filterData = {
-        date: date || null,
-        timeRange: date ? "today" : range,
-      };
+    setLoading(true);
 
-      if (!date) {
-        filterData.timeRange = range;
-      }
+    router.reload({
+      only: [
+        "dashboardData",
+        "totalSales",
+        "totalPaid",
+        "totalDue",
+        "totalselas",
+        "totalexpense",
+        "isShadowUser",
+      ],
+      data: {
+        timeRange: "custom",
+        date_from: dateFrom,
+        date_to: dateTo,
+      },
+      preserveScroll: true,
+      onFinish: () => setLoading(false),
+    });
+  }, [dateFrom, dateTo, t]);
 
-      router.reload({
-        only: [
-          "dashboardData",
-          "totalSales",
-          "totalPaid",
-          "totalDue",
-          "totalselas",
-          "totalexpense",
-          "isShadowUser",
-        ],
-        data: filterData,
-        preserveScroll: true,
-        onFinish: () => setLoading(false),
-      });
-    },
-    [range]
-  );
+  // ✅ Clear date range filter
+  const clearDateRangeFilter = useCallback(() => {
+    setDateFrom("");
+    setDateTo("");
+    
+    // Revert to current range
+    handleTimeRangeChange(range);
+  }, [range, handleTimeRangeChange]);
 
-  const clearDateFilter = useCallback(() => {
-    handleDateFilter("");
-  }, [handleDateFilter]);
+  // Check if custom date range is active
+  const isCustomRangeActive = dateFrom && dateTo;
 
   // ------------------ chart data ------------------
   const labels = salesSeries?.labels || [];
@@ -248,7 +262,7 @@ export default function Dashboard({
     return idxs;
   };
 
-  const effectiveRange = customDate ? "hour" : range === "year" ? "year" : "day";
+  const effectiveRange = isCustomRangeActive ? "day" : range === "year" ? "year" : "day";
   const tickIndexes = useMemo(
     () => getTickIndexes(labels.length, effectiveRange),
     [labels.length, effectiveRange]
@@ -257,15 +271,11 @@ export default function Dashboard({
   const [hoverIdx, setHoverIdx] = useState(null);
   const hoverPoint = hoverIdx === null ? null : chartPoints[hoverIdx];
 
-  // ============================================================
-  // ✅ FIXED: PROFIT CALCULATION (Sales - Purchase Cost)
-  // ============================================================
+  // Profit calculation
   const purchaseCostPeriod = Number(purchaseCost || 0);
   const netProfitPeriod = Number(periodSales || 0) - purchaseCostPeriod;
 
-  // ============================================================
-  // ✅ FIXED: SALE REPORT Paid + Due (period)
-  // ============================================================
+  // Paid + Due (period)
   const paidInPeriod = Number(periodPaid || 0);
   const dueInPeriod = Number(periodDue || 0);
 
@@ -275,19 +285,16 @@ export default function Dashboard({
       value: `৳${formatCurrency(periodSales)}`,
       change: salesGrowth,
       icon: <TrendingUp className="w-5 h-5" />,
-      description: customDate
-        ? t("dashboard.selected_date", "Selected date")
+      description: isCustomRangeActive
+        ? t("dashboard.date_range", "Date range")
         : t("dashboard.vs_previous_period", "vs previous period"),
     },
     {
-      title: t("dashboard.active_customers", "Active Customers"),
-      value: Number(activeCustomers || 0).toLocaleString(),
+      title: t("dashboard.total_expense", "Total Expense"),
+      value: `৳${formatCurrency(totalexpense)}`,
       change: conversionRate,
-      icon: <Users className="w-5 h-5" />,
-      description: t("dashboard.buyers_in_period", `${buyersThisPeriod} buyers`).replace(
-        ":count",
-        String(buyersThisPeriod)
-      ),
+      icon: <TrendingUp className="w-5 h-5" />,
+      description: t("dashboard.buyers_in_period", `${buyersThisPeriod} buyers`),
     },
     {
       title: t("dashboard.inventory_value", "Inventory Value"),
@@ -317,17 +324,30 @@ export default function Dashboard({
   };
 
   const getChartTitle = () => {
-    if (customDate) return t("dashboard.sales_trend_hourly", "Sales Trend (Hourly)");
+    if (isCustomRangeActive) return t("dashboard.sales_trend_range", "Sales Trend (Date Range)");
     return range === "year"
       ? t("dashboard.sales_trend_monthly", "Sales Trend (Monthly)")
       : t("dashboard.sales_trend", "Sales Trend");
   };
 
   const getChartSubTitle = () => {
-    if (customDate) return t("dashboard.hourly_data_for_date", `Hourly data for ${customDate}`);
+    if (isCustomRangeActive) {
+      return t("dashboard.daily_data_for_range", `Daily data from ${dateFrom} to ${dateTo}`);
+    }
     return range === "year"
       ? t("dashboard.smooth_monthly_hint", "Smooth monthly graph (Jan–Dec)")
       : t("dashboard.simple_hint", "Clean line chart for selected range");
+  };
+
+  const getRangeDisplayText = () => {
+    if (isCustomRangeActive) {
+      return `${t("dashboard.date_range", "Date range")}: ${dateFrom} ${t("dashboard.to", "to")} ${dateTo}`;
+    }
+    return `${t("dashboard.range", "Range")}: ${
+      range === "year"
+        ? t("dashboard.monthly_jan_dec", "Monthly (Jan–Dec)")
+        : timeRanges.find((r) => r.id === range)?.label || range
+    }`;
   };
 
   const chartTitle = getChartTitle();
@@ -343,14 +363,7 @@ export default function Dashboard({
           <h1 className="text-xl font-black text-slate-800">{t("dashboard.title", "Dashboard")}</h1>
 
           <p className="text-xs text-slate-500">
-            {t("dashboard.range", "Range")}:{" "}
-            <strong className="text-slate-700">
-              {customDate
-                ? `${t("dashboard.selected_date", "Selected date")}: ${customDate}`
-                : range === "year"
-                ? t("dashboard.monthly_jan_dec", "Monthly (Jan–Dec)")
-                : timeRanges.find((r) => r.id === range)?.label || range}
-            </strong>
+            {getRangeDisplayText()}
           </p>
         </div>
 
@@ -360,34 +373,59 @@ export default function Dashboard({
               key={r.id}
               onClick={() => handleTimeRangeChange(r.id)}
               className={`px-3 py-2 rounded-xl text-xs font-black border transition ${
-                range === r.id && !customDate
+                range === r.id && !isCustomRangeActive
                   ? "bg-[#1e4d2b] text-white border-[#1e4d2b]"
                   : "bg-white text-slate-700 border-slate-200 hover:border-[#1e4d2b]"
-              } ${customDate ? "opacity-50 cursor-not-allowed" : ""}`}
-              disabled={loading || customDate}
-              title={customDate ? t("dashboard.clear_date_first", "Clear date filter first") : ""}
+              } ${isCustomRangeActive ? "opacity-50 cursor-not-allowed" : ""}`}
+              disabled={loading || isCustomRangeActive}
+              title={isCustomRangeActive ? t("dashboard.clear_range_first", "Clear date range first") : ""}
             >
               {r.label}
             </button>
           ))}
 
+          {/* Date Range Inputs */}
           <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
-            <Calendar className="w-4 h-4 text-slate-400" />
-            <input
-              type="date"
-              value={customDate}
-              onChange={(e) => handleDateFilter(e.target.value)}
-              className="text-xs font-bold text-slate-700 outline-none bg-transparent cursor-pointer min-w-[120px]"
-              disabled={loading}
-            />
-            {customDate && (
-              <button
-                onClick={clearDateFilter}
-                className="text-[10px] font-black text-slate-400 hover:text-slate-700 px-2 py-1 hover:bg-slate-50 rounded"
+            <CalendarRange className="w-4 h-4 text-slate-400 shrink-0" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="text-xs font-bold text-slate-700 outline-none bg-transparent cursor-pointer w-full sm:w-auto"
                 disabled={loading}
-                title={t("dashboard.clear_date_filter", "Clear date filter")}
+                placeholder={t("dashboard.from_date", "From date")}
+              />
+              <span className="text-xs text-slate-400 hidden sm:inline">—</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="text-xs font-bold text-slate-700 outline-none bg-transparent cursor-pointer w-full sm:w-auto"
+                disabled={loading}
+                placeholder={t("dashboard.to_date", "To date")}
+              />
+            </div>
+            
+            {dateFrom && dateTo && (
+              <button
+                onClick={handleDateRangeFilter}
+                className="text-[10px] font-black text-green-600 hover:text-green-700 px-2 py-1 hover:bg-green-50 rounded whitespace-nowrap"
+                disabled={loading}
+                title={t("dashboard.apply_range", "Apply date range")}
               >
-                {t("dashboard.clear", "Clear")}
+                {t("dashboard.apply", "Apply")}
+              </button>
+            )}
+            
+            {isCustomRangeActive && (
+              <button
+                onClick={clearDateRangeFilter}
+                className="text-[10px] font-black text-red-400 hover:text-red-700 px-2 py-1 hover:bg-red-50 rounded"
+                disabled={loading}
+                title={t("dashboard.clear_range_filter", "Clear date range filter")}
+              >
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
@@ -476,8 +514,8 @@ export default function Dashboard({
                   {t("dashboard.no_sales_data", "No sales data")}
                 </p>
                 <p className="text-xs text-slate-500 mt-1">
-                  {customDate
-                    ? t("dashboard.no_data_for_date", "No sales data for selected date")
+                  {isCustomRangeActive
+                    ? t("dashboard.no_data_for_range", "No sales data for selected date range")
                     : t("dashboard.try_another_range", "Try another time range")}
                 </p>
               </div>
@@ -582,7 +620,7 @@ export default function Dashboard({
             </div>
           )}
 
-          {/* ✅ Sale Report Section (Paid + Due) */}
+          {/* Sale Report Section (Paid + Due) */}
           <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
             <div className="text-center p-3 rounded-xl bg-green-50 border border-green-100">
               <p className="text-[10px] uppercase tracking-widest font-black text-green-700">
@@ -621,8 +659,8 @@ export default function Dashboard({
                 {t("dashboard.purchase_analytics", "Purchase Analytics")}
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                {customDate
-                  ? t("dashboard.orders_for_date", `Orders for ${customDate}`)
+                {isCustomRangeActive
+                  ? t("dashboard.orders_for_range", `Orders for selected range`)
                   : t("dashboard.completed_processing_returned", "Completed / Processing / Returned")}
               </p>
             </div>
@@ -661,12 +699,12 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* ✅ Profit Highlight Section (Profit = Sales - Purchase Cost) */}
+      {/* Profit Highlight Section */}
       <div className="bg-white border border-slate-100 rounded-3xl shadow-sm p-6 flex flex-col sm:flex-row justify-between items-center gap-6">
         <div>
           <h3 className="text-lg font-black text-slate-800">
-            {customDate
-              ? t("dashboard.profit_for_date", `Profit Summary for ${customDate}`)
+            {isCustomRangeActive
+              ? t("dashboard.profit_for_range", `Profit Summary for Selected Range`)
               : t("dashboard.profit_highlight", "Profit Summary")}
           </h3>
           <p className="text-xs text-slate-500 mt-1">
@@ -705,7 +743,7 @@ export default function Dashboard({
       {/* ================= Lower stats ================= */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <LowerStat
-          title={customDate ? t("dashboard.sales_for_date", "Sales for Date") : t("dashboard.period_sales", "Period Sales")}
+          title={isCustomRangeActive ? t("dashboard.sales_for_range", "Sales for Range") : t("dashboard.period_sales", "Period Sales")}
           value={`৳${formatCurrency(periodSales)}`}
           sub={`${t("dashboard.prev", "Prev")}: ৳${formatCurrency(prevPeriodSales)}`}
           icon={<BarChart3 className="w-16 h-16 opacity-10 rotate-12" />}
@@ -744,8 +782,8 @@ export default function Dashboard({
           </div>
           <div>
             <h4 className="text-white font-black text-sm">
-              {customDate
-                ? t("dashboard.summary_for_date", `Summary for ${customDate}`)
+              {isCustomRangeActive
+                ? t("dashboard.summary_for_range", `Summary for Selected Range`)
                 : t("dashboard.system_summary", "System Summary")}
             </h4>
             <p className="text-white/80 text-xs mt-0.5">

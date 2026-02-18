@@ -22,6 +22,9 @@ class Brand extends Model
 
     use BelongsToTenant;
 
+    protected $appends = ['logo_url'];
+
+
     public function products()
     {
         return $this->hasMany(Product::class);
@@ -36,11 +39,17 @@ class Brand extends Model
     }
 
     // Accessor for logo URL
+
     public function getLogoUrlAttribute()
     {
         if ($this->logo) {
+            // If using public disk
             return asset('storage/' . $this->logo);
+            
+            // If using a different disk
+            // return Storage::disk('public')->url($this->logo);
         }
+        
         return null;
     }
 

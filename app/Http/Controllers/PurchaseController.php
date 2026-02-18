@@ -413,17 +413,22 @@ class PurchaseController extends Controller
 
 
                 if ($product->has_warranty) {
+
+                    $endDate = match ($product->warranty_duration_type) {
+                        Product::Day   => now()->addDays($product->warranty_duration),
+                        Product::Month => now()->addMonths($product->warranty_duration),
+                        Product::Year  => now()->addYears($product->warranty_duration),
+                        default        => now(),
+                    };
+
                     Warranty::create([
                         'purchase_item_id' => $purchaseItem->id,
                         'start_date' => now(),
-                        'end_date' => now()->{match ($product->warranty_duration_type) {
-                            Product::Day => 'addDays',
-                            Product::Month => 'addMonths',
-                            Product::Year => 'addYears',
-                        } }($product->warranty_duration),
-                        'terms' => $product->warranty_terms,
+                        'end_date'   => $endDate,
+                        'terms'      => $product->warranty_terms,
                     ]);
                 }
+
 
 
                 // ✅ Batch no
@@ -792,7 +797,9 @@ class PurchaseController extends Controller
         ]);
     }
 
-    // Update purchase (batch-wise delete old item stock)
+    /**
+     * Update purchase (batch-wise delete old item stock)
+     */
     public function update(PurchaseRequestStore $request, $id)
     {
         $user = Auth::user();

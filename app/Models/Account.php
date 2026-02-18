@@ -39,7 +39,7 @@ class Account extends Model
 
     public function payments()
     {
-        return $this->hasMany(Payment::class);
+        return $this->hasMany(Payment::class,'account_id');
     }
 
     public function scopeActive($query)
@@ -58,7 +58,7 @@ class Account extends Model
 
         if ($type == 'deposit' || $type == 'credit') {
             $newBalance += $amount;
-        } elseif ($type == 'withdraw') {
+        } elseif ($type == 'withdraw' || $type == 'debit') {
             if ($this->current_balance < $amount) {
                 throw new \Exception("Insufficient balance in account: {$this->name}. Available: {$this->current_balance}, Required: {$amount}");
             }
