@@ -279,9 +279,7 @@ class SalesReturnController extends Controller
             ->whereHas('items', function ($query) {
                 $query->whereNotNull('product_id')
                     ->where('type', 'inventory')
-                    ->whereHas('product', function ($q) {
-                        $q->where('type', 'global');
-                    });
+                    ->whereNotNull('stock_id');
             })
             ->whereDate('created_at', '>=', now()->subDays(15))
             ->orderBy('created_at', 'desc')
@@ -315,9 +313,9 @@ class SalesReturnController extends Controller
             }
         }
 
-        if ($variant->sku) {
-            $parts[] = "SKU: {$variant->sku}";
-        }
+        // if ($variant->sku) {
+        //     $parts[] = "SKU: {$variant->sku}";
+        // }
 
         return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
     }
@@ -382,20 +380,16 @@ class SalesReturnController extends Controller
                 $quantity = $itemData['return_quantity'];
                 $unit = $itemData['unit'];
 
-                // প্রোডাক্ট ইউনিট টাইপ
                 $product = $saleItem->product;
                 $unitType = $product->unit_type ?? 'piece';
 
-                // ইউনিট ভ্যালিডেশন
                 $availableUnits = $this->getAvailableSaleUnits($product);
                 if (!in_array($unit, $availableUnits)) {
                     throw new \Exception("Invalid unit {$unit} for product {$product->name}. Allowed units: " . implode(', ', $availableUnits));
                 }
 
-                // বেস ইউনিটে কনভার্ট
                 $baseQuantity = $this->convertToBase($quantity, $unit, $unitType);
 
-                // টোটাল ক্যালকুলেট
                 $totalReturnValue += $quantity * $saleItem->unit_price;
                 $shadowTotalReturnValue += $quantity * $saleItem->shadow_unit_price;
             }
