@@ -56,7 +56,7 @@ export default function Show({ return: returnItem, isShadowUser }) {
         if (type === 'money_back') {
             return <span className="badge badge-primary">Money Back</span>;
         } else if (type === 'product_replacement') {
-            return <span className="badge badge-warning">Product Replacement</span>;
+            return <span className="badge badge-warning">Replacement</span>;
         }
         return <span className="badge">{type}</span>;
     };

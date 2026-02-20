@@ -1292,7 +1292,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
                         {purchase.status === "completed" && (
                           <button
-                            onClick={() => router.visit(route("purchase-return.create", { purchase_id: purchase.id }))}
+                            onClick={() => router.visit(route("purchase-returns.create", { purchase_id: purchase.id }))}
                             className="btn btn-ghost btn-square btn-xs text-red-600 hover:bg-red-600 hover:text-white"
                             title="Create Return"
                           >
@@ -1304,9 +1304,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                           <Copy size={16} />
                         </button>
 
-                        {/* <Link href={route("purchase.edit", purchase.id)} className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600" title="Edit Purchase">
+                        <Link href={route("purchase.edit", purchase.id)} className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600" title="Edit Purchase">
                           <Edit size={16} />
-                        </Link> */}
+                        </Link>
 
                         {auth?.role === "admin" && (
                           <button onClick={() => handleDelete(purchase.id)} className="btn btn-ghost btn-square btn-xs text-red-400 hover:bg-red-600 hover:text-white" title="Delete Purchase">
