@@ -22,6 +22,7 @@ class BusinessProfile extends Model
         'thum',
         'logo',
         'created_by',
+        'footer_title',
         'outlet_id',
         'owner_id'
     ];

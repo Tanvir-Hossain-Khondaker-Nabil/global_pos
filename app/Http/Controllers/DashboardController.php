@@ -22,7 +22,7 @@ class DashboardController extends Controller
         $range = $request->get('timeRange', 'year');
         $dateFrom = $request->get('date_from');
         $dateTo = $request->get('date_to');
-        
+
         $payload = $this->buildDashboardPayload($range, $dateFrom, $dateTo);
 
         return inertia('Dashboard', $payload);
@@ -54,8 +54,8 @@ class DashboardController extends Controller
 
         // columns (sale)
         $salesTotalCol = $isShadowUser ? 'shadow_grand_total' : 'grand_total';
-        $paidCol       = $isShadowUser ? 'shadow_paid_amount' : 'paid_amount';
-        $dueCol        = $isShadowUser ? 'shadow_due_amount' : 'due_amount';
+        $paidCol = $isShadowUser ? 'shadow_paid_amount' : 'paid_amount';
+        $dueCol = $isShadowUser ? 'shadow_due_amount' : 'due_amount';
 
         // columns (purchase)
         $purchaseTotalCol = $isShadowUser ? 'shadow_grand_total' : 'grand_total';
@@ -67,22 +67,22 @@ class DashboardController extends Controller
         if ($dateFrom && $dateTo) {
             // Custom date range
             $from = Carbon::parse($dateFrom)->startOfDay();
-            $to   = Carbon::parse($dateTo)->endOfDay();
+            $to = Carbon::parse($dateTo)->endOfDay();
 
             // For previous period comparison (same length as selected range)
             $daysDiff = $from->diffInDays($to);
             $prevFrom = $from->copy()->subDays($daysDiff + 1);
-            $prevTo   = $from->copy()->subDay();
+            $prevTo = $from->copy()->subDay();
 
             $labelMode = 'day';
             $range = 'custom';
         } elseif ($dateFrom) {
             // Single date (backward compatibility)
             $from = Carbon::parse($dateFrom)->startOfDay();
-            $to   = Carbon::parse($dateFrom)->endOfDay();
+            $to = Carbon::parse($dateFrom)->endOfDay();
 
             $prevFrom = $from->copy()->subDay();
-            $prevTo   = $to->copy()->subDay();
+            $prevTo = $to->copy()->subDay();
 
             $labelMode = 'hour';
             $range = 'today';
@@ -99,9 +99,9 @@ class DashboardController extends Controller
         $salesPrev = Sale::query()->whereBetween('created_at', [$prevFrom, $prevTo]);
 
         // All-time (sales)
-        $totalSales  = (float) Sale::selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
-        $totalPaid   = (float) Sale::selectRaw("COALESCE(SUM($paidCol),0) as total")->value('total');
-        $totalDue    = (float) Sale::selectRaw("COALESCE(SUM($dueCol),0) as total")->value('total');
+        $totalSales = (float) Sale::selectRaw("COALESCE(SUM($salesTotalCol),0) as total")->value('total');
+        $totalPaid = (float) Sale::selectRaw("COALESCE(SUM($paidCol),0) as total")->value('total');
+        $totalDue = (float) Sale::selectRaw("COALESCE(SUM($dueCol),0) as total")->value('total');
         $totalOrders = (int) Sale::count();
 
         // Period (sales)
@@ -164,8 +164,8 @@ class DashboardController extends Controller
             ->toArray();
 
         $purchaseCompleted = (int) ($purchaseStatusCounts['completed'] ?? 0);
-        $purchasePending   = (int) ($purchaseStatusCounts['pending'] ?? 0);
-        $purchaseReturned  = (int) ($purchaseStatusCounts['returned'] ?? 0);
+        $purchasePending = (int) ($purchaseStatusCounts['pending'] ?? 0);
+        $purchaseReturned = (int) ($purchaseStatusCounts['returned'] ?? 0);
         $purchaseCancelled = (int) ($purchaseStatusCounts['cancelled'] ?? 0);
 
         $purchaseProcessing = $purchasePending;
@@ -180,7 +180,7 @@ class DashboardController extends Controller
         // =========================
         // CUSTOMERS
         // =========================
-        $totalCustomers  = (int) Customer::count();
+        $totalCustomers = (int) Customer::count();
         $activeCustomers = (int) Customer::where('is_active', true)->count();
 
         $buyersThisPeriod = (int) $salesBase->clone()
@@ -196,7 +196,7 @@ class DashboardController extends Controller
         $inventoryValue = (float) Stock::selectRaw("COALESCE(SUM(quantity * $stockPurchaseCol),0) as value")
             ->value('value');
 
-        $lowStockItems  = (int) Stock::where('quantity', '<=', 10)->where('quantity', '>', 0)->count();
+        $lowStockItems = (int) Stock::where('quantity', '<=', 10)->where('quantity', '>', 0)->count();
         $outOfStockItems = (int) Stock::where('quantity', '<=', 0)->count();
 
         // =========================
@@ -231,11 +231,11 @@ class DashboardController extends Controller
                 $growth = $prev > 0 ? (($current - $prev) / $prev) * 100 : 0;
 
                 return [
-                    'id'       => $row->product_id,
-                    'name'     => $row->name,
-                    'sales'    => $current,
+                    'id' => $row->product_id,
+                    'name' => $row->name,
+                    'sales' => $current,
                     'quantity' => (int) $row->total_quantity,
-                    'growth'   => round($growth, 1),
+                    'growth' => round($growth, 1),
                 ];
             });
 
@@ -248,11 +248,11 @@ class DashboardController extends Controller
             ->get()
             ->map(function ($sale) use ($salesTotalCol) {
                 return [
-                    'id'     => $sale->id,
-                    'type'   => 'sale',
-                    'user'   => 'Customer',
+                    'id' => $sale->id,
+                    'type' => 'sale',
+                    'user' => 'Customer',
                     'action' => 'Completed sale ' . ($sale->invoice_no ?? ''),
-                    'time'   => Carbon::parse($sale->created_at)->diffForHumans(),
+                    'time' => Carbon::parse($sale->created_at)->diffForHumans(),
                     'amount' => (float) ($sale->{$salesTotalCol} ?? 0),
                 ];
             })
@@ -273,7 +273,7 @@ class DashboardController extends Controller
             'salesGrowth' => round($salesGrowth, 1),
 
             'periodPaid' => round($periodPaid, 2),
-            'periodDue'  => round($periodDue, 2),
+            'periodDue' => round($periodDue, 2),
 
             'purchaseCost' => round($purchaseCost, 2),
             'totalExpense' => round($totalExpense, 2),
@@ -332,40 +332,40 @@ class DashboardController extends Controller
 
         if ($range === 'today') {
             $from = $now->copy()->startOfDay();
-            $to   = $now->copy()->endOfDay();
+            $to = $now->copy()->endOfDay();
 
             $prevFrom = $from->copy()->subDay();
-            $prevTo   = $to->copy()->subDay();
+            $prevTo = $to->copy()->subDay();
 
             return [$from, $to, $prevFrom, $prevTo, 'hour'];
         }
 
         if ($range === 'week') {
             $from = $now->copy()->startOfWeek();
-            $to   = $now->copy()->endOfWeek();
+            $to = $now->copy()->endOfWeek();
 
             $prevFrom = $from->copy()->subWeek();
-            $prevTo   = $to->copy()->subWeek();
+            $prevTo = $to->copy()->subWeek();
 
             return [$from, $to, $prevFrom, $prevTo, 'day'];
         }
 
         if ($range === 'month') {
             $from = $now->copy()->startOfMonth();
-            $to   = $now->copy()->endOfMonth();
+            $to = $now->copy()->endOfMonth();
 
             $prevFrom = $from->copy()->subMonth()->startOfMonth();
-            $prevTo   = $from->copy()->subMonth()->endOfMonth();
+            $prevTo = $from->copy()->subMonth()->endOfMonth();
 
             return [$from, $to, $prevFrom, $prevTo, 'day'];
         }
 
         // year
         $from = $now->copy()->startOfYear();
-        $to   = $now->copy()->endOfYear();
+        $to = $now->copy()->endOfYear();
 
         $prevFrom = $from->copy()->subYear()->startOfYear();
-        $prevTo   = $from->copy()->subYear()->endOfYear();
+        $prevTo = $from->copy()->subYear()->endOfYear();
 
         return [$from, $to, $prevFrom, $prevTo, 'month'];
     }
@@ -386,8 +386,8 @@ class DashboardController extends Controller
             $labels = [];
             $values = [];
             for ($h = 0; $h < 24; $h++) {
-                $labels[] = str_pad((string)$h, 2, '0', STR_PAD_LEFT) . ':00';
-                $values[] = (float)($map[$h] ?? 0);
+                $labels[] = str_pad((string) $h, 2, '0', STR_PAD_LEFT) . ':00';
+                $values[] = (float) ($map[$h] ?? 0);
             }
             return compact('labels', 'values');
         }
@@ -409,7 +409,7 @@ class DashboardController extends Controller
             while ($cursor->lte($to)) {
                 $k = $cursor->toDateString();
                 $labels[] = $cursor->format('d M');
-                $values[] = (float)($map[$k] ?? 0);
+                $values[] = (float) ($map[$k] ?? 0);
                 $cursor->addDay();
             }
             return compact('labels', 'values');
@@ -430,7 +430,7 @@ class DashboardController extends Controller
         $values = [];
         for ($m = 1; $m <= 12; $m++) {
             $labels[] = Carbon::createFromDate($from->year, $m, 1)->format('M');
-            $values[] = (float)($map[$m] ?? 0);
+            $values[] = (float) ($map[$m] ?? 0);
         }
 
         return compact('labels', 'values');

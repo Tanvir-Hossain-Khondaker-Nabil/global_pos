@@ -70,12 +70,6 @@ export default function Edit({ auth, header, outlets }) {
                             </Link>
                         </div>
 
-                        {/* Current Outlet Info */}
-                        <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-100">
-                            <div className="text-sm text-green-800">
-                                <strong>Current Outlet:</strong> {header.outlet?.name} ({header.outlet?.code})
-                            </div>
-                        </div>
 
                         {/* Form */}
                         <form onSubmit={handleSubmit}>
@@ -92,16 +86,12 @@ export default function Edit({ auth, header, outlets }) {
                                         className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.outlet_id ? 'border-red-300' : 'border-gray-300'
                                             }`}
                                     >
-                                        <option value={header.outlet_id}>
-                                            {header.outlet?.name} ({header.outlet?.code})
-                                        </option>
-                                        {outlets
-                                            .filter(o => o.id !== header.outlet_id)
-                                            .map(outlet => (
-                                                <option key={outlet.id} value={outlet.id}>
-                                                    {outlet.name} ({outlet.code})
-                                                </option>
-                                            ))}
+                                        <option value="">Select an outlet</option>
+                                        {outlets.map(outlet => (
+                                            <option key={outlet.id} value={outlet.id}>
+                                                {outlet.name} ({outlet.code}) {outlet.id === header.outlet_id ? '(Current)' : ''}
+                                            </option>
+                                        ))}
                                     </select>
                                     {errors.outlet_id && (
                                         <p className="mt-1 text-sm text-red-600">{errors.outlet_id}</p>

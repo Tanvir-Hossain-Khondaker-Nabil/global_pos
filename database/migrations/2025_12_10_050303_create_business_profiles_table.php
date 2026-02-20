@@ -13,6 +13,7 @@ return new class extends Migration {
         Schema::create('business_profiles', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable();
+            $table->text('footer_title')->nullable();
             $table->string('email')->nullable();
             $table->string('phone')->nullable();
             $table->string('address')->nullable();

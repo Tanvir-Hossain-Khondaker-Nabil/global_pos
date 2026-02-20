@@ -84,6 +84,7 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|min:3|max:255',
+            'footer_title' => 'required|min:3',
             'email' => 'required|email|lowercase|max:255',
             'phone' => 'required',
             'address' => 'required|string|min:3|max:500',
@@ -152,7 +153,8 @@ class AuthController extends Controller
             'profile' => 'nullable|image|mimes:png,jpg,jpeg',
             'name' => 'required',
             'phone_no' => 'nullable|min:11|max:14',
-            'address' => 'nullable|min:3'
+            'address' => 'nullable|min:3',
+            'footer_title' => 'nullable'
         ]);
 
         try {
@@ -163,6 +165,9 @@ class AuthController extends Controller
             }
             if ($request->address) {
                 $q->address = $request->address;
+            }
+            if ($request->footer_title) {
+                $q->footer_title = $request->footer_title;
             }
             if ($request->hasFile('profile')) {
                 // Delete old image if exists

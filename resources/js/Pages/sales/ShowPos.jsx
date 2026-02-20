@@ -39,7 +39,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
     try {
       const ls = localStorage.getItem(STORAGE_KEY);
       if (ls === "1" || ls === "2") return ls;
-    } catch (_) {}
+    } catch (_) { }
     const ck = getCookie(COOKIE_KEY);
     if (ck === "1" || ck === "2") return ck;
     return "1";
@@ -55,7 +55,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
     setInvoiceDesign(value);
     try {
       localStorage.setItem(STORAGE_KEY, value);
-    } catch (_) {}
+    } catch (_) { }
     setCookie(COOKIE_KEY, value, 30);
   };
 
@@ -193,6 +193,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
   const bpEmail = bp?.email || "mail@example.com";
   const bpAddr = bp?.address || "Address.";
   const bpWebsite = bp?.website || "";
+  const bpFooterTitle = bp?.footer_title || "";
 
   const bpLogo =
     resolveAssetUrl(bp?.logo) ||
@@ -303,21 +304,20 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
                 </thead>
                 <tbody>
                     ${(sale?.items || [])
-                      .map(
-                        (item) => `
+        .map(
+          (item) => `
                         <tr>
                             <td>${getProductDisplayName(item)}</td>
                             <td align="center">${item.quantity} × ${formatCurrency(item.unit_price)}</td>
                             <td align="right">${formatCurrency(item.total_price || rowTotal(item))}</td>
                         </tr>
-                        ${
-                          item.variant
-                            ? `<tr><td colspan="3" style="font-size: 10px; padding-left: 10px;">↳ ${getVariantDisplayName(item)}</td></tr>`
-                            : ""
-                        }
+                        ${item.variant
+              ? `<tr><td colspan="3" style="font-size: 10px; padding-left: 10px;">↳ ${getVariantDisplayName(item)}</td></tr>`
+              : ""
+            }
                     `
-                      )
-                      .join("")}
+        )
+        .join("")}
                 </tbody>
             </table>
 
@@ -364,7 +364,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
 
             <div class="footer">
                 <div>*** ${getTotalItemsQty()} Items ***</div>
-                <div style="margin-top: 8px;">বিক্রয়িত পণ্য ১৫ দিনের মধ্যে ফেরত যোগ্য । পণ্য ফেরতের সময় অবশ্যই মেমোর ফটোকপি দিতে হবে</div>
+                <div style="margin-top: 8px;">${bpFooterTitle || ""}</div>
             </div>
         </body>
         </html>
@@ -606,8 +606,8 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
           </span>
         </div>
 
-        <div className="mt-2 text-[11px] text-gray-700">
-          সময়: {formatDateTimeBn(sale?.sale_date || sale?.created_at)}
+        <div className="mt-5! text-[11px] text-gray-700">
+          {bpFooterTitle}
         </div>
 
         {sale?.notes && (
@@ -676,9 +676,8 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
         )}
 
         <div
-          className={`no-print fixed top-0 right-0 h-full w-[320px] bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-200 ${
-            sidebarOpen ? "translate-x-0" : "translate-x-full"
-          }`}
+          className={`no-print fixed top-0 right-0 h-full w-[320px] bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-200 ${sidebarOpen ? "translate-x-0" : "translate-x-full"
+            }`}
           style={{ zIndex: 2147483647 }}
         >
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -725,9 +724,8 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
       <button
         type="button"
         onClick={onSelect}
-        className={`w-full text-left p-3 rounded-xl border transition ${
-          active ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"
-        }`}
+        className={`w-full text-left p-3 rounded-xl border transition ${active ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"
+          }`}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -877,7 +875,6 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
             <div className="space-y-1">
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Project</span>
-                <span>{sale.project_name || "Ms Motors"}</span>
               </div>
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Memo No</span>
@@ -982,7 +979,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
               <div className="flex justify-between">
                 <span className="font-semibold">Discount</span>
                 <span className="font-mono">
-                  {sale.discount || 0} {sale?.discount_type == 'flat_discount' ? 'Tk' : '%'} 
+                  {sale.discount || 0} {sale?.discount_type == 'flat_discount' ? 'Tk' : '%'}
                 </span>
               </div>
               <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
@@ -1026,7 +1023,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
           {/* Footer note line */}
           <div className="mt-3 text-[9px] text-gray-600 flex justify-between border-t border-gray-300 pt-2">
             <div>
-              <span>বিক্রয়িত পণ্য ১৫ দিনের মধ্যে ফেরত যোগ্য । পণ্য ফেরতের সময় অবশ্যই মেমোর ফটোকপি দিতে হবে</span>
+              <span>{bpFooterTitle}</span>
             </div>
             <div>
               Powered by: Nexoryn

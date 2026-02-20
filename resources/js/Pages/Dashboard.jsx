@@ -31,12 +31,12 @@ export default function Dashboard({
   const [loading, setLoading] = useState(false);
 
   // ✅ Extract date range from backend response
-  const { 
-    dateFrom: initialDateFrom = "", 
-    dateTo: initialDateTo = "", 
-    range = "year" 
+  const {
+    dateFrom: initialDateFrom = "",
+    dateTo: initialDateTo = "",
+    range = "year"
   } = dashboardData;
-  
+
   const [dateFrom, setDateFrom] = useState(initialDateFrom);
   const [dateTo, setDateTo] = useState(initialDateTo);
 
@@ -176,7 +176,7 @@ export default function Dashboard({
   const clearDateRangeFilter = useCallback(() => {
     setDateFrom("");
     setDateTo("");
-    
+
     // Revert to current range
     handleTimeRangeChange(range);
   }, [range, handleTimeRangeChange]);
@@ -343,11 +343,10 @@ export default function Dashboard({
     if (isCustomRangeActive) {
       return `${t("dashboard.date_range", "Date range")}: ${dateFrom} ${t("dashboard.to", "to")} ${dateTo}`;
     }
-    return `${t("dashboard.range", "Range")}: ${
-      range === "year"
+    return `${t("dashboard.range", "Range")}: ${range === "year"
         ? t("dashboard.monthly_jan_dec", "Monthly (Jan–Dec)")
         : timeRanges.find((r) => r.id === range)?.label || range
-    }`;
+      }`;
   };
 
   const chartTitle = getChartTitle();
@@ -372,11 +371,10 @@ export default function Dashboard({
             <button
               key={r.id}
               onClick={() => handleTimeRangeChange(r.id)}
-              className={`px-3 py-2 rounded-xl text-xs font-black border transition ${
-                range === r.id && !isCustomRangeActive
+              className={`px-3 py-2 rounded-xl text-xs font-black border transition ${range === r.id && !isCustomRangeActive
                   ? "bg-[#1e4d2b] text-white border-[#1e4d2b]"
                   : "bg-white text-slate-700 border-slate-200 hover:border-[#1e4d2b]"
-              } ${isCustomRangeActive ? "opacity-50 cursor-not-allowed" : ""}`}
+                } ${isCustomRangeActive ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={loading || isCustomRangeActive}
               title={isCustomRangeActive ? t("dashboard.clear_range_first", "Clear date range first") : ""}
             >
@@ -406,7 +404,7 @@ export default function Dashboard({
                 placeholder={t("dashboard.to_date", "To date")}
               />
             </div>
-            
+
             {dateFrom && dateTo && (
               <button
                 onClick={handleDateRangeFilter}
@@ -417,7 +415,7 @@ export default function Dashboard({
                 {t("dashboard.apply", "Apply")}
               </button>
             )}
-            
+
             {isCustomRangeActive && (
               <button
                 onClick={clearDateRangeFilter}
@@ -473,9 +471,8 @@ export default function Dashboard({
 
             <div className="mt-4 flex items-center gap-2 relative z-10">
               <span
-                className={`text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold ${
-                  Number(stat.change) >= 0 ? "text-white" : "text-red-100"
-                }`}
+                className={`text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-bold ${Number(stat.change) >= 0 ? "text-white" : "text-red-100"
+                  }`}
               >
                 {Number(stat.change) >= 0 ? "+" : ""}
                 {Number(stat.change).toFixed(1)}%

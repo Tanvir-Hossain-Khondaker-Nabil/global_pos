@@ -5,23 +5,13 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useState, useMemo, useEffect } from "react";
 import { createPortal } from "react-dom";
 
-/**
- * ✅ 0% DESIGN CHANGE (Design-1 and Design-2 as you provided)
- * ✅ ONLY FIXES:
- *  - sidebar + floating icon + persist design (cookie + localStorage)
- *  - print routes (Design-1 => invoiceArea html replace print, Design-2 => printPad css print)
- *  - removed duplicate function names (handlePrintDesign2 only once)
- *  - Bangla Pad header uses businessProfile dynamic (name/phone/address/email/web/logo/description)
- */
+
 
 export default function PurchaseShow({ purchase, isShadowUser, businessProfile }) {
   const { auth } = usePage().props;
   const { t, locale } = useTranslation();
   const [isPrinting, setIsPrinting] = useState(false);
 
-  // =========================
-  // ✅ Persisted invoice type
-  // =========================
   const STORAGE_KEY = "purchase_invoice_design";
   const COOKIE_KEY = "purchase_invoice_design";
 
@@ -68,9 +58,6 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
     } catch (_) {}
   };
 
-  // =========================
-  // ✅ Sidebar states
-  // =========================
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const openSidebar = () => setSidebarOpen(true);
   const closeSidebar = () => setSidebarOpen(false);
@@ -83,9 +70,6 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // =========================
-  // ✅ Business profile (shared)
-  // =========================
   const resolveAssetUrl = (path) => {
     if (!path) return "";
     if (typeof path !== "string") return "";
@@ -101,6 +85,7 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
   const bpPhone = profile?.phone || "০১৬******৮৮";
   const bpAddr = profile?.address || "Address ";
   const bpWebsite = profile?.website || "";
+  const bpFooterTitle = profile?.footer_title || "";
   const bpDesc = profile?.description || "ধন্যবাদ।";
 
   const bpLogo =
@@ -108,9 +93,6 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
     resolveAssetUrl(profile?.thum) ||
     "/media/uploads/logo.png";
 
-  // =========================
-  // ✅ Design-1 helpers (UNCHANGED)
-  // =========================
   const formatCurrency = (amount) => {
     const n = Number(amount || 0);
     return n.toFixed(2);
@@ -585,8 +567,8 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
           </span>
         </div>
 
-        <div className="mt-2 text-[11px] text-gray-700">
-          সময়: {formatDateTimeBn(purchase?.purchase_date || purchase?.created_at)}
+        <div className="mt-25 text-[11px] text-gray-700">
+          {bpFooterTitle}
         </div>
 
         {purchase?.notes && (
@@ -1022,7 +1004,7 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
           {/* Footer note line */}
           <div className="mt-3 text-[9px] text-gray-600 flex justify-between border-t border-gray-300 pt-2">
             <div>
-              <span>বিক্রয়িত পণ্য ১৫ দিনের মধ্যে ফেরত যোগ্য । পণ্য ফেরতের সময় অবশ্যই মেমোর ফটোকপি দিতে হবে</span>
+              <span>{bpFooterTitle}</span>
             </div>
             <div>
               Powered by: Nexoryn

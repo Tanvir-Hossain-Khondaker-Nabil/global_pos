@@ -136,8 +136,6 @@ class HeaderController extends Controller
      */
     public function show(Header $header)
     {
-        $this->authorize('view', $header);
-        
         $header->load(['outlet', 'creator']);
         
         return inertia('Headers/Show', [
@@ -150,10 +148,8 @@ class HeaderController extends Controller
      */
     public function edit(Header $header)
     {
-        $this->authorize('update', $header);
-
         $outlets = Outlet::where('owner_id', Auth::user()->ownerId())->get();
-        
+
         return inertia('Headers/Edit', [
             'header' => $header,
             'outlets' => $outlets
@@ -165,8 +161,6 @@ class HeaderController extends Controller
      */
     public function update(Request $request, Header $header)
     {
-        $this->authorize('update', $header);
-
         $validated = $request->validate([
             'fav_icon' => ['nullable', 'image', 'max:2048', 'mimes:png,ico,jpg,jpeg'],
             'title' => ['required', 'string', 'max:255'],
@@ -213,8 +207,6 @@ class HeaderController extends Controller
      */
     public function destroy(Header $header)
     {
-        $this->authorize('delete', $header);
-
         // Delete fav_icon file if exists
         if ($header->fav_icon) {
             Storage::disk('public')->delete($header->fav_icon);

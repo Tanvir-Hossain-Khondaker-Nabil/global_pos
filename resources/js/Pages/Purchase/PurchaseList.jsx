@@ -78,14 +78,14 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
     align: "left", // left | right
 
-    labelWidthMm: 50,
+    labelWidthMm: 38,
     labelHeightMm: 30,
     gapMm: 2,
 
     copiesMode: "one", // one | byQty | fixed | manual
     fixedCopies: 1,
 
-    barcodeImgHeightPx: 40,
+    barcodeImgHeightPx: 60,
   });
 
   const selectedPurchases = useMemo(() => {
@@ -433,29 +433,30 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     if (!printWindow) return alert("Please allow popups to print barcodes.");
 
     const css = `
-      @page { margin: 6mm; }
-      @media print { .no-print { display:none !important; } body { padding:0; } }
+      @page { margin: 3mm; }        
+      @media print { body { padding:0; } }
 
       * { box-sizing:border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       body {
-        margin:0;
-        padding:10px;
+        margin: 0;
+        padding: 0;                    /* extra padding remove */
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
         background:#fff;
         color:#0f172a;
       }
 
-      .sheet {
-        width:100%;
-        display:flex;
-        justify-content:${align === "right" ? "flex-end" : "flex-start"};
-      }
+      .sheet { width: 100%; }
 
-      .flex-wrap-container {
-        display: flex;
-        flex-wrap: wrap;
+      .grid-wrap {
+        width: 100%;
+        display: grid;
+        grid-auto-flow: row;
+        grid-template-columns: repeat(auto-fit, ${Number(labelWidthMm)}mm);
         gap: ${Number(gapMm)}mm;
-        justify-content: flex-start;
+
+        /* left/right align */
+        justify-content: ${align === "right" ? "end" : "start"};
+        align-content: start;
       }
 
       .label {
@@ -512,10 +513,11 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
       }
 
       .barcodeImg {
-        width:100%;
         height:${Number(barcodeImgHeightPx)}px;
-        object-fit:contain;
+        width: 100%;             
+        object-fit: contain;
         display:block;
+        margin: 0 auto;            
       }
 
       .batch,
@@ -576,7 +578,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
       </head>
       <body>
         <div class="sheet">
-          <div class="flex-wrap-container">${labelsHtml}</div>
+          <div class="grid-wrap">${labelsHtml}</div>
         </div>
 
         <div class="no-print">
@@ -1290,7 +1292,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
                         {purchase.status === "completed" && (
                           <button
-                            onClick={() => router.visit(route("purchase-returns.create", { purchase_id: purchase.id }))}
+                            onClick={() => router.visit(route("purchase-return.create", { purchase_id: purchase.id }))}
                             className="btn btn-ghost btn-square btn-xs text-red-600 hover:bg-red-600 hover:text-white"
                             title="Create Return"
                           >
@@ -1302,9 +1304,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
                           <Copy size={16} />
                         </button>
 
-                        <Link href={route("purchase.edit", purchase.id)} className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600" title="Edit Purchase">
+                        {/* <Link href={route("purchase.edit", purchase.id)} className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600" title="Edit Purchase">
                           <Edit size={16} />
-                        </Link>
+                        </Link> */}
 
                         {auth?.role === "admin" && (
                           <button onClick={() => handleDelete(purchase.id)} className="btn btn-ghost btn-square btn-xs text-red-400 hover:bg-red-600 hover:text-white" title="Delete Purchase">

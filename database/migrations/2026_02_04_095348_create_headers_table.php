@@ -17,7 +17,8 @@ return new class extends Migration {
             $table->string('sitebar_name')->nullable();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('outlet_id')->nullable();
-            $table->unsignedBigInteger('owner_id')->nullable();
+            $table->unsignedBigInteger('owner_id')->nullable()->after('id');
+            $table->foreign('owner_id')->references('id')->on('users')->onDelete('cascade');
             $table->timestamps();
 
             // Add unique constraint for one header per outlet per owner
@@ -26,7 +27,6 @@ return new class extends Migration {
             // Foreign keys
             $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
             $table->foreign('outlet_id')->references('id')->on('outlets')->onDelete('cascade');
-            $table->foreign('owner_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 

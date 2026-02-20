@@ -40,6 +40,7 @@ export default function Profile() {
         website: businessData.website || '',
         description: businessData.description || '',
         tax_number: businessData.tax_number || '',
+        footer_title: businessData.footer_title || '',
         thum: null, 
         logo: null, 
     })
@@ -287,6 +288,19 @@ export default function Profile() {
                             placeholder={t('auth.tax_number_placeholder', 'TAX-123456')} 
                         />
                         {errors.tax_number && <div className="text-red-600 text-sm mt-1">{errors.tax_number}</div>}
+                    </fieldset>
+                    <fieldset className="fieldset">
+                        <legend className="fieldset-legend">
+                            Footer Title
+                        </legend>
+                        <input 
+                            value={data.footer_title} 
+                            onChange={(e) => setData('footer_title', e.target.value)} 
+                            type="text" 
+                            className="input input-bordered w-full" 
+                            placeholder={'Footer Title'} 
+                        />
+                        {errors.footer_title && <div className="text-red-600 text-sm mt-1">{errors.footer_title}</div>}
                     </fieldset>
                 </div>
 
