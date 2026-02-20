@@ -385,6 +385,7 @@ class SalesController extends Controller
             'total_installments' => 'nullable|integer',
         ];
 
+
         // Validate at least one type of items
         if (empty($request->items) && empty($request->pickup_items)) {
             throw new \Exception('At least one item (stock or pickup) is required.');
@@ -431,6 +432,7 @@ class SalesController extends Controller
         {
             $discount = (float) ($request->discount_rate ?? 0);
         }
+
 
         DB::beginTransaction();
 
