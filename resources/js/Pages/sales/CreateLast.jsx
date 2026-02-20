@@ -54,11 +54,9 @@ export default function AddSale({
     const [productSearch, setProductSearch] = useState("");
     const [filteredProducts, setFilteredProducts] = useState([]);
     const [vatRate, setVatRate] = useState(0);
-    const [discountType, setDiscountType] = useState("percentage");
-    const [flatDiscount, setFlatDiscount] = useState(null);
-    const [percentageDiscount, setPercentageDiscount] = useState(null);
-    const [paidAmount, setPaidAmount] = useState(null);
-    const [shadowPaidAmount, setShadowPaidAmount] = useState(null);
+    const [discountRate, setDiscountRate] = useState(0);
+    const [paidAmount, setPaidAmount] = useState(0);
+    const [shadowPaidAmount, setShadowPaidAmount] = useState(0);
     const [selectedAccount, setSelectedAccount] = useState("");
     const [paymentStatus, setPaymentStatus] = useState("unpaid");
     const [manualPaymentOverride, setManualPaymentOverride] = useState(false);
@@ -124,8 +122,6 @@ export default function AddSale({
         items: [],
         vat_rate: 0,
         discount_rate: 0,
-        discount_type: "percentage",
-        flat_discount: 0,
         paid_amount: 0,
         grand_amount: 0,
         due_amount: 0,
@@ -258,13 +254,8 @@ export default function AddSale({
 
     const calculateDiscountAmount = useCallback(() => {
         const subtotal = calculateTotalSubTotal();
-        
-        if (discountType === "flat_discount") {
-            return Number(flatDiscount) || 0;
-        } else {
-            return (subtotal * (Number(percentageDiscount) || 0)) / 100;
-        }
-    }, [calculateTotalSubTotal, discountType, flatDiscount, percentageDiscount]);
+        return (subtotal * (Number(discountRate) || 0)) / 100;
+    }, [calculateTotalSubTotal, discountRate]);
 
     const calculateGrandTotal = useCallback(() => {
         const subtotal = calculateTotalSubTotal();
@@ -1078,20 +1069,12 @@ export default function AddSale({
             total_price: item.total_price,
         }));
 
-        // Set the appropriate discount rate based on type
-        let discountRateValue = 0;
-        if (discountType === "percentage") {
-            discountRateValue = Number(percentageDiscount) || 0;
-        }
-
         form.setData({
             ...form.data,
             items: formattedItems,
             pickup_items: formattedPickupItems,
             vat_rate: Number(vatRate) || 0,
-            discount_rate: discountRateValue,
-            discount_type: discountType,
-            flat_discount: discountType === "flat_discount" ? (Number(flatDiscount) || 0) : 0,
+            discount_rate: Number(discountRate) || 0,
             paid_amount: Number(paidAmount) || 0,
             grand_amount: grandTotal,
             due_amount: dueAmount,
@@ -1111,9 +1094,7 @@ export default function AddSale({
         selectedItems,
         pickupItems,
         vatRate,
-        discountType,
-        flatDiscount,
-        percentageDiscount,
+        discountRate,
         paidAmount,
         usePartialPayment,
         adjustFromAdvance,
@@ -1620,65 +1601,22 @@ export default function AddSale({
                                     </div>
                                     <span>{formatWithSymbol(vatAmount)}</span>
                                 </div>
-
-                                {/* Discount Section */}
-                                <div className="flex justify-between items-center border-t pt-2 mt-2">
+                                <div className="flex justify-between items-center">
                                     <div className="flex items-center gap-2">
                                         <span>Discount:</span>
-                                        <select
-                                            className="select select-bordered select-sm w-24"
-                                            value={discountType}
-                                            onChange={(e) => setDiscountType(e.target.value)}
-                                        >
-                                            <option value="percentage">Percentage</option>
-                                            <option value="flat_discount">Flat</option>
-                                        </select>
+                                        <input
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            step="0.01"
+                                            className="input input-bordered input-sm w-20"
+                                            value={discountRate}
+                                            onChange={(e) => setDiscountRate(parseFloat(e.target.value) || 0)}
+                                        />
+                                        <span>%</span>
                                     </div>
-                                    <span className="text-green-600">-{formatWithSymbol(discountAmount)}</span>
+                                    <span>{formatWithSymbol(discountAmount)}</span>
                                 </div>
-
-                                {/* Conditional Discount Input Fields */}
-                                {discountType === "percentage" && (
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span>Percentage:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                max="100"
-                                                step="0.01"
-                                                className="input input-bordered input-sm w-20"
-                                                value={percentageDiscount}
-                                                onChange={(e) => setPercentageDiscount(parseFloat(e.target.value) || 0)}
-                                            />
-                                            <span>%</span>
-                                        </div>
-                                        <span className="text-sm text-gray-600">
-                                            Discount: {formatWithSymbol(discountAmount)}
-                                        </span>
-                                    </div>
-                                )}
-
-                                {discountType === "flat_discount" && (
-                                    <div className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                            <span>Flat Discount:</span>
-                                            <input
-                                                type="number"
-                                                min="0"
-                                                step="0.01"
-                                                className="input input-bordered input-sm w-28"
-                                                value={flatDiscount}
-                                                onChange={(e) => setFlatDiscount(parseFloat(e.target.value) || 0)}
-                                                placeholder="Enter amount"
-                                            />
-                                        </div>
-                                        <span className="text-sm text-gray-600">
-                                            ৳{formatCurrency(flatDiscount)} off
-                                        </span>
-                                    </div>
-                                )}
-
                                 <div className="flex justify-between text-lg font-bold border-t pt-2">
                                     <span>Grand Total:</span>
                                     <span>{formatWithSymbol(grandTotal)}</span>

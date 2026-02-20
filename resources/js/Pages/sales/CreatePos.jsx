@@ -21,13 +21,10 @@ import {
     Ruler,
     ChevronDown,
     Check,
-    Calculator,
     FileText,
     Calendar,
-    MessageSquare,
     AlertCircle,
     Percent,
-    Truck,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 
@@ -78,11 +75,10 @@ export default function AddSale({
     const [cart, setCart] = useState([]);
     const cartCount = cart.reduce((a, i) => a + n(i.qty), 0);
 
-    // Tax/Discount/Shipping
-    const [taxRate, setTaxRate] = useState(0);
+    // Tax/Discount
+    const [taxRate, setTaxRate] = useState(null);
     const [discountValue, setDiscountValue] = useState(null);
 
-    console.log(discountValue);
     // Pickup state
     const [pickupItems, setPickupItems] = useState([]);
     const [showPickupModal, setShowPickupModal] = useState(false);
@@ -166,14 +162,11 @@ export default function AddSale({
         [unitConversions]
     );
 
-    const calculatePriceInUnit = useCallback(
-        (basePricePerBaseUnit, toUnit, unitType) => {
-            const conversions = unitConversions[unitType];
-            if (!conversions || !conversions[toUnit]) return basePricePerBaseUnit;
-            return basePricePerBaseUnit * conversions[toUnit];
-        },
-        [unitConversions]
-    );
+    const calculatePriceForUnit = useCallback((basePricePerBaseUnit, targetUnit, unitType) => {
+        const conversions = unitConversions[unitType];
+        if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
+        return basePricePerBaseUnit * conversions[targetUnit];
+    }, [unitConversions]);
 
     const calculateBasePricePerBaseUnit = useCallback(
         (price, unit, unitType) => {
@@ -183,13 +176,6 @@ export default function AddSale({
         },
         [unitConversions]
     );
-
-    // ✅ FIXED: Calculate price based on base price and unit conversion
-    const calculatePriceForUnit = useCallback((basePricePerBaseUnit, targetUnit, unitType) => {
-        const conversions = unitConversions[unitType];
-        if (!conversions || !conversions[targetUnit]) return basePricePerBaseUnit;
-        return basePricePerBaseUnit * conversions[targetUnit];
-    }, [unitConversions]);
 
     // ---------------- Catalog (from productstocks) ----------------
     const catalog = useMemo(() => {
@@ -348,11 +334,9 @@ export default function AddSale({
                 product.min_sale_unit || product.default_unit || availableUnitsForStock[0] || "piece";
             if (!availableUnitsForStock.includes(defaultUnit)) defaultUnit = availableUnitsForStock[0] || "piece";
 
-            // ✅ FIXED: Always calculate base price per base unit
             const unitType = product.unit_type || "piece";
             let basePricePerBaseUnit = variant.sale_price;
 
-            // ✅ Calculate base price correctly
             if (unitType !== "piece") {
                 basePricePerBaseUnit = calculateBasePricePerBaseUnit(
                     variant.sale_price,
@@ -361,7 +345,6 @@ export default function AddSale({
                 );
             }
 
-            // ✅ Calculate price in sale unit using base price
             let unitPrice = variant.sale_price;
             if (variant.purchase_unit !== defaultUnit && unitType !== "piece") {
                 unitPrice = calculatePriceForUnit(
@@ -479,7 +462,6 @@ export default function AddSale({
         setUnitQuantities((prev) => ({ ...prev, [key]: q }));
     };
 
-    // ✅ FIXED: Handle unit change with auto price calculation
     const handleUnitChange = (key, newUnit) => {
         const item = cart.find((x) => x.key === key);
         if (!item) return;
@@ -497,12 +479,10 @@ export default function AddSale({
 
         const unitType = item.product_unit_type || "piece";
 
-        // ✅ Convert quantity to new unit
         let newQty = oldQty;
         if (unitType !== "piece") {
             newQty = convertUnitQuantity(oldQty, oldUnit, newUnit, unitType);
 
-            // Validate stock in new unit
             const requestedBaseQty = convertToBase(newQty, newUnit, unitType);
             if (requestedBaseQty > item.base_quantity) {
                 const availableInUnit = convertFromBase(item.base_quantity, newUnit, unitType);
@@ -511,16 +491,13 @@ export default function AddSale({
             }
         }
 
-        // ✅ ALWAYS recalc price based on stored base price
         const basePricePerBaseUnit =
             basePrices[key] ||
             item.base_price_per_base_unit ||
             calculateBasePricePerBaseUnit(item.original_sale_price, item.original_purchase_unit, unitType);
 
-        // ✅ Calculate new price for the selected unit
         const newPrice = calculatePriceForUnit(basePricePerBaseUnit, newUnit, unitType);
 
-        // Update cart item
         setCart((prev) =>
             prev.map((x) => {
                 if (x.key !== key) return x;
@@ -535,7 +512,6 @@ export default function AddSale({
             })
         );
 
-        // Update state
         setSelectedUnits((prev) => ({ ...prev, [key]: newUnit }));
         setUnitQuantities((prev) => ({ ...prev, [key]: newQty }));
         setUnitPrices((prev) => ({ ...prev, [key]: newPrice }));
@@ -558,13 +534,6 @@ export default function AddSale({
     // ---------------- Barcode Scanner ----------------
     const barcodeRef = useRef(null);
     const [scanError, setScanError] = useState("");
-    const [autoFocusScanner, setAutoFocusScanner] = useState(false);
-
-    useEffect(() => {
-        if (!autoFocusScanner) return;
-        const t = setTimeout(() => barcodeRef.current?.focus(), 200);
-        return () => clearTimeout(t);
-    }, [autoFocusScanner]);
 
     const scanIndex = useMemo(() => {
         const batchMap = new Map();
@@ -620,7 +589,6 @@ export default function AddSale({
         [scanIndex, addToCart]
     );
 
-    // FIXED: Barcode scanner - do NOT block typing in inputs
     const SCAN_TIMEOUT = 100;
     const barcodeRefNew = useRef("");
     const lastScanTimeRef = useRef(0);
@@ -637,7 +605,6 @@ export default function AddSale({
                 target?.isContentEditable;
 
             if (isTypingField) return;
-
             if (e.ctrlKey || e.altKey || e.metaKey) return;
 
             const now = Date.now();
@@ -657,7 +624,6 @@ export default function AddSale({
                 } else {
                     barcodeRefNew.current += e.key;
                 }
-
                 lastScanTimeRef.current = now;
             }
         };
@@ -666,7 +632,30 @@ export default function AddSale({
         return () => window.removeEventListener("keydown", handleKeydown);
     }, [handleBarcodeScan]);
 
-
+    // ---------------- Form ----------------
+    const form = useForm({
+        customer_id: null,
+        customer_name: null,
+        phone: null,
+        sale_date: saleDate,
+        notes: notes,
+        items: [],
+        vat_rate: 0,
+        discount_rate: 0,
+        flat_discount: 0,
+        paid_amount: 0,
+        grand_amount: 0,
+        due_amount: 0,
+        sub_amount: 0,
+        type: "pos",
+        pickup_items: [],
+        supplier_id: null,
+        account_id: "",
+        adjust_from_advance: false,
+        advance_adjustment: 0,
+        payment_status: "unpaid",
+        discount_type: 'flat_discount',
+    });
 
     // ---------------- Totals ----------------
     const subTotal = useMemo(() => cart.reduce((sum, i) => sum + n(i.total_price), 0), [cart]);
@@ -676,9 +665,18 @@ export default function AddSale({
     );
     const totalSubTotal = useMemo(() => subTotal + pickupSubTotal, [subTotal, pickupSubTotal]);
     const taxAmount = useMemo(() => (totalSubTotal * n(taxRate)) / 100, [totalSubTotal, taxRate]);
+    
+    const discountAmount = useMemo(() => {
+        if (form.data.discount_type === 'percentage') {
+            return (totalSubTotal * n(discountValue)) / 100;
+        } else {
+            return n(discountValue);
+        }
+    }, [totalSubTotal, discountValue, form.data.discount_type]);
+    
     const grandTotal = useMemo(
-        () => totalSubTotal + taxAmount - n(discountValue),
-        [totalSubTotal, taxAmount, discountValue]
+        () => totalSubTotal + taxAmount - discountAmount,
+        [totalSubTotal, taxAmount, discountAmount]
     );
 
     useEffect(() => {
@@ -718,41 +716,14 @@ export default function AddSale({
         setPickupProductId(productId);
 
         const p = products?.find((x) => String(x.id) === String(productId));
-
         setPickupProductName(p?.name || "");
 
         const vars = p?.variants || [];
         setPickupVariants(vars);
-
-        // reset variant selection
         setPickupVariantId("");
     };
 
-    // ---------------- Form ----------------
-    const form = useForm({
-        customer_id: null,
-        customer_name: null,
-        phone: null,
-        sale_date: saleDate,
-        notes: notes,
-        items: [],
-        vat_rate: 0,
-        discount_rate: 0,
-        flat_discount: 0,
-        paid_amount: 0,
-        grand_amount: 0,
-        due_amount: 0,
-        sub_amount: 0,
-        type: "pos",
-        pickup_items: [],
-        supplier_id: null,
-        account_id: "",
-        adjust_from_advance: false,
-        advance_adjustment: 0,
-        payment_status: "unpaid",
-        discount_type: 'flat_discount',
-    });
-
+    // ---------------- Form Sync ----------------
     useEffect(() => {
         const formattedItems = cart.map((i) => ({
             product_id: i.product_id,
@@ -776,7 +747,19 @@ export default function AddSale({
             sale_price: item.sale_price,
             total_price: item.total_price,
         }));
+        
         const walkIn = !customerId && !customerName.trim() && !customerPhone.trim();
+
+        let discountRate = 0;
+        let flatDiscount = 0;
+        
+        if (form.data.discount_type === 'percentage') {
+            discountRate = n(discountValue);
+            flatDiscount = 0;
+        } else {
+            discountRate = 0;
+            flatDiscount = n(discountValue);
+        }
 
         form.setData({
             ...form.data,
@@ -791,24 +774,21 @@ export default function AddSale({
                 : customerId && customerId !== "01"
                     ? null
                     : customerPhone.trim() || null,
-
             items: formattedItems,
             pickup_items: formattedPickupItems,
-
             vat_rate: n(taxRate),
-            discount_rate: 0,
-            flat_discount: n(discountValue),
+            discount_rate: discountRate,
+            flat_discount: flatDiscount,
+            discount_type: form.data.discount_type,
             paid_amount: n(paidAmount),
             grand_amount: n(grandTotal),
             due_amount: n(dueAmount),
             sub_amount: n(totalSubTotal),
-
             account_id: selectedAccount || "",
             payment_status: paymentStatus,
             supplier_id: selectedSupplier?.id || null,
             installment_duration: installmentDuration,
             total_installments: totalInstallments,
-
             sale_date: saleDate,
             notes: notes,
             type: "pos",
@@ -822,6 +802,8 @@ export default function AddSale({
         customerName,
         customerPhone,
         taxRate,
+        discountValue,
+        form.data.discount_type,
         totalSubTotal,
         grandTotal,
         paidAmount,
@@ -845,11 +827,6 @@ export default function AddSale({
             return;
         }
 
-        // if (pickupQuantity <= 0 || pickupUnitPrice <= 0 || pickupSalePrice <= 0) {
-        //     alert("Please fill all required fields for pickup item");
-        //     return;
-        // }
-
         const variantObj = pickupVariants?.find(
             (v) => String(v.id) === String(pickupVariantId)
         );
@@ -859,11 +836,8 @@ export default function AddSale({
             product_name: pickupProductName,
             pickup_product_id: pickupProductId,
             pickup_supplier_id: pickupSupplierId,
-
-            // ✅ IMPORTANT
             variant_id: pickupVariantId,
             variant_label: variantObj?.sku || `Variant#${pickupVariantId}`,
-
             quantity: Number(pickupQuantity),
             unit_price: Number(pickupUnitPrice),
             sale_price: Number(pickupSalePrice),
@@ -872,19 +846,15 @@ export default function AddSale({
 
         setPickupItems([...pickupItems, newItem]);
 
-        // Reset
         setPickupSupplierId("");
         setPickupProductId("");
         setPickupProductName("");
         setPickupVariants([]);
         setPickupVariantId("");
-
         setPickupQuantity(1);
         setPickupUnitPrice(0);
         setPickupSalePrice(0);
         setShowPickupModal(false);
-
-        // focusScanner();
     };
 
     const removePickupItem = (index) => {
@@ -914,8 +884,8 @@ export default function AddSale({
         } else if (status === "installment") {
             setPaidAmount(grandTotal / 3);
             setPartialPayment(false);
-            setTotalInstallments(3); // Default 3 installments
-            setInstallmentDuration(3); // Default 3 months
+            setTotalInstallments(3);
+            setInstallmentDuration(3);
         }
     };
 
@@ -992,11 +962,8 @@ export default function AddSale({
             (!!customerName.trim() && !customerPhone.trim()) ||
             (!customerName.trim() && !!customerPhone.trim());
         if (!customerId && hasOne)
-            return alert(
-                "If you type customer info, provide both Name and Phone. Otherwise keep walk-in empty."
-            );
+            return alert("If you type customer info, provide both Name and Phone. Otherwise keep walk-in empty.");
 
-        // Validate stock (base units)
         const outOfStockItems = cart.filter((item) => {
             const selectedUnit = selectedUnits[item.key] || item.unit;
             if (item.product_unit_type && item.product_unit_type !== "piece") {
@@ -1017,7 +984,6 @@ export default function AddSale({
             return;
         }
 
-        // Validate payment
         if (paymentStatus === "installment") {
             if (!totalInstallments || totalInstallments <= 0) {
                 alert("Please enter total installments for installment payment");
@@ -1030,7 +996,6 @@ export default function AddSale({
         }
 
         form.post(route("salesPos.store"), {
-            // onSuccess: () => router.visit(route("salesPos.index")),
             onError: (errors) => {
                 console.error(errors);
                 alert(errors?.error || "Sale create failed. Check fields.");
@@ -1144,10 +1109,6 @@ export default function AddSale({
                                                         src="/media/uploads/logo.png"
                                                         alt={p.name}
                                                         className="h-full w-full object-contain p-4 opacity-50"
-                                                        onError={(e) => {
-                                                            e.currentTarget.onerror = null;
-                                                            e.currentTarget.src = "/media/uploads/logo.png";
-                                                        }}
                                                     />
                                                 )}
                                             </figure>
@@ -1180,7 +1141,6 @@ export default function AddSale({
                                                         </div>
                                                     </div>
 
-                                                    {/* Variant dropdown */}
                                                     <div className="dropdown dropdown-end">
                                                         <button
                                                             type="button"
@@ -1270,12 +1230,9 @@ export default function AddSale({
                     {/* RIGHT COLUMN - Checkout */}
                     <div className="lg:col-span-4">
                         <div className="space-y-6">
-
-
                             {/* Checkout Summary */}
                             <div className="card border border-gray-200 rounded-2xl shadow-sm">
                                 <div className="card-body p-0">
-
                                     <div className="p-2">
                                         {!cart.length && !pickupItems.length ? (
                                             <div className="py-12 text-center bg-white">
@@ -1293,7 +1250,6 @@ export default function AddSale({
                                                     const selectedUnit = selectedUnits[i.key] || i.unit || "piece";
                                                     const unitQuantity = unitQuantities[i.key] || i.qty || 1;
                                                     const unitPrice = unitPrices[i.key] || i.unit_price;
-                                                    const basePricePerBaseUnit = basePrices[i.key] || i.base_price_per_base_unit;
 
                                                     return (
                                                         <div
@@ -1308,7 +1264,6 @@ export default function AddSale({
                                                                         {i.batch_no && ` • ${i.batch_no}`}
                                                                     </div>
 
-                                                                    {/* Unit selector */}
                                                                     {availableUnitsList.length > 1 && (
                                                                         <div
                                                                             className="mt-2 relative"
@@ -1348,7 +1303,6 @@ export default function AddSale({
                                                                         </div>
                                                                     )}
 
-                                                                    {/* Qty controls */}
                                                                     <div className="mt-2 flex items-center gap-2">
                                                                         <button
                                                                             type="button"
@@ -1363,8 +1317,6 @@ export default function AddSale({
                                                                             type="number"
                                                                             value={unitQuantity}
                                                                             onChange={(e) => changeQty(i.key, Number(e.target.value))}
-                                                                            // step={i.is_fraction_allowed ? "0.001" : "1"}
-                                                                            // min="0.001"
                                                                         />
 
                                                                         <button
@@ -1380,16 +1332,12 @@ export default function AddSale({
                                                                         Available: {formatCurrency(i.maxQty)}{" "}
                                                                         {i.original_purchase_unit?.toUpperCase()}
                                                                     </div>
-
                                                                 </div>
 
                                                                 <div className="text-right">
                                                                     <div className="font-bold text-gray-900 text-lg">{money(i.total_price)}</div>
                                                                     <div className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded mt-1">
                                                                         {money(unitPrice)}/{selectedUnit.toUpperCase()}
-                                                                        <div className="text-[10px] text-gray-500 mt-0.5">
-                                                                            (Auto Calculated)
-                                                                        </div>
                                                                     </div>
                                                                     <button
                                                                         type="button"
@@ -1415,10 +1363,6 @@ export default function AddSale({
                                                                 <div className="font-semibold text-gray-900 flex items-center gap-1">
                                                                     <ShoppingBag size={12} className="text-orange-500" />
                                                                     {item.product_name}
-                                                                </div>
-                                                                <div className="text-xs text-gray-600 mt-1">
-                                                                    {item.brand && `Brand: ${item.brand}`}
-                                                                    {item.variant && ` • ${item.variant}`}
                                                                 </div>
                                                                 <div className="text-xs text-gray-600 mt-1">
                                                                     Qty: <span className="font-medium">{item.quantity}</span> ×{" "}
@@ -1480,6 +1424,7 @@ export default function AddSale({
                                             </div>
                                         </div>
 
+                                        {/* Tax and Discount Section */}
                                         <div className="grid grid-cols-2 gap-2 mb-3">
                                             <div className="form-control">
                                                 <label className="label py-1">
@@ -1501,37 +1446,57 @@ export default function AddSale({
                                             <div className="form-control">
                                                 <label className="label py-1">
                                                     <span className="label-text text-xs flex items-center gap-1">
-                                                        <CreditCard size={10} /> Discount
+                                                        <CreditCard size={10} /> Discount Type
                                                     </span>
                                                 </label>
-                                                <input
-                                                    type="number"
-                                                    className="input input-bordered input-sm"
-                                                    value={discountValue}
-                                                    onChange={(e) => setDiscountValue(n(e.target.value))}
-                                                    placeholder="0"
-                                                    min="0"
-                                                    step="0.01"
-                                                />
+                                                <select
+                                                    className="select select-bordered select-sm"
+                                                    value={form.data.discount_type}
+                                                    onChange={(e) => form.setData('discount_type', e.target.value)}
+                                                >
+                                                    <option value="flat_discount">Flat Discount</option>
+                                                    <option value="percentage">Percentage</option>
+                                                </select>
                                             </div>
                                         </div>
 
-                                        {/* <div className="form-control">
+                                        <div className="form-control mb-3">
                                             <label className="label py-1">
                                                 <span className="label-text text-xs flex items-center gap-1">
-                                                    <Truck size={10} /> Shipping
+                                                    <Percent size={10} /> 
+                                                    {form.data.discount_type === 'percentage' ? 'Discount Percentage' : 'Discount Amount'}
                                                 </span>
                                             </label>
                                             <input
                                                 type="number"
                                                 className="input input-bordered input-sm"
-                                                value={shippingValue}
-                                                onChange={(e) => setShippingValue(n(e.target.value))}
-                                                placeholder="0"
-                                                min="0"
-                                                step="0.01"
+                                                value={discountValue}
+                                                onChange={(e) => setDiscountValue(n(e.target.value))}
+                                                placeholder={form.data.discount_type === 'percentage' ? 'Enter discount %' : 'Enter discount amount'}
+                                                // min="0"
+                                                // step={form.data.discount_type === 'percentage' ? "0.1" : "0.01"}
                                             />
-                                        </div> */}
+                                        </div>
+
+                                        {discountValue > 0 && (
+                                            <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg mb-3">
+                                                {form.data.discount_type === 'percentage' ? (
+                                                    <div className="flex justify-between">
+                                                        <span>Discount ({discountValue}%):</span>
+                                                        <span className="font-semibold text-green-600">
+                                                            -{money((totalSubTotal * discountValue) / 100)}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex justify-between">
+                                                        <span>Flat Discount:</span>
+                                                        <span className="font-semibold text-green-600">
+                                                            -{money(discountValue)}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
                                         <div className="mt-3 pt-3 border-t">
                                             <div className="flex justify-between items-center text-lg font-bold">
@@ -1551,7 +1516,6 @@ export default function AddSale({
                                     </h2>
 
                                     <div className="space-y-4">
-                                        {/* Sale Date */}
                                         <div className="form-control">
                                             <label className="label py-1">
                                                 <span className="label-text flex items-center gap-2">
@@ -1566,7 +1530,6 @@ export default function AddSale({
                                             />
                                         </div>
 
-                                        {/* Customer */}
                                         <div className="form-control">
                                             <label className="label py-1">
                                                 <span className="label-text flex items-center gap-2">
@@ -1592,7 +1555,6 @@ export default function AddSale({
                                             </select>
                                         </div>
 
-                                        {/* Manual customer */}
                                         {showManualCustomerFields && (
                                             <div className="space-y-3 bg-gray-50 p-3 rounded-lg border">
                                                 <div className="form-control">
@@ -1623,7 +1585,6 @@ export default function AddSale({
                                             </div>
                                         )}
 
-                                        {/* Selected Customer info */}
                                         {selectedCustomer && (
                                             <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                                                 <div className="flex items-center justify-between">
@@ -1648,22 +1609,6 @@ export default function AddSale({
                                                 </div>
                                             </div>
                                         )}
-
-                                        {/* Notes */}
-                                        {/* <div className="form-control">
-                                            <label className="label py-1">
-                                                <span className="label-text flex items-center gap-2">
-                                                    <MessageSquare size={14} /> Notes
-                                                </span>
-                                            </label>
-                                            <textarea
-                                                className="textarea textarea-bordered"
-                                                rows="2"
-                                                value={notes}
-                                                onChange={(e) => setNotes(e.target.value)}
-                                                placeholder="Additional notes..."
-                                            />
-                                        </div> */}
                                     </div>
                                 </div>
                             </div>
@@ -1671,7 +1616,6 @@ export default function AddSale({
                             {/* Payment */}
                             <div className="card bg-white border border-gray-200 rounded-xl shadow-sm">
                                 <div className="card-body p-3">
-                                    {/* Header */}
                                     <div className="flex justify-between items-center mb-3">
                                         <h3 className="text-sm font-bold text-gray-800 flex items-center gap-2">
                                             <CreditCard size={16} className="text-green-600" />
@@ -1689,8 +1633,6 @@ export default function AddSale({
                                     </div>
 
                                     <div className="space-y-3">
-
-                                        {/* Account */}
                                         <div className="form-control">
                                             <label className="label py-0">
                                                 <span className="label-text text-xs text-gray-600 font-semibold">
@@ -1719,7 +1661,6 @@ export default function AddSale({
                                             )}
                                         </div>
 
-                                        {/* Account Preview */}
                                         {selectedAccountObj && !isAccountDisabled && (
                                             <div className="p-2 rounded-lg bg-gray-50 border border-gray-200">
                                                 <div className="flex justify-between items-center text-xs">
@@ -1735,7 +1676,6 @@ export default function AddSale({
                                         )}
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                            {/* Payment Status */}
                                             <div className="form-control">
                                                 <label className="label py-0">
                                                     <span className="label-text text-xs text-gray-600 font-semibold">
@@ -1754,7 +1694,6 @@ export default function AddSale({
                                                 </select>
                                             </div>
 
-                                            {/* Paid Amount */}
                                             <div className="form-control">
                                                 <label className="label py-0">
                                                     <span className="label-text text-xs text-gray-600 font-semibold">
@@ -1774,10 +1713,8 @@ export default function AddSale({
                                             </div>
                                         </div>
 
-                                        {/* Installment Fields - Only show when status is installment */}
                                         {paymentStatus === 'installment' && (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
-                                                {/* Total Installments */}
                                                 <div className="md:col-span-1">
                                                     <div className="form-control">
                                                         <label className="label py-0">
@@ -1785,7 +1722,6 @@ export default function AddSale({
                                                                 Total Installments *
                                                             </span>
                                                         </label>
-
                                                         <input
                                                             type="number"
                                                             min="1"
@@ -1797,7 +1733,6 @@ export default function AddSale({
                                                     </div>
                                                 </div>
 
-                                                {/* Installment Duration */}
                                                 <div className="md:col-span-1">
                                                     <div className="form-control">
                                                         <label className="label py-0">
@@ -1805,7 +1740,6 @@ export default function AddSale({
                                                                 Duration (Months) *
                                                             </span>
                                                         </label>
-
                                                         <input
                                                             type="number"
                                                             min="1"
@@ -1819,8 +1753,6 @@ export default function AddSale({
                                             </div>
                                         )}
 
-
-                                        {/* Summary */}
                                         <div className="pt-2 border-t border-gray-200 space-y-1 text-xs">
                                             <div className="flex justify-between">
                                                 <span className="text-gray-500">Total</span>
@@ -1905,12 +1837,10 @@ export default function AddSale({
                         </div>
 
                         <div className="space-y-4">
-
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">Pickup Product *</span>
                                 </label>
-
                                 <select
                                     value={pickupProductId}
                                     onChange={(e) => handlePickupProductChange(e.target.value)}
@@ -1924,14 +1854,12 @@ export default function AddSale({
                                         </option>
                                     ))}
                                 </select>
-
                             </div>
 
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">Pickup Variant *</span>
                                 </label>
-
                                 <select
                                     value={pickupVariantId}
                                     onChange={(e) => setPickupVariantId(e.target.value)}
@@ -1942,36 +1870,25 @@ export default function AddSale({
                                     <option value="">
                                         {pickupProductId ? "Select Variant" : "Select Product First"}
                                     </option>
-
                                     {pickupVariants?.map((v) => (
                                         <option key={v.id} value={v.id}>
                                             {v.sku || `Variant#${v.id}`}
                                         </option>
                                     ))}
                                 </select>
-
-                                {pickupProductId && pickupVariants.length === 0 && (
-                                    <p className="text-xs text-red-500 mt-1">
-                                        This product has no variants. Please create at least one variant.
-                                    </p>
-                                )}
                             </div>
 
                             <div className="form-control">
                                 <label className="label">
                                     <span className="label-text">Pickup Supplier *</span>
                                 </label>
-
                                 <select
                                     value={pickupSupplierId}
                                     onChange={(e) => setPickupSupplierId(e.target.value)}
                                     className="select select-bordered"
                                     required
                                 >
-                                    <option value="" >
-                                        Select Supplier
-                                    </option>
-
+                                    <option value="">Select Supplier</option>
                                     {suppliers.map((supplier) => (
                                         <option key={supplier.id} value={supplier.id}>
                                             {supplier.name}
@@ -2009,12 +1926,9 @@ export default function AddSale({
                                         required
                                     />
                                 </div>
-
-
                             </div>
 
                             <div className="grid grid-cols-2 gap-2">
-
                                 <div className="form-control">
                                     <label className="label">
                                         <span className="label-text">Sale Price (৳) *</span>
@@ -2040,7 +1954,6 @@ export default function AddSale({
                                     </div>
                                 </div>
                             </div>
-
                         </div>
 
                         <div className="modal-action">
