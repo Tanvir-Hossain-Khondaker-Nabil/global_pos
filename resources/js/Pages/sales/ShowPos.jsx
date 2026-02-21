@@ -922,7 +922,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
                           <div className="text-[9px] text-gray-600">Pickup Item</div>
                         ) : (
                           <div className="text-[9px] text-gray-600">
-                            {item.variant?.sku ? `SKU: ${item.variant.sku}` : ""}
+                            {/* {item.variant?.sku ? `SKU: ${item.variant.sku}` : ""} */}
                           </div>
                         )}
                       </td>

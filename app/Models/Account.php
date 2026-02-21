@@ -30,6 +30,11 @@ class Account extends Model
         'owner_id'
     ];
 
+    protected $casts = [
+        'current_balance' => 'float',
+    ];
+
+
     use BelongsToTenant;
 
     public function user()
@@ -39,7 +44,7 @@ class Account extends Model
 
     public function payments()
     {
-        return $this->hasMany(Payment::class,'account_id');
+        return $this->hasMany(Payment::class, 'account_id');
     }
 
     public function scopeActive($query)
