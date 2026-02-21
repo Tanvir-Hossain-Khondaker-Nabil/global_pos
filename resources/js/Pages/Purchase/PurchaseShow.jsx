@@ -567,7 +567,7 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
           </span>
         </div>
 
-        <div className="mt-25 text-[11px] text-gray-700">
+        <div className="mt-25 text-[11px] text-gray-700  whitespace-pre-line">
           {bpFooterTitle}
         </div>
 
@@ -1004,10 +1004,10 @@ export default function PurchaseShow({ purchase, isShadowUser, businessProfile }
           {/* Footer note line */}
           <div className="mt-3 text-[9px] text-gray-600 flex justify-between border-t border-gray-300 pt-2">
             <div>
-              <span>{bpFooterTitle}</span>
+              <span className="whitespace-pre-line">{bpFooterTitle}</span>
             </div>
             <div>
-              Powered by: Nexoryn
+              Powered by: Wiki Tech BD
               <br />
             </div>
           </div>

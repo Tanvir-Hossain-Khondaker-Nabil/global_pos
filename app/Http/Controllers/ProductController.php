@@ -228,36 +228,36 @@ class ProductController extends Controller
     public function update(Request $request)
     {
         $isUpdate = !empty($request->id);
-        $data = $request->all();
-        $data['has_warranty'] = filter_var(
-            $request->has_warranty,
-            FILTER_VALIDATE_BOOLEAN
-        );
 
-        // -----------------------------
-        // 1) Active subscription + product_range limit
-        // -----------------------------
+        $request->merge([
+            'has_warranty' => filter_var($request->has_warranty, FILTER_VALIDATE_BOOLEAN),
+            'is_fraction_allowed' => filter_var($request->is_fraction_allowed, FILTER_VALIDATE_BOOLEAN),
+        ]);
+
         $user = Auth::user();
-        $activeSubsQuery = $user->subscriptions()
-            ->where('status', 1)
-            ->where('start_date', '<=', now())
-            ->where('end_date', '>=', now());
 
-        //  Option A: শুধু latest active subscription ধরবেন
-        $activeSub = (clone $activeSubsQuery)->latest('end_date')->first();
-        $allowedProductRange = (int) optional($activeSub)->product_range;
-
-        // $allowedProductRange = (int) (clone $activeSubsQuery)->sum('product_range');
-
-        if (!$activeSub) {
-            return redirect()->back()
-                ->withInput()
-                ->with('error', 'No active subscription found. Please renew/activate your plan.');
-        }
-
-        // নতুন প্রোডাক্ট create হলে তবেই limit চেক
+        /*
+        |--------------------------------------------------------------------------
+        | 1) Subscription + Product Range Limit (Only for Create)
+        |--------------------------------------------------------------------------
+        */
         if (!$isUpdate) {
-            // আপনার সিস্টেমে যেটা “একই outlet” অনুযায়ী limit, সেটা ধরলাম
+
+            $activeSub = $user->subscriptions()
+                ->where('status', 1)
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now())
+                ->latest('end_date')
+                ->first();
+
+            if (!$activeSub) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'No active subscription found. Please renew/activate your plan.');
+            }
+
+            $allowedProductRange = (int) optional($activeSub)->product_range;
+
             $outletId = $user->outlet_id ?? null;
 
             $currentCount = Product::query()
@@ -271,17 +271,21 @@ class ProductController extends Controller
             }
         }
 
-        // -----------------------------
-        // 2) variants JSON decode safe
-        // -----------------------------
+        /*
+        |--------------------------------------------------------------------------
+        | 2) Decode variants JSON (Safe)
+        |--------------------------------------------------------------------------
+        */
         if ($request->has('variants') && is_string($request->variants)) {
             $decoded = json_decode($request->variants, true);
             $request->merge(['variants' => is_array($decoded) ? $decoded : []]);
         }
 
-        // -----------------------------
-        // 3) Validation rules
-        // -----------------------------
+        /*
+        |--------------------------------------------------------------------------
+        | 3) Validation
+        |--------------------------------------------------------------------------
+        */
         $rules = [
             'product_name' => 'required|string|max:255',
             'category_id' => 'required|exists:categories,id',
@@ -294,7 +298,7 @@ class ProductController extends Controller
             'unit_type' => 'required|in:piece,weight,volume,length',
             'default_unit' => 'required|string|max:20',
             'min_sale_unit' => 'nullable|string|max:20',
-            'photo' => 'nullable',
+            'photo' => 'nullable|image|max:2048',
             'type' => 'nullable|string|max:20',
             'is_fraction_allowed' => 'nullable',
             'has_warranty' => 'nullable',
@@ -337,10 +341,13 @@ class ProductController extends Controller
                 ->with('error', 'Please fix the validation errors');
         }
 
-        // -----------------------------
-        // 4) Save product + variants
-        // -----------------------------
+        /*
+        |--------------------------------------------------------------------------
+        | 4) Save Product + Variants
+        |--------------------------------------------------------------------------
+        */
         DB::beginTransaction();
+
         try {
             $product = $isUpdate ? Product::find($request->id) : new Product();
 
@@ -356,8 +363,7 @@ class ProductController extends Controller
             $product->description = $request->description;
             $product->product_type = $request->product_type;
 
-
-            //has_warranty
+            // warranty
             $product->has_warranty = (bool) ($request->has_warranty ?? false);
             $product->warranty_duration = $request->warranty_duration;
             $product->warranty_duration_type = $request->warranty_duration_type;
@@ -367,18 +373,18 @@ class ProductController extends Controller
                 $product->created_by = Auth::id();
             }
 
-            // ✅ unit fields
+            // unit fields
             $product->unit_type = $request->unit_type;
             $product->default_unit = $request->default_unit;
             $product->is_fraction_allowed = (bool) ($request->is_fraction_allowed ?? false);
             $product->min_sale_unit = $request->min_sale_unit;
 
-            // ✅ outlet_id (set only if empty)
+            // outlet_id set only if empty
             if (!$product->outlet_id && $user && isset($user->outlet_id)) {
                 $product->outlet_id = $user->outlet_id;
             }
 
-            // ✅ Photo upload
+            // Photo upload
             if ($request->hasFile('photo')) {
                 if (!empty($product->photo) && Storage::disk('public')->exists($product->photo)) {
                     Storage::disk('public')->delete($product->photo);
@@ -387,7 +393,7 @@ class ProductController extends Controller
                 $product->photo = $path;
             }
 
-            // In-house settings
+            // In-house fields
             if ($request->product_type === 'in_house') {
                 $product->in_house_cost = $request->in_house_cost;
                 $product->in_house_shadow_cost = $request->in_house_shadow_cost ?? 0;
@@ -404,72 +410,101 @@ class ProductController extends Controller
 
             $product->save();
 
-            // -------- variants ----------
+            /*
+            |--------------------------------------------------------------------------
+            | 5) Variants Logic (AUTO DEFAULT + AUTO REMOVE)
+            |--------------------------------------------------------------------------
+            */
+
+            $variants = $request->input('variants', []);
+            if (!is_array($variants))
+                $variants = [];
+
             $existingVariantIds = $product->variants()->pluck('id')->toArray();
             $newVariantIds = [];
 
-            $variants = $request->input('variants', []);
+            // ✅ Keep only non-empty attribute variants
+            $nonEmptyVariants = [];
+            $hasAnyNonEmpty = false;
 
-            if (is_array($variants) && count($variants) > 0) {
-                foreach ($variants as $variantData) {
-                    if (!is_array($variantData))
-                        continue;
+            foreach ($variants as $variantData) {
+                if (!is_array($variantData))
+                    continue;
 
+                $attributeValues = $variantData['attribute_values'] ?? [];
+                if (is_string($attributeValues)) {
+                    $tmp = json_decode($attributeValues, true);
+                    $attributeValues = is_array($tmp) ? $tmp : [];
+                }
+                if (!is_array($attributeValues))
                     $attributeValues = [];
-                    if (isset($variantData['attribute_values'])) {
-                        if (is_array($variantData['attribute_values'])) {
-                            $attributeValues = $variantData['attribute_values'];
-                        } elseif (is_string($variantData['attribute_values'])) {
-                            $tmp = json_decode($variantData['attribute_values'], true);
-                            $attributeValues = is_array($tmp) ? $tmp : [];
-                        }
-                    }
 
-                    $sku = $this->generateSku($product, $attributeValues);
+                // remove empty values
+                $attributeValues = array_filter($attributeValues, fn($v) => trim((string) $v) !== '');
 
-                    if (!empty($variantData['id'])) {
-                        $variant = Variant::where('id', $variantData['id'])
-                            ->where('product_id', $product->id)
-                            ->first();
+                if (!empty($attributeValues)) {
+                    $hasAnyNonEmpty = true;
+                    $nonEmptyVariants[] = [
+                        'id' => $variantData['id'] ?? null,
+                        'attribute_values' => $attributeValues,
+                    ];
+                }
+            }
 
-                        if ($variant) {
-                            $variant->update([
-                                'attribute_values' => $attributeValues,
-                                'sku' => $sku,
-                            ]);
-                            $newVariantIds[] = $variant->id;
+            // ✅ If no attribute chosen anywhere => create one default variant
+            if (!$hasAnyNonEmpty) {
+                $nonEmptyVariants = [
+                    [
+                        'id' => null,
+                        'attribute_values' => [],
+                    ]
+                ];
+            }
 
-                            if ($product->product_type === 'in_house') {
-                                $this->updateInHouseStock($product, $variant);
-                            }
-                        }
-                    } else {
-                        $variant = Variant::create([
-                            'product_id' => $product->id,
+            foreach ($nonEmptyVariants as $variantData) {
+
+                $attributeValues = $variantData['attribute_values'] ?? [];
+                if (!is_array($attributeValues))
+                    $attributeValues = [];
+
+                $sku = $this->generateSku($product, $attributeValues);
+
+                if (!empty($variantData['id'])) {
+                    $variant = Variant::where('id', $variantData['id'])
+                        ->where('product_id', $product->id)
+                        ->first();
+
+                    if ($variant) {
+                        $variant->update([
                             'attribute_values' => $attributeValues,
                             'sku' => $sku,
                         ]);
-
                         $newVariantIds[] = $variant->id;
 
                         if ($product->product_type === 'in_house') {
-                            $this->createInHouseStock($product, $variant);
+                            $this->updateInHouseStock($product, $variant);
                         }
                     }
-                }
+                } else {
+                    $variant = Variant::create([
+                        'product_id' => $product->id,
+                        'attribute_values' => $attributeValues,
+                        'sku' => $sku,
+                    ]);
 
-                // delete removed variants + their stock
-                $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
-                if (!empty($variantsToDelete)) {
-                    Variant::whereIn('id', $variantsToDelete)->delete();
-                    Stock::whereIn('variant_id', $variantsToDelete)->delete();
+                    $newVariantIds[] = $variant->id;
+
+                    if ($product->product_type === 'in_house') {
+                        $this->createInHouseStock($product, $variant);
+                    }
                 }
-            } else {
-                // no variants sent => delete all existing variants + stock
-                if (!empty($existingVariantIds)) {
-                    Variant::whereIn('id', $existingVariantIds)->delete();
-                    Stock::whereIn('variant_id', $existingVariantIds)->delete();
-                }
+            }
+
+            // ✅ Delete removed variants (this will remove old DEFAULT automatically)
+            $variantsToDelete = array_diff($existingVariantIds, $newVariantIds);
+            if (!empty($variantsToDelete)) {
+                Variant::whereIn('id', $variantsToDelete)->delete();
+                Stock::whereIn('variant_id', $variantsToDelete)->delete();
             }
 
             DB::commit();
@@ -478,10 +513,16 @@ class ProductController extends Controller
                 ->with('success', "Product " . ($isUpdate ? 'updated' : 'created') . " successfully");
 
         } catch (\Exception $th) {
+
             DB::rollBack();
-            return redirect()->back()->withInput()->with('error', "Server error: " . $th->getMessage());
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', "Server error: " . $th->getMessage());
         }
     }
+
+
 
 
     /**

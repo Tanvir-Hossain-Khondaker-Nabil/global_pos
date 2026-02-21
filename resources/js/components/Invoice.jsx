@@ -364,7 +364,7 @@ export default function InvoiceComponent({
                         <p>Thanks for shopping with us</p>
                         <p>Email: {shop.email}</p>
                         <p className="mt-1 text-xs print:text-[10px]">
-                            Software powered by CTG IT Soft
+                            Software powered by Wiki Tech BD
                         </p>
                     </div>
                 </div>

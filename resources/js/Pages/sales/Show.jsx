@@ -51,7 +51,7 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
     try {
       const ls = localStorage.getItem(STORAGE_KEY);
       if (ls === "1" || ls === "2") return ls;
-    } catch (_) {}
+    } catch (_) { }
     return "1"; // ✅ default must be Design-1
   };
 
@@ -67,7 +67,7 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
     setCookie(COOKIE_KEY, value, 30);
     try {
       localStorage.setItem(STORAGE_KEY, value);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   // =========================
@@ -427,7 +427,7 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
           </span>
         </div>
 
-        <div className="mt-5! text-[11px] text-gray-700">
+        <div className="mt-5 text-[11px] text-gray-700 whitespace-pre-line">
           {bpFooterTitle}
         </div>
       </div>
@@ -479,9 +479,8 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
       <button
         type="button"
         onClick={onSelect}
-        className={`w-full text-left p-3 rounded-xl border transition ${
-          active ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"
-        }`}
+        className={`w-full text-left p-3 rounded-xl border transition ${active ? "border-green-600 bg-green-50" : "border-gray-200 hover:bg-gray-50"
+          }`}
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -516,9 +515,8 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
         )}
 
         <div
-          className={`no-print fixed top-0 right-0 h-full w-[320px] bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-200 ${
-            sidebarOpen ? "translate-x-0" : "translate-x-full"
-          }`}
+          className={`no-print fixed top-0 right-0 h-full w-[320px] bg-white shadow-2xl border-l border-gray-200 transform transition-transform duration-200 ${sidebarOpen ? "translate-x-0" : "translate-x-full"
+            }`}
           style={{ zIndex: 2147483647 }}
         >
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -832,12 +830,12 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
           {/* Footer note line */}
           <div className="mt-3 text-[9px] text-gray-600 flex justify-between border-t border-gray-300 pt-2">
             <div>
-              <span>
-                {bpFooterTitle }
+              <span className=" whitespace-pre-line">
+                {bpFooterTitle}
               </span>
             </div>
             <div>
-              Powered by: Nexoryn
+              Powered by: Wiki Tech BD
               <br />
             </div>
           </div>
