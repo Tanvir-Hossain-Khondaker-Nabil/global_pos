@@ -680,9 +680,9 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
             </div>
 
             <div className="space-y-1">
-              <div className="flex justify-between gap-3">
+              {/* <div className="flex justify-between gap-3">
                 <span className="font-semibold">Project</span>
-              </div>
+              </div> */}
               <div className="flex justify-between gap-3">
                 <span className="font-semibold">Memo No</span>
                 <span>{sale.reference_no || sale.id}</span>

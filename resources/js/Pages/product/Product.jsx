@@ -2,7 +2,6 @@ import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
 import {
-    Eye,
     Frown,
     Pen,
     Plus,
@@ -14,15 +13,15 @@ import {
     Barcode,
     Printer,
     Copy,
-    Grid,
     X,
     Layers,
     AlignLeft,
     AlignRight,
     CheckSquare,
     Square,
+    MoreVertical,
 } from "lucide-react";
-import { useState } from "react";
+import React, { Fragment, useMemo, useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export default function Product({ product, filters }) {
@@ -310,17 +309,15 @@ export default function Product({ product, filters }) {
 
       .sheet { width:100%; }
 
-        .grid{
-            width: 100%;
-            display: grid;
-            grid-auto-flow: row;
-            grid-template-columns: repeat(auto-fit, ${Number(labelWidthMm)}mm);
-
-            gap:${Number(gapMm)}mm;
-
-            justify-content:${align === "right" ? "end" : "start"};
-            align-content:start;
-        }
+      .grid{
+        width: 100%;
+        display: grid;
+        grid-auto-flow: row;
+        grid-template-columns: repeat(auto-fit, ${Number(labelWidthMm)}mm);
+        gap:${Number(gapMm)}mm;
+        justify-content:${align === "right" ? "end" : "start"};
+        align-content:start;
+      }
 
       .label{
         width:${Number(labelWidthMm)}mm;
@@ -335,8 +332,7 @@ export default function Product({ product, filters }) {
         break-inside:avoid;
         page-break-inside:avoid;
         position:relative;
-        }
-
+      }
 
       .barcodeArea {
         display:flex;
@@ -374,12 +370,12 @@ export default function Product({ product, filters }) {
 
       .barcodeImg{
         height:${Number(barcodeImgHeightPx)}px;
-        width:auto;     
-        max-width:92%;     
+        width:auto;
+        max-width:92%;
         object-fit:contain;
         display:block;
-        margin:0 auto;     
-        }
+        margin:0 auto;
+      }
 
       .batch, .price {
         width:100%;
@@ -483,6 +479,14 @@ export default function Product({ product, filters }) {
         closeBulkModal();
     };
 
+    // ====== Sticky column helper classes ======
+    const stickyLeftTh = "sticky left-0 z-30 bg-[#1e4d2b]";
+    const stickyRightTh = "sticky right-0 z-30 bg-[#1e4d2b]";
+    const stickyLeftTd = "sticky left-0 z-20 bg-white";
+    const stickyRightTd = "sticky right-0 z-20 bg-white";
+    const stickyShadowLeft = "shadow-[6px_0_10px_-10px_rgba(0,0,0,0.4)]";
+    const stickyShadowRight = "shadow-[-6px_0_10px_-10px_rgba(0,0,0,0.4)]";
+
     return (
         <div className={`bg-white rounded-box p-5 ${locale === "bn" ? "bangla-font" : ""}`}>
             {/* ✅ Bulk Barcode Settings Modal */}
@@ -554,14 +558,18 @@ export default function Product({ product, filters }) {
                                         <button
                                             type="button"
                                             onClick={() => updateBarcodeConfig("align", "left")}
-                                            className={`btn btn-sm flex-1 ${barcodeConfig.align === "left" ? "btn-primary" : "btn-outline"}`}
+                                            className={`btn btn-sm flex-1 ${
+                                                barcodeConfig.align === "left" ? "btn-primary" : "btn-outline"
+                                            }`}
                                         >
                                             <AlignLeft size={16} /> Left
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => updateBarcodeConfig("align", "right")}
-                                            className={`btn btn-sm flex-1 ${barcodeConfig.align === "right" ? "btn-primary" : "btn-outline"}`}
+                                            className={`btn btn-sm flex-1 ${
+                                                barcodeConfig.align === "right" ? "btn-primary" : "btn-outline"
+                                            }`}
                                         >
                                             <AlignRight size={16} /> Right
                                         </button>
@@ -703,8 +711,9 @@ export default function Product({ product, filters }) {
                     <button
                         type="button"
                         onClick={openBulkModal}
-                        className={`btn btn-sm font-black ${selectedCount > 0 ? "bg-gray-900 text-white hover:bg-black" : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                            }`}
+                        className={`btn btn-sm font-black ${
+                            selectedCount > 0 ? "bg-gray-900 text-white hover:bg-black" : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                        }`}
                         disabled={selectedCount === 0}
                         title="Print selected barcodes"
                     >
@@ -719,19 +728,26 @@ export default function Product({ product, filters }) {
                 </div>
             </PageHeader>
 
-            <div className="overflow-x-auto">
+            {/* ✅ Wrapper: keep horizontal scroll, but sticky first & last columns */}
+            <div className="overflow-x-auto rounded-xl border border-gray-100">
                 {safeProducts?.length > 0 ? (
-                    <table className="table table-auto w-full">
+                    <table className="table table-auto w-full min-w-[1100px]">
                         <thead className="bg-[#1e4d2b] text-white">
                             <tr>
-                                <th></th>
+                                {/* Sticky LEFT: expand toggle */}
+                                <th className={`${stickyLeftTh} ${stickyShadowLeft} w-[54px]`}></th>
+
                                 <th>{t("product.product_name", "Product Name")}</th>
-                                <th>{t("product.category", "Category")}</th>
-                                <th>{t("product.attributes", "Attributes")}</th>
-                                <th>{t("product.total_stock", "Total Stock")}</th>
-                                <th>{t("product.variants", "Variants")}</th>
-                                <th>{t("product.barcodes", "Barcodes")}</th>
-                                <th>{t("product.actions", "Actions")}</th>
+                                <th className="w-[140px]">{t("product.category", "Category")}</th>
+                                <th className="w-[140px]">{t("product.attributes", "Attributes")}</th>
+                                <th className="w-[140px]">{t("product.total_stock", "Total Stock")}</th>
+                                <th className="w-[360px]">{t("product.variants", "Variants")}</th>
+                                <th className="w-[360px]">{t("product.barcodes", "Barcodes")}</th>
+
+                                {/* ✅ Sticky RIGHT: actions */}
+                                <th className={`${stickyRightTh} ${stickyShadowRight} w-[120px] text-center`}>
+                                    {t("product.actions", "Actions")}
+                                </th>
                             </tr>
                         </thead>
 
@@ -746,9 +762,10 @@ export default function Product({ product, filters }) {
                                     productItem?.variants?.reduce((total, v) => total + getVariantBarcodes(v, productItem).length, 0) || 0;
 
                                 return (
-                                    <>
-                                        <tr key={productItem.id} className="hover:bg-gray-50">
-                                            <th>
+                                    <Fragment key={productItem.id}>
+                                        <tr className="hover:bg-gray-50">
+                                            {/* Sticky LEFT cell */}
+                                            <td className={`${stickyLeftTd} ${stickyShadowLeft} w-[54px]`}>
                                                 {variantsCount > 1 && (
                                                     <button
                                                         onClick={() => toggleExpand(productItem.id)}
@@ -758,19 +775,19 @@ export default function Product({ product, filters }) {
                                                         {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                                                     </button>
                                                 )}
-                                            </th>
-
+                                            </td>
 
                                             <td>
-                                                <div className="font-medium">{productItem.name}
-                                                    <span className="text-xs text-gray-500 "> <i> ({productItem.product_no})</i> </span>
+                                                <div className="font-medium">
+                                                    {productItem.name}
+                                                    <span className="text-xs text-gray-500">
+                                                        {" "}
+                                                        <i>({productItem.product_no})</i>{" "}
+                                                    </span>
                                                 </div>
-
                                             </td>
 
-                                            <td>
-                                                {productItem.category?.name || t("product.not_available", "N/A")}
-                                            </td>
+                                            <td>{productItem.category?.name || t("product.not_available", "N/A")}</td>
 
                                             <td>
                                                 <div className="flex items-center gap-2">
@@ -786,7 +803,11 @@ export default function Product({ product, filters }) {
                                                 <div className="flex items-center gap-2">
                                                     <Package size={16} className="text-blue-600" />
                                                     <div>
-                                                        <div className={`font-bold text-lg ${totalStock === 0 ? "text-error" : totalStock < 10 ? "text-warning" : "text-success"}`}>
+                                                        <div
+                                                            className={`font-bold text-lg ${
+                                                                totalStock === 0 ? "text-error" : totalStock < 10 ? "text-warning" : "text-success"
+                                                            }`}
+                                                        >
                                                             {totalStock}
                                                         </div>
                                                         <div className="text-xs text-gray-500">{t("product.units", "units")}</div>
@@ -795,10 +816,13 @@ export default function Product({ product, filters }) {
                                             </td>
 
                                             {/* Variants */}
-                                            <td className="max-w-[300px]">
+                                            <td className="max-w-[360px]">
                                                 <div className="flex flex-col gap-2">
                                                     {!isExpanded && variantsCount > 1 && (
-                                                        <button onClick={() => toggleExpand(productItem.id)} className="btn btn-ghost btn-xs w-full text-primary">
+                                                        <button
+                                                            onClick={() => toggleExpand(productItem.id)}
+                                                            className="btn btn-ghost btn-xs w-full text-primary justify-start"
+                                                        >
                                                             <ChevronDown size={12} className="mr-1" />
                                                             Show {variantsCount} variants
                                                         </button>
@@ -814,14 +838,15 @@ export default function Product({ product, filters }) {
                                                             return (
                                                                 <div
                                                                     key={variant.id}
-                                                                    className={`border p-2 rounded text-xs ${hasAttributes ? "border-primary bg-[#1e4d2b] text-white" : "border-dashed border-neutral"
-                                                                        }`}
+                                                                    className={`border p-2 rounded text-xs ${
+                                                                        hasAttributes ? "border-primary bg-[#1e4d2b] text-white" : "border-dashed border-neutral"
+                                                                    }`}
                                                                 >
                                                                     <div className="flex justify-between items-start">
                                                                         <div className="flex-1">
                                                                             <div className="font-medium">{formatVariantDisplay(variant)}</div>
 
-                                                                            <div className="flex gap-4 mt-1 text-xs">
+                                                                            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs">
                                                                                 <span>
                                                                                     {t("product.stock", "Stock")}: {variantStock}
                                                                                 </span>
@@ -844,7 +869,10 @@ export default function Product({ product, filters }) {
                                                         })}
 
                                                     {isExpanded && variantsCount > 1 && (
-                                                        <button onClick={() => toggleExpand(productItem.id)} className="btn btn-ghost btn-xs w-full text-primary mt-2">
+                                                        <button
+                                                            onClick={() => toggleExpand(productItem.id)}
+                                                            className="btn btn-ghost btn-xs w-full text-primary mt-1 justify-start"
+                                                        >
                                                             <ChevronRight size={12} className="mr-1" />
                                                             Hide variants
                                                         </button>
@@ -852,8 +880,8 @@ export default function Product({ product, filters }) {
                                                 </div>
                                             </td>
 
-                                            {/*  Barcodes column with checkboxes (VIEW button removed) */}
-                                            <td>
+                                            {/* Barcodes column */}
+                                            <td className="max-w-[360px]">
                                                 <div className="flex flex-col gap-2">
                                                     <div className="flex items-center gap-2">
                                                         <Barcode size={14} className="text-blue-600" />
@@ -872,11 +900,6 @@ export default function Product({ product, filters }) {
 
                                                                 return (
                                                                     <div key={variant.id} className="border rounded-lg p-2 bg-white">
-                                                                        {/* <div className="text-xs font-semibold text-gray-700 flex items-center gap-2 mb-2">
-                                                                            <Grid size={12} className="text-[#1e4d2b]" />
-                                                                            <span className="truncate">{variantName}</span>
-                                                                        </div> */}
-
                                                                         <div className="space-y-1">
                                                                             {barcodes.map((b, idx) => {
                                                                                 const isSelected = selectedBarcodeMap.has(b.barcode);
@@ -896,8 +919,9 @@ export default function Product({ product, filters }) {
                                                                                 return (
                                                                                     <div
                                                                                         key={`${variant.id}-${b.barcode}-${idx}`}
-                                                                                        className={`flex items-center justify-between p-2 rounded text-xs border ${isSelected ? "bg-primary/10 border-primary/20" : "bg-gray-50 border-transparent"
-                                                                                            }`}
+                                                                                        className={`flex items-center justify-between p-2 rounded text-xs border ${
+                                                                                            isSelected ? "bg-primary/10 border-primary/20" : "bg-gray-50 border-transparent"
+                                                                                        }`}
                                                                                     >
                                                                                         <div className="flex items-center gap-2 min-w-0">
                                                                                             <button
@@ -914,7 +938,7 @@ export default function Product({ product, filters }) {
                                                                                             </button>
 
                                                                                             <div className="min-w-0">
-                                                                                                <div className="font-mono truncate max-w-[160px]">{b.barcode}</div>
+                                                                                                <div className="font-mono truncate max-w-[220px]">{b.barcode}</div>
                                                                                                 <div className="text-[10px] text-gray-500">
                                                                                                     Batch: {b.batch_no || "N/A"} • Qty: {b.quantity || 0}
                                                                                                 </div>
@@ -940,29 +964,63 @@ export default function Product({ product, filters }) {
                                                 </div>
                                             </td>
 
-                                            {/* Actions */}
-                                            <td>
-                                                <div className="flex items-center gap-2">
-                                                    <Link href={route("product.add", { id: productItem.id })} className="btn btn-xs btn-warning" title={t("product.edit", "Edit Product")}>
-                                                        <Pen size={10} />
-                                                    </Link>
+                                            {/* ✅ Sticky RIGHT Actions cell (no more scrolling away) */}
+                                            <td className={`${stickyRightTd} ${stickyShadowRight} text-center`}>
+                                                <div className="flex items-center justify-center gap-2">
+                                                    {/* Desktop icons */}
+                                                    <div className="hidden md:flex items-center gap-2">
+                                                        <Link
+                                                            href={route("product.add", { id: productItem.id })}
+                                                            className="btn btn-xs btn-warning"
+                                                            title={t("product.edit", "Edit Product")}
+                                                        >
+                                                            <Pen size={10} />
+                                                        </Link>
 
-                                                    <Link
-                                                        href={route("product.del", { id: productItem.id })}
-                                                        onClick={(e) => {
-                                                            if (
-                                                                !confirm(
-                                                                    t("product.delete_confirmation", "Are you sure you want to delete this product? This action cannot be undone.")
-                                                                )
-                                                            ) {
-                                                                e.preventDefault();
-                                                            }
-                                                        }}
-                                                        className="btn btn-xs btn-error"
-                                                        title={t("product.delete", "Delete Product")}
-                                                    >
-                                                        <Trash2 size={10} />
-                                                    </Link>
+                                                        <Link
+                                                            href={route("product.del", { id: productItem.id })}
+                                                            onClick={(e) => {
+                                                                if (
+                                                                    !confirm(
+                                                                        t(
+                                                                            "product.delete_confirmation",
+                                                                            "Are you sure you want to delete this product? This action cannot be undone."
+                                                                        )
+                                                                    )
+                                                                ) {
+                                                                    e.preventDefault();
+                                                                }
+                                                            }}
+                                                            className="btn btn-xs btn-error"
+                                                            title={t("product.delete", "Delete Product")}
+                                                        >
+                                                            <Trash2 size={10} />
+                                                        </Link>
+                                                    </div>
+
+                                                    {/* Mobile dropdown */}
+                                                    <div className="md:hidden dropdown dropdown-end">
+                                                        <button type="button" className="btn btn-xs btn-ghost" title="Actions">
+                                                            <MoreVertical size={16} />
+                                                        </button>
+                                                        <ul className="dropdown-content z-[60] menu p-2 shadow bg-base-100 rounded-box w-44 border border-gray-100">
+                                                            <li>
+                                                                <Link href={route("product.add", { id: productItem.id })}>
+                                                                    <Pen size={14} /> Edit
+                                                                </Link>
+                                                            </li>
+                                                            <li>
+                                                                <Link
+                                                                    href={route("product.del", { id: productItem.id })}
+                                                                    onClick={(e) => {
+                                                                        if (!confirm("Delete this product?")) e.preventDefault();
+                                                                    }}
+                                                                >
+                                                                    <Trash2 size={14} /> Delete
+                                                                </Link>
+                                                            </li>
+                                                        </ul>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
@@ -970,7 +1028,7 @@ export default function Product({ product, filters }) {
                                         {/* Expanded variants row */}
                                         {isExpanded && (
                                             <tr>
-                                                <td colSpan="9" className="bg-gray-50 p-4">
+                                                <td colSpan="8" className="bg-gray-50 p-4">
                                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                         {productItem?.variants?.map((variant) => {
                                                             const barcodes = getVariantBarcodes(variant, productItem);
@@ -1019,11 +1077,16 @@ export default function Product({ product, filters }) {
                                                                                     return (
                                                                                         <div
                                                                                             key={`${variant.id}-${barcodeData.barcode}-${index}`}
-                                                                                            className={`flex items-center justify-between p-2 rounded text-xs border ${isSelected ? "bg-primary/10 border-primary/20" : "bg-gray-50 border-transparent"
-                                                                                                }`}
+                                                                                            className={`flex items-center justify-between p-2 rounded text-xs border ${
+                                                                                                isSelected ? "bg-primary/10 border-primary/20" : "bg-gray-50 border-transparent"
+                                                                                            }`}
                                                                                         >
                                                                                             <div className="flex items-center gap-2">
-                                                                                                <button type="button" onClick={() => toggleSelectBarcode(rowForBulk)} className="btn btn-ghost btn-xs">
+                                                                                                <button
+                                                                                                    type="button"
+                                                                                                    onClick={() => toggleSelectBarcode(rowForBulk)}
+                                                                                                    className="btn btn-ghost btn-xs"
+                                                                                                >
                                                                                                     {isSelected ? (
                                                                                                         <CheckSquare size={16} className="text-primary" />
                                                                                                     ) : (
@@ -1031,8 +1094,8 @@ export default function Product({ product, filters }) {
                                                                                                     )}
                                                                                                 </button>
 
-                                                                                                <div>
-                                                                                                    <div className="font-mono">{barcodeData.barcode}</div>
+                                                                                                <div className="min-w-0">
+                                                                                                    <div className="font-mono truncate max-w-[220px]">{barcodeData.barcode}</div>
                                                                                                     <div className="text-gray-500">Batch: {barcodeData.batch_no || "N/A"}</div>
                                                                                                 </div>
                                                                                             </div>
@@ -1057,7 +1120,7 @@ export default function Product({ product, filters }) {
                                                 </td>
                                             </tr>
                                         )}
-                                    </>
+                                    </Fragment>
                                 );
                             })}
                         </tbody>

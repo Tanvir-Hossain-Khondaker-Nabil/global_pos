@@ -9,24 +9,24 @@ export default function Profile() {
     const { t, locale } = useTranslation()
 
     const businessData = business || {};
-    
+
     // Get the base URL
     const baseUrl = url || window.location.origin;
-    
+
     // Helper function to get image URL
     const getImageUrl = (path) => {
         if (!path) return null;
-        
+
         // If path already contains http/https, return as is
         if (path.startsWith('http')) {
             return path;
         }
-        
+
         // If path starts with storage/, remove it as storage:link handles this
         if (path.startsWith('storage/')) {
             return `/${path}`;
         }
-        
+
         // If path is relative, prepend with base URL
         return `${baseUrl}/storage/${path}`;
     };
@@ -41,23 +41,23 @@ export default function Profile() {
         description: businessData.description || '',
         tax_number: businessData.tax_number || '',
         footer_title: businessData.footer_title || '',
-        thum: null, 
-        logo: null, 
+        thum: null,
+        logo: null,
     })
 
     const handleUpdate = (e) => {
         e.preventDefault()
-        
+
         // Create FormData for file uploads
         const formData = new FormData();
-        
+
         // Append all form data
         Object.keys(data).forEach(key => {
             if (data[key] !== null && data[key] !== undefined) {
                 formData.append(key, data[key]);
             }
         });
-        
+
         // Use Inertia's post method with FormData
         post(route('businessProfile.update'), {
             data: formData,
@@ -76,7 +76,7 @@ export default function Profile() {
     // Clear file input
     const clearFile = (fieldName) => {
         setData(fieldName, null)
-        
+
         // Reset file input
         const fileInput = document.querySelector(`input[name="${fieldName}"]`);
         if (fileInput) {
@@ -85,7 +85,7 @@ export default function Profile() {
     }
 
     // Get thumbnail URL
-    const thumbnailUrl = data.thum 
+    const thumbnailUrl = data.thum
         ? URL.createObjectURL(data.thum)
         : getImageUrl(businessData.thum);
 
@@ -107,7 +107,7 @@ export default function Profile() {
                     <span>{usePage().props.flash.success}</span>
                 </div>
             )}
-            
+
             {usePage().props.flash.error && (
                 <div className="alert alert-error mb-6">
                     <span>{usePage().props.flash.error}</span>
@@ -128,13 +128,13 @@ export default function Profile() {
                                 <div className="ring-primary ring-offset-base-100 w-20 h-20 rounded-lg ring-2 ring-offset-2 flex items-center justify-center overflow-hidden bg-gray-100">
                                     {thumbnailUrl ? (
                                         <div className="relative w-full h-full">
-                                            <img 
-                                                src={thumbnailUrl} 
-                                                alt="Thumbnail preview" 
+                                            <img
+                                                src={thumbnailUrl}
+                                                alt="Thumbnail preview"
                                                 className="w-full h-full object-cover"
                                             />
                                             {data.thum && (
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={() => clearFile('thum')}
                                                     className="absolute top-1 right-1 btn btn-xs btn-circle btn-error"
@@ -149,12 +149,12 @@ export default function Profile() {
                                 </div>
                             </div>
                             <div className="flex-1">
-                                <input 
+                                <input
                                     name="thum"
-                                    onChange={handleFileChange('thum')} 
-                                    type="file" 
-                                    accept='image/*' 
-                                    className="file-input file-input-bordered w-full" 
+                                    onChange={handleFileChange('thum')}
+                                    type="file"
+                                    accept='image/*'
+                                    className="file-input file-input-bordered w-full"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
                                     {t('auth.thumbnail_hint', 'Recommended: 200x200px')}
@@ -174,13 +174,13 @@ export default function Profile() {
                                 <div className="ring-primary ring-offset-base-100 w-20 h-20 rounded-lg ring-2 ring-offset-2 flex items-center justify-center bg-white overflow-hidden">
                                     {logoUrl ? (
                                         <div className="relative w-full h-full">
-                                            <img 
-                                                src={logoUrl} 
-                                                alt="Logo preview" 
+                                            <img
+                                                src={logoUrl}
+                                                alt="Logo preview"
                                                 className="w-full h-full object-contain"
                                             />
                                             {data.logo && (
-                                                <button 
+                                                <button
                                                     type="button"
                                                     onClick={() => clearFile('logo')}
                                                     className="absolute top-1 right-1 btn btn-xs btn-circle btn-error"
@@ -195,12 +195,12 @@ export default function Profile() {
                                 </div>
                             </div>
                             <div className="flex-1">
-                                <input 
+                                <input
                                     name="logo"
-                                    onChange={handleFileChange('logo')} 
-                                    type="file" 
-                                    accept='image/*' 
-                                    className="file-input file-input-bordered w-full" 
+                                    onChange={handleFileChange('logo')}
+                                    type="file"
+                                    accept='image/*'
+                                    className="file-input file-input-bordered w-full"
                                 />
                                 <p className="text-xs text-gray-500 mt-1">
                                     {t('auth.logo_hint', 'Recommended: Transparent PNG, 400x200px')}
@@ -217,13 +217,13 @@ export default function Profile() {
                         <legend className="fieldset-legend">
                             {t('auth.business_name', 'Business Name')}*
                         </legend>
-                        <input 
-                            value={data.name} 
-                            onChange={(e) => setData('name', e.target.value)} 
-                            type="text" 
-                            className="input input-bordered w-full" 
+                        <input
+                            value={data.name}
+                            onChange={(e) => setData('name', e.target.value)}
+                            type="text"
+                            className="input input-bordered w-full"
                             placeholder={t('auth.type_here', 'Type here')}
-                            required 
+                            required
                         />
                         {errors.name && <div className="text-red-600 text-sm mt-1">{errors.name}</div>}
                     </fieldset>
@@ -232,13 +232,13 @@ export default function Profile() {
                         <legend className="fieldset-legend">
                             {t('auth.email', 'Email')}*
                         </legend>
-                        <input 
-                            value={data.email} 
-                            onChange={(e) => setData('email', e.target.value)} 
-                            type="email" 
-                            className="input input-bordered w-full" 
+                        <input
+                            value={data.email}
+                            onChange={(e) => setData('email', e.target.value)}
+                            type="email"
+                            className="input input-bordered w-full"
                             placeholder={t('auth.email_placeholder', 'your@email.com')}
-                            required 
+                            required
                         />
                         {errors.email && <div className="text-red-600 text-sm mt-1">{errors.email}</div>}
                     </fieldset>
@@ -249,12 +249,12 @@ export default function Profile() {
                         <legend className="fieldset-legend">
                             {t('auth.phone', 'Phone')}*
                         </legend>
-                        <input 
-                            value={data.phone} 
-                            onChange={(e) => setData('phone', e.target.value)} 
-                            type="tel" 
-                            className="input input-bordered w-full" 
-                            placeholder={t('auth.phone_placeholder', '+1234567890')} 
+                        <input
+                            value={data.phone}
+                            onChange={(e) => setData('phone', e.target.value)}
+                            type="tel"
+                            className="input input-bordered w-full"
+                            placeholder={t('auth.phone_placeholder', '+1234567890')}
                             required
                         />
                         {errors.phone && <div className="text-red-600 text-sm mt-1">{errors.phone}</div>}
@@ -264,12 +264,12 @@ export default function Profile() {
                         <legend className="fieldset-legend">
                             {t('auth.website', 'Website')}
                         </legend>
-                        <input 
-                            value={data.website} 
-                            onChange={(e) => setData('website', e.target.value)} 
-                            type="url" 
-                            className="input input-bordered w-full" 
-                            placeholder={t('auth.website_placeholder', 'https://example.com')} 
+                        <input
+                            value={data.website}
+                            onChange={(e) => setData('website', e.target.value)}
+                            type="url"
+                            className="input input-bordered w-full"
+                            placeholder={t('auth.website_placeholder', 'https://example.com')}
                         />
                         {errors.website && <div className="text-red-600 text-sm mt-1">{errors.website}</div>}
                     </fieldset>
@@ -280,26 +280,27 @@ export default function Profile() {
                         <legend className="fieldset-legend">
                             {t('auth.tax_number', 'Tax Number')}
                         </legend>
-                        <input 
-                            value={data.tax_number} 
-                            onChange={(e) => setData('tax_number', e.target.value)} 
-                            type="text" 
-                            className="input input-bordered w-full" 
-                            placeholder={t('auth.tax_number_placeholder', 'TAX-123456')} 
+                        <input
+                            value={data.tax_number}
+                            onChange={(e) => setData('tax_number', e.target.value)}
+                            type="text"
+                            className="input input-bordered w-full"
+                            placeholder={t('auth.tax_number_placeholder', 'TAX-123456')}
                         />
                         {errors.tax_number && <div className="text-red-600 text-sm mt-1">{errors.tax_number}</div>}
                     </fieldset>
+
                     <fieldset className="fieldset">
                         <legend className="fieldset-legend">
                             Footer Title
                         </legend>
-                        <input 
-                            value={data.footer_title} 
-                            onChange={(e) => setData('footer_title', e.target.value)} 
-                            type="text" 
-                            className="input input-bordered w-full" 
-                            placeholder={'Footer Title'} 
-                        />
+                        <textarea
+                            value={data.footer_title}
+                            onChange={(e) => setData('footer_title', e.target.value)}
+                            className="textarea textarea-bordered w-full h-24"
+                            placeholder="Write footer title (supports multiple lines)"
+                            rows={3}
+                        ></textarea>
                         {errors.footer_title && <div className="text-red-600 text-sm mt-1">{errors.footer_title}</div>}
                     </fieldset>
                 </div>
@@ -308,10 +309,10 @@ export default function Profile() {
                     <legend className="fieldset-legend">
                         {t('auth.address', 'Address')}*
                     </legend>
-                    <textarea 
-                        value={data.address} 
-                        onChange={(e) => setData('address', e.target.value)} 
-                        className="textarea textarea-bordered w-full h-24" 
+                    <textarea
+                        value={data.address}
+                        onChange={(e) => setData('address', e.target.value)}
+                        className="textarea textarea-bordered w-full h-24"
                         placeholder={t('auth.address_placeholder', 'Enter your full address')}
                         required
                     ></textarea>
@@ -322,19 +323,19 @@ export default function Profile() {
                     <legend className="fieldset-legend">
                         {t('auth.description', 'Description')}
                     </legend>
-                    <textarea 
-                        value={data.description} 
-                        onChange={(e) => setData('description', e.target.value)} 
-                        className="textarea textarea-bordered w-full h-32" 
+                    <textarea
+                        value={data.description}
+                        onChange={(e) => setData('description', e.target.value)}
+                        className="textarea textarea-bordered w-full h-32"
                         placeholder={t('auth.description_placeholder', 'Tell us about your business...')}
                     ></textarea>
                     {errors.description && <div className="text-red-600 text-sm mt-1">{errors.description}</div>}
                 </fieldset>
 
                 <div className="flex justify-end pt-4">
-                    <button 
-                        disabled={processing} 
-                        type='submit' 
+                    <button
+                        disabled={processing}
+                        type='submit'
                         className='btn bg-[#1e4d2b] text-white min-w-32'
                     >
                         {processing ? (
