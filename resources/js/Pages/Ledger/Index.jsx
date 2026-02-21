@@ -1,5 +1,3 @@
-// resources/js/Pages/Ledger/Index.jsx
-
 import { Head, Link, router, useForm, usePage } from "@inertiajs/react";
 import {
     ArcElement,
@@ -29,10 +27,17 @@ import {
     User,
     UserCheck,
     Users,
+    Download,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import Pagination from "../../components/Pagination";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from "react-toastify";
 
 ChartJS.register(
     CategoryScale,
@@ -55,6 +60,8 @@ export default function LedgerIndex({
     type = "all",
 }) {
     const { auth } = usePage().props;
+    const [showFilters, setShowFilters] = useState(true);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const [salesChartData, setSalesChartData] = useState(null);
     const [purchasesChartData, setPurchasesChartData] = useState(null);
@@ -73,6 +80,15 @@ export default function LedgerIndex({
     const pad2 = (n) => String(n).padStart(2, "0");
     const toYMD = (d) =>
         `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+    // Format date for filename
+    const formatDateForFilename = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0] + '_' + 
+               now.getHours() + '-' + 
+               now.getMinutes() + '-' + 
+               now.getSeconds();
+    };
 
     // ---------------------------
     // Normalize lists
@@ -172,6 +188,17 @@ export default function LedgerIndex({
         filterForm.setData("end_date", toYMD(end));
     };
 
+    // Toggle filter section
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+    };
+
+    // Format date for input
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toISOString().split('T')[0];
+    };
+
     // ---------------------------
     // Entity dropdown options
     // ---------------------------
@@ -240,6 +267,245 @@ export default function LedgerIndex({
         if (type === "supplier") return supplierList.length;
         return customerList.length + supplierList.length;
     }, [customerList, supplierList, type]);
+
+    // ---------------------------
+    // Prepare data for export
+    // ---------------------------
+    const prepareExportData = () => {
+        return allEntities.map(entity => {
+            const isCustomer = "customer_name" in entity;
+            const transactions = isCustomer ? entity.sales : entity.purchases;
+            
+            const totalAmount = transactions?.reduce(
+                (sum, t) => sum + (parseFloat(t?.grand_total) || 0),
+                0
+            ) || 0;
+
+            const totalPaidAmount = transactions?.reduce(
+                (sum, t) => sum + (parseFloat(t?.paid_amount) || 0),
+                0
+            ) || 0;
+
+            const calculatedDue = transactions?.reduce(
+                (sum, t) => sum + (parseFloat(t?.due_amount) || 0),
+                0
+            ) ?? totalAmount - totalPaidAmount;
+
+            const totalDueAmount = Math.max(0, calculatedDue);
+            const transactionCount = transactions?.length || 0;
+            const advanceAmount = entity?.advance_amount || 0;
+
+            return {
+                'Entity Name': isCustomer ? entity.customer_name : entity.name,
+                'Type': isCustomer ? 'Customer' : 'Supplier',
+                'Phone': entity.phone || 'N/A',
+                'ID': entity.id,
+                'Transactions': transactionCount,
+                'Total Amount (Tk)': formatCurrency(totalAmount),
+                'Total Paid (Tk)': formatCurrency(totalPaidAmount),
+                'Advance (Tk)': formatCurrency(advanceAmount),
+                'Due (Tk)': formatCurrency(totalDueAmount),
+                'Created At': new Date(entity.created_at).toLocaleDateString()
+            };
+        });
+    };
+
+    // ---------------------------
+    // Download as CSV
+    // ---------------------------
+    const downloadCSV = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [];
+            
+            csvRows.push(headers.join(','));
+            
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            csvRows.push('');
+            csvRows.push('FILTER INFORMATION');
+            csvRows.push(`Search,${filterForm.data.search || 'None'}`);
+            csvRows.push(`Type,${filterForm.data.type || 'All'}`);
+            csvRows.push(`Entity,${filterForm.data.entity_key || 'None'}`);
+            csvRows.push(`Date From,${filterForm.data.start_date || 'None'}`);
+            csvRows.push(`Date To,${filterForm.data.end_date || 'None'}`);
+            csvRows.push(`Due Filter,${filterForm.data.due_filter || 'All'}`);
+
+            csvRows.push('');
+            csvRows.push('SUMMARY STATISTICS');
+            csvRows.push(`Total Entities,${totalEntities}`);
+            csvRows.push(`Total Sales (Tk),${formatCurrency(stats.total_sales_amount || 0)}`);
+            csvRows.push(`Total Purchases (Tk),${formatCurrency(stats.total_purchases_amount || 0)}`);
+            csvRows.push(`Total Transactions,${stats.total_transactions || 0}`);
+
+            const csvString = csvRows.join('\n');
+            
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `ledger_report_${formatDateForFilename()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            toast.success('CSV downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // ---------------------------
+    // Download as Excel
+    // ---------------------------
+    const downloadExcel = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            const filterData = [
+                { 'Filter': 'Search', 'Value': filterForm.data.search || 'None' },
+                { 'Filter': 'Type', 'Value': filterForm.data.type || 'All' },
+                { 'Filter': 'Entity', 'Value': filterForm.data.entity_key || 'None' },
+                { 'Filter': 'Date From', 'Value': filterForm.data.start_date || 'None' },
+                { 'Filter': 'Date To', 'Value': filterForm.data.end_date || 'None' },
+                { 'Filter': 'Due Filter', 'Value': filterForm.data.due_filter || 'All' }
+            ];
+            const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+            const summaryData = [
+                { 'Metric': 'Total Entities', 'Value': totalEntities },
+                { 'Metric': 'Total Sales (Tk)', 'Value': formatCurrency(stats.total_sales_amount || 0) },
+                { 'Metric': 'Total Purchases (Tk)', 'Value': formatCurrency(stats.total_purchases_amount || 0) },
+                { 'Metric': 'Total Transactions', 'Value': stats.total_transactions || 0 }
+            ];
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Ledger');
+            XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+            XLSX.writeFile(wb, `ledger_report_${formatDateForFilename()}.xlsx`);
+            
+            toast.success('Excel file downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            toast.error('Failed to download Excel file');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // ---------------------------
+    // Download as PDF
+    // ---------------------------
+    const downloadPDF = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            doc.setFontSize(16);
+            doc.setTextColor(30, 77, 43);
+            doc.text('Ledger Report', 14, 15);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Search: ${filterForm.data.search || 'None'} | Type: ${filterForm.data.type || 'All'}`, 14, 29);
+            doc.text(`Date Range: ${filterForm.data.start_date || 'Start'} to ${filterForm.data.end_date || 'End'}`, 14, 35);
+            doc.text(`Due Filter: ${filterForm.data.due_filter || 'All'}`, 14, 41);
+
+            const tableColumns = [
+                'Entity',
+                'Type',
+                'Transactions',
+                'Total',
+                'Paid',
+                'Advance',
+                'Due'
+            ];
+
+            const tableRows = exportData.map(item => [
+                item['Entity Name'].substring(0, 15) + (item['Entity Name'].length > 15 ? '...' : ''),
+                item['Type'],
+                item['Transactions'],
+                item['Total Amount (Tk)'],
+                item['Total Paid (Tk)'],
+                item['Advance (Tk)'],
+                item['Due (Tk)']
+            ]);
+
+            autoTable(doc, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 45,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 77, 43], textColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            const finalY = doc.lastAutoTable.finalY + 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(30, 77, 43);
+            doc.text('Summary Statistics', 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Entities: ${totalEntities}`, 14, finalY + 7);
+            doc.text(`Total Sales: ${formatCurrency(stats.total_sales_amount || 0)} Tk`, 14, finalY + 14);
+            doc.text(`Total Purchases: ${formatCurrency(stats.total_purchases_amount || 0)} Tk`, 14, finalY + 21);
+            doc.text(`Total Transactions: ${stats.total_transactions || 0}`, 14, finalY + 28);
+
+            doc.save(`ledger_report_${formatDateForFilename()}.pdf`);
+            
+            toast.success('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     // ---------------------------
     // Charts (top 10)
@@ -392,240 +658,314 @@ export default function LedgerIndex({
                             </div>
                         </div>
 
-                        {/* Filters */}
-                        <div className="px-6 py-5">
-                            <div className="flex items-center justify-between mb-4">
+                        {/* Collapsible Filters */}
+                        <div className="border-b border-gray-200">
+                            <div 
+                                className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                                onClick={toggleFilters}
+                            >
                                 <div className="flex items-center gap-2">
                                     <Filter className="h-4 w-4 text-gray-700" />
                                     <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
                                         Advanced Filter
                                     </h3>
+                                    {hasActiveFilters && (
+                                        <span className="badge badge-sm bg-gray-900 text-white ml-2">Active</span>
+                                    )}
                                 </div>
-
-                                {hasActiveFilters && (
-                                    <button
-                                        type="button"
-                                        onClick={clearFilters}
-                                        className="text-xs font-semibold text-gray-700 hover:text-gray-900 inline-flex items-center gap-2"
-                                    >
-                                        <RefreshCw className="h-4 w-4" />
-                                        Reset
+                                <div className="flex items-center gap-2">
+                                    {hasActiveFilters && (
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                clearFilters();
+                                            }}
+                                            className="text-xs font-semibold text-gray-700 hover:text-gray-900 inline-flex items-center gap-2"
+                                        >
+                                            <RefreshCw className="h-4 w-4" />
+                                            Reset
+                                        </button>
+                                    )}
+                                    <button className="btn btn-ghost btn-sm">
+                                        {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                                     </button>
-                                )}
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                                {/* Search */}
-                                <div className="md:col-span-4">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input
-                                            type="search"
-                                            value={filterForm.data.search}
-                                            onChange={(e) =>
-                                                filterForm.setData(
-                                                    "search",
-                                                    e.target.value,
-                                                )
-                                            }
-                                            onKeyDown={(e) =>
-                                                e.key === "Enter" &&
-                                                handleFilter()
-                                            }
-                                            placeholder="Search name / phone / invoice / purchase no..."
-                                            className="w-full h-11 pl-10 pr-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
+                            {showFilters && (
+                                <div className="px-6 pb-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                        {/* Search */}
+                                        <div className="md:col-span-4">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <input
+                                                    type="search"
+                                                    value={filterForm.data.search}
+                                                    onChange={(e) =>
+                                                        filterForm.setData(
+                                                            "search",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    onKeyDown={(e) =>
+                                                        e.key === "Enter" &&
+                                                        handleFilter()
+                                                    }
+                                                    placeholder="Search name / phone / invoice / purchase no..."
+                                                    className="w-full h-11 pl-10 pr-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
                                  focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
-                                        />
-                                    </div>
-                                </div>
+                                                />
+                                            </div>
+                                        </div>
 
-                                {/* Type */}
-                                <div className="md:col-span-3">
-                                    <select
-                                        value={filterForm.data.type}
-                                        onChange={(e) => {
-                                            const v = e.target.value;
-                                            filterForm.setData("type", v);
-                                            filterForm.setData(
-                                                "entity_key",
-                                                "",
-                                            );
-                                        }}
-                                        className="w-full h-11 px-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
-                               focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
-                                    >
-                                        <option value="all">
-                                            All (Customers & Suppliers)
-                                        </option>
-                                        <option value="customer">
-                                            Customers Only
-                                        </option>
-                                        <option value="supplier">
-                                            Suppliers Only
-                                        </option>
-                                    </select>
-                                </div>
-
-                                {/* Entity */}
-                                <div className="md:col-span-5">
-                                    <select
-                                        value={filterForm.data.entity_key}
-                                        onChange={(e) =>
-                                            filterForm.setData(
-                                                "entity_key",
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="w-full h-11 px-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
-                               focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
-                                    >
-                                        <option value="">
-                                            {filterForm.data.type === "customer"
-                                                ? "Select Customer (optional)"
-                                                : filterForm.data.type ===
-                                                    "supplier"
-                                                  ? "Select Supplier (optional)"
-                                                  : "Select Customer/Supplier (optional)"}
-                                        </option>
-
-                                        {entityOptions.map((opt, idx) => {
-                                            if (opt.header) {
-                                                return (
-                                                    <option
-                                                        key={`h-${idx}`}
-                                                        value=""
-                                                        disabled
-                                                    >
-                                                        ── {opt.header} ──
-                                                    </option>
-                                                );
-                                            }
-
-                                            if (
-                                                filterForm.data.type ===
-                                                    "customer" &&
-                                                !opt.key.startsWith("customer:")
-                                            )
-                                                return null;
-                                            if (
-                                                filterForm.data.type ===
-                                                    "supplier" &&
-                                                !opt.key.startsWith("supplier:")
-                                            )
-                                                return null;
-
-                                            return (
-                                                <option
-                                                    key={opt.key}
-                                                    value={opt.key}
-                                                >
-                                                    {opt.label}
+                                        {/* Type */}
+                                        <div className="md:col-span-3">
+                                            <select
+                                                value={filterForm.data.type}
+                                                onChange={(e) => {
+                                                    const v = e.target.value;
+                                                    filterForm.setData("type", v);
+                                                    filterForm.setData(
+                                                        "entity_key",
+                                                        "",
+                                                    );
+                                                }}
+                                                className="w-full h-11 px-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
+                                       focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
+                                            >
+                                                <option value="all">
+                                                    All (Customers & Suppliers)
                                                 </option>
-                                            );
-                                        })}
-                                    </select>
-                                </div>
+                                                <option value="customer">
+                                                    Customers Only
+                                                </option>
+                                                <option value="supplier">
+                                                    Suppliers Only
+                                                </option>
+                                            </select>
+                                        </div>
 
-                                {/* Start date */}
-                                <div className="md:col-span-3">
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input
-                                            type="date"
-                                            value={filterForm.data.start_date}
-                                            onChange={(e) =>
-                                                filterForm.setData(
-                                                    "start_date",
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="w-full h-11 pl-10 pr-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
-                                 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
-                                        />
+                                        {/* Entity */}
+                                        <div className="md:col-span-5">
+                                            <select
+                                                value={filterForm.data.entity_key}
+                                                onChange={(e) =>
+                                                    filterForm.setData(
+                                                        "entity_key",
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full h-11 px-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
+                                       focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
+                                            >
+                                                <option value="">
+                                                    {filterForm.data.type === "customer"
+                                                        ? "Select Customer (optional)"
+                                                        : filterForm.data.type ===
+                                                            "supplier"
+                                                          ? "Select Supplier (optional)"
+                                                          : "Select Customer/Supplier (optional)"}
+                                                </option>
+
+                                                {entityOptions.map((opt, idx) => {
+                                                    if (opt.header) {
+                                                        return (
+                                                            <option
+                                                                key={`h-${idx}`}
+                                                                value=""
+                                                                disabled
+                                                            >
+                                                                ── {opt.header} ──
+                                                            </option>
+                                                        );
+                                                    }
+
+                                                    if (
+                                                        filterForm.data.type ===
+                                                            "customer" &&
+                                                        !opt.key.startsWith("customer:")
+                                                    )
+                                                        return null;
+                                                    if (
+                                                        filterForm.data.type ===
+                                                            "supplier" &&
+                                                        !opt.key.startsWith("supplier:")
+                                                    )
+                                                        return null;
+
+                                                    return (
+                                                        <option
+                                                            key={opt.key}
+                                                            value={opt.key}
+                                                        >
+                                                            {opt.label}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+                                        </div>
+
+                                        {/* Start date */}
+                                        <div className="md:col-span-3">
+                                            <div className="relative">
+                                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <input
+                                                    type="date"
+                                                    value={filterForm.data.start_date}
+                                                    onChange={(e) =>
+                                                        filterForm.setData(
+                                                            "start_date",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="w-full h-11 pl-10 pr-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
+                                         focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* End date */}
+                                        <div className="md:col-span-3">
+                                            <div className="relative">
+                                                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                                <input
+                                                    type="date"
+                                                    value={filterForm.data.end_date}
+                                                    onChange={(e) =>
+                                                        filterForm.setData(
+                                                            "end_date",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="w-full h-11 pl-10 pr-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
+                                         focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
+                                                    min={filterForm.data.start_date}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Due filter */}
+                                        <div className="md:col-span-3">
+                                            <select
+                                                value={filterForm.data.due_filter}
+                                                onChange={(e) =>
+                                                    filterForm.setData(
+                                                        "due_filter",
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full h-11 px-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
+                                       focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
+                                            >
+                                                <option value="all">
+                                                    All (Due + Clear)
+                                                </option>
+                                                <option value="due_only">
+                                                    Only Due
+                                                </option>
+                                                <option value="clear_only">
+                                                    Only Clear
+                                                </option>
+                                            </select>
+                                        </div>
+
+                                        {/* Presets */}
+                                        <div className="md:col-span-6 flex flex-wrap gap-2 items-center">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreset("today")}
+                                                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-bold hover:bg-gray-50"
+                                            >
+                                                Today
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreset("this_month")}
+                                                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-bold hover:bg-gray-50"
+                                            >
+                                                This Month
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPreset("last_30")}
+                                                className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-bold hover:bg-gray-50"
+                                            >
+                                                Last 30 Days
+                                            </button>
+                                        </div>
+
+                                        {/* Apply */}
+                                        <div className="md:col-span-3">
+                                            <button
+                                                onClick={handleFilter}
+                                                className="w-full h-11 rounded-lg bg-gray-900 text-white font-semibold
+                                       hover:bg-gray-800 focus:ring-2 focus:ring-gray-900/20"
+                                            >
+                                                Apply
+                                            </button>
+                                        </div>
                                     </div>
-                                </div>
 
-                                {/* End date */}
-                                <div className="md:col-span-3">
-                                    <div className="relative">
-                                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <input
-                                            type="date"
-                                            value={filterForm.data.end_date}
-                                            onChange={(e) =>
-                                                filterForm.setData(
-                                                    "end_date",
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="w-full h-11 pl-10 pr-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
-                                 focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
-                                        />
-                                    </div>
+                                    {/* Active Filters Display */}
+                                    {hasActiveFilters && (
+                                        <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                            <span className="font-medium">Active Filters:</span>
+                                            {filterForm.data.search && (
+                                                <span className="badge badge-outline badge-sm">
+                                                    Search: {filterForm.data.search}
+                                                </span>
+                                            )}
+                                            {filterForm.data.type !== "all" && (
+                                                <span className="badge badge-outline badge-sm">
+                                                    Type: {filterForm.data.type}
+                                                </span>
+                                            )}
+                                            {filterForm.data.entity_key && (
+                                                <span className="badge badge-outline badge-sm">
+                                                    Entity Selected
+                                                </span>
+                                            )}
+                                            {filterForm.data.start_date && (
+                                                <span className="badge badge-outline badge-sm">
+                                                    From: {new Date(filterForm.data.start_date).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                            {filterForm.data.end_date && (
+                                                <span className="badge badge-outline badge-sm">
+                                                    To: {new Date(filterForm.data.end_date).toLocaleDateString()}
+                                                </span>
+                                            )}
+                                            {filterForm.data.due_filter !== "all" && (
+                                                <span className="badge badge-outline badge-sm">
+                                                    Due: {filterForm.data.due_filter}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
-
-                                {/* Due filter */}
-                                <div className="md:col-span-3">
-                                    <select
-                                        value={filterForm.data.due_filter}
-                                        onChange={(e) =>
-                                            filterForm.setData(
-                                                "due_filter",
-                                                e.target.value,
-                                            )
-                                        }
-                                        className="w-full h-11 px-3 bg-[#fbfaf7] border border-gray-300 rounded-lg
-                               focus:ring-2 focus:ring-gray-900/10 focus:border-gray-400 text-gray-800"
-                                    >
-                                        <option value="all">
-                                            All (Due + Clear)
-                                        </option>
-                                        <option value="due_only">
-                                            Only Due
-                                        </option>
-                                        <option value="clear_only">
-                                            Only Clear
-                                        </option>
-                                    </select>
-                                </div>
-
-                                {/* Presets */}
-                                <div className="md:col-span-6 flex flex-wrap gap-2 items-center">
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreset("today")}
-                                        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-bold hover:bg-gray-50"
-                                    >
-                                        Today
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreset("this_month")}
-                                        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-bold hover:bg-gray-50"
-                                    >
-                                        This Month
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setPreset("last_30")}
-                                        className="px-3 py-2 rounded-lg border border-gray-200 bg-white text-xs font-bold hover:bg-gray-50"
-                                    >
-                                        Last 30 Days
-                                    </button>
-                                </div>
-
-                                {/* Apply */}
-                                <div className="md:col-span-3">
-                                    <button
-                                        onClick={handleFilter}
-                                        className="w-full h-11 rounded-lg bg-gray-900 text-white font-semibold
-                               hover:bg-gray-800 focus:ring-2 focus:ring-gray-900/20"
-                                    >
-                                        Apply
-                                    </button>
-                                </div>
-                            </div>
+                            )}
                         </div>
+                    </div>
+                </div>
+
+                {/* Download Button */}
+                <div className="flex justify-end mb-4">
+                    <div className="dropdown dropdown-end">
+                        <button 
+                            className="btn bg-green-600 text-white btn-sm"
+                            disabled={isDownloading || allEntities.length === 0}
+                            tabIndex={0}
+                        >
+                            <Download size={14} />
+                            {isDownloading ? 'Downloading...' : 'Download Report'}
+                        </button>
+                        <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                            <li><button onClick={downloadCSV} className="btn btn-ghost btn-sm w-full text-left">CSV Format</button></li>
+                            <li><button onClick={downloadExcel} className="btn btn-ghost btn-sm w-full text-left">Excel Format</button></li>
+                            <li><button onClick={downloadPDF} className="btn btn-ghost btn-sm w-full text-left">PDF Format</button></li>
+                        </ul>
                     </div>
                 </div>
 
@@ -831,7 +1171,7 @@ export default function LedgerIndex({
                                                         <div className="text-sm font-black text-gray-900">
                                                             ৳
                                                             {formatCurrency(
-                                                                totalAmount - totalPaidAmount,
+                                                                totalDueAmount,
                                                             )}
                                                         </div>
                                                     </td>

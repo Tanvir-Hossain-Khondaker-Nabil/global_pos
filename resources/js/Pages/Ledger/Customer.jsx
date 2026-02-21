@@ -41,9 +41,16 @@ import {
     User,
     Wallet,
     XCircle,
+    Download,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Line, Pie } from "react-chartjs-2";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from "react-toastify";
 
 // Register ChartJS components
 ChartJS.register(
@@ -75,6 +82,8 @@ export default function CustomerLedger({
     const [monthlyChartData, setMonthlyChartData] = useState(null);
     const [paymentChartData, setPaymentChartData] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [showFilters, setShowFilters] = useState(true);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const paidAmountRef = useRef(null);
 
@@ -238,6 +247,26 @@ export default function CustomerLedger({
         }, 0);
     };
 
+    // Toggle filter section
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+    };
+
+    // Format date for input
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toISOString().split('T')[0];
+    };
+
+    // Format date for filename
+    const formatDateForFilename = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0] + '_' + 
+               now.getHours() + '-' + 
+               now.getMinutes() + '-' + 
+               now.getSeconds();
+    };
+
     const formatCurrency = (amount) => {
         if (!amount && amount !== 0) return "0";
         return new Intl.NumberFormat("en-BD", {
@@ -266,6 +295,242 @@ export default function CustomerLedger({
             hour: "2-digit",
             minute: "2-digit",
         });
+    };
+
+    // Prepare data for export
+    const prepareExportData = () => {
+        return sales.map(sale => {
+            const saleDue = sale.grand_total - (sale.paid_amount || 0);
+            
+            return {
+                'Invoice No': sale.invoice_no || sale.id,
+                'Date': formatDate(sale.created_at),
+                'Time': new Date(sale.created_at).toLocaleTimeString(),
+                'Items Count': sale.items?.length || 0,
+                'Payment Method': sale.payment_type || 'N/A',
+                'Status': saleDue > 0 ? 'Pending' : 'Paid',
+                'Total Amount (Tk)': formatCurrency(sale.grand_total),
+                'Paid Amount (Tk)': formatCurrency(sale.paid_amount || 0),
+                'Due Amount (Tk)': formatCurrency(saleDue),
+                'Created By': sale.creator?.name || 'System'
+            };
+        });
+    };
+
+    // Download as CSV
+    const downloadCSV = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [];
+            
+            csvRows.push(headers.join(','));
+            
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            csvRows.push('');
+            csvRows.push('CUSTOMER INFORMATION');
+            csvRows.push(`Customer Name,${customer?.customer_name || 'N/A'}`);
+            csvRows.push(`Phone,${customer?.phone || 'N/A'}`);
+            csvRows.push(`Email,${customer?.email || 'N/A'}`);
+            csvRows.push(`Address,${customer?.address || 'N/A'}`);
+            csvRows.push(`Current Balance,${formatCurrency(customer?.advance_amount || 0)}`);
+
+            csvRows.push('');
+            csvRows.push('FILTER INFORMATION');
+            csvRows.push(`Search,${filterForm.data.search || 'None'}`);
+            csvRows.push(`Date From,${filterForm.data.start_date || 'None'}`);
+            csvRows.push(`Date To,${filterForm.data.end_date || 'None'}`);
+
+            csvRows.push('');
+            csvRows.push('SUMMARY STATISTICS');
+            csvRows.push(`Total Transactions,${sales.length}`);
+            csvRows.push(`Total Sales Amount,${formatCurrency(stats?.total_sales || 0)}`);
+            csvRows.push(`Total Due Amount,${formatCurrency(stats?.total_due || 0)}`);
+
+            const csvString = csvRows.join('\n');
+            
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `customer_ledger_${customer?.id}_${formatDateForFilename()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            toast.success('CSV downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as Excel
+    const downloadExcel = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Customer info sheet
+            const customerInfo = [
+                { 'Field': 'Customer Name', 'Value': customer?.customer_name || 'N/A' },
+                { 'Field': 'Phone', 'Value': customer?.phone || 'N/A' },
+                { 'Field': 'Email', 'Value': customer?.email || 'N/A' },
+                { 'Field': 'Address', 'Value': customer?.address || 'N/A' },
+                { 'Field': 'Current Balance', 'Value': formatCurrency(customer?.advance_amount || 0) }
+            ];
+            const wsCustomer = XLSX.utils.json_to_sheet(customerInfo);
+
+            // Filter info sheet
+            const filterData = [
+                { 'Filter': 'Search', 'Value': filterForm.data.search || 'None' },
+                { 'Filter': 'Date From', 'Value': filterForm.data.start_date || 'None' },
+                { 'Filter': 'Date To', 'Value': filterForm.data.end_date || 'None' }
+            ];
+            const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+            // Summary sheet
+            const summaryData = [
+                { 'Metric': 'Total Transactions', 'Value': sales.length },
+                { 'Metric': 'Total Sales Amount', 'Value': formatCurrency(stats?.total_sales || 0) },
+                { 'Metric': 'Total Due Amount', 'Value': formatCurrency(stats?.total_due || 0) }
+            ];
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+            XLSX.utils.book_append_sheet(wb, wsCustomer, 'Customer Info');
+            XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+            XLSX.writeFile(wb, `customer_ledger_${customer?.id}_${formatDateForFilename()}.xlsx`);
+            
+            toast.success('Excel file downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            toast.error('Failed to download Excel file');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as PDF
+    const downloadPDF = () => {
+        try {
+            setIsDownloading(true);
+            
+            if (sales.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Add title
+            doc.setFontSize(18);
+            doc.setTextColor(30, 77, 43);
+            doc.text(`Customer Ledger: ${customer?.customer_name || 'Customer'}`, 14, 15);
+            
+            // Add customer info
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Phone: ${customer?.phone || 'N/A'} | Email: ${customer?.email || 'N/A'}`, 14, 22);
+            doc.text(`Address: ${customer?.address || 'N/A'}`, 14, 28);
+            
+            // Add filter information
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Search: ${filterForm.data.search || 'None'}`, 14, 35);
+            doc.text(`Date Range: ${filterForm.data.start_date || 'Start'} to ${filterForm.data.end_date || 'End'}`, 14, 40);
+
+            // Prepare table columns and rows
+            const tableColumns = [
+                'Invoice',
+                'Date',
+                'Items',
+                'Method',
+                'Status',
+                'Total',
+                'Paid',
+                'Due'
+            ];
+
+            const tableRows = sales.map(sale => {
+                const saleDue = sale.grand_total - (sale.paid_amount || 0);
+                return [
+                    (sale.invoice_no || sale.id).substring(0, 8),
+                    formatDate(sale.created_at),
+                    sale.items?.length || 0,
+                    sale.payment_type || 'N/A',
+                    saleDue > 0 ? 'Pending' : 'Paid',
+                    formatCurrency(sale.grand_total),
+                    formatCurrency(sale.paid_amount || 0),
+                    formatCurrency(saleDue)
+                ];
+            });
+
+            // Add table
+            autoTable(doc, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 45,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 77, 43], textColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            // Add summary statistics
+            const finalY = doc.lastAutoTable.finalY + 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(30, 77, 43);
+            doc.text('Summary Statistics', 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Transactions: ${sales.length}`, 14, finalY + 7);
+            doc.text(`Total Sales: ${formatCurrency(stats?.total_sales || 0)} Tk`, 14, finalY + 14);
+            doc.text(`Total Paid: ${formatCurrency(stats?.total_paid || 0)} Tk`, 14, finalY + 21);
+            doc.text(`Total Due: ${formatCurrency(stats?.total_due || 0)} Tk`, 14, finalY + 28);
+            doc.text(`Current Balance: ${formatCurrency(customer?.advance_amount || 0)} Tk`, 14, finalY + 35);
+
+            // Save PDF
+            doc.save(`customer_ledger_${customer?.id}_${formatDateForFilename()}.pdf`);
+            
+            toast.success('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF');
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     const getStatusBadge = (status) => {
@@ -1078,97 +1343,139 @@ export default function CustomerLedger({
                     </div>
                 </div>
 
-                {/* Filters Section */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                            <Filter className="h-5 w-5" />
-                            Filter Transactions
-                        </h3>
-
-                        {hasActiveFilters && (
-                            <button
-                                onClick={clearFilters}
-                                className="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-2 transition-colors"
-                            >
-                                <RefreshCw className="h-4 w-4" />
-                                Clear Filters
-                            </button>
-                        )}
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                        <div className="md:col-span-4">
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="search"
-                                    value={filterForm.data.search}
-                                    onChange={(e) =>
-                                        filterForm.setData(
-                                            "search",
-                                            e.target.value,
-                                        )
-                                    }
-                                    onKeyPress={(e) =>
-                                        e.key === "Enter" && handleFilter()
-                                    }
-                                    placeholder="Search invoice number..."
-                                    className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg
-                            focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                            bg-gray-50 text-gray-700 placeholder-gray-500"
-                                />
-                            </div>
+                {/* Collapsible Filters Section */}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-100 mb-6 overflow-hidden">
+                    <div 
+                        className="px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={toggleFilters}
+                    >
+                        <div className="flex items-center gap-2">
+                            <Filter className="h-5 w-5 text-gray-700" />
+                            <h3 className="text-lg font-semibold text-gray-900">
+                                Filter Transactions
+                            </h3>
+                            {hasActiveFilters && (
+                                <span className="badge badge-sm bg-blue-600 text-white ml-2">Active</span>
+                            )}
                         </div>
-
-                        <div className="md:col-span-3">
-                            <div className="relative">
-                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="date"
-                                    value={filterForm.data.start_date}
-                                    onChange={(e) =>
-                                        filterForm.setData(
-                                            "start_date",
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg bg-gray-50
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="md:col-span-3">
-                            <div className="relative">
-                                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                <input
-                                    type="date"
-                                    value={filterForm.data.end_date}
-                                    onChange={(e) =>
-                                        filterForm.setData(
-                                            "end_date",
-                                            e.target.value,
-                                        )
-                                    }
-                                    className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg bg-gray-50
-                           focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="md:col-span-2">
-                            <button
-                                onClick={handleFilter}
-                                className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-700 text-white
-                          font-medium rounded-lg hover:from-blue-700 hover:to-blue-800
-                          focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                          transition-all duration-200"
-                            >
-                                Apply
+                        <div className="flex items-center gap-2">
+                            {hasActiveFilters && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        clearFilters();
+                                    }}
+                                    className="text-sm font-medium text-gray-600 hover:text-gray-900 flex items-center gap-2 transition-colors"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Clear
+                                </button>
+                            )}
+                            <button className="p-1 hover:bg-gray-200 rounded-full transition-colors">
+                                {showFilters ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
                             </button>
                         </div>
                     </div>
+
+                    {showFilters && (
+                        <div className="px-5 pb-5">
+                            <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                                <div className="md:col-span-4">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <input
+                                            type="search"
+                                            value={filterForm.data.search}
+                                            onChange={(e) =>
+                                                filterForm.setData(
+                                                    "search",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            onKeyPress={(e) =>
+                                                e.key === "Enter" && handleFilter()
+                                            }
+                                            placeholder="Search invoice number..."
+                                            className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg
+                                    focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                                    bg-gray-50 text-gray-700 placeholder-gray-500"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-3">
+                                    <div className="relative">
+                                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <input
+                                            type="date"
+                                            value={filterForm.data.start_date}
+                                            onChange={(e) =>
+                                                filterForm.setData(
+                                                    "start_date",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg bg-gray-50
+                                   focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-3">
+                                    <div className="relative">
+                                        <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <input
+                                            type="date"
+                                            value={filterForm.data.end_date}
+                                            onChange={(e) =>
+                                                filterForm.setData(
+                                                    "end_date",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="w-full h-11 pl-9 pr-4 border border-gray-300 rounded-lg bg-gray-50
+                                   focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-700"
+                                            min={filterForm.data.start_date}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="md:col-span-2">
+                                    <button
+                                        onClick={handleFilter}
+                                        className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-700 text-white
+                                  font-medium rounded-lg hover:from-blue-700 hover:to-blue-800
+                                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
+                                  transition-all duration-200"
+                                    >
+                                        Apply
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Active Filters Display */}
+                            {hasActiveFilters && (
+                                <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                    <span className="font-medium">Active Filters:</span>
+                                    {filterForm.data.search && (
+                                        <span className="badge badge-outline badge-sm">
+                                            Search: {filterForm.data.search}
+                                        </span>
+                                    )}
+                                    {filterForm.data.start_date && (
+                                        <span className="badge badge-outline badge-sm">
+                                            From: {new Date(filterForm.data.start_date).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                    {filterForm.data.end_date && (
+                                        <span className="badge badge-outline badge-sm">
+                                            To: {new Date(filterForm.data.end_date).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Stats Cards */}
@@ -1212,6 +1519,25 @@ export default function CustomerLedger({
                                 : "bg-gradient-to-br from-rose-500/10 to-rose-600/10 text-rose-600"
                         }
                     />
+                </div>
+
+                {/* Download Button */}
+                <div className="flex justify-end mb-4">
+                    <div className="dropdown dropdown-end">
+                        <button 
+                            className="btn bg-green-600 text-white btn-sm"
+                            disabled={isDownloading || sales.length === 0}
+                            tabIndex={0}
+                        >
+                            <Download size={14} />
+                            {isDownloading ? 'Downloading...' : 'Download Report'}
+                        </button>
+                        <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                            <li><button onClick={downloadCSV} className="btn btn-ghost btn-sm w-full text-left">CSV Format</button></li>
+                            <li><button onClick={downloadExcel} className="btn btn-ghost btn-sm w-full text-left">Excel Format</button></li>
+                            <li><button onClick={downloadPDF} className="btn btn-ghost btn-sm w-full text-left">PDF Format</button></li>
+                        </ul>
+                    </div>
                 </div>
 
                 {/* Charts Section */}
