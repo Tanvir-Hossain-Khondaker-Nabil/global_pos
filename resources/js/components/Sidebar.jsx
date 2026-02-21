@@ -140,7 +140,6 @@ const outletLoggedInMenu = [
   // Finance
   { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expense.category_view" },
   { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expense.view" },
-  { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Finance", permission: "payments.view" },
   { title: "Accounts", icon: "dollar-sign", route: "accounts.index", active: "accounts.index", category: "Finance", permission: "accounts.view" },
   { title: "Ledgers", icon: "box", route: "ledgers.index", active: "ledgers.index", category: "Finance", permission: "ledger.view" },
 
@@ -157,6 +156,7 @@ const outletLoggedInMenu = [
   // Reports all
   { title: "All Sales Items", icon: "badge-cent", route: "salesItems.list", active: "salesItems.list", category: "Reports", permission: "sales.view" },
   { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Reports", permission: "purchase.items_view" },
+  { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Reports", permission: "payments.view" },
 
 
   // CRM

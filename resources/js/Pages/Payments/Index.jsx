@@ -12,7 +12,7 @@ import { toast } from "react-toastify";
 export default function PaymentIndex({ payments, filters, isShadowUser }) {
     const { auth } = usePage().props;
     const { t, locale } = useTranslation();
-    const [showFilters, setShowFilters] = useState(true);
+    const [showFilters, setShowFilters] = useState(false);
     const [isDownloading, setIsDownloading] = useState(false);
 
     // Handle search and filters

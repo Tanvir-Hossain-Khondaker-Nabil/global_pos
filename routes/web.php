@@ -331,7 +331,7 @@ Route::middleware('auth')->group(function () {
             ->name('profile.view');
 
         Route::get('/business/profile', 'businessProfileView')
-            ->middleware('permission:business_profile.view')
+            // ->middleware('permission:business_profile.view')
             ->name('businessProfile.view');
 
         Route::post('/business/profile/{id?}', 'businessProfileUpdate')
