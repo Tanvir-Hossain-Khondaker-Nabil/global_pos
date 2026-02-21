@@ -116,10 +116,9 @@ const outletLoggedInMenu = [
   { title: "All Sales Return", icon: "badge-cent", route: "salesReturn.list", active: "salesReturn.list", category: "Sales", permission: "salesReturn.list" },
 
   // Purchase
+  { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
   { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
   { title: "Local Purchase", icon: "receipt", route: "purchase.list_index", active: "purchase.list_index", category: "Purchase", permission: "purchase.list_index" },
-  { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
-
   // Purchase Return
   { title: "Purchase Return", icon: "receipt", route: "purchase-returns.list", active: "purchase-returns.list", category: "Purchase", permission: "purchase_return.view" },
   { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-returns.create", active: "purchase-returns.create", category: "Purchase", permission: "purchase_return.create" },
