@@ -608,6 +608,7 @@ class PurchaseController extends Controller
         }
     }
 
+
     // Print barcode for purchase item
     public function printItemBarcode($purchaseId, $itemId)
     {
@@ -643,6 +644,7 @@ class PurchaseController extends Controller
             return redirect()->back()->with('error', 'Failed: ' . $e->getMessage());
         }
     }
+
 
     // Print all barcodes for a purchase
     public function printPurchaseBarcodes($purchaseId)
@@ -684,6 +686,7 @@ class PurchaseController extends Controller
             return redirect()->back()->with('error', 'Failed: ' . $e->getMessage());
         }
     }
+
 
     // Show purchase with barcode details
     public function show($id)
@@ -773,6 +776,8 @@ class PurchaseController extends Controller
             'business' => $business,
         ]);
     }
+
+
 
     public function edit($id)
     {
@@ -1002,6 +1007,7 @@ class PurchaseController extends Controller
         }
     }
 
+
     public function destroy($id)
     {
         DB::beginTransaction();
@@ -1039,6 +1045,7 @@ class PurchaseController extends Controller
             return redirect()->back()->with('error', 'Error deleting purchase: ' . $e->getMessage());
         }
     }
+
 
     // update payment method (your same logic)
     public function updatePayment(Request $request, $id)
@@ -1094,6 +1101,7 @@ class PurchaseController extends Controller
             return redirect()->back()->with('error', 'Error processing payment: ' . $e->getMessage());
         }
     }
+
 
     public function approve(Request $request, $id)
     {
@@ -1157,6 +1165,7 @@ class PurchaseController extends Controller
         }
     }
 
+
     private function transformToShadowData($purchase)
     {
         // Keep your shadow display behavior
@@ -1176,6 +1185,7 @@ class PurchaseController extends Controller
         return $purchase;
     }
 
+
     public function allPurchasesItems(Request $request)
     {
         $user = Auth::user();
@@ -1185,12 +1195,13 @@ class PurchaseController extends Controller
             ->when($request->filled('product_id'), function ($query) use ($request) {
                 $query->where('product_id', $request->product_id);
             })
-            ->when($request->filled('date_from') && $request->filled('date_to'), function ($query) use ($request) {
-                $query->whereHas('purchase', function ($q) use ($request) {
-                    $q->whereBetween('purchase_date', [$request->date_from, $request->date_to]);
-                });
+            ->when(request()->filled(['date_from', 'date_to']), function ($q) {
+                $q->whereBetween('created_at', [
+                    request()->date_from,
+                    request()->date_to
+                ]);
             })
-            ->latest()
+            ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 

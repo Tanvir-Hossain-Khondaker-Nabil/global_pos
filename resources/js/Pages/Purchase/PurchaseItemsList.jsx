@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import React ,{ useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Eye, Search, RefreshCw, Frown, ChevronDown, ChevronUp, Package, Building, Calendar } from "lucide-react";
+import { Eye, Search, RefreshCw, Frown, ChevronDown, ChevronUp, Package, Building, Calendar, Download, Filter } from "lucide-react";
 import { toast } from "react-toastify";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser }) {
     const { flash } = usePage().props;
     const [expandedRow, setExpandedRow] = useState(null);
+    const [showFilters, setShowFilters] = useState(true);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Handle search and filtering
     const searchForm = useForm({
@@ -20,7 +25,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
     };
 
     const handleSearch = () => {
-        searchForm.get(route("purchaseItems.list"), {
+        searchForm.get(route("purchase.items"), {
             preserveState: true,
             preserveScroll: true,
         });
@@ -28,12 +33,22 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
 
     const clearFilters = () => {
         searchForm.reset();
-        router.get(route("purchaseItems.list"));
+        router.get(route("purchase.items"));
     };
 
     // Toggle row expansion
     const toggleRow = (index) => {
         setExpandedRow(expandedRow === index ? null : index);
+    };
+
+    // Toggle filter section
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+    };
+
+    // Check if any filter is active
+    const hasActiveFilters = () => {
+        return searchForm.data.product_id || searchForm.data.date_from || searchForm.data.date_to;
     };
 
     // Format date
@@ -45,6 +60,15 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    // Format date for filename
+    const formatDateForFilename = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0] + '_' + 
+               now.getHours() + '-' + 
+               now.getMinutes() + '-' + 
+               now.getSeconds();
     };
 
     // Format date for input
@@ -82,14 +106,24 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
         return attrsText || 'N/A';
     };
 
-    useEffect(() => {
-        if (flash?.success) {
-            toast.success(flash.success);
-        }
-        if (flash?.error) {
-            toast.error(flash.error);
-        }
-    }, [flash]);
+    // Prepare data for export
+    const prepareExportData = () => {
+        return purchaseItems.data.map(item => ({
+            'Product Name': item.product?.name || item.product_name,
+            'Product Code': item.product?.product_no || 'N/A',
+            'Variant': item.variant ? getVariantText(item.variant) : (item.variant_name || 'N/A'),
+            'Item Type': item?.item_type === 'real' ? 'Stock Item' : 'Pickup Item',
+            'Unit Price (Tk)': parseFloat(item.unit_price).toFixed(2),
+            'Quantity': item.quantity,
+            'Discount (%)': item.discount || 0,
+            'Total (Tk)': calculateItemTotal(item),
+            'Warehouse': item?.warehouse?.name || 'N/A',
+            'Purchase ID': item.purchase_id || 0,
+            'Supplier': item.purchase?.supplier?.name || item?.supplier?.name || 'N/A',
+            'Purchase Date': formatDate(item.created_at),
+            'Status': item.purchase?.status || 'Completed'
+        }));
+    };
 
     // Calculate summary statistics
     const calculateSummaryStats = () => {
@@ -109,6 +143,219 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
         return stats;
     };
 
+    // Download as CSV
+    const downloadCSV = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Convert to CSV
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [];
+            
+            // Add headers
+            csvRows.push(headers.join(','));
+            
+            // Add data rows
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    // Escape commas and quotes
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            // Add filter information
+            csvRows.push(''); // Empty row
+            csvRows.push('FILTER INFORMATION');
+            csvRows.push(`Product ID,${searchForm.data.product_id || 'None'}`);
+            csvRows.push(`Date From,${searchForm.data.date_from || 'None'}`);
+            csvRows.push(`Date To,${searchForm.data.date_to || 'None'}`);
+
+            // Add summary section
+            csvRows.push(''); // Empty row
+            csvRows.push('SUMMARY STATISTICS');
+            const stats = calculateSummaryStats();
+            csvRows.push(`Total Items,${stats.totalItems}`);
+            csvRows.push(`Total Quantity,${stats.totalQuantity.toFixed(0)}`);
+            csvRows.push(`Total Amount (Tk),${stats.totalAmount.toFixed(2)}`);
+            csvRows.push(`Average per Item (Tk),${stats.averagePerItem.toFixed(2)}`);
+
+            const csvString = csvRows.join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `purchase_items_report_${formatDateForFilename()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            toast.success('CSV downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as Excel
+    const downloadExcel = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Create workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Create filter info sheet
+            const filterData = [
+                { 'Filter': 'Product ID', 'Value': searchForm.data.product_id || 'None' },
+                { 'Filter': 'Date From', 'Value': searchForm.data.date_from || 'None' },
+                { 'Filter': 'Date To', 'Value': searchForm.data.date_to || 'None' }
+            ];
+            const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+            // Add summary to a new sheet
+            const stats = calculateSummaryStats();
+            const summaryData = [
+                { 'Metric': 'Total Items', 'Value': stats.totalItems },
+                { 'Metric': 'Total Quantity', 'Value': stats.totalQuantity.toFixed(0) },
+                { 'Metric': 'Total Amount (Tk)', 'Value': stats.totalAmount.toFixed(2) },
+                { 'Metric': 'Average per Item (Tk)', 'Value': stats.averagePerItem.toFixed(2) }
+            ];
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+            // Add sheets to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Purchase Items');
+            XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+            // Generate and download file
+            XLSX.writeFile(wb, `purchase_items_report_${formatDateForFilename()}.xlsx`);
+            
+            toast.success('Excel file downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            toast.error('Failed to download Excel file');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as PDF
+    const downloadPDF = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Create PDF document
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Add title
+            doc.setFontSize(16);
+            doc.setTextColor(30, 77, 43); // #1e4d2b color
+            doc.text('Purchase Items Report', 14, 15);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+            // Add filter information
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Filters: Product ID: ${searchForm.data.product_id || 'None'} | Date: ${searchForm.data.date_from || 'Start'} to ${searchForm.data.date_to || 'End'}`, 14, 29);
+
+            // Prepare table columns and rows
+            const tableColumns = [
+                'Product',
+                'Price',
+                'Qty',
+                'Total',
+                'Type',
+                'Date'
+            ];
+
+            const tableRows = exportData.map(item => [
+                item['Product Name'].substring(0, 20) + (item['Product Name'].length > 20 ? '...' : ''),
+                item['Unit Price (Tk)'],
+                item['Quantity'],
+                item['Total (Tk)'],
+                item['Item Type'],
+                item['Purchase Date'].split(',')[0] // Just the date part
+            ]);
+
+            // Add table using autoTable
+            autoTable(doc, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 35,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 77, 43], textColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            // Add summary statistics
+            const stats = calculateSummaryStats();
+            const finalY = doc.lastAutoTable.finalY + 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(30, 77, 43);
+            doc.text('Summary Statistics', 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Items: ${stats.totalItems}`, 14, finalY + 7);
+            doc.text(`Total Quantity: ${stats.totalQuantity.toFixed(0)}`, 14, finalY + 14);
+            doc.text(`Total Amount: ${stats.totalAmount.toFixed(2)} Tk`, 14, finalY + 21);
+            doc.text(`Average per Item: ${stats.averagePerItem.toFixed(2)} Tk`, 14, finalY + 28);
+
+            // Save PDF
+            doc.save(`purchase_items_report_${formatDateForFilename()}.pdf`);
+            
+            toast.success('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    useEffect(() => {
+        if (flash?.success) {
+            toast.success(flash.success);
+        }
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    }, [flash]);
+
     const stats = calculateSummaryStats();
 
     return (
@@ -118,61 +365,127 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                 description="Comprehensive list of all purchased items with detailed information"
             />
 
-            {/* Filters Section */}
-            <div className="bg-base-100 rounded-box border border-base-content/5 p-4 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-neutral">Filters</h3>
+            {/* Collapsible Filter Card */}
+            <div className="bg-base-100 rounded-box border border-base-content/5 mb-6 overflow-hidden">
+                {/* Card Header with Toggle Button */}
+                <div 
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-base-200 transition-colors"
+                    onClick={toggleFilters}
+                >
+                    <div className="flex items-center gap-2">
+                        <Filter size={18} className="text-[#1e4d2b]" />
+                        <h3 className="text-lg font-semibold text-neutral">Filters</h3>
+                        {hasActiveFilters() && (
+                            <span className="badge badge-sm bg-[#1e4d2b] text-white ml-2">Active</span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={clearFilters}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                clearFilters();
+                            }}
                             className="btn btn-ghost btn-sm"
                         >
                             Clear
                         </button>
                         <button
-                            onClick={handleSearch}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleSearch();
+                            }}
                             className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Search size={14} />
                             Search
                         </button>
+                        <button className="btn btn-ghost btn-sm">
+                            {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                        </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Product Filter */}
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Product ID</legend>
-                        <input
-                            type="text"
-                            className="input input-sm"
-                            placeholder="Enter product ID..."
-                            value={searchForm.data.product_id}
-                            onChange={(e) => handleFilterChange("product_id", e.target.value)}
-                        />
-                    </fieldset>
+                {/* Filter Content - Collapsible */}
+                {showFilters && (
+                    <div className="p-4 border-t border-base-content/5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {/* Product Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Product ID</legend>
+                                <input
+                                    type="text"
+                                    className="input input-sm"
+                                    placeholder="Enter product ID..."
+                                    value={searchForm.data.product_id}
+                                    onChange={(e) => handleFilterChange("product_id", e.target.value)}
+                                />
+                            </fieldset>
 
-                    {/* Date From Filter */}
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Date From</legend>
-                        <input
-                            type="date"
-                            className="input input-sm"
-                            value={searchForm.data.date_from}
-                            onChange={(e) => handleFilterChange("date_from", e.target.value)}
-                        />
-                    </fieldset>
+                            {/* Date From Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Date From</legend>
+                                <input
+                                    type="date"
+                                    className="input input-sm"
+                                    value={formatDateForInput(searchForm.data.date_from)}
+                                    onChange={(e) => handleFilterChange("date_from", e.target.value)}
+                                />
+                            </fieldset>
 
-                    {/* Date To Filter */}
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Date To</legend>
-                        <input
-                            type="date"
-                            className="input input-sm"
-                            value={searchForm.data.date_to}
-                            onChange={(e) => handleFilterChange("date_to", e.target.value)}
-                        />
-                    </fieldset>
+                            {/* Date To Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Date To</legend>
+                                <input
+                                    type="date"
+                                    className="input input-sm"
+                                    value={formatDateForInput(searchForm.data.date_to)}
+                                    onChange={(e) => handleFilterChange("date_to", e.target.value)}
+                                    min={formatDateForInput(searchForm.data.date_from)}
+                                />
+                            </fieldset>
+                        </div>
+
+                        {/* Active Filters Display */}
+                        {hasActiveFilters() && (
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                <span className="font-medium">Active Filters:</span>
+                                {searchForm.data.product_id && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Product: {searchForm.data.product_id}
+                                    </span>
+                                )}
+                                {searchForm.data.date_from && (
+                                    <span className="badge badge-outline badge-sm">
+                                        From: {new Date(searchForm.data.date_from).toLocaleDateString()}
+                                    </span>
+                                )}
+                                {searchForm.data.date_to && (
+                                    <span className="badge badge-outline badge-sm">
+                                        To: {new Date(searchForm.data.date_to).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Download Button */}
+            <div className="flex justify-end mb-4">
+                <div className="dropdown dropdown-end">
+                    <button 
+                        className="btn bg-green-600 text-white btn-sm"
+                        disabled={isDownloading || purchaseItems.data.length === 0}
+                        tabIndex={0}
+                    >
+                        <Download size={14} />
+                        {isDownloading ? 'Downloading...' : 'Download Report'}
+                    </button>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                        <li><button onClick={downloadCSV} className="btn btn-ghost btn-sm w-full text-left">CSV Format</button></li>
+                        <li><button onClick={downloadExcel} className="btn btn-ghost btn-sm w-full text-left">Excel Format</button></li>
+                        <li><button onClick={downloadPDF} className="btn btn-ghost btn-sm w-full text-left">PDF Format</button></li>
+                    </ul>
                 </div>
             </div>
 
@@ -196,8 +509,8 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                         </thead>
                         <tbody>
                             {purchaseItems.data.map((item, index) => (
-                                <>
-                                    <tr key={item.id} className="hover:bg-base-200">
+                                <React.Fragment key={item.id}>
+                                    <tr className="hover:bg-base-200">
                                         <td>
                                             <button
                                                 onClick={() => toggleRow(index)}
@@ -219,20 +532,18 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                 {item.variant && (
                                                     <div className="text-xs text-gray-500">
                                                         Variant: {getVariantText(item.variant)}
-                                                        {item.variant?.sku && ` (${item.variant.sku})`}
                                                     </div>
                                                 )}
                                                 {item?.variant_name}
-
                                             </div>
                                         </td>
                                         <td>
                                             <div className="max-w-[150px]">
-                                                    {item?.item_type && (
-                                                        <div className="badge badge-info badge-sm p-4 rounded">
-                                                            <strong>{item?.item_type == 'real' ? 'Stock Item' : 'Pickup Item'}</strong>
-                                                        </div>
-                                                    )}
+                                                {item?.item_type && (
+                                                    <div className="badge badge-info badge-sm p-4 rounded">
+                                                        <strong>{item?.item_type == 'real' ? 'Stock Item' : 'Pickup Item'}</strong>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                         <td>
@@ -267,7 +578,6 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                         </td>
                                         <td>
                                             <div className="flex items-center gap-1">
-
                                                 <Link
                                                     href={route('purchaseItems.show', { id: item.id })}
                                                     className="btn btn-ghost btn-xs"
@@ -288,32 +598,6 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                         <RefreshCw size={12} />
                                                     </Link>
                                                 )}
-
-                                                 {/* {!item?.damage && 
-                                                (
-                                                    <Link
-                                                        href={route('damages.create', {
-                                                            id: item.id,
-                                                            type: 'purchase',
-                                                        })}
-                                                        className="btn text-[red] btn-ghost btn-xs"
-                                                        title={Boolean(item?.warehouse_id) ? "Create Damage" : "Pickup Item Refund"}
-                                                    >
-                                                        <RefreshCw size={12} />
-                                                    </Link>
-                                                )} */}
-
-
-
-                                                {/* {item.product && (
-                                                    <Link
-                                                        href={route('products.show', { id: item.product_id })}
-                                                        className="btn btn-ghost btn-xs"
-                                                        title="View Product"
-                                                    >
-                                                        <Package size={12} />
-                                                    </Link>
-                                                )} */}
                                             </div>
                                         </td>
                                     </tr>
@@ -375,7 +659,6 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                                             </div>
                                                             <div>
                                                                 <div><strong>Purchase Date:</strong> {item?.created_at ? formatDate(item.created_at) : 'N/A'}</div>
-                                                                {/* <div><strong>Expected Date:</strong> {item.purchase?.expected_date ? formatDate(item.purchase.expected_date) : 'N/A'}</div> */}
                                                             </div>
                                                             <div>
                                                                 <div><strong>Created At:</strong> {formatDate(item.created_at)}</div>
@@ -392,7 +675,7 @@ export default function PurchaseItemsList({ purchaseItems, filters, isShadowUser
                                             </td>
                                         </tr>
                                     )}
-                                </>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>

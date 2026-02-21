@@ -287,7 +287,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/{sale}/update', [SalesController::class, 'update'])->middleware('permission:sales.edit')->name('sales.update');
     Route::delete('/{sale}/rejected', [SalesController::class, 'rejected'])->middleware('permission:sales.delete')->name('sales.rejected');
     Route::post('/sales/{sale}/payments', [SalesController::class, 'storePayment'])->middleware('permission:sales.payments.create')->name('sales.payments.store');
-
+    Route::get('/sales-items/download', [SalesController::class, 'downloadItem'])->name('salesItems.download');
     //modules route
     Route::resource('modules', ModuleController::class)->names([
         'index' => 'modules.index',
