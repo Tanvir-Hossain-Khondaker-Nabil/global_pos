@@ -193,7 +193,7 @@ export default function SaleShow({ sale, isShadowUser = false, businessProfile }
   const bpEmail = bp?.email || "mail@example.com";
   const bpAddr = bp?.address || "Address.";
   const bpWebsite = bp?.website || "";
-  const bpFooterTitle = bp?.footer_title || "";
+  const bpFooterTitle = bp?.footer_title || "বিক্রয়িত পণ্য ১৫ দিনের মধ্যে ফেরত যোগ্য । পণ্য ফেরতের সময় অবশ্যই মেমোর ফটোকপি দিতে হবে";
 
   const bpLogo =
     resolveAssetUrl(bp?.logo) ||

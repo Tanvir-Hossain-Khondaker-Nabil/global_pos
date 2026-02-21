@@ -124,6 +124,7 @@ return [
     'partners' => 'Partners',
     'crm' => 'CRM',
     'admin' => 'Admin',
+    'category_reports' => 'All Reports',
     'hr' => 'HR',
     'outlets' => 'Outlets',
 

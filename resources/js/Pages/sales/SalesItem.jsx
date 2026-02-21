@@ -1,51 +1,79 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import PageHeader from "../../components/PageHeader";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
-import { Eye, Search, RefreshCw, Frown, ChevronDown, ChevronUp } from "lucide-react";
+import { Eye, Search, RefreshCw, Frown, ChevronDown, ChevronUp, Download, Calendar, Filter } from "lucide-react";
 import { toast } from "react-toastify";
 import Select from "react-select";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 export default function AllSalesItems({ salesItems }) {
     const { flash, isShadowUser } = usePage().props;
     const [expandedRow, setExpandedRow] = useState(null);
+    const [showFilters, setShowFilters] = useState(true); // State for filter visibility
     const [filters, setFilters] = useState({
         search: "",
         customer: "",
         product: "",
         warehouse: "",
     });
+    const [dateRange, setDateRange] = useState({
+        start_date: "",
+        end_date: ""
+    });
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    // Handle date changes
+    const handleDateChange = (type, date) => {
+        const newDateRange = { ...dateRange, [type]: date };
+        setDateRange(newDateRange);
+    };
 
     // Handle search and filtering
     const handleFilter = (field, value) => {
         const newFilters = { ...filters, [field]: value };
         setFilters(newFilters);
+    };
+
+    const applyFilters = () => {
         const queryString = {};
-        if (newFilters.search) queryString.search = newFilters.search;
-        if (newFilters.customer) queryString.customer_id = newFilters.customer;
-        if (newFilters.product) queryString.product_id = newFilters.product;
-        if (newFilters.warehouse) queryString.warehouse_id = newFilters.warehouse;
+        
+        // Add text filters
+        if (filters.search) queryString.search = filters.search;
+        if (filters.customer) queryString.customer_id = filters.customer;
+        if (filters.product) queryString.product_id = filters.product;
+        if (filters.warehouse) queryString.warehouse_id = filters.warehouse;
+        
+        // Add date filters
+        if (dateRange.start_date) queryString.start_date = dateRange.start_date;
+        if (dateRange.end_date) queryString.end_date = dateRange.end_date;
+        
         router.get(route("salesItems.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
     };
 
     const handleKeyPress = (e) => {
-        if (e.key == 'Enter') {
-            const queryString = {};
-            if (filters.search) queryString.search = filters.search;
-            if (filters.customer) queryString.customer_id = filters.customer;
-            if (filters.product) queryString.product_id = filters.product;
-            if (filters.warehouse) queryString.warehouse_id = filters.warehouse;
-            router.get(route("salesItems.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
+        if (e.key === 'Enter') {
+            applyFilters();
         }
     };
 
     const clearFilters = () => {
         setFilters({ search: "", customer: "", product: "", warehouse: "" });
+        setDateRange({ start_date: "", end_date: "" });
         router.get(route("salesItems.list"), {}, { replace: true });
     };
 
     // Toggle row expansion
     const toggleRow = (index) => {
         setExpandedRow(expandedRow === index ? null : index);
+    };
+
+    // Toggle filter section
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
     };
 
     // Format date
@@ -57,6 +85,22 @@ export default function AllSalesItems({ salesItems }) {
             hour: '2-digit',
             minute: '2-digit'
         });
+    };
+
+    // Format date for input
+    const formatDateForInput = (date) => {
+        if (!date) return "";
+        const d = new Date(date);
+        return d.toISOString().split('T')[0];
+    };
+
+    // Format date for filename
+    const formatDateForFilename = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0] + '_' + 
+               now.getHours() + '-' + 
+               now.getMinutes() + '-' + 
+               now.getSeconds();
     };
 
     // Format currency
@@ -81,6 +125,259 @@ export default function AllSalesItems({ salesItems }) {
         return (subtotal - discountAmount).toFixed(2);
     };
 
+    // Check if any filter is active
+    const hasActiveFilters = () => {
+        return filters.search || filters.customer || filters.product || filters.warehouse || dateRange.start_date || dateRange.end_date;
+    };
+
+    // Prepare data for export
+    const prepareExportData = () => {
+        const safeSalesItems = salesItems?.data || [];
+        
+        return safeSalesItems.map(item => ({
+            'Product Name': item.product?.name ?? item.product_name,
+            'Product Code': item.product?.product_no || 'N/A',
+            'Variant': item.variant ? Object.values(item.variant.attribute_values || {}).join(', ') : (item.variant_name || 'N/A'),
+            'Customer Name': item.sale?.customer?.customer_name || 'Walk-in Customer',
+            'Customer Phone': item.sale?.customer?.phone || 'N/A',
+            'Unit Price (Tk)': parseFloat(item.unit_price).toFixed(2),
+            'Quantity': item.quantity,
+            'Discount': item.sale?.discount || 0,
+            'Discount Type': item.sale?.discount_type || 'N/A',
+            'VAT (%)': item.sale?.vat_tax || 0,
+            'Total (Tk)': calculateItemTotal(item),
+            'Sale Type': item?.sale?.type || 'N/A',
+            'Item Type': item?.warehouse_id ? 'Stock Item' : 'Pickup Item',
+            'Warehouse': item.warehouse?.name || 'N/A',
+            'Invoice No': item.sale?.invoice_no || 'N/A',
+            'Sale Status': item.sale?.status || 'N/A',
+            'Sale Date': formatDate(item.created_at),
+            'Sale ID': item.sale_id
+        }));
+    };
+
+    // Calculate summary stats
+    const calculateSummaryStats = () => {
+        const safeSalesItems = salesItems?.data || [];
+        const totalItems = safeSalesItems.length;
+        const totalQuantity = safeSalesItems.reduce((sum, item) => sum + parseFloat(item.quantity || 0), 0);
+        const totalSales = safeSalesItems.reduce((sum, item) => sum + parseFloat(calculateItemTotal(item) || 0), 0);
+        const avgPerItem = totalItems > 0 ? totalSales / totalItems : 0;
+        
+        return { totalItems, totalQuantity, totalSales, avgPerItem };
+    };
+
+    // Download as CSV
+    const downloadCSV = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Convert to CSV
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [];
+            
+            // Add headers
+            csvRows.push(headers.join(','));
+            
+            // Add data rows
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    // Escape commas and quotes
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            // Add filter information
+            csvRows.push(''); // Empty row
+            csvRows.push('FILTER INFORMATION');
+            csvRows.push(`Search,${filters.search || 'None'}`);
+            csvRows.push(`Customer,${filters.customer || 'All'}`);
+            csvRows.push(`Product,${filters.product || 'All'}`);
+            csvRows.push(`Warehouse,${filters.warehouse || 'All'}`);
+            csvRows.push(`Date Range,${dateRange.start_date || 'Start'} to ${dateRange.end_date || 'End'}`);
+
+            // Add summary section
+            csvRows.push(''); // Empty row
+            csvRows.push('SUMMARY STATISTICS');
+            const stats = calculateSummaryStats();
+            csvRows.push(`Total Items,${stats.totalItems}`);
+            csvRows.push(`Total Quantity,${stats.totalQuantity}`);
+            csvRows.push(`Total Sales (Tk),${stats.totalSales.toFixed(2)}`);
+            csvRows.push(`Average per Item (Tk),${stats.avgPerItem.toFixed(2)}`);
+
+            const csvString = csvRows.join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `sales_items_report_${formatDateForFilename()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            toast.success('CSV downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as Excel
+    const downloadExcel = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Create workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Create filter info sheet
+            const filterData = [
+                { 'Filter': 'Search', 'Value': filters.search || 'None' },
+                { 'Filter': 'Customer', 'Value': filters.customer || 'All' },
+                { 'Filter': 'Product', 'Value': filters.product || 'All' },
+                { 'Filter': 'Warehouse', 'Value': filters.warehouse || 'All' },
+                { 'Filter': 'Date Range', 'Value': `${dateRange.start_date || 'Start'} to ${dateRange.end_date || 'End'}` }
+            ];
+            const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+            // Add summary to a new sheet
+            const stats = calculateSummaryStats();
+            const summaryData = [
+                { 'Metric': 'Total Items', 'Value': stats.totalItems },
+                { 'Metric': 'Total Quantity', 'Value': stats.totalQuantity },
+                { 'Metric': 'Total Sales (Tk)', 'Value': stats.totalSales.toFixed(2) },
+                { 'Metric': 'Average per Item (Tk)', 'Value': stats.avgPerItem.toFixed(2) }
+            ];
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+            // Add sheets to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Sales Items');
+            XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+            // Generate and download file
+            XLSX.writeFile(wb, `sales_items_report_${formatDateForFilename()}.xlsx`);
+            
+            toast.success('Excel file downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            toast.error('Failed to download Excel file');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as PDF
+    const downloadPDF = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Create PDF document
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Add title
+            doc.setFontSize(16);
+            doc.setTextColor(30, 77, 43); // #1e4d2b color
+            doc.text('Sales Items Report', 14, 15);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+            // Add filter information
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Filters: Search: ${filters.search || 'None'} | Customer: ${filters.customer || 'All'} | Product: ${filters.product || 'All'} | Warehouse: ${filters.warehouse || 'All'}`, 14, 29);
+            doc.text(`Date Range: ${dateRange.start_date || 'Start'} to ${dateRange.end_date || 'End'}`, 14, 35);
+
+            // Prepare table columns and rows
+            const tableColumns = [
+                'Product',
+                'Customer',
+                'Price',
+                'Qty',
+                'Total',
+                'Type',
+                'Date'
+            ];
+
+            const tableRows = exportData.map(item => [
+                item['Product Name'].substring(0, 20) + (item['Product Name'].length > 20 ? '...' : ''),
+                item['Customer Name'].substring(0, 15) + (item['Customer Name'].length > 15 ? '...' : ''),
+                item['Unit Price (Tk)'],
+                item['Quantity'],
+                item['Total (Tk)'],
+                item['Sale Type'],
+                item['Sale Date'].split(',')[0] // Just the date part
+            ]);
+
+            // Add table using autoTable
+            autoTable(doc, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 40,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 77, 43], textColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            // Add summary statistics
+            const stats = calculateSummaryStats();
+            const finalY = doc.lastAutoTable.finalY + 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(30, 77, 43);
+            doc.text('Summary Statistics', 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Items: ${stats.totalItems}`, 14, finalY + 7);
+            doc.text(`Total Quantity: ${stats.totalQuantity}`, 14, finalY + 14);
+            doc.text(`Total Sales: ${stats.totalSales.toFixed(2)} Tk`, 14, finalY + 21);
+            doc.text(`Average per Item: ${stats.avgPerItem.toFixed(2)} Tk`, 14, finalY + 28);
+
+            // Save PDF
+            doc.save(`sales_items_report_${formatDateForFilename()}.pdf`);
+            
+            toast.success('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
     useEffect(() => {
         if (flash?.success) {
             toast.success(flash.success);
@@ -99,85 +396,190 @@ export default function AllSalesItems({ salesItems }) {
                 description="Comprehensive list of all sold items with detailed information"
             />
 
-            <div className="bg-base-100 rounded-box border border-base-content/5 p-4 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-neutral">Filters</h3>
+            {/* Collapsible Filter Card */}
+            <div className="bg-base-100 rounded-box border border-base-content/5 mb-6 overflow-hidden">
+                {/* Card Header with Toggle Button */}
+                <div 
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-base-200 transition-colors"
+                    onClick={toggleFilters}
+                >
+                    <div className="flex items-center gap-2">
+                        <Filter size={18} className="text-[#1e4d2b]" />
+                        <h3 className="text-lg font-semibold text-neutral">Filters</h3>
+                        {hasActiveFilters() && (
+                            <span className="badge badge-sm bg-[#1e4d2b] text-white ml-2">Active</span>
+                        )}
+                    </div>
                     <div className="flex items-center gap-2">
                         <button
-                            onClick={clearFilters}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                clearFilters();
+                            }}
                             className="btn btn-ghost btn-sm"
                         >
                             Clear
                         </button>
                         <button
-                            onClick={() => {
-                                const queryString = {};
-                                if (filters.search) queryString.search = filters.search;
-                                if (filters.customer) queryString.customer_id = filters.customer;
-                                if (filters.product) queryString.product_id = filters.product;
-                                if (filters.warehouse) queryString.warehouse_id = filters.warehouse;
-                                router.get(route("salesItems.list"), queryString, { preserveScroll: true, preserveState: true, replace: true });
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                applyFilters();
                             }}
                             className="btn bg-[#1e4d2b] text-white btn-sm"
                         >
                             <Search size={14} />
                             Search
                         </button>
+                        <button className="btn btn-ghost btn-sm">
+                            {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                        </button>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {/* Search */}
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Search</legend>
-                        <input
-                            type="text"
-                            className="input input-sm"
-                            placeholder="Product name, code..."
-                            value={filters.search}
-                            onChange={(e) => handleFilter("search", e.target.value)}
-                            onKeyPress={handleKeyPress}
-                        />
-                    </fieldset>
+                {/* Filter Content - Collapsible */}
+                {showFilters && (
+                    <div className="p-4 border-t border-base-content/5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                            {/* Search */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Search</legend>
+                                <input
+                                    type="text"
+                                    className="input input-sm"
+                                    placeholder="Product name, code..."
+                                    value={filters.search}
+                                    onChange={(e) => handleFilter("search", e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                />
+                            </fieldset>
 
-                    {/* Customer Filter */}
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Customer</legend>
-                        <input
-                            type="text"
-                            className="input input-sm"
-                            placeholder="Customer name..."
-                            value={filters.customer}
-                            onChange={(e) => handleFilter("customer", e.target.value)}
-                            onKeyPress={handleKeyPress}
-                        />
-                    </fieldset>
+                            {/* Customer Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Customer</legend>
+                                <input
+                                    type="text"
+                                    className="input input-sm"
+                                    placeholder="Customer name..."
+                                    value={filters.customer}
+                                    onChange={(e) => handleFilter("customer", e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                />
+                            </fieldset>
 
-                    {/* Product Filter */}
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Product</legend>
-                        <input
-                            type="text"
-                            className="input input-sm"
-                            placeholder="Product name..."
-                            value={filters.product}
-                            onChange={(e) => handleFilter("product", e.target.value)}
-                            onKeyPress={handleKeyPress}
-                        />
-                    </fieldset>
+                            {/* Product Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Product</legend>
+                                <input
+                                    type="text"
+                                    className="input input-sm"
+                                    placeholder="Product name..."
+                                    value={filters.product}
+                                    onChange={(e) => handleFilter("product", e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                />
+                            </fieldset>
 
-                    {/* Warehouse Filter */}
-                    <fieldset className="fieldset">
-                        <legend className="fieldset-legend">Warehouse</legend>
-                        <input
-                            type="text"
-                            className="input input-sm"
-                            placeholder="Warehouse name..."
-                            value={filters.warehouse}
-                            onChange={(e) => handleFilter("warehouse", e.target.value)}
-                            onKeyPress={handleKeyPress}
-                        />
-                    </fieldset>
+                            {/* Warehouse Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Warehouse</legend>
+                                <input
+                                    type="text"
+                                    className="input input-sm"
+                                    placeholder="Warehouse name..."
+                                    value={filters.warehouse}
+                                    onChange={(e) => handleFilter("warehouse", e.target.value)}
+                                    onKeyPress={handleKeyPress}
+                                />
+                            </fieldset>
+                        </div>
+
+                        {/* Date Range Filters */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Start Date */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Start Date</legend>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        className="input input-sm w-full"
+                                        value={formatDateForInput(dateRange.start_date)}
+                                        onChange={(e) => handleDateChange('start_date', e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                    />
+                                    <Calendar className="absolute right-2 top-2 text-gray-400" size={16} />
+                                </div>
+                            </fieldset>
+
+                            {/* End Date */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">End Date</legend>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        className="input input-sm w-full"
+                                        value={formatDateForInput(dateRange.end_date)}
+                                        onChange={(e) => handleDateChange('end_date', e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                        min={formatDateForInput(dateRange.start_date)}
+                                    />
+                                    <Calendar className="absolute right-2 top-2 text-gray-400" size={16} />
+                                </div>
+                            </fieldset>
+                        </div>
+
+                        {/* Active Filters Display */}
+                        {hasActiveFilters() && (
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                <span className="font-medium">Active Filters:</span>
+                                {filters.search && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Search: {filters.search}
+                                    </span>
+                                )}
+                                {filters.customer && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Customer: {filters.customer}
+                                    </span>
+                                )}
+                                {filters.product && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Product: {filters.product}
+                                    </span>
+                                )}
+                                {filters.warehouse && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Warehouse: {filters.warehouse}
+                                    </span>
+                                )}
+                                {(dateRange.start_date || dateRange.end_date) && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Date: {dateRange.start_date ? new Date(dateRange.start_date).toLocaleDateString() : 'Start'} 
+                                        {' → '} 
+                                        {dateRange.end_date ? new Date(dateRange.end_date).toLocaleDateString() : 'End'}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Download Button (outside filter card for easy access) */}
+            <div className="flex justify-end mb-4">
+                <div className="dropdown dropdown-end">
+                    <button 
+                        className="btn bg-green-600 text-white btn-sm"
+                        disabled={isDownloading || safeSalesItems.length === 0}
+                        tabIndex={0}
+                    >
+                        <Download size={14} />
+                        {isDownloading ? 'Downloading...' : 'Download Report'}
+                    </button>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                        <li><button onClick={downloadCSV} className="btn btn-ghost btn-sm w-full text-left">CSV Format</button></li>
+                        <li><button onClick={downloadExcel} className="btn btn-ghost btn-sm w-full text-left">Excel Format</button></li>
+                        <li><button onClick={downloadPDF} className="btn btn-ghost btn-sm w-full text-left">PDF Format</button></li>
+                    </ul>
                 </div>
             </div>
 
@@ -202,8 +604,8 @@ export default function AllSalesItems({ salesItems }) {
                         </thead>
                         <tbody>
                             {safeSalesItems.map((item, index) => (
-                                <>
-                                    <tr key={item.id} className="hover:bg-base-200">
+                                <React.Fragment key={item.id}>
+                                    <tr className="hover:bg-base-200">
                                         <td>
                                             <button
                                                 onClick={() => toggleRow(index)}
@@ -221,15 +623,7 @@ export default function AllSalesItems({ salesItems }) {
                                                 <div className="font-medium text-sm">
                                                     {item.product?.name ?? item.product_name}
                                                 </div>
-
-                                                <div className="text-xs text-gray-500">
-                                                    {item.variant
-                                                        ? `Variant: ${item.variant.sku ?? ''}`
-                                                        : item.variant_name
-                                                    }
-                                                </div>
                                             </div>
-
                                         </td>
                                         <td>
                                             <div className="max-w-[150px]">
@@ -259,12 +653,10 @@ export default function AllSalesItems({ salesItems }) {
                                                 {item?.sale?.discount_type === 'percentage' ? ' %' : ' Tk'}
                                             </div>
                                         </td>
-
                                         <td>
                                             <div className="badge badge-info badge-sm rounded">
                                                 <strong>{item?.sale?.type || 'N/A'}</strong>
                                             </div>
-
                                             <div className="badge bg-[#E5FBF4] badge-sm mt-1 rounded p-4">
                                                 <strong>{item?.warehouse_id ? 'Stock Item' : 'Pickup Item'}</strong>
                                             </div>
@@ -293,7 +685,6 @@ export default function AllSalesItems({ salesItems }) {
                                                 >
                                                     <Eye size={12} />
                                                 </Link>
-
                                                 {!item?.damage && (
                                                     <Link
                                                         href={route('damages.create', {
@@ -306,7 +697,6 @@ export default function AllSalesItems({ salesItems }) {
                                                         <RefreshCw size={12} />
                                                     </Link>
                                                 )}
-
                                             </div>
                                         </td>
                                     </tr>
@@ -314,7 +704,7 @@ export default function AllSalesItems({ salesItems }) {
                                     {/* Expanded Row Details */}
                                     {expandedRow === index && (
                                         <tr className="bg-base-200">
-                                            <td colSpan="10">
+                                            <td colSpan="11">
                                                 <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Product Details:</strong>
@@ -343,7 +733,6 @@ export default function AllSalesItems({ salesItems }) {
                                                                 })()}<br />
                                                             </div>
                                                         )}
-
                                                         <div><strong>Code:</strong> {item.product?.product_no || 'N/A'}</div>
                                                         {item.variant && (
                                                             <div>
@@ -370,7 +759,6 @@ export default function AllSalesItems({ salesItems }) {
                                                                 })()}
                                                             </div>
                                                         )}
-
                                                     </div>
                                                     <div>
                                                         <strong style={{ fontSize: '16px' }}>Sale Details:</strong>
@@ -396,7 +784,7 @@ export default function AllSalesItems({ salesItems }) {
                                             </td>
                                         </tr>
                                     )}
-                                </>
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
@@ -430,7 +818,6 @@ export default function AllSalesItems({ salesItems }) {
                                 Previous
                             </Link>
                         )}
-
                         {salesItems.links?.slice(1, -1).map((link, index) => (
                             <Link
                                 key={index}
@@ -442,7 +829,6 @@ export default function AllSalesItems({ salesItems }) {
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                             />
                         ))}
-
                         {salesItems.next_page_url && (
                             <Link
                                 href={salesItems.next_page_url}

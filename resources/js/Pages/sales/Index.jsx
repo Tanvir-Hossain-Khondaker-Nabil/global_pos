@@ -1,13 +1,19 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "../../components/PageHeader";
 import Pagination from "../../components/Pagination";
-import { Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Wallet, AlertCircle, DollarSign, History, Landmark, Smartphone, CreditCard } from "lucide-react";
+import { Frown, Plus, Trash2, Eye, Search, Edit, Check, X, Wallet, AlertCircle, DollarSign, History, Landmark, Smartphone, CreditCard, Download, Filter, ChevronUp, ChevronDown } from "lucide-react";
 import { Link, router, useForm, usePage } from "@inertiajs/react";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from "react-toastify";
 
 export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
     const { auth } = usePage().props;
     const [paymentErrors, setPaymentErrors] = useState({});
-    const [selectedAccount, setSelectedAccount] = useState(null); // Added missing state
+    const [selectedAccount, setSelectedAccount] = useState(null);
+    const [showFilters, setShowFilters] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Handle search and filters
     const filterForm = useForm({
@@ -73,6 +79,22 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                 preserveState: true,
             });
         }, 0);
+    };
+
+    // Toggle filter section
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+    };
+
+    // Check if any filter is active
+    const hasActiveFilters = () => {
+        return filterForm.data.search || filterForm.data.status || filterForm.data.date_from || filterForm.data.date_to;
+    };
+
+    // Format date for input
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toISOString().split('T')[0];
     };
 
     const openPaymentModal = (sale) => {
@@ -202,6 +224,15 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
         });
     };
 
+    // Format date for filename
+    const formatDateForFilename = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0] + '_' + 
+               now.getHours() + '-' + 
+               now.getMinutes() + '-' + 
+               now.getSeconds();
+    };
+
     // Get account icon
     const getAccountIcon = (type) => {
         switch (type) {
@@ -236,16 +267,242 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
         };
     };
 
-    // Get payments for selected sale - with multiple fallback options
-    const getPayments = (sale) => {
-        if (!sale) return [];
+    // Prepare data for export
+    const prepareExportData = () => {
+        const salesData = sales?.data || [];
+        
+        return salesData.map(sale => ({
+            'Invoice No': sale.invoice_no,
+            'Customer': sale.customer?.customer_name || "Walk-in Customer",
+            'Customer Phone': sale.customer?.phone || 'N/A',
+            'Total Items': getTotalItems(sale),
+            'Sub Total (Tk)': formatCurrency(sale.sub_total),
+            'Discount': sale.discount || 0,
+            'VAT': sale.vat_tax || 0,
+            'Grand Total (Tk)': formatCurrency(sale.grand_total),
+            'Paid Amount (Tk)': formatCurrency(sale.paid_amount),
+            'Due Amount (Tk)': formatCurrency(sale.due_amount),
+            'Status': sale.status,
+            'Payment Status': sale.payment_status || sale.status,
+            'Payment Type': sale.payment_type || 'N/A',
+            'Sale Type': sale.type || 'N/A',
+            'Date': formatDate(sale.created_at),
+            'Created By': sale.creator?.name || 'System'
+        }));
+    };
 
-        // Try different possible property names
-        return sale.payments || sale.payment_history || sale.payment_records || [];
+    // Download as CSV
+    const downloadCSV = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Convert to CSV
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [];
+            
+            // Add headers
+            csvRows.push(headers.join(','));
+            
+            // Add data rows
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    // Escape commas and quotes
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            // Add filter information
+            csvRows.push(''); // Empty row
+            csvRows.push('FILTER INFORMATION');
+            csvRows.push(`Search,${filterForm.data.search || 'None'}`);
+            csvRows.push(`Status,${filterForm.data.status || 'All'}`);
+            csvRows.push(`Date From,${filterForm.data.date_from || 'None'}`);
+            csvRows.push(`Date To,${filterForm.data.date_to || 'None'}`);
+
+            // Add summary section
+            csvRows.push(''); // Empty row
+            csvRows.push('SUMMARY STATISTICS');
+            const totals = calculateTotals();
+            csvRows.push(`Total Sales,${totals.totalSales}`);
+            csvRows.push(`Total Revenue (Tk),${totals.totalRevenue.toFixed(2)}`);
+            csvRows.push(`Total Paid (Tk),${totals.totalPaid.toFixed(2)}`);
+            csvRows.push(`Total Due (Tk),${totals.totalDue.toFixed(2)}`);
+
+            const csvString = csvRows.join('\n');
+            
+            // Create and download file
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `sales_report_${formatDateForFilename()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            toast.success('CSV downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as Excel
+    const downloadExcel = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Create workbook and worksheet
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Create filter info sheet
+            const filterData = [
+                { 'Filter': 'Search', 'Value': filterForm.data.search || 'None' },
+                { 'Filter': 'Status', 'Value': filterForm.data.status || 'All' },
+                { 'Filter': 'Date From', 'Value': filterForm.data.date_from || 'None' },
+                { 'Filter': 'Date To', 'Value': filterForm.data.date_to || 'None' }
+            ];
+            const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+            // Add summary to a new sheet
+            const totals = calculateTotals();
+            const summaryData = [
+                { 'Metric': 'Total Sales', 'Value': totals.totalSales },
+                { 'Metric': 'Total Revenue (Tk)', 'Value': totals.totalRevenue.toFixed(2) },
+                { 'Metric': 'Total Paid (Tk)', 'Value': totals.totalPaid.toFixed(2) },
+                { 'Metric': 'Total Due (Tk)', 'Value': totals.totalDue.toFixed(2) }
+            ];
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+            // Add sheets to workbook
+            XLSX.utils.book_append_sheet(wb, ws, 'Sales');
+            XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+            // Generate and download file
+            XLSX.writeFile(wb, `sales_report_${formatDateForFilename()}.xlsx`);
+            
+            toast.success('Excel file downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            toast.error('Failed to download Excel file');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as PDF
+    const downloadPDF = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            // Create PDF document
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Add title
+            doc.setFontSize(16);
+            doc.setTextColor(30, 77, 43); // #1e4d2b color
+            doc.text('Sales Report', 14, 15);
+            
+            // Add date
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+            // Add filter information
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Search: ${filterForm.data.search || 'None'} | Status: ${filterForm.data.status || 'All'}`, 14, 29);
+            doc.text(`Date Range: ${filterForm.data.date_from || 'Start'} to ${filterForm.data.date_to || 'End'}`, 14, 35);
+
+            // Prepare table columns and rows
+            const tableColumns = [
+                'Invoice',
+                'Customer',
+                'Items',
+                'Grand Total',
+                'Paid',
+                'Due',
+                'Status',
+                'Date'
+            ];
+
+            const tableRows = exportData.map(item => [
+                item['Invoice No'].substring(0, 10) + (item['Invoice No'].length > 10 ? '...' : ''),
+                item['Customer'].substring(0, 15) + (item['Customer'].length > 15 ? '...' : ''),
+                item['Total Items'],
+                item['Grand Total (Tk)'],
+                item['Paid Amount (Tk)'],
+                item['Due Amount (Tk)'],
+                item['Status'],
+                item['Date']
+            ]);
+
+            // Add table using autoTable
+            autoTable(doc, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 40,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 77, 43], textColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            // Add summary statistics
+            const totals = calculateTotals();
+            const finalY = doc.lastAutoTable.finalY + 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(30, 77, 43);
+            doc.text('Summary Statistics', 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Sales: ${totals.totalSales}`, 14, finalY + 7);
+            doc.text(`Total Revenue: ${totals.totalRevenue.toFixed(2)} Tk`, 14, finalY + 14);
+            doc.text(`Total Paid: ${totals.totalPaid.toFixed(2)} Tk`, 14, finalY + 21);
+            doc.text(`Total Due: ${totals.totalDue.toFixed(2)} Tk`, 14, finalY + 28);
+
+            // Save PDF
+            doc.save(`sales_report_${formatDateForFilename()}.pdf`);
+            
+            toast.success('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF');
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     const totals = calculateTotals();
-    const hasActiveFilters = filterForm.data.search || filterForm.data.status || filterForm.data.date_from || filterForm.data.date_to;
 
     const isPaymentDisabled = (sale) => {
         return sale.due_amount <= 0 && sale.shadow_due_amount <= 0;
@@ -258,62 +515,6 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                 subtitle={isShadowUser ? "View sales data" : "Manage your product sales"}
             >
                 <div className="flex items-center gap-3 flex-wrap">
-                    <div className="join">
-                        <input
-                            type="search"
-                            value={filterForm.data.search}
-                            onChange={(e) => filterForm.setData("search", e.target.value)}
-                            onKeyPress={handleKeyPress}
-                            placeholder="Search invoice or customer..."
-                            className="input input-sm input-bordered join-item"
-                        />
-                    </div>
-
-                    <select
-                        value={filterForm.data.status}
-                        onChange={(e) => filterForm.setData("status", e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        className="select select-sm select-bordered"
-                    >
-                        <option value="">All Status</option>
-                        <option value="pending">Pending</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
-                    </select>
-
-                    <input
-                        type="date"
-                        value={filterForm.data.date_from}
-                        onChange={(e) => filterForm.setData("date_from", e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        className="input input-sm input-bordered"
-                    />
-
-                    <input
-                        type="date"
-                        value={filterForm.data.date_to}
-                        onChange={(e) => filterForm.setData("date_to", e.target.value)}
-                        onKeyPress={handleKeyPress}
-                        className="input input-sm input-bordered"
-                    />
-
-                    {hasActiveFilters && (
-                        <button
-                            onClick={clearFilters}
-                            className="btn btn-sm btn-ghost"
-                        >
-                            Clear Filters
-                        </button>
-                    )}
-
-                    <button
-                        onClick={handleFilter}
-                        className="btn btn-sm bg-[#1e4d2b] text-white join-item"
-                    >
-                        <Search size={16} />
-                        Search
-                    </button>
-
                     <Link
                         className="btn bg-[#1e4d2b] text-white btn-sm"
                         href={route("sales.create")}
@@ -323,6 +524,161 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                     </Link>
                 </div>
             </PageHeader>
+
+            {/* Collapsible Filter Card */}
+            <div className="bg-base-100 rounded-box border border-base-content/5 mb-6 overflow-hidden">
+                {/* Card Header with Toggle Button */}
+                <div 
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-base-200 transition-colors"
+                    onClick={toggleFilters}
+                >
+                    <div className="flex items-center gap-2">
+                        <Filter size={18} className="text-[#1e4d2b]" />
+                        <h3 className="text-lg font-semibold text-neutral">Filters</h3>
+                        {hasActiveFilters() && (
+                            <span className="badge badge-sm bg-[#1e4d2b] text-white ml-2">Active</span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                clearFilters();
+                            }}
+                            className="btn btn-ghost btn-sm"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                handleFilter();
+                            }}
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
+                        >
+                            <Search size={14} />
+                            Search
+                        </button>
+                        <button className="btn btn-ghost btn-sm">
+                            {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Filter Content - Collapsible */}
+                {showFilters && (
+                    <div className="p-4 border-t border-base-content/5">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            {/* Search Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Search</legend>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        className="input input-sm w-full"
+                                        placeholder="Invoice or customer..."
+                                        value={filterForm.data.search}
+                                        onChange={(e) => filterForm.setData("search", e.target.value)}
+                                        onKeyPress={handleKeyPress}
+                                    />
+                                    <Search className="absolute right-2 top-2 text-gray-400" size={16} />
+                                </div>
+                            </fieldset>
+
+                            {/* Status Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Status</legend>
+                                <select
+                                    value={filterForm.data.status}
+                                    onChange={(e) => filterForm.setData("status", e.target.value)}
+                                    className="select select-sm w-full"
+                                >
+                                    <option value="">All Status</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="paid">Paid</option>
+                                    <option value="partial">Partial</option>
+                                    <option value="partially_returned">Partially Returned</option>
+                                    <option value="fully_returned">Fully Returned</option>
+                                    <option value="cancelled">Cancelled</option>
+                                </select>
+                            </fieldset>
+
+                            {/* Date From Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Date From</legend>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        className="input input-sm w-full"
+                                        value={formatDateForInput(filterForm.data.date_from)}
+                                        onChange={(e) => filterForm.setData("date_from", e.target.value)}
+                                    />
+                                </div>
+                            </fieldset>
+
+                            {/* Date To Filter */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Date To</legend>
+                                <div className="relative">
+                                    <input
+                                        type="date"
+                                        className="input input-sm w-full"
+                                        value={formatDateForInput(filterForm.data.date_to)}
+                                        onChange={(e) => filterForm.setData("date_to", e.target.value)}
+                                        min={formatDateForInput(filterForm.data.date_from)}
+                                    />
+                                </div>
+                            </fieldset>
+                        </div>
+
+                        {/* Active Filters Display */}
+                        {hasActiveFilters() && (
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                <span className="font-medium">Active Filters:</span>
+                                {filterForm.data.search && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Search: {filterForm.data.search}
+                                    </span>
+                                )}
+                                {filterForm.data.status && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Status: {filterForm.data.status}
+                                    </span>
+                                )}
+                                {filterForm.data.date_from && (
+                                    <span className="badge badge-outline badge-sm">
+                                        From: {new Date(filterForm.data.date_from).toLocaleDateString()}
+                                    </span>
+                                )}
+                                {filterForm.data.date_to && (
+                                    <span className="badge badge-outline badge-sm">
+                                        To: {new Date(filterForm.data.date_to).toLocaleDateString()}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Download Button */}
+            <div className="flex justify-end mb-4">
+                <div className="dropdown dropdown-end">
+                    <button 
+                        className="btn bg-green-600 text-white btn-sm"
+                        disabled={isDownloading || sales?.data?.length === 0}
+                        tabIndex={0}
+                    >
+                        <Download size={14} />
+                        {isDownloading ? 'Downloading...' : 'Download Report'}
+                    </button>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                        <li><button onClick={downloadCSV} className="btn btn-ghost btn-sm w-full text-left">CSV Format</button></li>
+                        <li><button onClick={downloadExcel} className="btn btn-ghost btn-sm w-full text-left">Excel Format</button></li>
+                        <li><button onClick={downloadPDF} className="btn btn-ghost btn-sm w-full text-left">PDF Format</button></li>
+                    </ul>
+                </div>
+            </div>
 
             <div className="print:hidden">
                 <div className="overflow-x-auto">
@@ -408,8 +764,6 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                     View
                                                 </Link>
 
-
-
                                                 {sale.shadow_type == 'shadow' && !isShadowUser && (
                                                     <>
                                                         <Link
@@ -473,9 +827,6 @@ export default function SalesIndex({ sales, filters, isShadowUser, accounts }) {
                                                         </button>
                                                     )
                                                 )}
-
-
-
                                             </div>
                                         </td>
                                     </tr>

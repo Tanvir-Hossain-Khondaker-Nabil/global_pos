@@ -11,7 +11,9 @@ use Inertia\Inertia;
 class PaymentController extends Controller
 {
 
-    //index function
+    /**
+     * Display a listing of the resource.
+     */
     public function index(Request $request)
     {
         $isShadowUser = Auth::user()->type === 'shadow';
@@ -27,6 +29,12 @@ class PaymentController extends Controller
         ])
             ->where('status', '!=', 'cancelled')
             ->search($search)
+            ->when(request()->filled(['start_date', 'end_date']), function ($q) {
+                $q->whereBetween('created_at', [
+                    request()->start_date,
+                    request()->end_date
+                ]);
+            })
             ->latest()
             ->paginate(20)
             ->withQueryString();

@@ -26,13 +26,23 @@ import {
   AlignRight,
   Tag,
   Copy,
+  Download,
+  Filter,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from "react-toastify";
 
 export default function PurchaseList({ purchases, filters, isShadowUser, accounts }) {
   const { auth } = usePage().props;
   const { t, locale } = useTranslation();
+  const [showFilters, setShowFilters] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const safePurchases = purchases?.data || [];
 
@@ -40,6 +50,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     search: filters?.search || "",
     status: filters?.status || "",
     date: filters?.date || "",
+    date_from: filters?.date_from || "",
+    date_to: filters?.date_to || "",
   });
 
   // ===================== Payment Modal =====================
@@ -114,6 +126,15 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     }
   };
 
+  // Format date for filename
+  const formatDateForFilename = () => {
+    const now = new Date();
+    return now.toISOString().split('T')[0] + '_' + 
+           now.getHours() + '-' + 
+           now.getMinutes() + '-' + 
+           now.getSeconds();
+  };
+
   const formatAccountBalance = (balance) => {
     const num = parseFloat(balance) || 0;
     return new Intl.NumberFormat("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num);
@@ -138,11 +159,21 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
   const handleFilter = (field, value) => {
     const newFilters = { ...localFilters, [field]: value };
     setLocalFilters(newFilters);
+  };
 
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      applyFilters();
+    }
+  };
+
+  const applyFilters = () => {
     const qs = {};
-    if (newFilters.search) qs.search = newFilters.search;
-    if (newFilters.status) qs.status = newFilters.status;
-    if (newFilters.date) qs.date = newFilters.date;
+    if (localFilters.search) qs.search = localFilters.search;
+    if (localFilters.status) qs.status = localFilters.status;
+    if (localFilters.date) qs.date = localFilters.date;
+    if (localFilters.date_from) qs.date_from = localFilters.date_from;
+    if (localFilters.date_to) qs.date_to = localFilters.date_to;
 
     router.get(route("purchase.list"), qs, {
       preserveScroll: true,
@@ -152,8 +183,30 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
   };
 
   const clearFilters = () => {
-    setLocalFilters({ search: "", status: "", date: "" });
+    setLocalFilters({ 
+      search: "", 
+      status: "", 
+      date: "", 
+      date_from: "", 
+      date_to: "" 
+    });
     router.get(route("purchase.list"), {}, { replace: true });
+  };
+
+  // Toggle filter section
+  const toggleFilters = () => {
+    setShowFilters(!showFilters);
+  };
+
+  // Check if any filter is active
+  const hasActiveFilters = () => {
+    return localFilters.search || localFilters.status || localFilters.date || localFilters.date_from || localFilters.date_to;
+  };
+
+  // Format date for input
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return '';
+    return new Date(dateString).toISOString().split('T')[0];
   };
 
   const handleDelete = (id) => {
@@ -618,6 +671,239 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     printWindow.document.close();
 
     closeBarcodeModal();
+  };
+
+  // ===================== Prepare data for export =====================
+  const prepareExportData = () => {
+    return safePurchases.map(purchase => {
+      const amounts = getDisplayAmounts(purchase);
+      
+      return {
+        'Purchase No': purchase.purchase_no,
+        'Supplier': purchase.supplier?.name || 'N/A',
+        'Warehouse': purchase.warehouse?.name || 'N/A',
+        'Total (Tk)': amounts.total.toFixed(2),
+        'Paid (Tk)': amounts.paid.toFixed(2),
+        'Due (Tk)': amounts.due.toFixed(2),
+        'Payment Status': amounts.payment_status,
+        'Purchase Status': purchase.status || 'N/A',
+        'Date': formatDate(purchase.purchase_date),
+        'Items Count': purchase.items?.length || 0,
+        'Created By': purchase.creator?.name || 'System'
+      };
+    });
+  };
+
+  // ===================== Download as CSV =====================
+  const downloadCSV = () => {
+    try {
+      setIsDownloading(true);
+      const exportData = prepareExportData();
+      
+      if (exportData.length === 0) {
+        toast.warning('No data to export');
+        return;
+      }
+
+      const headers = Object.keys(exportData[0]);
+      const csvRows = [];
+      
+      csvRows.push(headers.join(','));
+      
+      for (const row of exportData) {
+        const values = headers.map(header => {
+          const value = row[header]?.toString() || '';
+          return `"${value.replace(/"/g, '""')}"`;
+        });
+        csvRows.push(values.join(','));
+      }
+
+      csvRows.push('');
+      csvRows.push('FILTER INFORMATION');
+      csvRows.push(`Search,${localFilters.search || 'None'}`);
+      csvRows.push(`Status,${localFilters.status || 'All'}`);
+      csvRows.push(`Date,${localFilters.date || 'None'}`);
+      csvRows.push(`Date From,${localFilters.date_from || 'None'}`);
+      csvRows.push(`Date To,${localFilters.date_to || 'None'}`);
+
+      csvRows.push('');
+      csvRows.push('SUMMARY STATISTICS');
+      const totals = safePurchases.reduce((acc, purchase) => {
+        const amounts = getDisplayAmounts(purchase);
+        acc.total += amounts.total;
+        acc.paid += amounts.paid;
+        acc.due += amounts.due;
+        return acc;
+      }, { total: 0, paid: 0, due: 0 });
+      
+      csvRows.push(`Total Purchases,${safePurchases.length}`);
+      csvRows.push(`Total Amount (Tk),${totals.total.toFixed(2)}`);
+      csvRows.push(`Total Paid (Tk),${totals.paid.toFixed(2)}`);
+      csvRows.push(`Total Due (Tk),${totals.due.toFixed(2)}`);
+
+      const csvString = csvRows.join('\n');
+      
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.href = url;
+      link.download = `purchases_report_${formatDateForFilename()}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      toast.success('CSV downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading CSV:', error);
+      toast.error('Failed to download CSV');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // ===================== Download as Excel =====================
+  const downloadExcel = () => {
+    try {
+      setIsDownloading(true);
+      const exportData = prepareExportData();
+      
+      if (exportData.length === 0) {
+        toast.warning('No data to export');
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      const filterData = [
+        { 'Filter': 'Search', 'Value': localFilters.search || 'None' },
+        { 'Filter': 'Status', 'Value': localFilters.status || 'All' },
+        { 'Filter': 'Date', 'Value': localFilters.date || 'None' },
+        { 'Filter': 'Date From', 'Value': localFilters.date_from || 'None' },
+        { 'Filter': 'Date To', 'Value': localFilters.date_to || 'None' }
+      ];
+      const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+      const totals = safePurchases.reduce((acc, purchase) => {
+        const amounts = getDisplayAmounts(purchase);
+        acc.total += amounts.total;
+        acc.paid += amounts.paid;
+        acc.due += amounts.due;
+        return acc;
+      }, { total: 0, paid: 0, due: 0 });
+      
+      const summaryData = [
+        { 'Metric': 'Total Purchases', 'Value': safePurchases.length },
+        { 'Metric': 'Total Amount (Tk)', 'Value': totals.total.toFixed(2) },
+        { 'Metric': 'Total Paid (Tk)', 'Value': totals.paid.toFixed(2) },
+        { 'Metric': 'Total Due (Tk)', 'Value': totals.due.toFixed(2) }
+      ];
+      const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Purchases');
+      XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+      XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+      XLSX.writeFile(wb, `purchases_report_${formatDateForFilename()}.xlsx`);
+      
+      toast.success('Excel file downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading Excel:', error);
+      toast.error('Failed to download Excel file');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // ===================== Download as PDF =====================
+  const downloadPDF = () => {
+    try {
+      setIsDownloading(true);
+      const exportData = prepareExportData();
+      
+      if (exportData.length === 0) {
+        toast.warning('No data to export');
+        return;
+      }
+
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      doc.setFontSize(16);
+      doc.setTextColor(30, 77, 43);
+      doc.text('Purchase Report', 14, 15);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+      doc.setFontSize(9);
+      doc.setTextColor(80, 80, 80);
+      doc.text(`Search: ${localFilters.search || 'None'} | Status: ${localFilters.status || 'All'}`, 14, 29);
+      doc.text(`Date: ${localFilters.date || 'None'} | Date Range: ${localFilters.date_from || 'Start'} to ${localFilters.date_to || 'End'}`, 14, 35);
+
+      const tableColumns = [
+        'Purchase No',
+        'Supplier',
+        'Total',
+        'Paid',
+        'Due',
+        'Status',
+        'Date'
+      ];
+
+      const tableRows = exportData.map(item => [
+        item['Purchase No'].substring(0, 10) + (item['Purchase No'].length > 10 ? '...' : ''),
+        item['Supplier'].substring(0, 15) + (item['Supplier'].length > 15 ? '...' : ''),
+        item['Total (Tk)'],
+        item['Paid (Tk)'],
+        item['Due (Tk)'],
+        item['Payment Status'],
+        item['Date']
+      ]);
+
+      autoTable(doc, {
+        head: [tableColumns],
+        body: tableRows,
+        startY: 40,
+        theme: 'grid',
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 77, 43], textColor: [255, 255, 255] },
+        alternateRowStyles: { fillColor: [245, 245, 245] }
+      });
+
+      const totals = safePurchases.reduce((acc, purchase) => {
+        const amounts = getDisplayAmounts(purchase);
+        acc.total += amounts.total;
+        acc.paid += amounts.paid;
+        acc.due += amounts.due;
+        return acc;
+      }, { total: 0, paid: 0, due: 0 });
+      
+      const finalY = doc.lastAutoTable.finalY + 10;
+      
+      doc.setFontSize(12);
+      doc.setTextColor(30, 77, 43);
+      doc.text('Summary Statistics', 14, finalY);
+      
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      doc.text(`Total Purchases: ${safePurchases.length}`, 14, finalY + 7);
+      doc.text(`Total Amount: ${totals.total.toFixed(2)} Tk`, 14, finalY + 14);
+      doc.text(`Total Paid: ${totals.paid.toFixed(2)} Tk`, 14, finalY + 21);
+      doc.text(`Total Due: ${totals.due.toFixed(2)} Tk`, 14, finalY + 28);
+
+      doc.save(`purchases_report_${formatDateForFilename()}.pdf`);
+      
+      toast.success('PDF downloaded successfully');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+      toast.error('Failed to download PDF');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   // ===================== UI Helper counts =====================
@@ -1103,32 +1389,154 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         subtitle={t("purchase.manage_purchases", "Inbound inventory tracking index")}
       >
         <div className="flex flex-wrap gap-2 items-center">
-          <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              onChange={(e) => handleFilter("search", e.target.value)}
-              value={localFilters.search}
-              placeholder="ID or Number..."
-              className="input input-sm input-bordered rounded-lg pl-8 font-bold"
-            />
-          </div>
-
-          <select
-            onChange={(e) => handleFilter("status", e.target.value)}
-            value={localFilters.status}
-            className="select select-sm select-bordered rounded-lg font-bold"
+          <Link
+            href={route("purchase.create")}
+            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${
+              isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"
+            }`}
           >
-            <option value="">All Status</option>
-            <option value="pending">Pending</option>
-            <option value="completed">Completed</option>
-            <option value="cancelled">Cancelled</option>
-          </select>
+            <Plus size={15} /> {t("purchase.new_purchase", "New Entry")}
+          </Link>
+        </div>
+      </PageHeader>
 
-          <button type="button" onClick={clearFilters} className="btn btn-sm btn-ghost" title="Clear Filters">
-            <X size={16} />
-          </button>
+      {/* ===================== Collapsible Filter Card ===================== */}
+      <div className="bg-base-100 rounded-box border border-base-content/5 mb-6 overflow-hidden">
+        <div 
+          className="flex items-center justify-between p-4 cursor-pointer hover:bg-base-200 transition-colors"
+          onClick={toggleFilters}
+        >
+          <div className="flex items-center gap-2">
+            <Filter size={18} className="text-primary" />
+            <h3 className="text-lg font-semibold text-neutral">Filters</h3>
+            {hasActiveFilters() && (
+              <span className="badge badge-sm bg-primary text-white ml-2">Active</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                clearFilters();
+              }}
+              className="btn btn-ghost btn-sm"
+            >
+              Clear
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                applyFilters();
+              }}
+              className="btn bg-primary text-white btn-sm"
+            >
+              <Search size={14} />
+              Search
+            </button>
+            <button className="btn btn-ghost btn-sm">
+              {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+          </div>
+        </div>
 
+        {showFilters && (
+          <div className="p-4 border-t border-base-content/5">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+              <fieldset className="fieldset">
+                <legend className="fieldset-legend">Search</legend>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="search"
+                    onChange={(e) => handleFilter("search", e.target.value)}
+                    value={localFilters.search}
+                    placeholder="ID or Number..."
+                    className="input input-sm input-bordered w-full pl-8"
+                    onKeyPress={handleKeyPress}
+                  />
+                </div>
+              </fieldset>
+
+              <fieldset className="fieldset">
+                <legend className="fieldset-legend">Status</legend>
+                <select
+                  onChange={(e) => handleFilter("status", e.target.value)}
+                  value={localFilters.status}
+                  className="select select-sm select-bordered w-full"
+                >
+                  <option value="">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </fieldset>
+
+                      <fieldset className="fieldset">
+                <legend className="fieldset-legend">Date From</legend>
+                <div className="relative">
+                  <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="date"
+                    onChange={(e) => handleFilter("date_from", e.target.value)}
+                    value={formatDateForInput(localFilters.date_from)}
+                    className="input input-sm input-bordered w-full pl-8"
+                  />
+                </div>
+              </fieldset>
+
+              <fieldset className="fieldset">
+                <legend className="fieldset-legend">Date To</legend>
+                <div className="relative">
+                  <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="date"
+                    onChange={(e) => handleFilter("date_to", e.target.value)}
+                    value={formatDateForInput(localFilters.date_to)}
+                    className="input input-sm input-bordered w-full pl-8"
+                    min={formatDateForInput(localFilters.date_from)}
+                  />
+                </div>
+              </fieldset>
+
+            </div>
+
+            {hasActiveFilters() && (
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                <span className="font-medium">Active Filters:</span>
+                {localFilters.search && (
+                  <span className="badge badge-outline badge-sm">
+                    Search: {localFilters.search}
+                  </span>
+                )}
+                {localFilters.status && (
+                  <span className="badge badge-outline badge-sm">
+                    Status: {localFilters.status}
+                  </span>
+                )}
+                {localFilters.date && (
+                  <span className="badge badge-outline badge-sm">
+                    Date: {new Date(localFilters.date).toLocaleDateString()}
+                  </span>
+                )}
+                {localFilters.date_from && (
+                  <span className="badge badge-outline badge-sm">
+                    From: {new Date(localFilters.date_from).toLocaleDateString()}
+                  </span>
+                )}
+                {localFilters.date_to && (
+                  <span className="badge badge-outline badge-sm">
+                    To: {new Date(localFilters.date_to).toLocaleDateString()}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ===================== Action Buttons ===================== */}
+      <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+        <div className="flex flex-wrap gap-2 items-center">
           {/* Print selected */}
           <button
             type="button"
@@ -1147,17 +1555,25 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
               <X size={16} /> Clear ({selectedPurchaseIds.size})
             </button>
           )}
-
-          <Link
-            href={route("purchase.create")}
-            className={`btn btn-sm border-none font-black uppercase tracking-widest text-[10px] ${
-              isShadowUser ? "bg-amber-500 text-black hover:bg-amber-600" : "bg-primary text-white hover:bg-primary"
-            }`}
-          >
-            <Plus size={15} /> {t("purchase.new_purchase", "New Entry")}
-          </Link>
         </div>
-      </PageHeader>
+
+        {/* Download Button */}
+        <div className="dropdown dropdown-end">
+          <button 
+            className="btn bg-green-600 text-white btn-sm"
+            disabled={isDownloading || safePurchases.length === 0}
+            tabIndex={0}
+          >
+            <Download size={14} />
+            {isDownloading ? 'Downloading...' : 'Download Report'}
+          </button>
+          <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+            <li><button onClick={downloadCSV} className="btn btn-ghost btn-sm w-full text-left">CSV Format</button></li>
+            <li><button onClick={downloadExcel} className="btn btn-ghost btn-sm w-full text-left">Excel Format</button></li>
+            <li><button onClick={downloadPDF} className="btn btn-ghost btn-sm w-full text-left">PDF Format</button></li>
+          </ul>
+        </div>
+      </div>
 
       {/* ===================== Table ===================== */}
       <div className="overflow-x-auto rounded-xl border border-gray-100">

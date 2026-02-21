@@ -287,7 +287,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/{sale}/update', [SalesController::class, 'update'])->middleware('permission:sales.edit')->name('sales.update');
     Route::delete('/{sale}/rejected', [SalesController::class, 'rejected'])->middleware('permission:sales.delete')->name('sales.rejected');
     Route::post('/sales/{sale}/payments', [SalesController::class, 'storePayment'])->middleware('permission:sales.payments.create')->name('sales.payments.store');
-
+    Route::get('/sales-items/download', [SalesController::class, 'downloadItem'])->name('salesItems.download');
     //modules route
     Route::resource('modules', ModuleController::class)->names([
         'index' => 'modules.index',
@@ -331,11 +331,11 @@ Route::middleware('auth')->group(function () {
             ->name('profile.view');
 
         Route::get('/business/profile', 'businessProfileView')
-            ->middleware('permission:business_profile.view')
+            // ->middleware('permission:business_profile.view')
             ->name('businessProfile.view');
 
         Route::post('/business/profile/{id?}', 'businessProfileUpdate')
-            ->middleware('permission:business_profile.edit')
+            // ->middleware('permission:business_profile.edit')
             ->name('businessProfile.update');
 
         Route::post('/profile', 'profileUpdate')

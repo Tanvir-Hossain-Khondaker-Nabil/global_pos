@@ -320,11 +320,10 @@ class SalesController extends Controller
     public function store(Request $request)
     {
         try {
-            $sale = $this->storeManage($request,'inventory');
+            $sale = $this->storeManage($request, 'inventory');
 
             return to_route('sales.show', $sale->id)
-                   ->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
-
+                ->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
         } catch (\Throwable $e) {
             return back()->withErrors($e->getMessage())->withInput();
         }
@@ -341,7 +340,7 @@ class SalesController extends Controller
             $sale = $this->storeManage($request, 'pos');
 
             return to_route('salesPrint.show', $sale->id)
-                   ->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
+                ->with('success', 'Sale created successfully! Invoice: ' . $sale->invoice_no);
         } catch (\Throwable $e) {
             return back()->withErrors($e->getMessage())->withInput();
         }
@@ -385,7 +384,6 @@ class SalesController extends Controller
             'total_installments' => 'nullable|integer',
         ];
 
-
         // Validate at least one type of items
         if (empty($request->items) && empty($request->pickup_items)) {
             throw new \Exception('At least one item (stock or pickup) is required.');
@@ -428,11 +426,9 @@ class SalesController extends Controller
 
         if ($discountType == 'flat_discount') {
             $discount = (float) ($request->flat_discount ?? 0);
-        } else
-        {
+        } else {
             $discount = (float) ($request->discount_rate ?? 0);
         }
-
 
         DB::beginTransaction();
 
@@ -473,16 +469,14 @@ class SalesController extends Controller
                 !$request->filled('phone')
             ) {
                 $customer = Customer::where('phone', '100100100')
-                ->where('is_active', Customer::IS_ACTIVE)
-                ->where('created_by', Auth::id())
-                ->where('outlet_id', Auth::user()->current_outlet_id)
-                ->first() ;
+                    ->where('is_active', Customer::IS_ACTIVE)
+                    ->where('created_by', Auth::id())
+                    ->where('outlet_id', Auth::user()->current_outlet_id)
+                    ->first();
 
-                if($customer)
-                {
-                   $customerId =   $customer->id;
-                } else
-                {
+                if ($customer) {
+                    $customerId =   $customer->id;
+                } else {
                     $customer = Customer::create([
                         'customer_name' => 'Walk-In-Customer',
                         'phone' => '100100100',
@@ -495,7 +489,6 @@ class SalesController extends Controller
 
                     $customerId = $customer->id;
                 }
-
             } elseif (!empty($request->customer_id)) {
                 $customerId = (int) $request->customer_id;
             } else {
@@ -1363,15 +1356,32 @@ class SalesController extends Controller
         ]);
     }
 
+
+    /**
+     * Get all sales items
+     */
     public function allSalesItems()
     {
         $user = Auth::user();
         $isShadowUser = $user->type === 'shadow';
 
-        $salesItems = SaleItem::with(['sale.customer', 'product', 'variant', 'stock', 'warehouse', 'damage'])
+        $salesItems = SaleItem::with([
+            'sale.customer',
+            'product',
+            'variant',
+            'stock',
+            'warehouse',
+            'damage'
+        ])
             ->where('status', '!=', 'cancelled')
-            ->orderBy('created_at', 'desc')
+            ->when(request()->filled(['start_date', 'end_date']), function ($q) {
+                $q->whereBetween('created_at', [
+                    request()->start_date,
+                    request()->end_date
+                ]);
+            })
             ->filter(request()->all())
+            ->orderBy('created_at', 'desc')
             ->paginate(15)
             ->withQueryString();
 
@@ -1386,6 +1396,8 @@ class SalesController extends Controller
             'isShadowUser' => $isShadowUser,
         ]);
     }
+
+
     public function showItem($id)
     {
         $user = Auth::user();

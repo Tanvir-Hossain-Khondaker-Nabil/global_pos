@@ -113,15 +113,12 @@ const outletLoggedInMenu = [
   { title: "Add Sale (POS)", icon: "baggage-claim", route: "sales.add", active: "sales.add", category: "Sales", permission: "sales.create" },
   { title: "All Orders (Inventory)", icon: "badge-cent", route: "sales.index", active: "sales.index", category: "Sales", permission: "sales.view" },
   { title: "All Orders (POS)", icon: "badge-cent", route: "salesPos.index", active: "salesPos.index", category: "Sales", permission: "sales.view" },
-  { title: "All Sales Items", icon: "badge-cent", route: "salesItems.list", active: "salesItems.list", category: "Sales", permission: "sales.view" },
   { title: "All Sales Return", icon: "badge-cent", route: "salesReturn.list", active: "salesReturn.list", category: "Sales", permission: "salesReturn.list" },
 
   // Purchase
+  { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
   { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Purchase", permission: "purchase.view" },
   { title: "Local Purchase", icon: "receipt", route: "purchase.list_index", active: "purchase.list_index", category: "Purchase", permission: "purchase.list_index" },
-  { title: "Add Purchase", icon: "arrow-right-left", route: "purchase.create", active: "purchase.create", category: "Purchase", permission: "purchase.create" },
-  { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Purchase", permission: "purchase.items_view" },
-
   // Purchase Return
   { title: "Purchase Return", icon: "receipt", route: "purchase-returns.list", active: "purchase-returns.list", category: "Purchase", permission: "purchase_return.view" },
   { title: "Add Purchase Return", icon: "arrow-right-left", route: "purchase-returns.create", active: "purchase-returns.create", category: "Purchase", permission: "purchase_return.create" },
@@ -138,10 +135,10 @@ const outletLoggedInMenu = [
   { title: "Product Ledger", icon: "list-checks", route: "product-ledger.index", active: "product-ledger.index", category: "Inventory", permission: "product_ledger.view" },
 
 
+
   // Finance
   { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expense.category_view" },
   { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expense.view" },
-  { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Finance", permission: "payments.view" },
   { title: "Accounts", icon: "dollar-sign", route: "accounts.index", active: "accounts.index", category: "Finance", permission: "accounts.view" },
   { title: "Ledgers", icon: "box", route: "ledgers.index", active: "ledgers.index", category: "Finance", permission: "ledger.view" },
 
@@ -153,6 +150,13 @@ const outletLoggedInMenu = [
 
   // Partners
   { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
+
+
+  // Reports all
+  { title: "All Sales Items", icon: "badge-cent", route: "salesItems.list", active: "salesItems.list", category: "Reports", permission: "sales.view" },
+  { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Reports", permission: "purchase.items_view" },
+  { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Reports", permission: "payments.view" },
+
 
   // CRM
   { title: "Customer", icon: "user-plus", route: "customer.index", active: "customer.index", category: "CRM", permission: "customer.view" },
@@ -346,6 +350,7 @@ export default function Sidebar({ status, setStatus }) {
       Subscriptions: t("auth.category_subscriptions", "Subscriptions"),
       Partners: t("auth.category_partners", "Partners"),
       CRM: t("auth.category_crm", "CRM"),
+      Reports: t("auth.category_reports", "Reports"),
       Admin: t("auth.category_admin", "Admin"),
       HR: t("auth.category_hr", "HR"),
       Outlets: t("auth.category_outlets", "Outlets"),
@@ -386,13 +391,10 @@ export default function Sidebar({ status, setStatus }) {
     const categories = {};
 
     menuItems.forEach((item) => {
-      // ✅ Permission gate (SuperAdmin bypass)
       if (!isSuperAdmin && !can(item.permission)) return;
 
-      // ✅ Outlet login অবস্থায় => Users/Roles/Outlets hide (শুধু non-superadmin)
       if (!isSuperAdmin && isLoggedIntoOutlet && (item.category === "Admin" || item.category === "Outlets")) return;
 
-      // ✅ Outlet user + outlet login => Investments hide (শুধু non-superadmin)
       if (!isSuperAdmin && isOutletUser && isLoggedIntoOutlet && item.category === "Investments") return;
 
       const category = item.category || "General";
