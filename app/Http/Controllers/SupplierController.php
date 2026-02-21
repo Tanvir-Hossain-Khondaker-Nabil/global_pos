@@ -18,36 +18,38 @@ use App\Models\Purchase;
 
 class SupplierController extends Controller
 {
-    // Display supplier list
+    
+    /**
+     * Display a listing of suppliers.
+     */
     public function index(Request $request)
     {
-        $filters = $request->only('search');
+        $filters = $request->only(['search', 'status', 'date_from', 'date_to']);
 
-        $suppliers = Supplier::with(['purchases','dealership'])->when($filters['search'] ?? null, function ($query, $search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('contact_person', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('company', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
-            });
-        })
+        $suppliers = Supplier::with(['purchases', 'dealership'])
+            ->search($filters['search'] ?? null)
+            ->status($filters['status'] ?? null)
+            ->dateRange(
+                $filters['date_from'] ?? null,
+                $filters['date_to'] ?? null
+            )
             ->withCount('purchases')
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('Supplier/Index', [
-            'suppliers' => $suppliers,
-            'filters' => $filters,
-            'dealerships' => DillerShip::all(),
-            'accounts' => Account::where('is_active',true)->get(),
+            'suppliers'    => $suppliers,
+            'filters'      => $filters,
+            'dealerships'  => DillerShip::all(),
+            'accounts'     => Account::where('is_active', true)->get(),
         ]);
     }
 
 
-
-    // Store new supplier
+    /**
+     * Store a newly created supplier in storage.
+     */
     public function store(SupplierStore $request)
     {
         $validated = $request->validated();
@@ -154,7 +156,6 @@ class SupplierController extends Controller
     }
 
 
-
     // Edit supplier - return data for form
     public function edit($id)
     {
@@ -164,7 +165,7 @@ class SupplierController extends Controller
             'data' => $supplier
         ]);
     }
-    
+
 
     // Update supplier
     public function update(Request $request, $id)
@@ -212,7 +213,8 @@ class SupplierController extends Controller
 
     public function show($id)
     {
-        $supplier = Supplier::with(['dealership',
+        $supplier = Supplier::with([
+            'dealership',
             'purchases' => function ($query) {
                 $query->with([
                     'items.product',

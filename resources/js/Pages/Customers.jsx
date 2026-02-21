@@ -31,11 +31,18 @@ import {
     Wallet,
     X,
     Filter,
+    Download,
+    ChevronDown,
+    ChevronUp,
 } from "lucide-react";
 import { useState } from "react";
 import PageHeader from "../components/PageHeader";
 import Pagination from "../components/Pagination";
 import { useTranslation } from "../hooks/useTranslation";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from "react-toastify";
 
 export default function Customers({ customers, filters, accounts }) {
     const { auth } = usePage().props;
@@ -46,11 +53,14 @@ export default function Customers({ customers, filters, accounts }) {
     const [selectedCustomer, setSelectedCustomer] = useState(null);
     const [editProcessing, setEditProcessing] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     // Handle search and filters
     const [localFilters, setLocalFilters] = useState({
         search: filters.search || "",
         status: filters.status || "",
+        date_from: filters.date_from || "",
+        date_to: filters.date_to || "",
     });
 
     const [paymentData, setPaymentData] = useState({
@@ -112,11 +122,21 @@ export default function Customers({ customers, filters, accounts }) {
         setClearDueModel(false);
     };
 
-    // Handle search
-    const handleFilter = () => {
+    // Handle filter changes
+    const handleFilter = (field, value) => {
+        setLocalFilters(prev => ({ ...prev, [field]: value }));
+    };
+
+    const applyFilters = () => {
+        const queryParams = {};
+        if (localFilters.search) queryParams.search = localFilters.search;
+        if (localFilters.status) queryParams.status = localFilters.status;
+        if (localFilters.date_from) queryParams.date_from = localFilters.date_from;
+        if (localFilters.date_to) queryParams.date_to = localFilters.date_to;
+
         router.get(
             route("customer.index"),
-            { search: localFilters.search, status: localFilters.status },
+            queryParams,
             {
                 preserveScroll: true,
                 preserveState: true,
@@ -126,14 +146,30 @@ export default function Customers({ customers, filters, accounts }) {
     };
 
     const clearFilters = () => {
-        setLocalFilters({ search: "", status: "" });
+        setLocalFilters({ search: "", status: "", date_from: "", date_to: "" });
         router.get(route("customer.index"), {}, { replace: true });
     };
 
     const handleKeyPress = (e) => {
         if (e.key === "Enter") {
-            handleFilter();
+            applyFilters();
         }
+    };
+
+    // Format date for input
+    const formatDateForInput = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toISOString().split('T')[0];
+    };
+
+    // Toggle filter section
+    const toggleFilters = () => {
+        setShowFilters(!showFilters);
+    };
+
+    // Check if any filter is active
+    const hasActiveFilters = () => {
+        return localFilters.search || localFilters.status || localFilters.date_from || localFilters.date_to;
     };
 
     // Handle customer form submission
@@ -435,6 +471,15 @@ export default function Customers({ customers, filters, accounts }) {
         }
     };
 
+    // Format date for filename
+    const formatDateForFilename = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0] + '_' + 
+               now.getHours() + '-' + 
+               now.getMinutes() + '-' + 
+               now.getSeconds();
+    };
+
     // Get payment method icon
     const getPaymentIcon = (type) => {
         switch (type) {
@@ -543,7 +588,221 @@ export default function Customers({ customers, filters, accounts }) {
         return options;
     };
 
-    const hasActiveFilters = localFilters.search || localFilters.status;
+    // Prepare data for export
+    const prepareExportData = () => {
+        return customers.data.map(customer => {
+            const dueAmount = calculateDueAmount(customer.sales);
+            const customerAccount = getCustomerAccount(customer.account_id);
+            
+            return {
+                'Name': customer.customer_name,
+                'Phone': customer.phone || 'N/A',
+                'Email': customer.email || 'N/A',
+                'Address': customer.address || 'N/A',
+                'Advance (Tk)': formatCurrency(customer.advance_amount || 0),
+                'Due (Tk)': formatCurrency(dueAmount),
+                'Status': customer.is_active ? 'Active' : 'Inactive',
+                'Default Account': customerAccount?.name || 'N/A',
+                'Sales Count': customer.sales?.length || 0,
+                'Created At': formatDate(customer.created_at)
+            };
+        });
+    };
+
+    // Download as CSV
+    const downloadCSV = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [];
+            
+            csvRows.push(headers.join(','));
+            
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            csvRows.push('');
+            csvRows.push('FILTER INFORMATION');
+            csvRows.push(`Search,${localFilters.search || 'None'}`);
+            csvRows.push(`Status,${localFilters.status || 'All'}`);
+            csvRows.push(`Date From,${localFilters.date_from || 'None'}`);
+            csvRows.push(`Date To,${localFilters.date_to || 'None'}`);
+
+            csvRows.push('');
+            csvRows.push('SUMMARY STATISTICS');
+            const totalAdvance = customers.data.reduce((sum, c) => sum + parseFloat(c.advance_amount || 0), 0);
+            const totalDue = customers.data.reduce((sum, c) => sum + calculateDueAmount(c.sales), 0);
+            
+            csvRows.push(`Total Customers,${customers.total}`);
+            csvRows.push(`Active Customers,${customers.data.filter(c => c.is_active).length}`);
+            csvRows.push(`Total Advance (Tk),${totalAdvance.toFixed(2)}`);
+            csvRows.push(`Total Due (Tk),${totalDue.toFixed(2)}`);
+
+            const csvString = csvRows.join('\n');
+            
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `customers_report_${formatDateForFilename()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            toast.success('CSV downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as Excel
+    const downloadExcel = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            const filterData = [
+                { 'Filter': 'Search', 'Value': localFilters.search || 'None' },
+                { 'Filter': 'Status', 'Value': localFilters.status || 'All' },
+                { 'Filter': 'Date From', 'Value': localFilters.date_from || 'None' },
+                { 'Filter': 'Date To', 'Value': localFilters.date_to || 'None' }
+            ];
+            const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+            const totalAdvance = customers.data.reduce((sum, c) => sum + parseFloat(c.advance_amount || 0), 0);
+            const totalDue = customers.data.reduce((sum, c) => sum + calculateDueAmount(c.sales), 0);
+            
+            const summaryData = [
+                { 'Metric': 'Total Customers', 'Value': customers.total },
+                { 'Metric': 'Active Customers', 'Value': customers.data.filter(c => c.is_active).length },
+                { 'Metric': 'Total Advance (Tk)', 'Value': totalAdvance.toFixed(2) },
+                { 'Metric': 'Total Due (Tk)', 'Value': totalDue.toFixed(2) }
+            ];
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Customers');
+            XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+            XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+
+            XLSX.writeFile(wb, `customers_report_${formatDateForFilename()}.xlsx`);
+            
+            toast.success('Excel file downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            toast.error('Failed to download Excel file');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as PDF
+    const downloadPDF = () => {
+        try {
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No data to export');
+                return;
+            }
+
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            doc.setFontSize(16);
+            doc.setTextColor(30, 77, 43); // #1e4d2b color
+            doc.text('Customers Report', 14, 15);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 22);
+
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Search: ${localFilters.search || 'None'} | Status: ${localFilters.status || 'All'}`, 14, 29);
+            doc.text(`Date Range: ${localFilters.date_from || 'Start'} to ${localFilters.date_to || 'End'}`, 14, 35);
+
+            const tableColumns = [
+                'Name',
+                'Phone',
+                'Advance',
+                'Due',
+                'Status',
+                'Account'
+            ];
+
+            const tableRows = exportData.map(item => [
+                item['Name'].substring(0, 15) + (item['Name'].length > 15 ? '...' : ''),
+                item['Phone'],
+                item['Advance (Tk)'],
+                item['Due (Tk)'],
+                item['Status'],
+                item['Default Account'] === 'N/A' ? 'N/A' : item['Default Account'].substring(0, 10)
+            ]);
+
+            autoTable(doc, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 40,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [30, 77, 43], textColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            const totalAdvance = customers.data.reduce((sum, c) => sum + parseFloat(c.advance_amount || 0), 0);
+            const totalDue = customers.data.reduce((sum, c) => sum + calculateDueAmount(c.sales), 0);
+            
+            const finalY = doc.lastAutoTable.finalY + 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(30, 77, 43);
+            doc.text('Summary Statistics', 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Customers: ${customers.total}`, 14, finalY + 7);
+            doc.text(`Active Customers: ${customers.data.filter(c => c.is_active).length}`, 14, finalY + 14);
+            doc.text(`Total Advance: ${totalAdvance.toFixed(2)} Tk`, 14, finalY + 21);
+            doc.text(`Total Due: ${totalDue.toFixed(2)} Tk`, 14, finalY + 28);
+
+            doc.save(`customers_report_${formatDateForFilename()}.pdf`);
+            
+            toast.success('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // const hasActiveFilters = localFilters.search || localFilters.status || localFilters.date_from || localFilters.date_to;
 
     return (
         <div
@@ -1832,7 +2091,7 @@ export default function Customers({ customers, filters, accounts }) {
                 </div>
             )}
 
-            {/* Page Header with Responsive Filters */}
+            {/* Page Header */}
             <PageHeader
                 title={t("customer.title", "Customer Management")}
                 subtitle={t(
@@ -1840,166 +2099,173 @@ export default function Customers({ customers, filters, accounts }) {
                     "Manage your all customers from here.",
                 )}
             >
-                {/* Responsive Filter Section */}
-                <div className="mb-4">
-                    {/* Desktop/Tablet View (md and up) */}
-                    <div className="hidden md:flex flex-col lg:flex-row items-start lg:items-center gap-3">
-                        {/* Main filter row */}
-                        <div className="flex-1 flex flex-wrap lg:flex-nowrap items-center gap-2">
-                            {/* Search Input */}
-                            <div className="flex-1 min-w-[200px] max-w-[300px]">
-                                <div className="join w-full">
+                <div className="flex items-center gap-3">
+                    <button
+                        onClick={() => {
+                            customerForm.reset();
+                            setModel(true);
+                        }}
+                        className="btn bg-[#1e4d2b] hover:bg-[#1a4326] text-white btn-sm flex items-center gap-2"
+                    >
+                        <Plus size={16} />
+                        <span>{t("customer.add_customer", "Add Customer")}</span>
+                    </button>
+                </div>
+            </PageHeader>
+
+            {/* Collapsible Filter Card */}
+            <div className="bg-base-100 rounded-box border border-base-content/5 mb-6 overflow-hidden">
+                <div 
+                    className="flex items-center justify-between p-4 cursor-pointer hover:bg-base-200 transition-colors"
+                    onClick={toggleFilters}
+                >
+                    <div className="flex items-center gap-2">
+                        <Filter size={18} className="text-[#1e4d2b]" />
+                        <h3 className="text-lg font-semibold text-neutral">Filters</h3>
+                        {hasActiveFilters && (
+                            <span className="badge badge-sm bg-[#1e4d2b] text-white ml-2">Active</span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                clearFilters();
+                            }}
+                            className="btn btn-ghost btn-sm"
+                        >
+                            Clear
+                        </button>
+                        <button
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                applyFilters();
+                            }}
+                            className="btn bg-[#1e4d2b] text-white btn-sm"
+                        >
+                            <Search size={14} />
+                            Search
+                        </button>
+                        <button className="btn btn-ghost btn-sm">
+                            {showFilters ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                        </button>
+                    </div>
+                </div>
+
+                {showFilters && (
+                    <div className="p-4 border-t border-base-content/5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* Search */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Search</legend>
+                                <div className="relative">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                     <input
                                         type="search"
                                         value={localFilters.search}
-                                        onChange={(e) => setLocalFilters(prev => ({ ...prev, search: e.target.value }))}
+                                        onChange={(e) => handleFilter("search", e.target.value)}
                                         onKeyPress={handleKeyPress}
                                         placeholder={t(
                                             "customer.search_placeholder",
                                             "Search customers...",
                                         )}
-                                        className="input input-sm input-bordered join-item w-full"
+                                        className="input input-sm input-bordered w-full pl-8"
                                     />
-                                    <button
-                                        onClick={handleFilter}
-                                        className="btn btn-sm bg-[#1e4d2b] text-white join-item"
-                                        title="Search"
-                                    >
-                                        <Search size={14} />
-                                    </button>
                                 </div>
-                            </div>
+                            </fieldset>
 
-                            {/* Status Filter */}
-                            <div className="w-32">
+                            {/* Status */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Status</legend>
                                 <select
                                     value={localFilters.status}
-                                    onChange={(e) => setLocalFilters(prev => ({ ...prev, status: e.target.value }))}
+                                    onChange={(e) => handleFilter("status", e.target.value)}
                                     className="select select-sm select-bordered w-full"
                                 >
                                     <option value="">{t("customer.all_status", "All Status")}</option>
                                     <option value="active">{t("customer.active", "Active")}</option>
                                     <option value="inactive">{t("customer.inactive", "Inactive")}</option>
                                 </select>
-                            </div>
+                            </fieldset>
 
-                            {/* Action Buttons */}
-                            <div className="flex items-center gap-1">
-                                {hasActiveFilters && (
-                                    <button
-                                        onClick={clearFilters}
-                                        className="btn btn-sm btn-ghost text-xs"
-                                        title="Clear Filters"
-                                    >
-                                        {t("customer.clear", "Clear")}
-                                    </button>
-                                )}
-                                
-                                <button
-                                    onClick={handleFilter}
-                                    className="btn btn-sm btn-primary"
-                                    title="Apply Filters"
-                                >
-                                    <Filter size={14} />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Add Customer Button - Right side on desktop */}
-                        <div className="lg:ml-auto">
-                            <button
-                                onClick={() => {
-                                    customerForm.reset();
-                                    setModel(true);
-                                }}
-                                className="btn bg-[#1e4d2b] hover:bg-[#1a4326] text-white btn-sm flex items-center gap-2"
-                            >
-                                <Plus size={16} />
-                                <span>{t("customer.add_customer", "Add Customer")}</span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Mobile View (below md) */}
-                    <div className="md:hidden space-y-2">
-                        {/* Top Row: Search and Add Customer */}
-                        <div className="flex items-center gap-2">
-                            <div className="flex-1">
-                                <div className="join w-full">
+                            {/* Date From */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Date From</legend>
+                                <div className="relative">
+                                    <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                                     <input
-                                        type="search"
-                                        value={localFilters.search}
-                                        onChange={(e) => setLocalFilters(prev => ({ ...prev, search: e.target.value }))}
-                                        onKeyPress={handleKeyPress}
-                                        placeholder={t("customer.search_placeholder", "Search customers...")}
-                                        className="input input-sm input-bordered join-item w-full"
+                                        type="date"
+                                        value={formatDateForInput(localFilters.date_from)}
+                                        onChange={(e) => handleFilter("date_from", e.target.value)}
+                                        className="input input-sm input-bordered w-full pl-8"
                                     />
-                                    <button
-                                        onClick={handleFilter}
-                                        className="btn btn-sm bg-[#1e4d2b] text-white join-item"
-                                    >
-                                        <Search size={14} />
-                                    </button>
                                 </div>
-                            </div>
-                            
-                            <button
-                                onClick={() => setShowFilters(!showFilters)}
-                                className="btn btn-sm btn-ghost"
-                                title="Toggle Filters"
-                            >
-                                <Filter size={16} />
-                            </button>
-                            
-                            <button
-                                onClick={() => {
-                                    customerForm.reset();
-                                    setModel(true);
-                                }}
-                                className="btn bg-[#1e4d2b] text-white btn-sm p-2"
-                                title={t("customer.add_customer", "Add Customer")}
-                            >
-                                <Plus size={16} />
-                            </button>
+                            </fieldset>
+
+                            {/* Date To */}
+                            <fieldset className="fieldset">
+                                <legend className="fieldset-legend">Date To</legend>
+                                <div className="relative">
+                                    <Calendar size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="date"
+                                        value={formatDateForInput(localFilters.date_to)}
+                                        onChange={(e) => handleFilter("date_to", e.target.value)}
+                                        min={formatDateForInput(localFilters.date_from)}
+                                        className="input input-sm input-bordered w-full pl-8"
+                                    />
+                                </div>
+                            </fieldset>
                         </div>
 
-                        {/* Collapsible Mobile Filters */}
-                        {showFilters && (
-                            <div className="bg-gray-50 p-3 rounded-box space-y-3">
-                                <div>
-                                    <label className="text-xs font-medium mb-1 block">{t("customer.status", "Status")}</label>
-                                    <select
-                                        value={localFilters.status}
-                                        onChange={(e) => setLocalFilters(prev => ({ ...prev, status: e.target.value }))}
-                                        className="select select-sm select-bordered w-full"
-                                    >
-                                        <option value="">{t("customer.all_status", "All Status")}</option>
-                                        <option value="active">{t("customer.active", "Active")}</option>
-                                        <option value="inactive">{t("customer.inactive", "Inactive")}</option>
-                                    </select>
-                                </div>
-                                
-                                <div className="flex gap-2 pt-2">
-                                    <button
-                                        onClick={handleFilter}
-                                        className="btn btn-sm bg-[#1e4d2b] text-white flex-1"
-                                    >
-                                        {t("customer.apply_filters", "Apply Filters")}
-                                    </button>
-                                    {hasActiveFilters && (
-                                        <button
-                                            onClick={clearFilters}
-                                            className="btn btn-sm btn-ghost"
-                                        >
-                                            {t("customer.clear_all", "Clear All")}
-                                        </button>
-                                    )}
-                                </div>
+                        {/* Active Filters Display */}
+                        {hasActiveFilters && (
+                            <div className="mt-4 flex flex-wrap items-center gap-2 text-sm text-gray-600">
+                                <span className="font-medium">Active Filters:</span>
+                                {localFilters.search && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Search: {localFilters.search}
+                                    </span>
+                                )}
+                                {localFilters.status && (
+                                    <span className="badge badge-outline badge-sm">
+                                        Status: {localFilters.status}
+                                    </span>
+                                )}
+                                {localFilters.date_from && (
+                                    <span className="badge badge-outline badge-sm">
+                                        From: {new Date(localFilters.date_from).toLocaleDateString()}
+                                    </span>
+                                )}
+                                {localFilters.date_to && (
+                                    <span className="badge badge-outline badge-sm">
+                                        To: {new Date(localFilters.date_to).toLocaleDateString()}
+                                    </span>
+                                )}
                             </div>
                         )}
                     </div>
+                )}
+            </div>
+
+            {/* Download Button */}
+            <div className="flex justify-end mb-4">
+                <div className="dropdown dropdown-end">
+                    <button 
+                        className="btn bg-green-600 text-white btn-sm"
+                        disabled={isDownloading || customers.data.length === 0}
+                        tabIndex={0}
+                    >
+                        <Download size={14} />
+                        {isDownloading ? 'Downloading...' : 'Download Report'}
+                    </button>
+                    <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-40">
+                        <li><button onClick={downloadCSV} className="btn btn-ghost btn-sm w-full text-left">CSV Format</button></li>
+                        <li><button onClick={downloadExcel} className="btn btn-ghost btn-sm w-full text-left">Excel Format</button></li>
+                        <li><button onClick={downloadPDF} className="btn btn-ghost btn-sm w-full text-left">PDF Format</button></li>
+                    </ul>
                 </div>
-            </PageHeader>
+            </div>
 
             {/* Summary Stats - Responsive */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-4">

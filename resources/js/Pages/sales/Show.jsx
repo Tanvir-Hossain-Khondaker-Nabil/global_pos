@@ -726,11 +726,12 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
                           <div className="text-[9px] text-gray-600">Pickup Item</div>
                         ) : (
                           <div className="text-[9px] text-gray-600">
+                            Stock Item
                             {/* {item.variant?.sku ? `SKU: ${item.variant.sku}` : ""} */}
                           </div>
                         )}
                       </td>
-                      <td className="border border-black p-1">{getVariantDisplayName(item)}</td>
+                      <td className="border border-black p-1">{getVariantDisplayName(item) || 'Default'}</td>
                       <td className="border border-black p-1 text-center">{getBrandName(item)}</td>
                       <td className="border border-black p-1 text-center font-bold">
                         {item.quantity}

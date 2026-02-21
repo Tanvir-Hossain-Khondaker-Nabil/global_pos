@@ -42,11 +42,42 @@ class Customer extends Model
         }
     }
 
+    public function scopeStatus($query, $status)
+    {
+        if ($status === 'active') {
+            return $query->where('is_active', true);
+        }
+
+        if ($status === 'inactive') {
+            return $query->where('is_active', false);
+        }
+
+        return $query;
+    }
+
+
+    public function scopeSearch($query, $search)
+    {
+        return $query->when($search, function ($q) use ($search) {
+            $q->where(function ($q) use ($search) {
+                $q->where('customer_name', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
+            });
+        });
+    }
+
+    public function scopeDateRange($query, $from, $to)
+    {
+        return $query->when($from && $to, function ($q) use ($from, $to) {
+            $q->whereBetween('created_at', [$from, $to]);
+        });
+    }
 
     //relations ship to sales
     public function sales()
     {
-        return $this->hasMany(Sale::class, 'customer_id')->with(['creator','items','payments']);
+        return $this->hasMany(Sale::class, 'customer_id')->with(['creator', 'items', 'payments']);
     }
 
     //user relation

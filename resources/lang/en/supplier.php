@@ -119,4 +119,27 @@ return [
     
     // Required field indicator
     'required_field' => '*',
+    'advance_payment_desc' => 'Advance payment allows you to pay a portion of the total amount upfront.',
+    'payment_date' => 'Payment Date',
+    'payment_account' => 'Payment Account',
+    'not_selected' => 'Not Selected',
+    'payment_date_placeholder' => 'Select payment date',
+    'payment_date' => 'Payment Date',
+    'payment_summary' => 'Payment Summary',
+    'payment_account' => 'Payment Account',
+    'amount_to_pay' => 'Amount to Pay',
+    'optional' => 'Optional',
+    'select_account' => 'Select Account',
+    'clear_due_desc' => 'Clearing due payment allows you to settle outstanding amounts with the supplier.',
+    'clear_due_payment' => 'Clear Due Payment',
+    'due_purchases' => 'Due Purchases',
+    'full_payment' => 'Full Payment',
+    'account_adjustment' => 'Account Adjustment',
+    'payment_method' => 'Payment Method',
+    'transaction_reference' => 'Transaction Reference',
+    'payment_amount' => 'Payment Amount',
+    'auto_generated_ref' => 'Auto Generated Reference',
+    'balance_after_payment' => 'Balance After Payment'
+
+
 ];

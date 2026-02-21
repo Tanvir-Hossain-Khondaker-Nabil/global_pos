@@ -18,53 +18,51 @@ class CustomerController extends Controller
     // index
     public function index(Request $request)
     {
-        $query = Customer::query()
-            ->with(['sales' => function ($query) {
-                $query->select('id', 'customer_id', 'due_amount');
-            }])
-            ->latest();
+        $filters = $request->only(['search', 'status', 'date_from', 'date_to']);
 
-        if ($request->has('search') && $request->search) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('customer_name', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('address', 'like', "%{$search}%");
-            });
-        }
+        $customers = Customer::query()
+            ->with([
+                'sales:id,customer_id,due_amount'
+            ])
+            ->search($filters['search'] ?? null)
+            ->status($filters['status'] ?? null)
+            ->dateRange(
+                $filters['date_from'] ?? null,
+                $filters['date_to'] ?? null
+            )
+            ->latest()
+            ->paginate(10)
+            ->withQueryString()
+            ->through(fn($customer) => [
+                'id'             => $customer->id,
+                'customer_name'  => $customer->customer_name,
+                'phone'          => $customer->phone,
+                'address'        => $customer->address,
+                'is_active'      => (bool) $customer->is_active,
+                'advance_amount' => (float) $customer->advance_amount,
+                'due_amount'     => (float) $customer->due_amount,
+                'sales'          => $customer->sales,
+                'created_at'     => $customer->created_at->format('D M, Y h:i A'),
+            ]);
 
-        return Inertia::render("Customers", [
-            'filters' => $request->only('search'),
-            'accounts' => Account::where('is_active',true)->get(),
-            'customers' => $query->paginate(10)
-                ->withQueryString()
-                ->through(fn($customer) => [
-                    'id' => $customer->id,
-                    'customer_name' => $customer->customer_name,
-                    'phone' => $customer->phone,
-                    'address' => $customer->address,
-                    'is_active' => (bool) $customer->is_active,
-                    'advance_amount' => (float) $customer->advance_amount,
-                    'due_amount' => (float) $customer->due_amount,
-                    'sales' => $customer->sales,
-                    'created_at' => $customer->created_at->format('D M, Y h:i A'),
-                ]),
+        return Inertia::render('Customers', [
+            'customers' => $customers,
+            'filters'   => $filters,
+            'accounts'  => Account::where('is_active', true)->get(),
         ]);
     }
-
     // store
     public function store(CustomerStore $request)
     {
         $request->validated();
 
         $account = null;
-        if($request->account_id !=null) 
-        {
+        if ($request->account_id != null) {
             $account = Account::find($request->input('account_id'));
         }
-        
+
         try {
-           $customer =   Customer::create([
+            $customer =   Customer::create([
                 'customer_name' => $request->customer_name,
                 'phone' => $request->phone,
                 'address' => $request->address,
@@ -74,8 +72,7 @@ class CustomerController extends Controller
                 'created_by' => Auth::id(),
             ]);
 
-            if($request->due_amount > 0)
-            {
+            if ($request->due_amount > 0) {
                 Sale::create([
                     'customer_id' => $customer->id,
                     'invoice_no' => 'ICD-' . Str::random(8),
@@ -91,15 +88,15 @@ class CustomerController extends Controller
             if ($account) {
                 if ($request->advance_amount && $request->advance_amount > 0) {
 
-                    $account->updateBalance($request->advance_amount,'deposit');
-                    
+                    $account->updateBalance($request->advance_amount, 'deposit');
+
                     Payment::create([
                         'customer_id'    => $customer->id ?? null,
                         'amount'         => $request->advance_amount ?? 0,
                         'shadow_amount'  => 0,
                         'payment_method' => $account->type ?? 'Cash',
                         'txn_ref'        => $request->input('transaction_id') ?? ('ADB-' . Str::random(10)),
-                        'note'           =>'Initial advance amount payment of customer',
+                        'note'           => 'Initial advance amount payment of customer',
                         'paid_at'        => Carbon::now(),
                         'created_by'     => Auth::id(),
                         'status'         => 'completed'
@@ -108,7 +105,6 @@ class CustomerController extends Controller
             }
 
             return redirect()->back()->with('success', 'New customer added successfully');
-
         } catch (\Exception $th) {
             return redirect()->back()->with('error', 'Server error: ' . $th->getMessage());
         }
