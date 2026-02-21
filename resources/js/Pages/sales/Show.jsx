@@ -104,7 +104,7 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
   const bpAddr = profile?.address || "Address";
   const bpWebsite = profile?.website || "";
   const bpDesc = profile?.description || "";
-  const bpFooterTitle = profile?.footer_title || "";
+  const bpFooterTitle = profile?.footer_title || "বিক্রয়িত পণ্য ১৫ দিনের মধ্যে ফেরত যোগ্য । পণ্য ফেরতের সময় অবশ্যই মেমোর ফটোকপি দিতে হবে";
 
   const bpLogo =
     resolveAssetUrl(profile?.logo) ||
@@ -833,7 +833,7 @@ export default function SaleShow({ sale, isShadowUser, businessProfile }) {
           <div className="mt-3 text-[9px] text-gray-600 flex justify-between border-t border-gray-300 pt-2">
             <div>
               <span>
-                {bpFooterTitle}
+                {bpFooterTitle }
               </span>
             </div>
             <div>

@@ -80,69 +80,67 @@ class AuthController extends Controller
         ]);
     }
 
+
+    /**
+     * Update the business profile.
+     */
     public function businessProfileUpdate(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|min:3|max:255',
-            'footer_title' => 'required|min:3',
-            'email' => 'required|email|lowercase|max:255',
-            'phone' => 'required',
-            'address' => 'required|string|min:3|max:500',
-            'website' => 'nullable|url|max:255',
-            'description' => 'nullable|string|max:1000',
-            'tax_number' => 'nullable|string|max:50',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'thum' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        $data = $request->validate([
+            'name'         => 'required|string|min:3|max:255',
+            'footer_title' => 'nullable|string',
+            'email'        => 'required|email:filter|lowercase|max:255',
+            'phone'        => 'required|string|max:50',
+            'address'      => 'required|string|min:3|max:500',
+            'website'      => 'nullable|url|max:255',
+            'description'  => 'nullable|string|max:1000',
+            'tax_number'   => 'nullable|string|max:50',
+            'logo'         => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'thum'         => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         try {
-            $data = $validated;
+            $userId   = Auth::id();
+            $business = BusinessProfile::where('user_id', $userId)->first();
 
-            // Get existing business profile if it exists
-            $business = BusinessProfile::where('user_id', Auth::id())->first();
-
-            // Handle logo upload
             if ($request->hasFile('logo')) {
-                // Delete old logo if exists
-                if ($business && $business->logo) {
+                if ($business?->logo) {
                     Storage::disk('public')->delete($business->logo);
                 }
 
-                $data['logo'] = $request->file('logo')->store('business/logos', 'public');
+                $data['logo'] = $request->file('logo')
+                    ->store('business/logos', 'public');
             } else {
-                // Keep existing logo if no new file uploaded
                 unset($data['logo']);
             }
 
-            // Handle thumbnail upload
+            // Thumbnail upload
             if ($request->hasFile('thum')) {
-                // Delete old thumbnail if exists
-                if ($business && $business->thum) {
+                if ($business?->thum) {
                     Storage::disk('public')->delete($business->thum);
                 }
 
-                $data['thum'] = $request->file('thum')->store('business/thumbs', 'public');
+                $data['thum'] = $request->file('thum')
+                    ->store('business/thumbs', 'public');
             } else {
-                // Keep existing thumbnail if no new file uploaded
                 unset($data['thum']);
             }
 
-            // Add user_id to data
-            $data['user_id'] = Auth::id();
-
-            // Update or create business profile
-            $business = BusinessProfile::updateOrCreate(
-                ['user_id' => Auth::id()],
+            BusinessProfile::updateOrCreate(
+                ['user_id' => $userId],
                 $data
             );
 
-            // Return success response
             return back()->with('success', 'Business profile updated successfully.');
-        } catch (\Exception $e) {
-            // Log the error for debugging
-            \Log::error('Business profile update error: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            \Log::error('Business profile update failed', [
+                'user_id' => Auth::id(),
+                'error'   => $e->getMessage(),
+            ]);
 
-            return back()->withErrors(['error' => 'Failed to update business profile. Please try again.']);
+            return back()->withErrors([
+                'error' => 'Failed to update business profile. Please try again.',
+            ]);
         }
     }
 
