@@ -127,6 +127,7 @@ return [
     'category_reports' => 'All Reports',
     'hr' => 'HR',
     'outlets' => 'Outlets',
+    'category_accounts' => 'Accounts',
 
     // Other sidebar items
     'accounts' => 'Accounts',

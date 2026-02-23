@@ -528,7 +528,6 @@ class SalesReturnController extends Controller
 
 
             $salesReturn->update(['status' => 'completed']);
-
             $this->updateSaleStatus($salesReturn->sale_id);
 
             DB::commit();

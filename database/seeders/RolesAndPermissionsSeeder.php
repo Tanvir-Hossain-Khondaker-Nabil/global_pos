@@ -382,8 +382,6 @@ class RolesAndPermissionsSeeder extends Seeder
             'deposits.edit',
             'deposits.delete',
             'deposits.show',
-            'deposits.approve',
-            'deposits.reject',
 
             // Sales Return
             'sales_return.view',
@@ -458,6 +456,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'modules.delete',
             'modules.update',
             'modules.show',
+
+            // User Deposit 
+            'deposits.approve',
+            'deposits.reject'
         ];
 
         $admin->syncPermissions(
@@ -466,7 +468,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ========== USERS ==========
         $superAdminUser = User::updateOrCreate(
-            ['email' => 'superadmin@system.com'], 
+            ['email' => 'superadmin@system.com'], // search condition
             [
                 'name' => 'Super Admin',
                 'role_id' => User::SUPERADMIN_ROLE,
