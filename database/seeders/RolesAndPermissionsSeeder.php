@@ -382,6 +382,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'deposits.edit',
             'deposits.delete',
             'deposits.show',
+            'deposits.approve',
+            'deposits.reject',
 
             // Sales Return
             'sales_return.view',
@@ -468,12 +470,13 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ========== USERS ==========
         $superAdminUser = User::updateOrCreate(
-            ['email' => 'superadmin@system.com'], // search condition
+            ['email' => 'superadmin@system.com'], 
             [
                 'name' => 'Super Admin',
                 'role_id' => User::SUPERADMIN_ROLE,
                 'password' => bcrypt('password123'),
                 'email_verified_at' => now(),
+                'role' => 'superadmin',
             ]
         );
 
@@ -487,6 +490,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'role_id' => User::ADMIN_ROLE,
                 'password' => bcrypt('password123'),
                 'email_verified_at' => now(),
+                'role' => 'admin',
             ]
         );
 

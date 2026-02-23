@@ -126,7 +126,7 @@ export default function Create({ plans, users }) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Form Section */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-3 space-y-6">
                         <form onSubmit={handleSubmit} className="space-y-6">
 
                             {/* User & Plan Card */}
@@ -320,63 +320,6 @@ export default function Create({ plans, users }) {
                                 </button>
                             </div>
                         </form>
-                    </div>
-
-                    {/* Right Column Plan Details */}
-                    <div>
-                        {selectedPlan ? (
-                            <div className="bg-white rounded-2xl shadow-sm border overflow-hidden">
-                                <div
-                                    className="px-6 py-4 text-white font-bold flex justify-between"
-                                    style={{ background: gradient }}
-                                >
-                                    <span>{selectedPlan.name}</span>
-                                    <span className={`px-3 py-1 rounded-full text-xs ${getPlanTypeBadge(selectedPlan.plan_type).class}`}>
-                                        {getPlanTypeBadge(selectedPlan.plan_type).label}
-                                    </span>
-                                </div>
-
-                                <div className="p-6 space-y-4">
-                                    <p className="text-gray-700">{selectedPlan.description}</p>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="p-4 rounded-xl bg-emerald-50 border">
-                                            <p className="text-sm text-gray-600">Price</p>
-                                            <p className="font-bold text-lg">{formatCurrency(selectedPlan.price)}</p>
-                                        </div>
-
-                                        <div className="p-4 rounded-xl bg-emerald-50 border">
-                                            <p className="text-sm text-gray-600">Validity</p>
-                                            <p className="font-bold text-lg">{selectedPlan.validity} Days</p>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <h4 className="font-semibold mb-2 flex items-center gap-2">
-                                            <Grid size={16} />
-                                            Modules
-                                        </h4>
-                                        {selectedPlan.modules?.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {selectedPlan.modules.map((m) => (
-                                                    <div key={m.id} className="flex items-center gap-2 p-2 bg-emerald-50 rounded-lg">
-                                                        <CheckCircle size={14} className="text-emerald-700" />
-                                                        {m.name}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <p className="text-gray-400 text-sm">No modules included</p>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="bg-white rounded-2xl shadow-sm border p-8 text-center">
-                                <Star size={50} className="mx-auto text-gray-300 mb-3" />
-                                <p className="text-gray-500 font-semibold">No Plan Selected</p>
-                            </div>
-                        )}
                     </div>
                 </div>
             </div>

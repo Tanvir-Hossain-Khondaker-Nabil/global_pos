@@ -96,6 +96,8 @@ const investmentsOverviewMenu = [
 // Overview Admin
 const adminOverviewMenu = [
   { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  
+
   { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
 ];
 
@@ -144,7 +146,6 @@ const outletLoggedInMenu = [
   { title: "Plan", icon: "barcode", route: "plans.index", active: "plans.index", category: "Subscriptions", permission: "plans.view" },
   // { title: "Plan Modules", icon: "barcode", route: "modules.index", active: "modules.index", category: "Subscriptions", permission: "modules.view" },
   { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", active: "subscriptions.index", category: "Subscriptions", permission: "subscriptions.view" },
-  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments_view" },
 
   // Partners
   { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
@@ -173,10 +174,15 @@ const outletLoggedInMenu = [
   { title: "Bonus", icon: "gift", route: "bonus.index", active: "bonus.index", category: "HR", permission: "bonus.view" },
   { title: "SMS", icon: "message-circle", route: "sms-templates.index", active: "sms-templates.index", category: "HR", permission: "sms_templates.view" },
 
-  // Accounts (super admin will see even inside outlet)
-  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Accounts", permission: "users.view" },
-  { title: "Users Deposit", icon: "user", route: "userlist.view", active: "userlist.view", category: "Accounts", permission: "users.view" },
-  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Accounts", permission: "roles.view" },
+  // Admin (super admin will see even inside outlet)
+  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
+
+
+  // Accounts
+  { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Accounts", permission: "deposits.view" },
+  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Accounts", permission: "subscriptions.payments_view" },
+
 
   // Outlets (super admin will see even inside outlet)
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },

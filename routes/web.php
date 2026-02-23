@@ -530,6 +530,9 @@ Route::middleware('auth')->group(function () {
         'destroy' => 'subscriptions.destroy',
     ])->middleware('permission:subscriptions.view|subscriptions.create|subscriptions.edit|subscriptions.delete');
 
+    Route::get('/subscriptions/{id}/renew', [SubscriptionController::class, 'renewEdit'])
+    ->middleware('permission:subscriptions.renew')->name('subscriptions.renew_edit');
+
     //ledger routes
     Route::get('/ledgers', [LedgerController::class, 'index'])->middleware('permission:ledger.view')->name('ledgers.index');
     Route::get('/ledgers/customer/{id?}', [LedgerController::class, 'customerLedger'])->middleware('permission:ledger.customer_view')->name('ledgers.customer');

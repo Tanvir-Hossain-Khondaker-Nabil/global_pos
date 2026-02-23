@@ -50,14 +50,15 @@ class PlanController extends Controller
     public function store(PlanStore $request)
     {
         $validated = $request->validated();
+        $validated['plan_type'] == 'free' ?? $validated['price'] = 0;
+
         $validated['status'] = Plan::STATUS_ACTIVE;
         $plan = Plan::create($validated);
 
         $modules = Module::pluck('id')->toArray(); 
         $plan->modules()->sync($modules);
 
-        return to_route('plans.index')
-            ->with('success', 'Plan created successfully.');
+        return to_route('plans.index')->with('success', 'Plan created successfully.');
     }
 
     /**

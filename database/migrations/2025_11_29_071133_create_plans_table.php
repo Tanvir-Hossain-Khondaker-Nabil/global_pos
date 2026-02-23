@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('plans', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->float('price', 8, 2)->default(0);
+            $table->float('price', 8, 2)->nullable()->default(0);
             $table->integer('plan_type')->nullable()->comment("1= FREE, 2=PAID");
             $table->integer('validity')->default(0);
             $table->text('description')->nullable();
