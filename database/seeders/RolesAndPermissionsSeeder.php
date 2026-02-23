@@ -466,7 +466,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ========== USERS ==========
         $superAdminUser = User::updateOrCreate(
-            ['email' => 'superadmin@system.com'], // search condition
+            ['email' => 'superadmin@system.com'], 
             [
                 'name' => 'Super Admin',
                 'role_id' => User::SUPERADMIN_ROLE,

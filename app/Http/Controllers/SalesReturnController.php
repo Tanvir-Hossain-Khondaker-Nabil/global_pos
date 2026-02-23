@@ -179,8 +179,9 @@ class SalesReturnController extends Controller
 
 
 
-
-    // ক্রিয়েট পেজ
+    /*
+    ** Create function (with unit conversion)
+    */
     public function create(Request $request)
     {
         $saleId = $request->query('sale_id');
@@ -300,57 +301,10 @@ class SalesReturnController extends Controller
     }
 
 
-    // ভেরিয়েন্ট ডিসপ্লে নাম
-    private function getVariantDisplayName($variant)
-    {
-        if (!$variant) return 'Default Variant';
 
-        $parts = [];
-
-        if ($variant->attribute_values && is_array($variant->attribute_values)) {
-            foreach ($variant->attribute_values as $key => $value) {
-                $parts[] = "$key: $value";
-            }
-        }
-
-        // if ($variant->sku) {
-        //     $parts[] = "SKU: {$variant->sku}";
-        // }
-
-        return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
-    }
-
-    // উপলব্ধ বিক্রয় ইউনিট
-    private function getAvailableSaleUnits($product)
-    {
-        $unitType = $product->unit_type ?? 'piece';
-        $conversions = $this->getUnitConversions();
-
-        if (!isset($conversions[$unitType])) {
-            return [$product->default_unit ?? 'piece'];
-        }
-
-        // পুচ্ছেজ ইউনিট (ডিফল্ট ইউনিট)
-        $purchaseUnit = $product->default_unit ?? 'piece';
-        $purchaseFactor = $conversions[$unitType][$purchaseUnit] ?? 1;
-
-        // ছোট বা সমান ইউনিটগুলো
-        $available = [];
-        foreach ($conversions[$unitType] as $unit => $factor) {
-            if ($factor <= $purchaseFactor) {
-                $available[] = $unit;
-            }
-        }
-
-        // সর্ট করুন (ছোট থেকে বড়)
-        usort($available, function ($a, $b) use ($conversions, $unitType) {
-            return ($conversions[$unitType][$a] ?? 0) <=> ($conversions[$unitType][$b] ?? 0);
-        });
-
-        return $available;
-    }
-
-    // স্টোর ফাংশন (ইউনিট কনভার্সন সহ)
+    /*
+    ** Store function (with unit conversion)
+    */
     public function store(SalesReturnStore $request)
     {
 
@@ -366,11 +320,9 @@ class SalesReturnController extends Controller
             $isDamaged = $request->input('is_damaged', false);
             $type = $isDamaged ? 'damaged' : 'sale_return';
 
-            // কাস্টমার ডেটা
             $customerId = $sale->customer_id;
             $customer = $sale->customer;
 
-            // টোটাল রিটার্ন ভ্যালু ক্যালকুলেট
             $totalReturnValue = 0;
             $shadowTotalReturnValue = 0;
 
@@ -423,6 +375,7 @@ class SalesReturnController extends Controller
                 'return_no' => $returnNo,
                 'sale_id' => $request->sale_id,
                 'customer_id' => $customerId,
+                'account_id' => $request->account_id,
                 'return_type' => $request->return_type,
                 'return_date' => $request->return_date,
                 'reason' => $request->reason,
@@ -534,7 +487,10 @@ class SalesReturnController extends Controller
         }
     }
 
-     // return approve will be here
+
+    /*
+    ** approved function (with unit conversion)
+    */
     public function approve($id)
     {
         DB::beginTransaction();
@@ -550,10 +506,10 @@ class SalesReturnController extends Controller
             }
 
             $customer = Customer::find($salesReturn->customer_id);
+            $account = Account::find($salesReturn->account_id);
 
-            $this->processFinancials($salesReturn, $customer);
+            $this->processFinancials($salesReturn, $customer, $account);
 
-            
             if($salesReturn->return_type == 'money_back')
             {
                 foreach ($salesReturn->items as $item) 
@@ -578,12 +534,64 @@ class SalesReturnController extends Controller
             DB::commit();
 
             return redirect()->back()->with('success', 'Sales return approved successfully.');
-            
+
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back();
         }
     }
+
+
+        // ভেরিয়েন্ট ডিসপ্লে নাম
+    private function getVariantDisplayName($variant)
+    {
+        if (!$variant) return 'Default Variant';
+
+        $parts = [];
+
+        if ($variant->attribute_values && is_array($variant->attribute_values)) {
+            foreach ($variant->attribute_values as $key => $value) {
+                $parts[] = "$key: $value";
+            }
+        }
+
+        // if ($variant->sku) {
+        //     $parts[] = "SKU: {$variant->sku}";
+        // }
+
+        return !empty($parts) ? implode(', ', $parts) : 'Default Variant';
+    }
+
+    // উপলব্ধ বিক্রয় ইউনিট
+    private function getAvailableSaleUnits($product)
+    {
+        $unitType = $product->unit_type ?? 'piece';
+        $conversions = $this->getUnitConversions();
+
+        if (!isset($conversions[$unitType])) {
+            return [$product->default_unit ?? 'piece'];
+        }
+
+        // পুচ্ছেজ ইউনিট (ডিফল্ট ইউনিট)
+        $purchaseUnit = $product->default_unit ?? 'piece';
+        $purchaseFactor = $conversions[$unitType][$purchaseUnit] ?? 1;
+
+        // ছোট বা সমান ইউনিটগুলো
+        $available = [];
+        foreach ($conversions[$unitType] as $unit => $factor) {
+            if ($factor <= $purchaseFactor) {
+                $available[] = $unit;
+            }
+        }
+
+        // সর্ট করুন (ছোট থেকে বড়)
+        usort($available, function ($a, $b) use ($conversions, $unitType) {
+            return ($conversions[$unitType][$a] ?? 0) <=> ($conversions[$unitType][$b] ?? 0);
+        });
+
+        return $available;
+    }
+
 
 
   
@@ -693,7 +701,7 @@ class SalesReturnController extends Controller
 
 
   // ফাইনান্সিয়াল প্রসেস
-    private function processFinancials($salesReturn, $customer)
+    private function processFinancials($salesReturn, $customer, $account)
     {
         // মানি ব্যাক রিটার্ন
         if ($salesReturn->return_type === 'money_back') {
@@ -720,9 +728,10 @@ class SalesReturnController extends Controller
                 Payment::create([
                     'sale_id' => $salesReturn->sale_id,
                     'customer_id' => $customer->id,
-                    'amount' => -$salesReturn->refunded_amount,
+                    'account_id' => $account->id,
+                    'amount' => -$salesReturn->refunded_amount ,
                     'shadow_amount' => $salesReturn->shadow_refunded_amount,
-                    'payment_method' => $salesReturn->payment_type ?? 'cash',
+                    'payment_method' => 'refunded',
                     'txn_ref' => 'RFND-' . Str::random(10),
                     'note' => 'Refund for sales return #' . $salesReturn->return_no,
                     'paid_at' => Carbon::now(),

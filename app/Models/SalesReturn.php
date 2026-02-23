@@ -15,6 +15,7 @@ class SalesReturn extends Model
     protected $fillable = [
         'sale_id',
         'customer_id',
+        'account_id',
         'refunded_amount',
         'shadow_refunded_amount',
         'return_type',

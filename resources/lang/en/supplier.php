@@ -139,7 +139,9 @@ return [
     'transaction_reference' => 'Transaction Reference',
     'payment_amount' => 'Payment Amount',
     'auto_generated_ref' => 'Auto Generated Reference',
-    'balance_after_payment' => 'Balance After Payment'
+    'balance_after_payment' => 'Balance After Payment',
+    'selected_account' => 'Selected Account',
+    'current_balance' => 'Current Balance'
 
 
 ];
