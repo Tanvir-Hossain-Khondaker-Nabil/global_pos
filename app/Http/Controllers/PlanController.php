@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\PlanStore;
 use App\Http\Requests\PlanUpdate;
+use App\Models\Module;
 use App\Models\Plan;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -16,12 +17,16 @@ class PlanController extends Controller
     public function index()
     {
         $plans = Plan::active()
-        ->with('modules')
-        ->when(request('plan_type'), function ($query) {$query->ofType(request('plan_type')); })
-        ->when(request('search'), function ($query) {$query->search(request('search')); })
-        ->orderBy('created_at', 'desc')
-        ->paginate(10)
-        ->withQueryString();
+            ->with('modules')
+            ->when(request('plan_type'), function ($query) {
+                $query->ofType(request('plan_type'));
+            })
+            ->when(request('search'), function ($query) {
+                $query->search(request('search'));
+            })
+            ->orderBy('created_at', 'desc')
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Plans/Index', [
             'plans' => $plans,
@@ -48,9 +53,11 @@ class PlanController extends Controller
         $validated['status'] = Plan::STATUS_ACTIVE;
         $plan = Plan::create($validated);
 
-        $plan->modules()->sync($request->modules);
+        $modules = Module::pluck('id')->toArray(); 
+        $plan->modules()->sync($modules);
 
-        return to_route('plans.index')->with('success', 'Plan created successfully.');
+        return to_route('plans.index')
+            ->with('success', 'Plan created successfully.');
     }
 
     /**
@@ -84,11 +91,6 @@ class PlanController extends Controller
     {
         $plan = Plan::findOrFail($id);
         $plan->update($request->validated());
-
-        if (isset($validated['modules'])) {
-            $plan->modules()->sync($validated['modules']);
-        }
-
         return to_route('plans.index')->with('success', 'Plan updated successfully!');
     }
 
@@ -105,7 +107,7 @@ class PlanController extends Controller
         if ($plan->subscriptions()->exists()) {
             return to_route('plans.index')->withErrors(['error' => 'Cannot delete plan with active subscriptions.']);
         }
-        
+
         $plan->modules()->detach();
         $plan->delete();
         return to_route('plans.index')->with('success', 'Plan deleted successfully.');
