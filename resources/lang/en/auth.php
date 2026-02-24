@@ -119,7 +119,7 @@ return [
     // Menu Categories
     'main' => 'Main',
     'sales' => 'Sales',
-    
+    'category_system' => 'System',
     'finance' => 'Finance',
     'partners' => 'Partners',
     'crm' => 'CRM',

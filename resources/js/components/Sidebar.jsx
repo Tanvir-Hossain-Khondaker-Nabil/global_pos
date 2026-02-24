@@ -184,6 +184,17 @@ const outletLoggedInMenu = [
   { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Accounts", permission: "subscriptions.payments_view" },
 
 
+  //System
+  {
+    title: "System Setting",
+    icon: "user",
+    route: route('system.index', 1),
+    active: "system.index",
+    category: "System",
+    permission: "system.index",
+  },
+
+
   // Outlets (super admin will see even inside outlet)
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
 ];
@@ -362,6 +373,7 @@ export default function Sidebar({ status, setStatus }) {
       Reports: t("auth.category_reports", "Reports"),
       Admin: t("auth.category_admin", "Admin"),
       Accounts: t("auth.category_accounts", "Accounts"),
+      System: t("auth.category_system", "System"),
 
       HR: t("auth.category_hr", "HR"),
       Outlets: t("auth.category_outlets", "Outlets"),
@@ -457,7 +469,7 @@ export default function Sidebar({ status, setStatus }) {
       if (filtered.length) out[cat] = filtered;
     });
     return out;
-  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet, isOutletUser]); // eslint-disable-line
+  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet, isOutletUser]); 
 
   const getFaviconUrl = () => {
     if (headerSettings?.fav_icon) {

@@ -767,13 +767,13 @@ Route::middleware(['auth', 'active.subscription','check.system'])->group(functio
 
 
     //System route will be here
-
-    Route::get('/system', [SystemController::class, 'index'])
-        ->middleware('permission:system.view')
+    Route::get('/system/{id}', [SystemController::class, 'show'])
+        ->middleware('permission:system.index')
         ->name('system.index');
-    Route::post('/system/update', [SystemController::class, 'update'])
-        ->middleware('permission:system.edit')
-        ->name('system.update');
+
+    Route::put('/systems/{id}', [SystemController::class, 'update'])
+    ->middleware('permission:system.edit')
+    ->name('systems.update');
 
 
     //notifications

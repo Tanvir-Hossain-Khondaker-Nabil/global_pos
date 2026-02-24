@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\System;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rules\In;
+use Inertia\Inertia;
 
 class SystemController extends Controller
 {
@@ -35,7 +38,11 @@ class SystemController extends Controller
      */
     public function show(string $id)
     {
-        //
+        $system = System::findOrFail($id);
+
+        return Inertia::render('Systems/Show', [
+            'system' => $system
+        ]);
     }
 
     /**
@@ -51,7 +58,16 @@ class SystemController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $system = System::findOrFail($id);
+
+        $validated = $request->validate([
+            'status' => 'required|in:active,inactive',
+            'hold_reason' => 'required_if:status,inactive|nullable|string|max:255'
+        ]);
+
+        $system->update($validated);
+
+        return back()->with('success', 'System status updated successfully.');
     }
 
     /**
