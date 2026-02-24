@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Global middleware - DO NOT include your custom Permission middleware here
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            // \App\Http\Middleware\CheckSystemHold::class,
             SetLocale::class,
         ]);
     })

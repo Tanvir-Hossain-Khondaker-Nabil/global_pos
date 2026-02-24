@@ -154,7 +154,7 @@ export default function Create({ plans, users }) {
                                             </option>
                                             {users.map((user) => (
                                                 <option key={user.id} value={user.id}>
-                                                    {user.name} - {user.email}
+                                                    {user.name} - {user.email} ({user.total_deposit} tk deposits)
                                                 </option>
                                             ))}
                                         </select>
