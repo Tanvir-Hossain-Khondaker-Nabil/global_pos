@@ -26,6 +26,7 @@ class User extends Authenticatable
         'total_deposit',
         'role_id',
         'created_by',
+        'status'
     ];
 
     protected $hidden = [

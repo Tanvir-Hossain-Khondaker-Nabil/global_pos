@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Customer;
+use App\Models\Module;
 use App\Models\Supplier;
+use App\Models\System;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -50,6 +52,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'users.create',
             'users.edit',
             'users.delete',
+            'users.active',
+            'users.hold',
+
 
             // Customers
             'customer.view',
@@ -128,6 +133,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'salesReturn.edit',
             'salesReturn.update',
             'return.approve',
+            
 
             // Sales List
             'sales_list.view',
@@ -392,6 +398,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales_return.delete',
             'sales_return.show',
 
+             //system 
+            'system.index',
+            'system.edit',
+
             // SMS
             'sms_templates.view',
             'sms_templates.create',
@@ -451,6 +461,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'subscriptions.delete',
             'subscriptions.renew',
             'subscriptions.payments_view',
+
             // Modules
             'modules.view',
             'modules.create',
@@ -461,7 +472,14 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // User Deposit 
             'deposits.approve',
-            'deposits.reject'
+            'deposits.reject',
+            'users.active',
+            'users.hold',
+
+
+            //system 
+            'system.index',
+            'system.edit',
         ];
 
         $admin->syncPermissions(
@@ -519,7 +537,6 @@ class RolesAndPermissionsSeeder extends Seeder
         );
 
         // === Customer Create ======
-
         Customer::updateOrCreate(
             ['phone' => '100100100'],
             [
@@ -533,6 +550,30 @@ class RolesAndPermissionsSeeder extends Seeder
                 'outlet_id' => 1 ?? null,
             ]
         );
+
+
+        // === System Create ======
+        System::updateOrCreate(
+            ['id' => 1],
+            [
+                'status' => 'active',
+                'hold_reason' => 'Right Now System is on Maintenance | ' . now() . ' Contact With System Admin',
+            ]
+        );
+
+        // === module Crate == //
+        Module::updateOrCreate(
+            ['id' => 1],
+            [
+                'name' => 'All Modules',
+                'is_active' => 1,
+                'description' => 'All Modules will be accessible',
+            ]
+        );
+
+     
+
+
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
     }

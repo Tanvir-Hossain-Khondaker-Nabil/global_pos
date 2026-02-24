@@ -52,6 +52,7 @@ use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\InvestmentReturnController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\SystemController;
 
 // Guest routes
 Route::middleware('guest')->controller(AuthController::class)->group(function () {
@@ -61,7 +62,7 @@ Route::middleware('guest')->controller(AuthController::class)->group(function ()
 
 
 // auth routes
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'active.subscription','check.system'])->group(function () {
 
     Route::get('/dashboard/{s?}', [DashboardController::class, 'index'])->middleware('permission:dashboard.view')->name('home');
 
@@ -119,6 +120,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/toggle-user-type', 'toggleUserType')->name('toggle.user.type');
     });
 
+    Route::controller(UserController::class)->prefix('users')->group(function () {
+        Route::post('/hold/{id}', 'hold')
+        ->middleware('permission:users.hold')
+        ->name('users.hold');
+        Route::post('/active/{id}', 'active')
+        ->middleware('permission:users.active')
+        ->name('users.active');
+    });
 
     Route::get('api/sales/{batch_no}', [SalesController::class, 'stockInvoice']);
 
@@ -217,7 +226,7 @@ Route::middleware('auth')->group(function () {
         ->name('return.store');
 
     Route::post('/approve/{id}/return', [SalesReturnController::class, 'approve'])
-        // ->middleware('permission:sales_return.approve')
+        ->middleware('permission:return.approve')
         ->name('return.approve');
 
     Route::get('/return/{id}', [SalesReturnController::class, 'show'])
@@ -265,7 +274,7 @@ Route::middleware('auth')->group(function () {
         ->name('accounts.destroy');
 
     Route::get('/accounts/{account}', [AccountController::class, 'show'])
-        // ->middleware('permission:accounts.show')
+        ->middleware('permission:accounts.show')
         ->name('accounts.show');
 
     Route::post('/accounts/{account}/deposit', [AccountController::class, 'deposit'])
@@ -331,11 +340,11 @@ Route::middleware('auth')->group(function () {
             ->name('profile.view');
 
         Route::get('/business/profile', 'businessProfileView')
-            // ->middleware('permission:business_profile.view')
+            ->middleware('permission:business_profile.view')
             ->name('businessProfile.view');
 
         Route::post('/business/profile/{id?}', 'businessProfileUpdate')
-            // ->middleware('permission:business_profile.edit')
+            ->middleware('permission:business_profile.edit')
             ->name('businessProfile.update');
 
         Route::post('/profile', 'profileUpdate')
@@ -757,8 +766,17 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:headers.index|headers.create|headers.edit|headers.delete|headers.show');
 
 
-    //notifications
+    //System route will be here
 
+    Route::get('/system', [SystemController::class, 'index'])
+        ->middleware('permission:system.view')
+        ->name('system.index');
+    Route::post('/system/update', [SystemController::class, 'update'])
+        ->middleware('permission:system.edit')
+        ->name('system.update');
+
+
+    //notifications
     Route::get('/notifications', [NotificationController::class, 'index'])
         ->middleware('permission:notifications.view')
         ->name('notifications.index');

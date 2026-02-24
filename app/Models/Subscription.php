@@ -15,9 +15,10 @@ class Subscription extends Model
         'status',
         'notes',
         'product_range',
+        'outlet_range'
     ];
 
-    // ✅ date cast (খুব গুরুত্বপূর্ণ)
+    //  date cast (খুব গুরুত্বপূর্ণ)
     protected $casts = [
         'start_date' => 'date',
         'end_date'   => 'date',

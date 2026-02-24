@@ -61,6 +61,7 @@ class SubscriptionController extends Controller
     {
         $validity = Plan::where('id', $request->plan_id)->value('validity');
         $product_range = Plan::where('id', $request->plan_id)->value('product_range');
+        $outlet_range = Plan::where('id', $request->plan_id)->value('outlet_range');
         $validated = $request->validated();
 
         if (!empty($request->user_email) && empty($request->user_id)) {
@@ -80,6 +81,8 @@ class SubscriptionController extends Controller
         $validated['validity'] = $validity;
         $validated['status'] = 1;
         $validated['product_range'] =  $product_range ?? 20;
+        $validated['outlet_range'] =  $outlet_range ?? 2;
+
 
         $subscriptions = Subscription::create($validated);
 

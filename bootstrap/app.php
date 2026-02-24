@@ -18,6 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class, // IMPORTANT: Add this
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'active.subscription' => \App\Http\Middleware\CheckUserStatusAndSubscription::class,
+            'check.system' => \App\Http\Middleware\CheckSystemHold::class
         ]);
 
         // Global middleware - DO NOT include your custom Permission middleware here

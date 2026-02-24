@@ -1,7 +1,7 @@
 import React from "react";
 import { Head, Link, useForm, router } from "@inertiajs/react";
+import { Check } from "lucide-react";
 
-// Icons
 const Search = (props) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -174,11 +174,34 @@ export default function Index({ users, roles, filters, statistics }) {
     });
   };
 
-  const handleStatusToggle = (userId) => {
-    // Since is_active column doesn't exist, show message
-    alert(
-      "User status toggle functionality is not available. All users are active by default."
+  const handleActiveStatusToggle = (userId) => {
+    const confirmAction = window.confirm(
+      "Do you want to activate this user?"
     );
+
+    if (!confirmAction) return;
+
+    router.post(route("users.active", userId), {
+      preserveScroll: true,
+      onError: () => {
+        alert("Failed to update user status. Please try again.");
+      },
+    });
+  };
+
+  const handleHoldStatusToggle = (userId) => {
+    const confirmAction = window.confirm(
+      "Do you want to hold this user?"
+    );
+
+    if (!confirmAction) return;
+
+    router.post(route("users.hold", userId), {
+      preserveScroll: true,
+      onError: () => {
+        alert("Failed to update user status. Please try again.");
+      },
+    });
   };
 
   const handleDelete = (userId, userName) => {
@@ -440,15 +463,14 @@ export default function Index({ users, roles, filters, statistics }) {
                         {user.roles.map((role) => (
                           <span
                             key={role}
-                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${
-                              role === "admin"
-                                ? "bg-rose-100 text-rose-800 ring-rose-200"
-                                : role === "seller"
+                            className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ring-1 ring-inset ${role == "admin"
+                              ? "bg-rose-100 text-rose-800 ring-rose-200"
+                              : role == "user"
                                 ? "bg-emerald-100 text-emerald-800 ring-emerald-200"
                                 : role === "buyer"
-                                ? "bg-sky-100 text-sky-800 ring-sky-200"
-                                : "bg-gray-100 text-gray-800 ring-gray-200"
-                            }`}
+                                  ? "bg-sky-100 text-sky-800 ring-sky-200"
+                                  : "bg-gray-100 text-gray-800 ring-gray-200"
+                              }`}
                           >
                             {role}
                           </span>
@@ -460,15 +482,8 @@ export default function Index({ users, roles, filters, statistics }) {
                       <div className="flex items-center">
                         <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium bg-emerald-100 text-emerald-800 ring-1 ring-emerald-200">
                           <div className="h-1.5 w-1.5 rounded-full bg-emerald-600"></div>
-                          Active
+                          {user?.status}
                         </span>
-
-                        <button
-                          onClick={() => handleStatusToggle(user.id)}
-                          className="ml-3 text-sm font-medium text-emerald-800 hover:text-emerald-950 underline underline-offset-4"
-                        >
-                          Deactivate
-                        </button>
                       </div>
                     </td>
 
@@ -483,20 +498,40 @@ export default function Index({ users, roles, filters, statistics }) {
 
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
+
+
+                        {user.status === 'inactive' ? (
+                          <button
+                            onClick={() => handleActiveStatusToggle(user.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border bg-white  hover:bg-rose-50 transition-colors text-sm font-medium"
+                            title="Activate"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleHoldStatusToggle(user.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-300 bg-white text-rose-700 hover:bg-rose-50 transition-colors text-sm font-medium"
+                            title="Hole"
+                          >
+                            <Plus className="h-4 w-4" />
+                          </button>
+                        )}
+
                         <Link
                           href={route("userlist.edit", user.id)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors text-sm font-medium"
                         >
                           <Edit className="h-4 w-4" />
-                          Edit
                         </Link>
+
+
 
                         <button
                           onClick={() => handleDelete(user.id, user.name)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-300 bg-white text-rose-700 hover:bg-rose-50 transition-colors text-sm font-medium"
                         >
                           <Trash className="h-4 w-4" />
-                          Delete
                         </button>
                       </div>
                     </td>
@@ -555,55 +590,32 @@ export default function Index({ users, roles, filters, statistics }) {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => handlePageChange(users.meta.current_page - 1)}
-                  disabled={users.meta.current_page === 1}
+                  disabled={!users.meta.prev_page_url}
                   className="px-3 py-1.5 rounded-xl border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Previous
                 </button>
 
                 <div className="flex items-center gap-1">
-                  {Array.from(
-                    { length: Math.min(5, users.meta.last_page) },
-                    (_, i) => {
-                      let pageNum;
-                      if (users.meta.last_page <= 5) {
-                        pageNum = i + 1;
-                      } else if (users.meta.current_page <= 3) {
-                        pageNum = i + 1;
-                      } else if (
-                        users.meta.current_page >=
-                        users.meta.last_page - 2
-                      ) {
-                        pageNum = users.meta.last_page - 4 + i;
-                      } else {
-                        pageNum = users.meta.current_page - 2 + i;
-                      }
-
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => handlePageChange(pageNum)}
-                          className={`min-w-[40px] h-10 rounded-xl text-sm font-medium transition-colors ${
-                            pageNum === users.meta.current_page
-                              ? "text-white shadow-sm"
-                              : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                          }`}
-                          style={
-                            pageNum === users.meta.current_page
-                              ? { background: gradient }
-                              : undefined
-                          }
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    }
-                  )}
+                  {users.meta.links.slice(1, -1).map((link) => (
+                    <button
+                      key={link.label}
+                      onClick={() => handlePageChange(link.label)}
+                      disabled={link.active}
+                      className={`min-w-[40px] h-10 rounded-xl text-sm font-medium transition-colors ${link.active
+                        ? "text-white shadow-sm"
+                        : "border border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                        }`}
+                      style={link.active ? { background: gradient } : undefined}
+                    >
+                      {link.label}
+                    </button>
+                  ))}
                 </div>
 
                 <button
                   onClick={() => handlePageChange(users.meta.current_page + 1)}
-                  disabled={users.meta.current_page === users.meta.last_page}
+                  disabled={!users.meta.next_page_url}
                   className="px-3 py-1.5 rounded-xl border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next

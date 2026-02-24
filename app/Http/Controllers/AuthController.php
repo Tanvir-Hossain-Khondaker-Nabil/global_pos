@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
@@ -28,6 +29,10 @@ class AuthController extends Controller
 
         try {
             $user = User::where('email', $request->email)->first();
+
+            if($user->status == 'inactive') {
+                return back()->with('error', 'Your account is currently on hold. Please contact support for assistance.');
+            }
 
             if (!$user) {
                 return back()->with('error', 'The provided credentials do not match our records.');
@@ -133,7 +138,7 @@ class AuthController extends Controller
 
             return back()->with('success', 'Business profile updated successfully.');
         } catch (\Throwable $e) {
-            \Log::error('Business profile update failed', [
+            Log::error('Business profile update failed', [
                 'user_id' => Auth::id(),
                 'error'   => $e->getMessage(),
             ]);
