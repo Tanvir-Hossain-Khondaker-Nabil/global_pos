@@ -264,29 +264,43 @@ export default function Create({ plans, users }) {
                                             className="w-full px-4 py-3 border rounded-xl focus:ring-4 focus:ring-emerald-200"
                                         >
                                             <option value="">Select Payment Method</option>
+                                            <option value="adjust_deposit">Adjust User Deposit</option>
                                             <option value="cash">Cash</option>
                                             <option value="mobile_banking">Mobile Banking</option>
                                             <option value="bank_transfer">Bank Transfer</option>
                                         </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                                            <CreditCard size={16} className="text-blue-600" />
-                                            {t('subscription.transaction_id', 'Transaction ID')}
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={data.transaction_id}
-                                            onChange={(e) => setData("transaction_id", e.target.value)}
-                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
-                                            placeholder={t('subscription.transaction_placeholder', 'Enter transaction ID')}
-                                        />
-                                        {errors.transaction_id && (
-                                            <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
-                                                {errors.transaction_id}
+                                        {errors.payment_method && (
+                                            <p className="text-red-500 text-sm mt-2">
+                                                {errors.payment_method}
                                             </p>
                                         )}
                                     </div>
+                                    {
+                                        data.payment_method !== 'adjust_deposit' &&
+                                        data.payment_method !== 'cash' && (
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                                                    <CreditCard size={16} className="text-blue-600" />
+                                                    {t('subscription.transaction_id', 'Transaction ID')}
+                                                </label>
+
+                                                <input
+                                                    type="text"
+                                                    value={data.transaction_id}
+                                                    onChange={(e) => setData("transaction_id", e.target.value)}
+                                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-gray-50 hover:bg-white"
+                                                    placeholder={t('subscription.transaction_placeholder', 'Enter transaction ID')}
+                                                    required
+                                                />
+
+                                                {errors.transaction_id && (
+                                                    <p className="text-red-500 text-sm mt-2">
+                                                        {errors.transaction_id}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )
+                                    }
                                 </div>
                             </div>
 

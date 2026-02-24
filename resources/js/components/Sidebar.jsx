@@ -96,10 +96,14 @@ const investmentsOverviewMenu = [
 // Overview Admin
 const adminOverviewMenu = [
   { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
-  
-
   { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
 ];
+
+// Subscriptions Admin
+const subscriptionsViewMenu = [
+  { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Admin", permission: "users.view" },
+];
+
 
 const outletsOverviewExtraMenu = [
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
@@ -148,7 +152,7 @@ const outletLoggedInMenu = [
   { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", active: "subscriptions.index", category: "Subscriptions", permission: "subscriptions.view" },
 
   // Partners
-  { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
+  // { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
 
 
   // Reports all
@@ -182,22 +186,37 @@ const outletLoggedInMenu = [
   // Accounts
   { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Accounts", permission: "deposits.view" },
   { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Accounts", permission: "subscriptions.payments_view" },
-
-
-  //System
-  {
-    title: "System Setting",
-    icon: "user",
-    route: route('system.index', 1),
-    active: "system.index",
-    category: "System",
-    permission: "system.index",
-  },
-
+  { title: "System Setting", icon: "user", route: 'system.index', active: "system.index", category: "System", permission: "system.index" },
 
   // Outlets (super admin will see even inside outlet)
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
 ];
+
+
+const superAdminMenu = [
+    // Main
+  { title: "Dashboard", icon: "home", route: "home", active: "home", category: "Main", permission: "dashboard.view" },
+
+    // Subscriptions
+  { title: "Plan", icon: "barcode", route: "plans.index", active: "plans.index", category: "Subscriptions", permission: "plans.view" },
+  // { title: "Plan Modules", icon: "barcode", route: "modules.index", active: "modules.index", category: "Subscriptions", permission: "modules.view" },
+  { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", active: "subscriptions.index", category: "Subscriptions", permission: "subscriptions.view" },
+
+
+    // Admin (super admin will see even inside outlet)
+  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
+
+
+    // Accounts
+  { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Accounts", permission: "deposits.view" },
+  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Accounts", permission: "subscriptions.payments_view" },
+
+
+  // System
+  { title: "System Setting", icon: "user", route: 'system.index', active: "system.index", category: "System", permission: "system.index" },
+
+]
 
 const iconComponents = {
   dashboard: LayoutDashboard,
@@ -439,11 +458,11 @@ export default function Sidebar({ status, setStatus }) {
   }, [status, setStatus]);
 
   /**
-   * ✅ Super Admin: outlet logout থাকলেও Admin/Outlets/Investments সব দেখবে
+   *  Super Admin: outlet logout থাকলেও Admin/Outlets/Investments সব দেখবে
    * তাই superadmin হলে Overview mode এও full menu দেখাবো (same as outletLoggedInMenu)
    */
   const menuToShow = useMemo(() => {
-    if (isSuperAdmin) return outletLoggedInMenu;
+    if (isSuperAdmin) return superAdminMenu;
 
     if (isLoggedIntoOutlet) return outletLoggedInMenu;
 
@@ -455,6 +474,7 @@ export default function Sidebar({ status, setStatus }) {
       base.push(...investmentsOverviewMenu);
       base.push(...adminOverviewMenu);
       base.push(...outletsOverviewExtraMenu);
+      base.push(...subscriptionsViewMenu);
     }
 
     return base;

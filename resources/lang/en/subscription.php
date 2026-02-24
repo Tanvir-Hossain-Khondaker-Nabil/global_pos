@@ -64,6 +64,7 @@ return [
     'subscription_created' => 'Subscription Created',
     'subscription_updated' => 'Subscription Updated',
     'subscription_renewed' => 'Subscription Renewed',
+    'renewal_notes_placeholder' => 'Any additional notes about this renewal or upgrade...',
     'showing_entries' => 'Showing entries',
     'to' => 'to',
     'of' => 'of',

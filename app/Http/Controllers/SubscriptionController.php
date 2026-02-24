@@ -59,6 +59,7 @@ class SubscriptionController extends Controller
      */
     public function store(SubscriptionStore $request)
     {
+        $amount = Plan::where('id', $request->plan_id)->value('price');
         $validity = Plan::where('id', $request->plan_id)->value('validity');
         $product_range = Plan::where('id', $request->plan_id)->value('product_range');
         $outlet_range = Plan::where('id', $request->plan_id)->value('outlet_range');
@@ -71,18 +72,28 @@ class SubscriptionController extends Controller
             }
         }
 
+        $userDeposit = User::where('id', $validated['user_id'])->value('total_deposit');
+
+        if ($validated['payment_method'] == 'adjust_deposit' && $userDeposit < $amount) {
+            return back()->withErrors(['payment_method' => 'Insufficient deposit balance.Add User Deposit '])->withInput();
+        }
+
+
         $checkUser = Subscription::where('user_id', $validated['user_id'])
-            ->orWhere('plan_id', $validated['plan_id'])->where('status', 1)->exists();
+            ->where('status', 1)->exists();
 
         if ($checkUser) {
             return back()->withErrors(['user_id' => 'This user already has an active subscription for the selected plan.'])->withInput();
         }
+
 
         $validated['validity'] = $validity;
         $validated['status'] = 1;
         $validated['product_range'] =  $product_range ?? 20;
         $validated['outlet_range'] =  $outlet_range ?? 2;
 
+        if($validated['payment_method'] == 'cash') $validated['transaction_id'] = 'Cash-' . uniqid();
+        if($validated['payment_method'] == 'adjust_deposit') $validated['transaction_id'] = 'Adjust_deposit-' . uniqid();
 
         $subscriptions = Subscription::create($validated);
 
@@ -130,6 +141,7 @@ class SubscriptionController extends Controller
      */
     public function renew(Request $request, string $id)
     {
+        $amount = Plan::where('id', $request->plan_id)->value('price');
         $subscription = Subscription::with(['user', 'plan'])->findOrFail($id);
         $plan = Plan::findOrFail($request->plan_id);
         $plan_type = $plan->plan_type;
@@ -137,9 +149,19 @@ class SubscriptionController extends Controller
         if ($plan_type == Plan::PLAN_PAID) {
             $request->validate([
                 'payment_method' => 'required|string',
-                'transaction_id' => 'required|string',
+                'transaction_id' => 'nullable|string',
             ]);
         }
+
+        $userDeposit = User::where('id',  $subscription->user_id)->value('total_deposit');
+
+        if ($request['payment_method'] == 'adjust_deposit' && $userDeposit < $amount) {
+            return back()->withErrors(['payment_method' => 'Insufficient deposit balance.Add User Deposit '])->withInput();
+        }
+        
+        if($request['payment_method'] == 'cash') $transaction_id = 'Cash-' . uniqid();
+        if($request['payment_method'] == 'adjust_deposit') $transaction_id = 'Adjust_deposit-' . uniqid();
+
 
         $startDate = Carbon::parse($subscription->end_date);
         $endDate = $startDate->addDays($plan->validity);
@@ -156,7 +178,7 @@ class SubscriptionController extends Controller
                 'subscription_id' => $subscription->id,
                 'amount' => $plan->price,
                 'payment_method' => $request->payment_method,
-                'transaction_id' => $request->transaction_id,
+                'transaction_id' => $request->transaction_id ??  $transaction_id,
                 'status' => \App\Models\SubscriptionPayment::STATUS_COMPLETED,
                 'payment_date' => now(),
             ]);

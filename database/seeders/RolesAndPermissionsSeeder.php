@@ -24,9 +24,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Dashboard
             'dashboard.view',
-
             'sales_return.pickup',
-
             'locale.switch',
 
             // Installments
@@ -434,13 +432,16 @@ class RolesAndPermissionsSeeder extends Seeder
             'notifications.delete',
         ];
 
+        // $permissionSuperAdmin = [
+
+        // ];
+
         foreach ($permissions as $permission) {
             Permission::updateOrCreate(['name' => $permission]);
         }
 
         // ========== ROLES ==========
         $superAdmin = Role::updateOrCreate(['name' => 'Super Admin']);
-        $superAdmin->syncPermissions(Permission::all());
 
         $admin = Role::updateOrCreate(['name' => 'Admin']);
 
@@ -481,6 +482,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'system.index',
             'system.edit',
         ];
+
+        $superAdmin->syncPermissions(Permission::all());
+
 
         $admin->syncPermissions(
             Permission::whereNotIn('name', $excluded)->get()

@@ -767,7 +767,7 @@ Route::middleware(['auth', 'active.subscription','check.system'])->group(functio
 
 
     //System route will be here
-    Route::get('/system/{id}', [SystemController::class, 'show'])
+    Route::get('/system', [SystemController::class, 'index'])
         ->middleware('permission:system.index')
         ->name('system.index');
 

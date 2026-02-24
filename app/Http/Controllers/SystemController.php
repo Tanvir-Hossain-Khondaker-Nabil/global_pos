@@ -14,7 +14,11 @@ class SystemController extends Controller
      */
     public function index()
     {
-        //
+        $system = System::findOrFail(1);
+
+        return Inertia::render('Systems/Show', [
+            'system' => $system
+        ]);
     }
 
     /**

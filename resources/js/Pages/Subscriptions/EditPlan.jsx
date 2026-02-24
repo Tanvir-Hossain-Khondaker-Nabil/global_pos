@@ -128,10 +128,10 @@ export default function Edit({ subscription, plans }) {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-extrabold">
-                                { t("subscription.update_subscription", "Update Subscription")}
+                                {t("subscription.update_subscription", "Update Subscription")}
                             </h1>
                             <p className="text-white/80 mt-2">
-                                { t("subscription.reactivate_modify_plan", "Reactivate or modify the subscription plan")}
+                                {t("subscription.reactivate_modify_plan", "Reactivate or modify the subscription plan")}
                             </p>
                         </div>
                         <a
@@ -176,12 +176,12 @@ export default function Edit({ subscription, plans }) {
                                         {subscription.status == 1
                                             ? t("subscription.active", "active")
                                             : subscription.status == 2
-                                            ? t("subscription.expired", "expired")
-                                            : subscription.status == 3
-                                            ? t("subscription.cancelled", "cancelled")
-                                            : subscription.status == 4
-                                            ? t("subscription.pending", "pending")
-                                            : "unknown"}
+                                                ? t("subscription.expired", "expired")
+                                                : subscription.status == 3
+                                                    ? t("subscription.cancelled", "cancelled")
+                                                    : subscription.status == 4
+                                                        ? t("subscription.pending", "pending")
+                                                        : "unknown"}
                                     </p>
                                 </div>
 
@@ -214,7 +214,8 @@ export default function Edit({ subscription, plans }) {
                             {t("subscription.select_plan", "Select Plan")}
                         </div>
 
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                     <Star size={16} className="text-emerald-700" />
@@ -252,8 +253,8 @@ export default function Edit({ subscription, plans }) {
                                         {selectedPlan.price > subscription.plan.price
                                             ? t("subscription.upgrade", "Upgrade")
                                             : selectedPlan.price < subscription.plan.price
-                                            ? t("subscription.downgrade", "Downgrade")
-                                            : t("subscription.same_plan", "Same")}{" "}
+                                                ? t("subscription.downgrade", "Downgrade")
+                                                : t("subscription.same_plan", "Same")}{" "}
                                         {t("subscription.plan_details", "Plan Details")}
                                     </h4>
 
@@ -297,17 +298,7 @@ export default function Edit({ subscription, plans }) {
                                     )}
                                 </div>
                             )}
-                        </div>
-                    </div>
 
-                    {/* Subscription Period */}
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                        <div className="px-6 py-4 text-white font-bold text-lg flex items-center gap-2" style={{ background: gradient }}>
-                            <Calendar size={20} />
-                            {t("subscription.subscription_period", "Subscription Period")}
-                        </div>
-
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                     <Calendar size={16} className="text-emerald-700" />
@@ -341,35 +332,6 @@ export default function Edit({ subscription, plans }) {
                                 {errors.end_date && <p className="text-red-500 text-sm mt-2">{errors.end_date}</p>}
                             </div>
 
-                            <div className="md:col-span-2">
-                                <label className="flex items-start gap-3 cursor-pointer p-4 rounded-xl border border-gray-200 bg-gray-50">
-                                    <input
-                                        type="checkbox"
-                                        checked={data.auto_renew}
-                                        onChange={(e) => setData("auto_renew", e.target.checked)}
-                                        className="w-4 h-4 mt-1 text-emerald-700 rounded focus:ring-emerald-500"
-                                    />
-                                    <div>
-                                        <span className="font-semibold text-gray-800">
-                                            {t("subscription.enable_auto_renewal", "Enable Auto-Renewal")}
-                                        </span>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            {t("subscription.auto_renew_description", "Automatically renew this subscription when it expires")}
-                                        </p>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Payment Information */}
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                        <div className="px-6 py-4 text-white font-bold text-lg flex items-center gap-2" style={{ background: gradient }}>
-                            <CreditCard size={20} />
-                            {t("subscription.payment_information", "Payment Information")}
-                        </div>
-
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                     ৳ {t("subscription.amount", "Amount")}
@@ -401,11 +363,11 @@ export default function Edit({ subscription, plans }) {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition"
                                 >
                                     <option value="">{t("subscription.select_payment_method", "Select payment method")}</option>
+                                    <option value="adjust_deposit">Adjust User Deposit</option>
                                     <option value="cash">{t("subscription.cash", "Cash")}</option>
                                     <option value="card">{t("subscription.card", "Credit Card")}</option>
                                     <option value="bank">{t("subscription.bank", "Bank Transfer")}</option>
                                     <option value="mobile">{t("subscription.mobile", "Mobile Banking")}</option>
-                                    <option value="online">{t("subscription.online", "Online Payment")}</option>
                                 </select>
 
                                 {errors.payment_method && (
@@ -413,25 +375,53 @@ export default function Edit({ subscription, plans }) {
                                 )}
                             </div>
 
+
+                            {
+                                data.payment_method !== 'adjust_deposit' &&
+                                data.payment_method !== 'cash' && (
+                                    <div xclassName="md:col-span-2">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                            <CreditCard size={16} className="text-emerald-700" />
+                                            {t("subscription.transaction_id", "Transaction ID")}
+                                        </label>
+
+                                        <input
+                                            type="text"
+                                            value={data.transaction_id}
+                                            onChange={(e) => setData("transaction_id", e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition"
+                                            placeholder={t("subscription.transaction_placeholder", "Enter transaction ID (if applicable)")}
+                                            required
+                                        />
+                                        {errors.transaction_id && (
+                                            <p className="text-red-500 text-sm mt-2">{errors.transaction_id}</p>
+                                        )}
+                                    </div>
+
+                            )}
+
+
+
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                    <CreditCard size={16} className="text-emerald-700" />
-                                    {t("subscription.transaction_id", "Transaction ID")}
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    {t("subscription.renewal_notes", "Renewal Notes")}
                                 </label>
 
-                                <input
-                                    type="text"
-                                    value={data.transaction_id}
-                                    onChange={(e) => setData("transaction_id", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition"
-                                    placeholder={t("subscription.transaction_placeholder", "Enter transaction ID (if applicable)")}
+                                <textarea
+                                    value={data.notes}
+                                    onChange={(e) => setData("notes", e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition resize-none"
+                                    rows={4}
+                                    placeholder={t("subscription.renewal_notes_placeholder", "Any additional notes about this renewal or upgrade...")}
                                 />
-                                {errors.transaction_id && (
-                                    <p className="text-red-500 text-sm mt-2">{errors.transaction_id}</p>
-                                )}
+                                {errors.notes && <p className="text-red-500 text-sm mt-2">{errors.notes}</p>}
                             </div>
+
                         </div>
                     </div>
+
+
+
 
                     {/* Additional Information */}
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
@@ -440,20 +430,7 @@ export default function Edit({ subscription, plans }) {
                             {t("subscription.additional_information", "Additional Information")}
                         </div>
 
-                        <div className="p-6">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                {t("subscription.renewal_notes", "Renewal Notes")}
-                            </label>
 
-                            <textarea
-                                value={data.notes}
-                                onChange={(e) => setData("notes", e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition resize-none"
-                                rows={4}
-                                placeholder={t("subscription.renewal_notes_placeholder", "Any additional notes about this renewal or upgrade...")}
-                            />
-                            {errors.notes && <p className="text-red-500 text-sm mt-2">{errors.notes}</p>}
-                        </div>
                     </div>
 
                     {/* Actions */}
@@ -467,9 +444,8 @@ export default function Edit({ subscription, plans }) {
 
                         <button
                             disabled={processing}
-                            className={`px-8 py-3 rounded-xl font-bold text-white shadow-md hover:shadow-lg transition ${
-                                processing ? "bg-gray-400 cursor-not-allowed" : ""
-                            }`}
+                            className={`px-8 py-3 rounded-xl font-bold text-white shadow-md hover:shadow-lg transition ${processing ? "bg-gray-400 cursor-not-allowed" : ""
+                                }`}
                             style={!processing ? { background: gradient } : {}}
                         >
                             <Save size={18} className="inline mr-2" />
