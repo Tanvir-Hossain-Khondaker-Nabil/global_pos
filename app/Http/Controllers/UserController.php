@@ -43,56 +43,55 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $auth = Auth::user();
+        $user = auth()->user();
         $hasSubscription = $this->hasOwnerSubscription();
 
-        $query = User::query()
+        // Base query (shared)
+        $baseQuery = User::query()
             ->with(['roles', 'business'])
-            ->where('created_by', Auth::id())
+            ->where('created_by', $user->id)
+            ->whereDoesntHave('roles', fn($q) => $q->where('name', 'Super Admin'));
+
+        // Apply subscription restriction
+        $baseQuery->when(
+            ! $hasSubscription,
+            fn($q) => $q->where('created_by', $user->id)
+        );
+
+        // Users list query
+        $usersQuery = (clone $baseQuery)
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->search;
+                $q->where(
+                    fn($qq) =>
+                    $qq->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                );
+            })
+            ->when(
+                $request->filled('role'),
+                fn($q) =>
+                $q->whereHas('roles', fn($r) => $r->where('name', $request->role))
+            )
             ->latest();
 
-        // Always exclude Super Admin from list (safe)
-        $query->whereDoesntHave('roles', fn($q) => $q->where('name', 'Super Admin'));
-
-        // Condition: subscription
-        if (!$hasSubscription) {
-            $query->where('created_by', $auth->id);
-        }
-
-        // Search filter
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%");
-            });
-        }
-
-        // Role filter
-        if ($request->filled('role')) {
-            $role = $request->role;
-            $query->whereHas('roles', fn($q) => $q->where('name', $role));
-        }
-
-        // Roles for dropdown
-        $allRoles = Role::where('name', '!=', 'Super Admin')->pluck('name');
-
-        // Statistics (same condition applied)
-        $statsQuery = User::query()->whereDoesntHave('roles', fn($q) => $q->where('name', 'Super Admin'));
-        if (!$hasSubscription) {
-            $statsQuery->where('created_by', $auth->id);
-        }
-
-        $totalUsers = (clone $statsQuery)->count();
-        $adminsCount = (clone $statsQuery)->whereHas('roles', fn($q) => $q->where('name', 'admin'))->count();
-        $sellersCount = Role::where('name', 'seller')->exists()
-            ? (clone $statsQuery)->whereHas('roles', fn($q) => $q->where('name', 'seller'))->count()
-            : 0;
+        // Statistics
+        $stats = [
+            'total_users' => (clone $baseQuery)->count(),
+            'admins_count' => (clone $baseQuery)
+                ->whereHas('roles', fn($q) => $q->where('name', 'admin'))
+                ->count(),
+            'sellers_count' => Role::where('name', 'seller')->exists()
+                ? (clone $baseQuery)->whereHas('roles', fn($q) => $q->where('name', 'seller'))->count()
+                : 0,
+        ];
 
         return Inertia::render('Users/Index', [
-            'filters' => $request->only(['search', 'role']),
-            'users' => $query->paginate(10)->withQueryString()
+            'filters' => $request->only('search', 'role'),
+            'users' => $usersQuery
+                ->paginate(10)
+                ->withQueryString()
                 ->through(fn($user) => [
                     'id' => $user->id,
                     'name' => $user->name,
@@ -106,12 +105,10 @@ class UserController extends Controller
                     'join_at' => $user->created_at->format('d M Y'),
                     'last_login' => $user->last_login_at?->format('d M Y H:i'),
                 ]),
-            'roles' => $allRoles,
+            'roles' => Role::where('name', '!=', 'Super Admin')->pluck('name'),
             'statistics' => [
-                'total_users' => $totalUsers,
-                'admins_count' => $adminsCount,
-                'sellers_count' => $sellersCount,
-                'active_users' => $totalUsers,
+                ...$stats,
+                'active_users' => $stats['total_users'],
             ],
             'hasSubscription' => $hasSubscription,
         ]);
@@ -150,7 +147,7 @@ class UserController extends Controller
 
     /**
      * Hold function
-    */
+     */
     public function hold($id)
     {
         $user = User::findOrFail($id);
@@ -163,7 +160,7 @@ class UserController extends Controller
 
     /**
      * active function
-    */
+     */
     public function active($id)
     {
         $user = User::findOrFail($id);
