@@ -90,7 +90,7 @@ class SubscriptionController extends Controller
         $validated['validity'] = $validity;
         $validated['status'] = 1;
         $validated['product_range'] =  $product_range ?? 20;
-        $validated['outlet_range'] =  $outlet_range ?? 2;
+        $validated['outlet_range'] =  $outlet_range ?? 1;
 
         if($validated['payment_method'] == 'cash') $validated['transaction_id'] = 'Cash-' . uniqid();
         if($validated['payment_method'] == 'adjust_deposit') $validated['transaction_id'] = 'Adjust_deposit-' . uniqid();
