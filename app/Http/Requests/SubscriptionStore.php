@@ -28,7 +28,7 @@ class SubscriptionStore extends FormRequest
             'start_date'     => 'required|date',
             'end_date'       => 'required|date|after_or_equal:start_date',
             'payment_method'=> 'required|string',
-            'transaction_id'=> 'required|string',
+            'transaction_id'=> 'nullable|string',
             'notes'          => 'nullable|string',
         ];
 

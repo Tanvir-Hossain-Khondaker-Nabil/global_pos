@@ -119,7 +119,7 @@ return [
     // Menu Categories
     'main' => 'Main',
     'sales' => 'Sales',
-    
+    'category_system' => 'System',
     'finance' => 'Finance',
     'partners' => 'Partners',
     'crm' => 'CRM',
@@ -127,6 +127,7 @@ return [
     'category_reports' => 'All Reports',
     'hr' => 'HR',
     'outlets' => 'Outlets',
+    'category_accounts' => 'Accounts',
 
     // Other sidebar items
     'accounts' => 'Accounts',

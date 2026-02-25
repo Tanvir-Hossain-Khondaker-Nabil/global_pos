@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Supplier extends Model
 {
-   use HasFactory;
+    use HasFactory;
 
     protected $fillable = [
         'name',
@@ -41,7 +41,7 @@ class Supplier extends Model
     //relationship to dealership
     public function dealership()
     {
-        return $this->belongsTo(DillerShip::class, 'dealership_id' , 'id');
+        return $this->belongsTo(DillerShip::class, 'dealership_id', 'id');
     }
 
     //relationship to creator
@@ -53,7 +53,7 @@ class Supplier extends Model
     //relationship to purchases
     public function purchases()
     {
-        return $this->hasMany(Purchase::class, 'supplier_id')->with('warehouse', 'creator','items');
+        return $this->hasMany(Purchase::class, 'supplier_id')->with('warehouse', 'creator', 'items');
     }
 
     //active scrope 
@@ -62,5 +62,30 @@ class Supplier extends Model
         return $query->where('is_active', 1);
     }
 
-
+    public function scopeSearch($query, $search)
+    {
+        return $query->when($search, function ($q) use ($search) {
+            $q->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('contact_person', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('company', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+            });
+        });
     }
+
+    public function scopeStatus($query, $status)
+    {
+        return $query->when($status, function ($q) use ($status) {
+            $q->where('is_active', $status === 'active');
+        });
+    }
+
+    public function scopeDateRange($query, $from, $to)
+    {
+        return $query->when($from && $to, function ($q) use ($from, $to) {
+            $q->whereBetween('created_at', [$from, $to]);
+        });
+    }
+}

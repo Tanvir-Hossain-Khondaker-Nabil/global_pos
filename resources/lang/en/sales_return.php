@@ -16,6 +16,8 @@ return [
     // Navigation & Actions
     'back_to_list' => 'Back to List',
     'back_to_purchases' => 'Back to Purchases',
+    'select_account' => 'Select Account',
+    'account' => 'Account',
     'create_return' => 'Create Sales  Return',
     'create_new' => 'Create Return',
     'edit_return' => 'Edit Return',

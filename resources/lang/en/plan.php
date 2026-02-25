@@ -9,7 +9,9 @@ return [
     // Edit Component
     'edit_title' => 'Edit Plan',
     'edit_subtitle' => 'Update the subscription plan information',
-    
+    'plan_overview' => 'Plan Overview',
+    'sales_performance' => 'Sales Performance',
+
     // Index Component
     'index_title' => 'Plans Management',
     'index_subtitle' => 'Manage your subscription plans and pricing',
@@ -18,6 +20,9 @@ return [
     'basic_information' => 'Basic Information',
     'plan_features' => 'Plan Features',
     'status_performance' => 'Status & Performance',
+    'enter_outlet_range' => 'Enter outlet range...',
+    'outlet_range' => 'Outlet Range',
+    'showing_entries' => 'Showing entries',
 
     //module guidline
     'modules' => 'Modules',

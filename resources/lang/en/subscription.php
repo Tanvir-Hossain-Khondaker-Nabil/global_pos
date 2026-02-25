@@ -21,7 +21,14 @@ return [
     'cancelled' => 'Cancelled',
     'pending' => 'Pending',
     'inactive' => 'Inactive',
-    
+    'current_price' => 'Current Price',
+    'extend_upgrade_plan' => 'Extend Upgrade Plan',
+    'user_information' => 'User Information',
+    'auto_renew_description' => 'Automatically renew this subscription before it expires.',
+    'expires' => 'Expires',
+    'start' => 'Start',
+    'end' => 'End',
+
     // Form Labels
     'select_company' => 'Select Company',
     'user_email' => 'User Email (manual)',
@@ -47,6 +54,9 @@ return [
     'delete' => 'Delete',
     'all_status' => 'All Statuses',
     'selected_plan' => 'Selected Plan',
+    'date_from' => 'Date From',
+    'date_to' => 'Date To',
+    'subscription_details' => 'Subscription Details',
 
     // Status Messages
     'creating_subscription' => 'Creating Subscription...',
@@ -55,11 +65,13 @@ return [
     'subscription_created' => 'Subscription Created',
     'subscription_updated' => 'Subscription Updated',
     'subscription_renewed' => 'Subscription Renewed',
+    'renewal_notes_placeholder' => 'Any additional notes about this renewal or upgrade...',
     'showing_entries' => 'Showing entries',
     'to' => 'to',
     'of' => 'of',
     'entries' => 'entries',
     'subscriptions_summary' => 'Subscriptions Summary',
+    'current' => 'Current',
     'plan_name' => 'Plan Name',
     'description' => 'Description',
     'validity' => 'Validity',
@@ -71,6 +83,8 @@ return [
     'included_modules' => 'Included Modules',
     'subscription_summary' => 'Subscription Summary',
     'search_subscriptions' => 'Search Subscriptions' ,
+    'reactivate_modify_plan' => 'Reactivate Modify Plan',
+    'edit' => 'Edit',
 
     // Table Headers
     'sl' => 'SL',

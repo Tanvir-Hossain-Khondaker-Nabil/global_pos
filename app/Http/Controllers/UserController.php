@@ -98,6 +98,7 @@ class UserController extends Controller
                     'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
+                    'status' => $user->status,
                     'avatar' => $user->profile,
                     'roles' => $user->roles->pluck('name'),
                     'address' => $user->address,
@@ -144,6 +145,35 @@ class UserController extends Controller
             'outlet_exist' => $outlet_exist,
         ]);
     }
+
+
+
+    /**
+     * Hold function
+    */
+    public function hold($id)
+    {
+        $user = User::findOrFail($id);
+        $user->status = 'inactive';
+        $user->save();
+
+        return redirect()->back()->with('success', 'User has been held successfully.');
+    }
+
+
+    /**
+     * active function
+    */
+    public function active($id)
+    {
+        $user = User::findOrFail($id);
+        $user->status = 'active';
+        $user->save();
+
+        return redirect()->back()->with('success', 'User has been activated successfully.');
+    }
+
+
 
 
     /**

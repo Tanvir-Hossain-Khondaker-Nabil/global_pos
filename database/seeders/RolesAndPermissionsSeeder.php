@@ -3,7 +3,9 @@
 namespace Database\Seeders;
 
 use App\Models\Customer;
+use App\Models\Module;
 use App\Models\Supplier;
+use App\Models\System;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
@@ -22,9 +24,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
             // Dashboard
             'dashboard.view',
-
             'sales_return.pickup',
-
             'locale.switch',
 
             // Installments
@@ -50,6 +50,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'users.create',
             'users.edit',
             'users.delete',
+            'users.active',
+            'users.hold',
+
 
             // Customers
             'customer.view',
@@ -128,6 +131,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'salesReturn.edit',
             'salesReturn.update',
             'return.approve',
+            
 
             // Sales List
             'sales_list.view',
@@ -392,6 +396,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'sales_return.delete',
             'sales_return.show',
 
+             //system 
+            'system.index',
+            'system.edit',
+
             // SMS
             'sms_templates.view',
             'sms_templates.create',
@@ -422,7 +430,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'notifications.read_all',
             'notifications.delete_all',
             'notifications.delete',
+
+            // user subscriptions
+            'user_subscriptions.create',
+            'user_subscriptions.view',
+            'user_subscriptions.renew',
+            'user_subscriptions.edit',
         ];
+
 
         foreach ($permissions as $permission) {
             Permission::updateOrCreate(['name' => $permission]);
@@ -430,7 +445,6 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ========== ROLES ==========
         $superAdmin = Role::updateOrCreate(['name' => 'Super Admin']);
-        $superAdmin->syncPermissions(Permission::all());
 
         $admin = Role::updateOrCreate(['name' => 'Admin']);
 
@@ -442,6 +456,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'plans.edit',
             'plans.update',
             'plans.delete',
+            
             // Subscriptions
             'subscriptions.view',
             'subscriptions.create',
@@ -451,6 +466,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'subscriptions.delete',
             'subscriptions.renew',
             'subscriptions.payments_view',
+
             // Modules
             'modules.view',
             'modules.create',
@@ -458,7 +474,21 @@ class RolesAndPermissionsSeeder extends Seeder
             'modules.delete',
             'modules.update',
             'modules.show',
+
+            // User Deposit 
+            'deposits.approve',
+            'deposits.reject',
+            'users.active',
+            'users.hold',
+
+
+            //system 
+            'system.index',
+            'system.edit',
         ];
+
+        $superAdmin->syncPermissions(Permission::all());
+
 
         $admin->syncPermissions(
             Permission::whereNotIn('name', $excluded)->get()
@@ -466,12 +496,13 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // ========== USERS ==========
         $superAdminUser = User::updateOrCreate(
-            ['email' => 'superadmin@system.com'], // search condition
+            ['email' => 'superadmin@system.com'], 
             [
                 'name' => 'Super Admin',
                 'role_id' => User::SUPERADMIN_ROLE,
                 'password' => bcrypt('password123'),
                 'email_verified_at' => now(),
+                'role' => 'superadmin',
             ]
         );
 
@@ -485,6 +516,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'role_id' => User::ADMIN_ROLE,
                 'password' => bcrypt('password123'),
                 'email_verified_at' => now(),
+                'role' => 'admin',
             ]
         );
 
@@ -513,7 +545,6 @@ class RolesAndPermissionsSeeder extends Seeder
         );
 
         // === Customer Create ======
-
         Customer::updateOrCreate(
             ['phone' => '100100100'],
             [
@@ -527,6 +558,30 @@ class RolesAndPermissionsSeeder extends Seeder
                 'outlet_id' => 1 ?? null,
             ]
         );
+
+
+        // === System Create ======
+        System::updateOrCreate(
+            ['id' => 1],
+            [
+                'status' => 'active',
+                'hold_reason' => 'Right Now System is on Maintenance | ' . now() . ' Contact With System Admin',
+            ]
+        );
+
+        // === module Crate == //
+        Module::updateOrCreate(
+            ['id' => 1],
+            [
+                'name' => 'All Modules',
+                'is_active' => 1,
+                'description' => 'All Modules will be accessible',
+            ]
+        );
+
+     
+
+
 
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
     }

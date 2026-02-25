@@ -9,6 +9,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__ . '/../routes/web.php',
+        api: __DIR__.'/../routes/api.php',
         commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
@@ -18,11 +19,14 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class, // IMPORTANT: Add this
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+            'active.subscription' => \App\Http\Middleware\CheckUserStatusAndSubscription::class,
+            'check.system' => \App\Http\Middleware\CheckSystemHold::class
         ]);
 
         // Global middleware - DO NOT include your custom Permission middleware here
         $middleware->web(append: [
             HandleInertiaRequests::class,
+            // \App\Http\Middleware\CheckSystemHold::class,
             SetLocale::class,
         ]);
     })

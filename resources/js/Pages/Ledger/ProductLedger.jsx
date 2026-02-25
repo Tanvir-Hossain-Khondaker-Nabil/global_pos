@@ -10,8 +10,16 @@ import {
     Search,
     TrendingDown,
     TrendingUp,
+    Download,
+    FileText,
+    Table as TableIcon,
+    FileSpreadsheet,
 } from "lucide-react";
 import { useEffect, useState } from "react";
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { toast } from "react-toastify";
 
 export default function ProductLedger({
     products,
@@ -24,6 +32,7 @@ export default function ProductLedger({
     const [selectedProductId, setSelectedProductId] = useState(
         filters?.product_id || null,
     );
+    const [isDownloading, setIsDownloading] = useState(false);
     
     // URL থেকে পৃষ্ঠা নম্বর নেওয়া
     const [currentPage, setCurrentPage] = useState(() => {
@@ -112,6 +121,239 @@ export default function ProductLedger({
 
     const rows = transactions?.rows || [];
     const pagination = transactions?.pagination || null;
+
+    // Format date for filename
+    const formatDateForFilename = () => {
+        const now = new Date();
+        return now.toISOString().split('T')[0] + '_' + 
+               now.getHours() + '-' + 
+               now.getMinutes() + '-' + 
+               now.getSeconds();
+    };
+
+    // Prepare data for export
+    const prepareExportData = () => {
+        if (!selectedProduct) return [];
+        
+        return rows.map(transaction => ({
+            'Date': transaction.date || 'N/A',
+            'Type': transaction.type === 'sale' ? 'SALE' : 'PURCHASE',
+            'Reference No': transaction.ref_no || 'N/A',
+            'Party': transaction.party || 'N/A',
+            'Party Phone': transaction.party_phone || 'N/A',
+            'Variant': transaction.variant || '-',
+            'Quantity': transaction.qty || 0,
+            'Unit Price': parseFloat(transaction.unit_price || 0).toFixed(2),
+            'Total': parseFloat(transaction.total || 0).toFixed(2)
+        }));
+    };
+
+    // Download as CSV
+    const downloadCSV = () => {
+        try {
+            if (!selectedProduct) {
+                toast.warning('Please select a product first');
+                return;
+            }
+
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No transaction data to export');
+                return;
+            }
+
+            const headers = Object.keys(exportData[0]);
+            const csvRows = [];
+            
+            csvRows.push(headers.join(','));
+            
+            for (const row of exportData) {
+                const values = headers.map(header => {
+                    const value = row[header]?.toString() || '';
+                    return `"${value.replace(/"/g, '""')}"`;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            csvRows.push('');
+            csvRows.push('PRODUCT INFORMATION');
+            csvRows.push(`Product Name,${selectedProduct.name || 'N/A'}`);
+            csvRows.push(`Product Code,${selectedProduct.product_no || 'N/A'}`);
+            csvRows.push(`Total Purchased Qty,${summary.purchased_qty || 0}`);
+            csvRows.push(`Total Sold Qty,${summary.sold_qty || 0}`);
+            csvRows.push(`Estimated Stock,${summary.stock_est || 0}`);
+
+            csvRows.push('');
+            csvRows.push('FILTER INFORMATION');
+            csvRows.push(`Transaction Type,${txType === 'all' ? 'All' : txType}`);
+            csvRows.push(`Search Term,${search || 'None'}`);
+
+            const csvString = csvRows.join('\n');
+            
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.href = url;
+            link.download = `product_ledger_${selectedProduct.product_no}_${formatDateForFilename()}.csv`;
+            link.click();
+            URL.revokeObjectURL(url);
+            
+            toast.success('CSV downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading CSV:', error);
+            toast.error('Failed to download CSV');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as Excel
+    const downloadExcel = () => {
+        try {
+            if (!selectedProduct) {
+                toast.warning('Please select a product first');
+                return;
+            }
+
+            setIsDownloading(true);
+            const exportData = prepareExportData();
+            
+            if (exportData.length === 0) {
+                toast.warning('No transaction data to export');
+                return;
+            }
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(exportData);
+
+            // Product info sheet
+            const productInfo = [
+                { 'Field': 'Product Name', 'Value': selectedProduct.name || 'N/A' },
+                { 'Field': 'Product Code', 'Value': selectedProduct.product_no || 'N/A' },
+                { 'Field': 'Total Purchased Qty', 'Value': summary.purchased_qty || 0 },
+                { 'Field': 'Total Sold Qty', 'Value': summary.sold_qty || 0 },
+                { 'Field': 'Estimated Stock', 'Value': summary.stock_est || 0 }
+            ];
+            const wsProduct = XLSX.utils.json_to_sheet(productInfo);
+
+            // Filter info sheet
+            const filterData = [
+                { 'Filter': 'Transaction Type', 'Value': txType === 'all' ? 'All' : txType },
+                { 'Filter': 'Search Term', 'Value': search || 'None' }
+            ];
+            const wsFilters = XLSX.utils.json_to_sheet(filterData);
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Transactions');
+            XLSX.utils.book_append_sheet(wb, wsProduct, 'Product Info');
+            XLSX.utils.book_append_sheet(wb, wsFilters, 'Filters Applied');
+
+            XLSX.writeFile(wb, `product_ledger_${selectedProduct.product_no}_${formatDateForFilename()}.xlsx`);
+            
+            toast.success('Excel file downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading Excel:', error);
+            toast.error('Failed to download Excel file');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    // Download as PDF
+    const downloadPDF = () => {
+        try {
+            if (!selectedProduct) {
+                toast.warning('Please select a product first');
+                return;
+            }
+
+            setIsDownloading(true);
+            
+            if (rows.length === 0) {
+                toast.warning('No transaction data to export');
+                return;
+            }
+
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Add title
+            doc.setFontSize(18);
+            doc.setTextColor(59, 130, 246);
+            doc.text(`Product Ledger: ${selectedProduct.name || 'Product'}`, 14, 15);
+            
+            // Add product info
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`Product Code: ${selectedProduct.product_no || 'N/A'}`, 14, 22);
+            
+            // Add filter information
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(`Transaction Type: ${txType === 'all' ? 'All' : txType} | Search: ${search || 'None'}`, 14, 29);
+
+            // Prepare table columns and rows
+            const tableColumns = [
+                'Date',
+                'Type',
+                'Reference',
+                'Party',
+                'Qty',
+                'Unit Price',
+                'Total'
+            ];
+
+            const tableRows = rows.map(transaction => [
+                transaction.date || 'N/A',
+                transaction.type === 'sale' ? 'SALE' : 'PURCHASE',
+                (transaction.ref_no || 'N/A').substring(0, 8),
+                (transaction.party || 'N/A').substring(0, 15),
+                transaction.qty || 0,
+                parseFloat(transaction.unit_price || 0).toFixed(2),
+                parseFloat(transaction.total || 0).toFixed(2)
+            ]);
+
+            // Add table
+            autoTable(doc, {
+                head: [tableColumns],
+                body: tableRows,
+                startY: 35,
+                theme: 'grid',
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [59, 130, 246], textColor: [255, 255, 255] },
+                alternateRowStyles: { fillColor: [245, 245, 245] }
+            });
+
+            // Add summary statistics
+            const finalY = doc.lastAutoTable.finalY + 10;
+            
+            doc.setFontSize(12);
+            doc.setTextColor(59, 130, 246);
+            doc.text('Summary Statistics', 14, finalY);
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            doc.text(`Total Purchased Quantity: ${summary.purchased_qty || 0}`, 14, finalY + 7);
+            doc.text(`Total Sold Quantity: ${summary.sold_qty || 0}`, 14, finalY + 14);
+            doc.text(`Estimated Stock: ${summary.stock_est || 0}`, 14, finalY + 21);
+            doc.text(`Total Sale Amount: ${saleTotal.toFixed(2)} Tk`, 14, finalY + 28);
+            doc.text(`Total Purchase Amount: ${purchaseTotal.toFixed(2)} Tk`, 14, finalY + 35);
+
+            // Save PDF
+            doc.save(`product_ledger_${selectedProduct.product_no}_${formatDateForFilename()}.pdf`);
+            
+            toast.success('PDF downloaded successfully');
+        } catch (error) {
+            console.error('Error downloading PDF:', error);
+            toast.error('Failed to download PDF');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     // ডিবাউন্সড সার্চ ইফেক্ট
     useEffect(() => {
@@ -335,6 +577,50 @@ export default function ProductLedger({
                             Clear Filters
                         </button>
                     )}
+                    
+                    {/* Download Dropdown */}
+                    {selectedProduct && (
+                        <div className="dropdown dropdown-end">
+                            <button 
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                                disabled={isDownloading || rows.length === 0}
+                                tabIndex={0}
+                            >
+                                <Download className="w-4 h-4" />
+                                {isDownloading ? 'Downloading...' : 'Download'}
+                            </button>
+                            <ul tabIndex={0} className="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-48 mt-1">
+                                <li>
+                                    <button 
+                                        onClick={downloadCSV} 
+                                        className="btn btn-ghost btn-sm w-full text-left flex items-center gap-2"
+                                    >
+                                        <TableIcon className="w-4 h-4" />
+                                        CSV Format
+                                    </button>
+                                </li>
+                                <li>
+                                    <button 
+                                        onClick={downloadExcel} 
+                                        className="btn btn-ghost btn-sm w-full text-left flex items-center gap-2"
+                                    >
+                                        <FileSpreadsheet className="w-4 h-4" />
+                                        Excel Format
+                                    </button>
+                                </li>
+                                <li>
+                                    <button 
+                                        onClick={downloadPDF} 
+                                        className="btn btn-ghost btn-sm w-full text-left flex items-center gap-2"
+                                    >
+                                        <FileText className="w-4 h-4" />
+                                        PDF Format
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    )}
+
                     <button
                         onClick={handleRefresh}
                         className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"

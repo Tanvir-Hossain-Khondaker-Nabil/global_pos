@@ -97,7 +97,10 @@ const investmentsOverviewMenu = [
 const adminOverviewMenu = [
   { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
   { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
+  { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Admin", permission: "users.view" },
+  { title: "Subscriptions", icon: "barcode", route: "user_subscriptions.index", active: "user_subscriptions.index", category: "Admin", permission: "user_subscriptions.view" },
 ];
+
 
 const outletsOverviewExtraMenu = [
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
@@ -111,8 +114,7 @@ const outletLoggedInMenu = [
   // Sales
   { title: "Add Sale (Inventory)", icon: "baggage-claim", route: "sales.create", active: "sales.create", category: "Sales", permission: "sales.create" },
   { title: "Add Sale (POS)", icon: "baggage-claim", route: "sales.add", active: "sales.add", category: "Sales", permission: "sales.create" },
-  { title: "All Orders (Inventory)", icon: "badge-cent", route: "sales.index", active: "sales.index", category: "Sales", permission: "sales.view" },
-  { title: "All Orders (POS)", icon: "badge-cent", route: "salesPos.index", active: "salesPos.index", category: "Sales", permission: "sales.view" },
+
   { title: "All Sales Return", icon: "badge-cent", route: "salesReturn.list", active: "salesReturn.list", category: "Sales", permission: "salesReturn.list" },
 
   // Purchase
@@ -135,7 +137,6 @@ const outletLoggedInMenu = [
   { title: "Product Ledger", icon: "list-checks", route: "product-ledger.index", active: "product-ledger.index", category: "Inventory", permission: "product_ledger.view" },
 
 
-
   // Finance
   { title: "Expense Category", icon: "banknote-arrow-up", route: "expenses.category", active: "expenses.category", category: "Finance", permission: "expense.category_view" },
   { title: "Expense", icon: "wallet-minimal", route: "expenses.list", active: "expenses.list", category: "Finance", permission: "expense.view" },
@@ -144,16 +145,19 @@ const outletLoggedInMenu = [
 
   // Subscriptions
   { title: "Plan", icon: "barcode", route: "plans.index", active: "plans.index", category: "Subscriptions", permission: "plans.view" },
-  { title: "Plan Modules", icon: "barcode", route: "modules.index", active: "modules.index", category: "Subscriptions", permission: "modules.view" },
+  // { title: "Plan Modules", icon: "barcode", route: "modules.index", active: "modules.index", category: "Subscriptions", permission: "modules.view" },
   { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", active: "subscriptions.index", category: "Subscriptions", permission: "subscriptions.view" },
-  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Subscriptions", permission: "subscriptions.payments_view" },
 
   // Partners
-  { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
+  // { title: "Dealerships", icon: "box", route: "dealerships.index", active: "dealerships.index", category: "Partners", permission: "dealerships.view" },
 
 
   // Reports all
+  { title: "All Orders (Inventory)", icon: "badge-cent", route: "sales.index", active: "sales.index", category: "Reports", permission: "sales.view" },
+  { title: "All Orders (POS)", icon: "badge-cent", route: "salesPos.index", active: "salesPos.index", category: "Reports", permission: "sales.view" },
   { title: "All Sales Items", icon: "badge-cent", route: "salesItems.list", active: "salesItems.list", category: "Reports", permission: "sales.view" },
+  { title: "Purchase", icon: "receipt", route: "purchase.list", active: "purchase.list", category: "Reports", permission: "purchase.view" },
+  { title: "Local Purchase", icon: "receipt", route: "purchase.list_index", active: "purchase.list_index", category: "Reports", permission: "purchase.list_index" },
   { title: "All Purchase Items", icon: "arrow-right-left", route: "purchase.items", active: "purchase.items", category: "Reports", permission: "purchase.items_view" },
   { title: "Transactions", icon: "dollar-sign", route: "payments.index", active: "payments.index", category: "Reports", permission: "payments.view" },
 
@@ -175,9 +179,41 @@ const outletLoggedInMenu = [
   { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
   { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
 
+
+  // Accounts
+  { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Accounts", permission: "deposits.view" },
+  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Accounts", permission: "subscriptions.payments_view" },
+  { title: "System Setting", icon: "user", route: 'system.index', active: "system.index", category: "System", permission: "system.index" },
+
   // Outlets (super admin will see even inside outlet)
   { title: "Outlet", icon: "store", route: "outlets.index", active: "outlets.index", category: "Outlets", permission: "outlets.view" },
 ];
+
+
+const superAdminMenu = [
+    // Main
+  { title: "Dashboard", icon: "home", route: "home", active: "home", category: "Main", permission: "dashboard.view" },
+
+    // Subscriptions
+  { title: "Plan", icon: "barcode", route: "plans.index", active: "plans.index", category: "Subscriptions", permission: "plans.view" },
+  // { title: "Plan Modules", icon: "barcode", route: "modules.index", active: "modules.index", category: "Subscriptions", permission: "modules.view" },
+  { title: "Subscriptions", icon: "barcode", route: "subscriptions.index", active: "subscriptions.index", category: "Subscriptions", permission: "subscriptions.view" },
+
+
+    // Admin (super admin will see even inside outlet)
+  { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
+  { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
+
+
+    // Accounts
+  { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Accounts", permission: "deposits.view" },
+  { title: "Subscriptions Payments", icon: "dollar-sign", route: "subscriptions.payments", active: "subscriptions.payments", category: "Accounts", permission: "subscriptions.payments_view" },
+
+
+  // System
+  { title: "System Setting", icon: "user", route: 'system.index', active: "system.index", category: "System", permission: "system.index" },
+
+]
 
 const iconComponents = {
   dashboard: LayoutDashboard,
@@ -352,6 +388,9 @@ export default function Sidebar({ status, setStatus }) {
       CRM: t("auth.category_crm", "CRM"),
       Reports: t("auth.category_reports", "Reports"),
       Admin: t("auth.category_admin", "Admin"),
+      Accounts: t("auth.category_accounts", "Accounts"),
+      System: t("auth.category_system", "System"),
+
       HR: t("auth.category_hr", "HR"),
       Outlets: t("auth.category_outlets", "Outlets"),
     };
@@ -416,11 +455,11 @@ export default function Sidebar({ status, setStatus }) {
   }, [status, setStatus]);
 
   /**
-   * ✅ Super Admin: outlet logout থাকলেও Admin/Outlets/Investments সব দেখবে
+   *  Super Admin: outlet logout থাকলেও Admin/Outlets/Investments সব দেখবে
    * তাই superadmin হলে Overview mode এও full menu দেখাবো (same as outletLoggedInMenu)
    */
   const menuToShow = useMemo(() => {
-    if (isSuperAdmin) return outletLoggedInMenu;
+    if (isSuperAdmin) return superAdminMenu;
 
     if (isLoggedIntoOutlet) return outletLoggedInMenu;
 
@@ -446,7 +485,7 @@ export default function Sidebar({ status, setStatus }) {
       if (filtered.length) out[cat] = filtered;
     });
     return out;
-  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet, isOutletUser]); // eslint-disable-line
+  }, [menuToShow, searchQuery, locale, permissions, isSuperAdmin, isLoggedIntoOutlet, isOutletUser]); 
 
   const getFaviconUrl = () => {
     if (headerSettings?.fav_icon) {

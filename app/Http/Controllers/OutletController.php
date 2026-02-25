@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Outlet;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -43,16 +44,43 @@ class OutletController extends Controller
             'is_active' => 'boolean',
         ]);
 
+    
+        $user = User::findOrFail(Auth::id());
 
-        // Merge the authenticated user ID
-        $outlet = Outlet::create(array_merge($validated, [
-            'user_id' => Auth::id(),
-            'code' => strtoupper(uniqid('OUT-')),
-            'is_main' => false,
-            'currency' => 'BDT',
-            'timezone' => 'Asia/Dhaka',
-            'created_by' => Auth::id(),
-        ]));
+        $activeSub = $user->subscriptions()
+                ->where('status', 1)
+                ->where('start_date', '<=', now())
+                ->where('end_date', '>=', now())
+                ->latest('end_date')
+                ->first();
+
+            if (!$activeSub) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', 'No active subscription found. Please renew/activate your plan.');
+            }
+
+            $allowedOutletRange = (int) optional($activeSub)->outlet_range;
+
+            $currentCount = Outlet::query()
+            ->where('user_id', Auth::id())
+            ->count();
+
+            if ($allowedOutletRange > 0 && $currentCount >= $allowedOutletRange) {
+                return redirect()->back()
+                    ->withInput()
+                    ->with('error', "Outlet limit exceeded! Your plan allows {$allowedOutletRange} outlets. Current: {$currentCount}.");
+            }
+
+            // Merge the authenticated user ID
+            $outlet = Outlet::create(array_merge($validated, [
+                'user_id' => Auth::id(),
+                'code' => strtoupper(uniqid('OUT-')),
+                'is_main' => false,
+                'currency' => 'BDT',
+                'timezone' => 'Asia/Dhaka',
+                'created_by' => Auth::id(),
+            ]));
 
 
         return to_route('outlets.index', $outlet)

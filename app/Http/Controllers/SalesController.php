@@ -346,6 +346,9 @@ class SalesController extends Controller
         }
     }
 
+
+
+    
     /**
      * Shared create logic for both Inventory + POS
      */
@@ -685,7 +688,7 @@ class SalesController extends Controller
             }
 
             // -------------------------
-            // ✅ Pickup items
+            //  Pickup items
             // -------------------------
             if (count($pickup_items) > 0) {
                 foreach ($pickup_items as $pickupItem) {
@@ -768,7 +771,7 @@ class SalesController extends Controller
             }
 
             // -------------------------
-            // ✅ Calculate totals (same structure)
+            //  Calculate totals (same structure)
             // -------------------------
             $totalSubTotal = $regularSubTotal;
 
@@ -802,7 +805,7 @@ class SalesController extends Controller
             ]);
 
             // -------------------------
-            // ✅ Payment create (same logic)
+            //  Payment create (same logic)
             // -------------------------
             if ($paid_amount > 0) {
                 Payment::create([
@@ -1136,9 +1139,7 @@ class SalesController extends Controller
 
 
 
-
     //clear due of sales order
-
     public function storePayment(Request $request, Sale $sale)
     {
         $request->validate([
@@ -1178,6 +1179,7 @@ class SalesController extends Controller
 
             $sale->update([
                 'paid_amount' => $newPaidAmount ?? 0,
+                'account_id' => $request->account_id ?? null,
                 'shadow_paid_amount' => $sale->shadow_paid_amount + ($request->shadow_paid_amount ?? 0),
                 'due_amount' => $newDueAmount ?? 0,
                 'shadow_due_amount' => max(0, $sale->shadow_due_amount - ($request->shadow_paid_amount ?? 0)),

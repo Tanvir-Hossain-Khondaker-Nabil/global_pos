@@ -13,7 +13,7 @@ import "react-datepicker/dist/react-datepicker.css";
 export default function AllSalesItems({ salesItems }) {
     const { flash, isShadowUser } = usePage().props;
     const [expandedRow, setExpandedRow] = useState(null);
-    const [showFilters, setShowFilters] = useState(true); // State for filter visibility
+    const [showFilters, setShowFilters] = useState(false); // State for filter visibility
     const [filters, setFilters] = useState({
         search: "",
         customer: "",

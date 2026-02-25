@@ -10,6 +10,7 @@ return [
     'search_placeholder' => 'Search by customer, invoice, method, reference...',
     'search' => 'Search',
     'clear_filters' => 'Clear Filters',
+    'payment_records' => 'Payment Records',
     
     // Table Headers
     'transaction_ref' => 'Transaction Ref',
@@ -22,6 +23,7 @@ return [
     'note' => 'Note',
     'date' => 'Date',
     'actions' => 'Actions',
+
     'other_payment' => 'Other Payment',
     'no_related_purchase' => 'No related purchase', 
     'receipt' => 'Receipt',

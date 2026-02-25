@@ -35,13 +35,11 @@ export default function Edit({ subscription, plans }) {
 
     const gradient = "linear-gradient(rgb(15, 45, 26) 0%, rgb(30, 77, 43) 100%)";
 
-    // Initialize form with subscription data
     useEffect(() => {
         if (subscription.plan) {
             setSelectedPlan(subscription.plan);
             setData("amount", subscription.plan.price);
 
-            // Calculate end date based on current subscription end or today
             const startDate = new Date();
             const endDate = new Date(startDate);
             endDate.setDate(startDate.getDate() + parseInt(subscription.plan.validity));
@@ -130,14 +128,10 @@ export default function Edit({ subscription, plans }) {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-extrabold">
-                                {subscription.status == 1
-                                    ? t("subscription.renew_subscription", "Renew Subscription")
-                                    : t("subscription.update_subscription", "Update Subscription")}
+                               { t("subscription.renew_subscription", "Renew Subscription")}
                             </h1>
                             <p className="text-white/80 mt-2">
-                                {subscription.status == 1
-                                    ? t("subscription.extend_upgrade_plan", "Extend or upgrade the current subscription plan")
-                                    : t("subscription.reactivate_modify_plan", "Reactivate or modify the subscription plan")}
+                                { t("subscription.extend_upgrade_plan", "Extend or upgrade the current subscription plan") }
                             </p>
                         </div>
                         <a
@@ -182,12 +176,12 @@ export default function Edit({ subscription, plans }) {
                                         {subscription.status == 1
                                             ? t("subscription.active", "active")
                                             : subscription.status == 2
-                                            ? t("subscription.expired", "expired")
-                                            : subscription.status == 3
-                                            ? t("subscription.cancelled", "cancelled")
-                                            : subscription.status == 4
-                                            ? t("subscription.pending", "pending")
-                                            : "unknown"}
+                                                ? t("subscription.expired", "expired")
+                                                : subscription.status == 3
+                                                    ? t("subscription.cancelled", "cancelled")
+                                                    : subscription.status == 4
+                                                        ? t("subscription.pending", "pending")
+                                                        : "unknown"}
                                     </p>
                                 </div>
 
@@ -213,14 +207,16 @@ export default function Edit({ subscription, plans }) {
                         </div>
                     </div>
 
-                    {/* Plan Selection */}
+
+                    {/* Subscription Period */}
                     <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
                         <div className="px-6 py-4 text-white font-bold text-lg flex items-center gap-2" style={{ background: gradient }}>
-                            <Star size={20} />
-                            {t("subscription.select_plan", "Select Plan")}
+                            <Calendar size={20} />
+                            {t("subscription.subscription_period", "Subscription Period")}
                         </div>
 
-                        <div className="p-6 space-y-4">
+                        <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                     <Star size={16} className="text-emerald-700" />
@@ -237,83 +233,11 @@ export default function Edit({ subscription, plans }) {
                                         {subscription.plan?.name} - {formatCurrency(subscription.plan?.price)} (
                                         {t("subscription.current", "Current")})
                                     </option>
-
-                                    {plans
-                                        .filter((plan) => plan.id !== subscription.plan_id)
-                                        .map((plan) => (
-                                            <option key={plan.id} value={plan.id}>
-                                                {plan.name} - {formatCurrency(plan.price)} - {plan.validity}{" "}
-                                                {t("subscription.days", "days")}
-                                            </option>
-                                        ))}
                                 </select>
 
                                 {errors.plan_id && <p className="text-red-500 text-sm mt-2">{errors.plan_id}</p>}
                             </div>
 
-                            {selectedPlan && selectedPlan.id !== subscription.plan_id && (
-                                <div className="border rounded-2xl p-5 bg-emerald-50 border-emerald-200">
-                                    <h4 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                                        <CheckCircle size={18} className="text-emerald-700" />
-                                        {selectedPlan.price > subscription.plan.price
-                                            ? t("subscription.upgrade", "Upgrade")
-                                            : selectedPlan.price < subscription.plan.price
-                                            ? t("subscription.downgrade", "Downgrade")
-                                            : t("subscription.same_plan", "Same")}{" "}
-                                        {t("subscription.plan_details", "Plan Details")}
-                                    </h4>
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                        <div>
-                                            <span className="font-semibold text-gray-700">
-                                                {t("subscription.plan_name", "Plan Name")}:
-                                            </span>
-                                            <p className="text-emerald-800 font-medium">{selectedPlan.name}</p>
-                                        </div>
-                                        <div>
-                                            <span className="font-semibold text-gray-700">
-                                                {t("subscription.price", "Price")}:
-                                            </span>
-                                            <p className="text-emerald-800 font-medium">
-                                                {formatCurrency(selectedPlan.price)}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <span className="font-semibold text-gray-700">
-                                                {t("subscription.validity", "Validity")}:
-                                            </span>
-                                            <p className="text-emerald-800 font-medium">
-                                                {selectedPlan.validity} {t("subscription.days", "days")}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {selectedPlan.price !== subscription.plan.price && (
-                                        <div className="mt-4 pt-4 border-t border-emerald-200">
-                                            <div className="flex justify-between items-center">
-                                                <span className="font-semibold text-gray-700">
-                                                    {t("subscription.price_difference", "Price Difference")}:
-                                                </span>
-                                                <span className="font-extrabold text-lg text-emerald-800">
-                                                    {getPriceDifference() > 0 ? "+" : ""}
-                                                    {formatCurrency(getPriceDifference())}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Subscription Period */}
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                        <div className="px-6 py-4 text-white font-bold text-lg flex items-center gap-2" style={{ background: gradient }}>
-                            <Calendar size={20} />
-                            {t("subscription.subscription_period", "Subscription Period")}
-                        </div>
-
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                     <Calendar size={16} className="text-emerald-700" />
@@ -347,35 +271,6 @@ export default function Edit({ subscription, plans }) {
                                 {errors.end_date && <p className="text-red-500 text-sm mt-2">{errors.end_date}</p>}
                             </div>
 
-                            <div className="md:col-span-2">
-                                <label className="flex items-start gap-3 cursor-pointer p-4 rounded-xl border border-gray-200 bg-gray-50">
-                                    <input
-                                        type="checkbox"
-                                        checked={data.auto_renew}
-                                        onChange={(e) => setData("auto_renew", e.target.checked)}
-                                        className="w-4 h-4 mt-1 text-emerald-700 rounded focus:ring-emerald-500"
-                                    />
-                                    <div>
-                                        <span className="font-semibold text-gray-800">
-                                            {t("subscription.enable_auto_renewal", "Enable Auto-Renewal")}
-                                        </span>
-                                        <p className="text-sm text-gray-600 mt-1">
-                                            {t("subscription.auto_renew_description", "Automatically renew this subscription when it expires")}
-                                        </p>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Payment Information */}
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                        <div className="px-6 py-4 text-white font-bold text-lg flex items-center gap-2" style={{ background: gradient }}>
-                            <CreditCard size={20} />
-                            {t("subscription.payment_information", "Payment Information")}
-                        </div>
-
-                        <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                     ৳ {t("subscription.amount", "Amount")}
@@ -407,6 +302,7 @@ export default function Edit({ subscription, plans }) {
                                     className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition"
                                 >
                                     <option value="">{t("subscription.select_payment_method", "Select payment method")}</option>
+                                    <option value="adjust_deposit">Adjust User Deposit</option>
                                     <option value="cash">{t("subscription.cash", "Cash")}</option>
                                     <option value="card">{t("subscription.card", "Credit Card")}</option>
                                     <option value="bank">{t("subscription.bank", "Bank Transfer")}</option>
@@ -419,7 +315,7 @@ export default function Edit({ subscription, plans }) {
                                 )}
                             </div>
 
-                            <div className="md:col-span-2">
+                            <div >
                                 <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
                                     <CreditCard size={16} className="text-emerald-700" />
                                     {t("subscription.transaction_id", "Transaction ID")}
@@ -436,31 +332,26 @@ export default function Edit({ subscription, plans }) {
                                     <p className="text-red-500 text-sm mt-2">{errors.transaction_id}</p>
                                 )}
                             </div>
+
+                            <div className="md:col-span-3">
+                                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                                    {t("subscription.renewal_notes", "Renewal Notes")}
+                                </label>
+
+                                <textarea
+                                    value={data.notes}
+                                    onChange={(e) => setData("notes", e.target.value)}
+                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition resize-none"
+                                    rows={4}
+                                    placeholder={t("subscription.renewal_notes_placeholder", "Any additional notes about this renewal or upgrade...")}
+                                />
+                                {errors.notes && <p className="text-red-500 text-sm mt-2">{errors.notes}</p>}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Additional Information */}
-                    <div className="bg-white rounded-2xl shadow-sm overflow-hidden border border-gray-100">
-                        <div className="px-6 py-4 text-white font-bold text-lg flex items-center gap-2" style={{ background: gradient }}>
-                            <FileText size={20} />
-                            {t("subscription.additional_information", "Additional Information")}
-                        </div>
 
-                        <div className="p-6">
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">
-                                {t("subscription.renewal_notes", "Renewal Notes")}
-                            </label>
-
-                            <textarea
-                                value={data.notes}
-                                onChange={(e) => setData("notes", e.target.value)}
-                                className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition resize-none"
-                                rows={4}
-                                placeholder={t("subscription.renewal_notes_placeholder", "Any additional notes about this renewal or upgrade...")}
-                            />
-                            {errors.notes && <p className="text-red-500 text-sm mt-2">{errors.notes}</p>}
-                        </div>
-                    </div>
+            
 
                     {/* Actions */}
                     <div className="flex justify-end gap-4">
@@ -473,19 +364,15 @@ export default function Edit({ subscription, plans }) {
 
                         <button
                             disabled={processing}
-                            className={`px-8 py-3 rounded-xl font-bold text-white shadow-md hover:shadow-lg transition ${
-                                processing ? "bg-gray-400 cursor-not-allowed" : ""
-                            }`}
+                            className={`px-8 py-3 rounded-xl font-bold text-white shadow-md hover:shadow-lg transition ${processing ? "bg-gray-400 cursor-not-allowed" : ""
+                                }`}
                             style={!processing ? { background: gradient } : {}}
                         >
                             <Save size={18} className="inline mr-2" />
                             {processing
-                                ? subscription.status == 1
-                                    ? t("subscription.renewing_subscription", "Renewing...")
-                                    : t("subscription.updating_subscription", "Updating...")
-                                : subscription.status == 1
-                                ? t("subscription.renew_subscription", "Renew Subscription")
-                                : t("subscription.update_subscription", "Update Subscription")}
+                                ?  t("subscription.renewing_subscription", "Renewing...")
+                                :  t("subscription.renew_subscription", "Renew Subscription")
+                            }
                         </button>
                     </div>
                 </form>

@@ -251,13 +251,13 @@ export default function Index({ plans }) {
                                                 href={route("plans.edit", plan.id)}
                                                 className="btn btn-info btn-xs"
                                             >
-                                                <Edit size={12} /> {t('plan.edit', 'Edit')}
+                                                <Edit size={12} /> 
                                             </Link>
                                             <Link
                                                 href={route("plans.show", plan.id)}
                                                 className="btn bg-[#1e4d2b] text-white btn-xs"
                                             >
-                                                <Eye size={12} /> {t('plan.view', 'View')}
+                                                <Eye size={12} /> 
                                             </Link>
                                             <Link
                                                 href={route("plans.destroy", plan.id)}
@@ -270,7 +270,7 @@ export default function Index({ plans }) {
                                                 }}
                                                 className="btn btn-error btn-xs"
                                             >
-                                                <Trash2 size={12} /> {t('plan.delete', 'Delete')}
+                                                <Trash2 size={12} /> 
                                             </Link>
                                         </div>
                                     </td>
@@ -305,11 +305,7 @@ export default function Index({ plans }) {
                 <div className="mt-6">
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
                         <div className="text-sm text-gray-600">
-                            {t('plan.showing_entries', 'Showing :from to :to of :total entries', {
-                                from: plans.from,
-                                to: plans.to,
-                                total: plans.total
-                            })}
+                            {t('plan.showing_entries', 'Showing total entries')}
                         </div>
                         
                         {/* Custom Pagination Component */}

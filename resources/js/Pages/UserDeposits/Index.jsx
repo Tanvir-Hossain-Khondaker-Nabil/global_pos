@@ -631,7 +631,7 @@ export default function UserDeposits({ deposits, filters }) {
                       )}
 
                       {/* Approve button - only for pending deposits */}
-                      {deposit.status === 'pending' &&  userRole === 'superadmin' && (
+                      {deposit.status == 'pending' &&  userRole == 'superadmin' && (
                         <button
                           onClick={() => handleApproveDeposit(deposit)}
                           className="btn btn-ghost btn-square btn-xs hover:bg-green-600 hover:text-white text-green-600"
@@ -639,11 +639,9 @@ export default function UserDeposits({ deposits, filters }) {
                         >
                           <CheckCircle size={16} />
                         </button>
-                      )}
+                       )} 
 
-          
 
-                      {/* View details button - always visible */}
                       <button
                         onClick={() => setSelectedDeposit(deposit)}
                         className="btn btn-ghost btn-square btn-xs hover:bg-blue-600 hover:text-white text-blue-600"
@@ -1056,7 +1054,7 @@ export default function UserDeposits({ deposits, filters }) {
                     >
                       Close
                     </button>
-                    {selectedDeposit.status === 'pending' && (
+                    {selectedDeposit.status === 'pending' &&  userRole == 'superadmin' && (
                       <>
                         <button
                           onClick={() => {
