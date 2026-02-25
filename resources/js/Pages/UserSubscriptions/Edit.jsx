@@ -88,7 +88,7 @@ export default function Edit({ subscription, plans }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(route("subscriptions.renew", { subscription: subscription.id }));
+        post(route("user_subscriptions.renew", { id: subscription.id }));
     };
 
     // Format currency
@@ -128,10 +128,10 @@ export default function Edit({ subscription, plans }) {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-3xl font-extrabold">
-                               { t("subscription.renew_subscription", "Renew Subscription")}
+                                {t("subscription.renew_subscription", "Renew Subscription")}
                             </h1>
                             <p className="text-white/80 mt-2">
-                                { t("subscription.extend_upgrade_plan", "Extend or upgrade the current subscription plan") }
+                                {t("subscription.extend_upgrade_plan", "Extend or upgrade the current subscription plan")}
                             </p>
                         </div>
                         <a
@@ -201,7 +201,7 @@ export default function Edit({ subscription, plans }) {
                                     {t("subscription.user_information", "User Information")}
                                 </h4>
                                 <p className="text-gray-700">
-                                    <strong>{subscription.user?.name}</strong> • {subscription.user?.email}
+                                    <strong>{subscription.user?.name}</strong> • {subscription.user?.email} • {subscription.user?.total_deposit ?? 0}tk Deposit
                                 </p>
                             </div>
                         </div>
@@ -303,11 +303,6 @@ export default function Edit({ subscription, plans }) {
                                 >
                                     <option value="">{t("subscription.select_payment_method", "Select payment method")}</option>
                                     <option value="adjust_deposit">Adjust User Deposit</option>
-                                    <option value="cash">{t("subscription.cash", "Cash")}</option>
-                                    <option value="card">{t("subscription.card", "Credit Card")}</option>
-                                    <option value="bank">{t("subscription.bank", "Bank Transfer")}</option>
-                                    <option value="mobile">{t("subscription.mobile", "Mobile Banking")}</option>
-                                    <option value="online">{t("subscription.online", "Online Payment")}</option>
                                 </select>
 
                                 {errors.payment_method && (
@@ -315,23 +310,29 @@ export default function Edit({ subscription, plans }) {
                                 )}
                             </div>
 
-                            <div >
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
-                                    <CreditCard size={16} className="text-emerald-700" />
-                                    {t("subscription.transaction_id", "Transaction ID")}
-                                </label>
+                            {
+                                data.payment_method !== 'adjust_deposit' && (
+                                    <div xclassName="md:col-span-2">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-2">
+                                            <CreditCard size={16} className="text-emerald-700" />
+                                            {t("subscription.transaction_id", "Transaction ID")}
+                                        </label>
 
-                                <input
-                                    type="text"
-                                    value={data.transaction_id}
-                                    onChange={(e) => setData("transaction_id", e.target.value)}
-                                    className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition"
-                                    placeholder={t("subscription.transaction_placeholder", "Enter transaction ID (if applicable)")}
-                                />
-                                {errors.transaction_id && (
-                                    <p className="text-red-500 text-sm mt-2">{errors.transaction_id}</p>
+                                        <input
+                                            type="text"
+                                            value={data.transaction_id}
+                                            onChange={(e) => setData("transaction_id", e.target.value)}
+                                            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-emerald-200 focus:border-emerald-400 transition"
+                                            placeholder={t("subscription.transaction_placeholder", "Enter transaction ID (if applicable)")}
+                                            required
+                                        />
+                                        {errors.transaction_id && (
+                                            <p className="text-red-500 text-sm mt-2">{errors.transaction_id}</p>
+                                        )}
+                                    </div>
+
                                 )}
-                            </div>
+
 
                             <div className="md:col-span-3">
                                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -351,12 +352,12 @@ export default function Edit({ subscription, plans }) {
                     </div>
 
 
-            
+
 
                     {/* Actions */}
                     <div className="flex justify-end gap-4">
                         <a
-                            href={route("subscriptions.index")}
+                            href={route("user_subscriptions.index")}
                             className="px-6 py-3 rounded-xl font-semibold border border-gray-300 bg-white hover:border-emerald-300 hover:text-emerald-800 transition"
                         >
                             {t("subscription.cancel", "Cancel")}
@@ -370,8 +371,8 @@ export default function Edit({ subscription, plans }) {
                         >
                             <Save size={18} className="inline mr-2" />
                             {processing
-                                ?  t("subscription.renewing_subscription", "Renewing...")
-                                :  t("subscription.renew_subscription", "Renew Subscription")
+                                ? t("subscription.renewing_subscription", "Renewing...")
+                                : t("subscription.renew_subscription", "Renew Subscription")
                             }
                         </button>
                     </div>

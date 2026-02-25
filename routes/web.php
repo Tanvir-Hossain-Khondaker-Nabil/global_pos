@@ -48,6 +48,7 @@ use App\Http\Controllers\UserDepositController;
 use App\Http\Controllers\BarcodePrintController;
 use App\Http\Controllers\BonusSettingController;
 use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\UserSubscriptionsController;
 use App\Http\Controllers\ProvidentFundController;
 use App\Http\Controllers\PurchaseReturnController;
 use App\Http\Controllers\InvestmentReturnController;
@@ -541,6 +542,33 @@ Route::middleware(['auth', 'active.subscription','check.system'])->group(functio
 
     Route::get('/subscriptions/{id}/renew', [SubscriptionController::class, 'renewEdit'])
     ->middleware('permission:subscriptions.renew')->name('subscriptions.renew_edit');
+
+
+
+    // user subscriptions controller
+    Route::get('user_subscriptions/create', [UserSubscriptionsController::class, 'create'])
+    ->middleware('permission:user_subscriptions.create')
+    ->name('user_subscriptions.create');
+    Route::get('/user_subscriptions', [UserSubscriptionsController::class, 'index'])
+    ->middleware('permission:user_subscriptions.view')
+    ->name('user_subscriptions.index');
+    Route::get('/user_subscriptions/{id}/renew', [UserSubscriptionsController::class, 'renewEdit'])
+    ->middleware('permission:user_subscriptions.renew')
+    ->name('user_subscriptions.renew_edit');
+    Route::get('/user_subscriptions/{id}/show', [UserSubscriptionsController::class, 'show'])
+    ->middleware('permission:user_subscriptions.view')
+    ->name('user_subscriptions.show');
+    Route::post('/user_subscriptions', [UserSubscriptionsController::class, 'store'])
+    ->middleware('permission:user_subscriptions.create')
+    ->name('user_subscriptions.store');
+    Route::get('/user_subscriptions/{id}', [UserSubscriptionsController::class, 'edit'])
+    ->middleware('permission:user_subscriptions.edit')
+    ->name('user_subscriptions.edit');
+    Route::post('/user_subscriptions/{id}', [UserSubscriptionsController::class, 'renew'])
+    ->middleware('permission:user_subscriptions.renew')
+    ->name('user_subscriptions.renew');
+
+
 
     //ledger routes
     Route::get('/ledgers', [LedgerController::class, 'index'])->middleware('permission:ledger.view')->name('ledgers.index');

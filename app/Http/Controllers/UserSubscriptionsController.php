@@ -2,17 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\SubscriptionStore;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\SubscriptionPayment;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
-class SubscriptionController extends Controller
+class UserSubscriptionsController extends Controller
 {
+
     /**
      * Display a listing of the resource.
      */
@@ -32,13 +33,15 @@ class SubscriptionController extends Controller
                 $query->where('created_at', '<=', Carbon::parse(request('date_to'))->endOfDay());
             })
             ->orderBy('created_at', 'desc')
+            ->where('user_id', Auth::id())
             ->paginate(10)
             ->withQueryString();
 
-        return inertia('Subscriptions/Index', [
+        return inertia('UserSubscriptions/Index', [
             'subscriptions' => $subscriptions
         ]);
     }
+
 
     /**
      * Show the form for creating a new resource.
@@ -46,31 +49,36 @@ class SubscriptionController extends Controller
     public function create()
     {
         $plans = Plan::with('modules')->active()->get();
-        $users = User::where('role', User::USER_ROLE)->get();
-
-        return inertia('Subscriptions/Create', [
+        return inertia('UserSubscriptions/Create', [
             'plans' => $plans,
-            'users' => $users
+            'user' => User::where('id',Auth::id())->first()
         ]);
     }
+
+
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(SubscriptionStore $request)
+    public function store(Request $request)
     {
+
+        $validated = $request->validate([
+            'plan_id'        => 'required|exists:plans,id',
+            'start_date'     => 'required|date',
+            'end_date'       => 'required|date|after_or_equal:start_date',
+            'payment_method' => 'required|string',
+            'transaction_id' => 'nullable|string',
+            'notes'          => 'nullable|string',
+        ]);
+
         $amount = Plan::where('id', $request->plan_id)->value('price');
         $validity = Plan::where('id', $request->plan_id)->value('validity');
         $product_range = Plan::where('id', $request->plan_id)->value('product_range');
         $outlet_range = Plan::where('id', $request->plan_id)->value('outlet_range');
         $validated = $request->validated();
+        $validated['user_id'] = Auth::id();
 
-        if (!empty($request->user_email) && empty($request->user_id)) {
-            $user = User::where('email', $request->user_email)->first();
-            if ($user) {
-                $validated['user_id'] = $user->id;
-            }
-        }
 
         $userDeposit = User::where('id', $validated['user_id'])->value('total_deposit');
 
@@ -92,8 +100,8 @@ class SubscriptionController extends Controller
         $validated['product_range'] =  $product_range ?? 20;
         $validated['outlet_range'] =  $outlet_range ?? 2;
 
-        if($validated['payment_method'] == 'cash') $validated['transaction_id'] = 'Cash-' . uniqid();
-        if($validated['payment_method'] == 'adjust_deposit') $validated['transaction_id'] = 'Adjust_deposit-' . uniqid();
+        if ($validated['payment_method'] == 'cash') $validated['transaction_id'] = 'Cash-' . uniqid();
+        if ($validated['payment_method'] == 'adjust_deposit') $validated['transaction_id'] = 'Adjust_deposit-' . uniqid();
 
         $subscriptions = Subscription::create($validated);
 
@@ -108,7 +116,7 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        return to_route('subscriptions.index')->with('success', 'Subscription created successfully.');
+        return to_route('user_subscriptions.index')->with('success', 'Subscription created successfully.');
     }
 
 
@@ -119,7 +127,7 @@ class SubscriptionController extends Controller
     {
         $subscription = Subscription::with(['user', 'plan'])->findOrFail($id);
 
-        return Inertia::render('Subscriptions/Edit', [
+        return Inertia::render('UserSubscriptions/Edit', [
             'subscription' => $subscription,
             'plans' => Plan::active()->get(),
         ]);
@@ -130,11 +138,12 @@ class SubscriptionController extends Controller
     {
         $subscription = Subscription::with(['user', 'plan'])->findOrFail($id);
 
-        return Inertia::render('Subscriptions/EditPlan', [
+        return Inertia::render('UserSubscriptions/EditPlan', [
             'subscription' => $subscription,
             'plans' => Plan::active()->get(),
         ]);
     }
+
 
     /**
      * Display the specified resource.
@@ -158,13 +167,14 @@ class SubscriptionController extends Controller
         if ($request['payment_method'] == 'adjust_deposit' && $userDeposit < $amount) {
             return back()->withErrors(['payment_method' => 'Insufficient deposit balance.Add User Deposit '])->withInput();
         }
-        
-        if($request['payment_method'] == 'cash') $transaction_id = 'Cash-' . uniqid();
+
+        if ($request['payment_method'] == 'cash') $transaction_id = 'Cash-' . uniqid();
         if ($request['payment_method'] == 'adjust_deposit')
         {
             $transaction_id = 'Adjust_deposit-' . uniqid();
             User::where('id', $subscription->user_id)->decrement('total_deposit', $amount);
         }
+
 
         $startDate = Carbon::parse($subscription->end_date);
         $endDate = $startDate->addDays($plan->validity);
@@ -187,10 +197,10 @@ class SubscriptionController extends Controller
             ]);
         }
 
-        return to_route('subscriptions.index')->with('success', 'Subscription renewed and payment recorded successfully.');
+        return to_route('user_subscriptions.index')->with('success', 'Subscription renewed and payment recorded successfully.');
     }
 
-    /**
+        /**
      * Show the form for editing the specified resource.
      */
     public function show(string $id)
@@ -201,42 +211,9 @@ class SubscriptionController extends Controller
 
         $paymentTotal = $subscription->payments()->sum('amount');
 
-        return inertia('Subscriptions/Show', [
+        return inertia('UserSubscriptions/Show', [
             'subscription' => $subscription,
             'paymentTotal' => $paymentTotal
-        ]);
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function payment(Request $request)
-    {
-        $subscription = SubscriptionPayment::with(['subscription.plan', 'subscription.user'])
-            ->when($request->search, fn($q) => $q->search($request->search))
-            ->when($request->status, fn($q) => $q->where('status', $request->status))
-            ->when($request->payment_method, fn($q) => $q->where('payment_method', $request->payment_method))
-            ->when($request->date_from, fn($q) => $q->whereDate('created_at', '>=', $request->date_from))
-            ->when($request->date_to, fn($q) => $q->whereDate('created_at', '<=', $request->date_to))
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->withQueryString();
-
-        return inertia('Subscriptions/Payment', [
-            'subscription' => $subscription
-        ]);
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function paymentView(string $id)
-    {
-        $payment = SubscriptionPayment::with(['subscription.plan', 'subscription.user', 'subscription'])
-            ->findOrFail($id);
-
-        return inertia('Subscriptions/PaymentView', [
-            'payment' => $payment
         ]);
     }
 }

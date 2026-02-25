@@ -56,6 +56,7 @@ return [
     'selected_plan' => 'Selected Plan',
     'date_from' => 'Date From',
     'date_to' => 'Date To',
+    'subscription_details' => 'Subscription Details',
 
     // Status Messages
     'creating_subscription' => 'Creating Subscription...',

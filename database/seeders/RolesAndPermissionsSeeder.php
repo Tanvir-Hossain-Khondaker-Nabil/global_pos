@@ -430,11 +430,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'notifications.read_all',
             'notifications.delete_all',
             'notifications.delete',
+
+            // user subscriptions
+            'user_subscriptions.create',
+            'user_subscriptions.view',
+            'user_subscriptions.renew',
+            'user_subscriptions.edit',
         ];
 
-        // $permissionSuperAdmin = [
-
-        // ];
 
         foreach ($permissions as $permission) {
             Permission::updateOrCreate(['name' => $permission]);
@@ -453,6 +456,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'plans.edit',
             'plans.update',
             'plans.delete',
+            
             // Subscriptions
             'subscriptions.view',
             'subscriptions.create',

@@ -97,11 +97,8 @@ const investmentsOverviewMenu = [
 const adminOverviewMenu = [
   { title: "Users", icon: "user", route: "userlist.view", active: "userlist.view", category: "Admin", permission: "users.view" },
   { title: "Roles", icon: "user", route: "roles.index", active: "roles.index", category: "Admin", permission: "roles.view" },
-];
-
-// Subscriptions Admin
-const subscriptionsViewMenu = [
   { title: "Users Deposit", icon: "user", route: "deposits.index", active: "deposits.index", category: "Admin", permission: "users.view" },
+  { title: "Subscriptions", icon: "barcode", route: "user_subscriptions.index", active: "user_subscriptions.index", category: "Admin", permission: "user_subscriptions.view" },
 ];
 
 
@@ -474,7 +471,6 @@ export default function Sidebar({ status, setStatus }) {
       base.push(...investmentsOverviewMenu);
       base.push(...adminOverviewMenu);
       base.push(...outletsOverviewExtraMenu);
-      base.push(...subscriptionsViewMenu);
     }
 
     return base;
