@@ -15,8 +15,8 @@
         }
     </style>
 
-    {{-- <link rel="stylesheet" href="{{ asset('build/assets/app-CoabLf21.css') }}">
-    <script src="{{ asset('build/assets/app-BBJS5aa8.js') }}" type="module"></script> --}}
+    <link rel="stylesheet" href="{{ asset('build/assets/app-Bq2oaUja.css') }}">
+    <script src="{{ asset('build/assets/app-ffc3BtNE.js') }}" type="module"></script>
 </head>
 
 

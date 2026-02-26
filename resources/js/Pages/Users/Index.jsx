@@ -115,8 +115,8 @@ export default function Index({ users, filters, roles, statistics, hasSubscripti
   // Get status badge
   const getStatusBadge = (status) => {
     const statusMap = {
-      1: { label: 'Active', class: 'bg-emerald-100 text-emerald-800 ring-emerald-200', icon: CheckCircle },
-      0: { label: 'Inactive', class: 'bg-gray-100 text-gray-800 ring-gray-200', icon: XCircle },
+      active: { label: 'Active', class: 'bg-emerald-100 text-emerald-800 ring-emerald-200', icon: CheckCircle },
+      inactive: { label: 'Inactive', class: 'bg-gray-100 text-gray-800 ring-gray-200', icon: XCircle },
     };
 
     const statusInfo = statusMap[status] || { label: 'Unknown', class: 'bg-gray-100 text-gray-800 ring-gray-200', icon: AlertCircle };

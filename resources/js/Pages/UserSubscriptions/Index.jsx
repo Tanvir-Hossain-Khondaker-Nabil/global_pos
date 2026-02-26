@@ -65,7 +65,7 @@ export default function Index({ subscriptions, filters, statistics }) {
         if (dateTo) params.date_to = dateTo;
         if (currentPage > 1) params.page = currentPage;
 
-        router.get(route("user_subscriptions.view"), params, {
+        router.get(route("user_subscriptions.index"), params, {
             preserveState: true,
             preserveScroll: true,
             replace: true
@@ -86,7 +86,7 @@ export default function Index({ subscriptions, filters, statistics }) {
         setDateFrom("");
         setDateTo("");
         setCurrentPage(1);
-        router.get(route("user_subscriptions.view"), {
+        router.get(route("user_subscriptions.index"), {
             preserveState: true,
             preserveScroll: true,
         });
@@ -423,7 +423,7 @@ export default function Index({ subscriptions, filters, statistics }) {
         if (dateTo) params.date_to = dateTo;
         params.page = page;
 
-        router.get(route("user_subscriptions.view"), params, {
+        router.get(route("user_subscriptions.index"), params, {
             preserveState: true,
             preserveScroll: true,
         });
@@ -490,7 +490,7 @@ export default function Index({ subscriptions, filters, statistics }) {
                         </p>
                     </div>
 
-                    <div className="flex gap-3">
+                    {/* <div className="flex gap-3">
                         <Link
                             href={route("subscriptions.create")}
                             className="group flex items-center gap-2 rounded-xl bg-white/15 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/20 hover:bg-white/20 transition-colors"
@@ -498,7 +498,7 @@ export default function Index({ subscriptions, filters, statistics }) {
                             <Plus className="h-4 w-4" />
                             New Subscription
                         </Link>
-                    </div>
+                    </div> */}
                 </div>
             </div>
 

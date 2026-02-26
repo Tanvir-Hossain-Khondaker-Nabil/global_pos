@@ -507,10 +507,10 @@ export default function Index({ subscriptions }) {
                                     className="select select-bordered w-full"
                                 >
                                     <option value="">{t('subscription.all_status', 'All Status')}</option>
-                                    <option value="active">{t('subscription.active', 'Active')}</option>
-                                    <option value="pending">{t('subscription.pending', 'Pending')}</option>
-                                    <option value="expired">{t('subscription.expired', 'Expired')}</option>
-                                    <option value="cancelled">{t('subscription.cancelled', 'Cancelled')}</option>
+                                    <option value="1">{t('subscription.active', 'Active')}</option>
+                                    <option value="2">{t('subscription.expired', 'Expired')}</option>
+                                    <option value="3">{t('subscription.cancelled', 'Cancelled')}</option>
+                                    <option value="4">{t('subscription.pending', 'Pending')}</option>
                                 </select>
                             </div>
 
