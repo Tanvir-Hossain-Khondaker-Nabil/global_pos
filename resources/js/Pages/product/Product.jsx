@@ -48,13 +48,13 @@ export default function Product({ product, filters }) {
         sheet: {
             showProductName: true,
             showBatchNo: true,
-            showSalePrice: true,
+            showSalePrice: false,
             showVariantName: false,
 
             align: "left", // left | right
 
-            labelWidthMm: 36,
-            labelHeightMm: 30,
+            labelWidthMm: 38,
+            labelHeightMm: 25,
             gapMm: 2,
 
             copiesMode: "one", // one | byQty | fixed
@@ -78,10 +78,10 @@ export default function Product({ product, filters }) {
 
             // label/slip sizes
             // (You can change these in modal)
-            labelWidthMm: 100,
-            labelHeightMm: 55,
-            slipWidthMm: 100,
-            slipHeightMm: 55,
+            labelWidthMm: 38,
+            labelHeightMm: 25,
+            slipWidthMm: 38,
+            slipHeightMm: 25,
 
             paddingMm: 1,
 
@@ -437,12 +437,10 @@ export default function Product({ product, filters }) {
             width:100%;
             font-weight:900;
             font-size:11px;
-            line-height:1.15;
             color:#0f172a;
             display:-webkit-box;
             -webkit-line-clamp:2;
             -webkit-box-orient:vertical;
-            overflow:hidden;
           }
 
           .variant {
@@ -469,9 +467,7 @@ export default function Product({ product, filters }) {
             width:100%;
             font-size:10px;
             font-weight:900;
-            line-height:1.1;
             white-space:nowrap;
-            overflow:hidden;
             text-overflow:ellipsis;
           }
           .batch { color:#475569; font-weight:800; font-size:9px; }
@@ -747,10 +743,8 @@ export default function Product({ product, filters }) {
 
             .name {
                 width: 100%;
-                font-size: ${printMode === "slip" ? "14pt" : "15pt"};
+                font-size: 9pt;
                 font-weight: 900;
-                line-height: 1.1;
-                margin-bottom: 1.6mm;
                 white-space: nowrap;
                 overflow: hidden;
                 text-overflow: ellipsis;
@@ -770,11 +764,10 @@ export default function Product({ product, filters }) {
 
             .barcodeBox {
                 width: 100%;
-                height: ${Math.min(barcodeH, baseH - 10)}mm;
+                height: 9pt
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                overflow: hidden;
             }
 
             .barcodeBox svg {
@@ -792,18 +785,17 @@ export default function Product({ product, filters }) {
 
             .batch {
                 width: 100%;
-                font-size: ${printMode === "slip" ? "14pt" : "15pt"};
+                font-size: 9pt;
                 font-weight: 800;
                 margin-top: 0.8mm;
                 white-space: nowrap;
-                overflow: hidden;
                 text-overflow: ellipsis;
                 color: #111;
             }
 
             .price {
                 width: 100%;
-                font-size: ${printMode === "slip" ? "14pt" : "15pt"};
+                font-size: 9pt;
                 font-weight: 900;
                 margin-top: 0.6mm;
             }
@@ -1544,7 +1536,7 @@ export default function Product({ product, filters }) {
 
                                 <th>{t("product.product_name", "Product Name")}</th>
                                 <th className="w-[140px]">{t("product.category", "Category")}</th>
-                                <th className="w-[140px]">{t("product.attributes", "Attributes")}</th>
+                                {/* <th className="w-[140px]">{t("product.attributes", "Attributes")}</th> */}
                                 <th className="w-[140px]">{t("product.total_stock", "Total Stock")}</th>
                                 <th className="w-[360px]">{t("product.variants", "Variants")}</th>
                                 <th className="w-[360px]">{t("product.barcodes", "Barcodes")}</th>
@@ -1594,7 +1586,7 @@ export default function Product({ product, filters }) {
 
                                             <td>{productItem.category?.name || t("product.not_available", "N/A")}</td>
 
-                                            <td>
+                                            {/* <td>
                                                 <div className="flex items-center gap-2">
                                                     <Tag size={14} className="text-purple-600" />
                                                     <span className="text-sm">
@@ -1602,7 +1594,7 @@ export default function Product({ product, filters }) {
                                                         {attributesCount === 1 ? t("product.attribute", "attribute") : t("product.attributes_plural", "attributes")}
                                                     </span>
                                                 </div>
-                                            </td>
+                                            </td> */}
 
                                             <td>
                                                 <div className="flex items-center gap-2">

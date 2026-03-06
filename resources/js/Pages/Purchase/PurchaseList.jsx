@@ -99,8 +99,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     align: "left", // left | right
 
     // label size (used for BOTH types)
-    labelWidthMm: 100,
-    labelHeightMm: 55,
+    labelWidthMm: 38,
+    labelHeightMm: 25,
     gapMm: 2,
 
     // copies
@@ -108,7 +108,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
     fixedCopies: 1,
 
     // IMG mode (tec-it)
-    barcodeImgHeightPx: 100,
+    barcodeImgHeightPx: 50,
 
     // SVG mode (sharp RP400)
     layoutMode: "label", // label (1 per page) | sheet (grid)
@@ -637,14 +637,9 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         .name {
           width:100%;
           font-weight:900;
-          font-size:20px;
-          line-height:1.15;
+          font-size:10px;
           color:#0f172a;
           display:-webkit-box;
-          -webkit-line-clamp:2;
-          -webkit-box-orient:vertical;
-          overflow:hidden;
-          margin-bottom: 8px;
         }
 
         .barcodeImg {
@@ -658,12 +653,10 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         .batch,
         .price {
           width:100%;
-          font-size:20px;
+          font-size:10px;
           font-weight:900;
-          line-height:1.1;
           color:#0f172a;
           white-space:nowrap;
-          overflow:hidden;
           text-overflow:ellipsis;
         }
 
@@ -836,13 +829,8 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
 
       .name {
         width: 100%;
-        font-size: 10pt;
+        font-size: 7pt;
         font-weight: 900;
-        line-height: 1.1;
-        margin-bottom: 1mm;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
       }
 
       .barcodeBox {
@@ -866,9 +854,7 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         width: 100%;
         font-size: 9pt;
         font-weight: 800;
-        margin-top: 0.6mm;
         white-space: nowrap;
-        overflow: hidden;
         text-overflow: ellipsis;
         color:#111;
       }
@@ -877,7 +863,6 @@ export default function PurchaseList({ purchases, filters, isShadowUser, account
         width: 100%;
         font-size: 9pt;
         font-weight: 900;
-        margin-top: 0.4mm;
       }
 
       @media screen {
